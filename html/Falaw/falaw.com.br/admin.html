@@ -714,7 +714,11 @@
             <input type="text" id="cfg-claude-model" placeholder="claude-sonnet-4-5" autocomplete="off" />
             <p class="cfg-hint" style="margin-top:6px;">Modelos: <strong>claude-sonnet-4-5</strong>, claude-opus-4-5, claude-haiku-4-5-20251001.</p>
           </div>
-          <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar chaves</button>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
+            <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar chaves</button>
+            <button type="button" class="btn btn-secondary" onclick="testAPIs()">Testar conexões</button>
+          </div>
+          <div id="api-test-result" style="margin-top:12px;font-family:var(--f-mono);font-size:11px;line-height:1.7;display:none;"></div>
         </div>
 
         <!-- Senha -->
@@ -1432,6 +1436,51 @@ function loadConfig() {
   document.getElementById('cfg-grok-model').value  = localStorage.getItem('fa_grok_model')    || '';
   document.getElementById('cfg-claude-proxy').value = localStorage.getItem('fa_claude_proxy') || '';
   document.getElementById('cfg-claude-model').value = localStorage.getItem('fa_claude_model') || '';
+}
+
+async function testAPIs() {
+  const box = document.getElementById('api-test-result');
+  box.style.display = 'block';
+  box.innerHTML = 'Testando…';
+  const lines = [];
+
+  // Test Grok
+  const grokKey   = localStorage.getItem('fa_grok_key') || '';
+  const grokModel = localStorage.getItem('fa_grok_model') || 'grok-3-fast';
+  if (!grokKey) {
+    lines.push('❌ Grok: chave não salva');
+  } else {
+    lines.push('🔑 Grok key: ' + grokKey.slice(0,8) + '… (model: ' + grokModel + ')');
+    try {
+      const r = await fetch('https://api.x.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + grokKey },
+        body: JSON.stringify({ model: grokModel, messages: [{ role: 'user', content: 'ok' }], max_tokens: 5, stream: false })
+      });
+      const txt = await r.text();
+      lines.push((r.ok ? '✅' : '❌') + ' Grok HTTP ' + r.status + ' — ' + txt.slice(0, 120));
+    } catch(e) { lines.push('❌ Grok network error: ' + e.message); }
+  }
+
+  // Test Claude Worker
+  const proxyUrl = localStorage.getItem('fa_claude_proxy') || '';
+  const clModel  = localStorage.getItem('fa_claude_model') || 'claude-sonnet-4-5';
+  if (!proxyUrl) {
+    lines.push('❌ Claude: URL do Worker não salva');
+  } else {
+    lines.push('🔗 Claude proxy: ' + proxyUrl + ' (model: ' + clModel + ')');
+    try {
+      const r = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: clModel, max_tokens: 5, messages: [{ role: 'user', content: 'ok' }] })
+      });
+      const txt = await r.text();
+      lines.push((r.ok ? '✅' : '❌') + ' Claude HTTP ' + r.status + ' — ' + txt.slice(0, 120));
+    } catch(e) { lines.push('❌ Claude network error: ' + e.message); }
+  }
+
+  box.innerHTML = lines.join('<br>');
 }
 
 function saveConfig() {
