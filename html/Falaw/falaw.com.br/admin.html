@@ -1062,6 +1062,8 @@ async function pushArticlesToGitHub() {
     if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'HTTP ' + res.status); }
     const data = await res.json();
     GH_FILE_SHA = data.content.sha;
+    // GitHub é a fonte de verdade — limpa cópias locais antigas
+    localStorage.removeItem('fa_blog_articles');
     return true;
   } catch (e) {
     showToast('Erro GitHub: ' + e.message);

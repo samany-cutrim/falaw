@@ -132,10 +132,7 @@
   var filterRow   = document.getElementById('filterRow');
   var countEl     = document.getElementById('resultsCount');
 
-  var base = (typeof FALAW_ARTICLES !== 'undefined') ? FALAW_ARTICLES : [];
-  var local = [];
-  try { local = JSON.parse(localStorage.getItem('fa_blog_articles') || '[]'); } catch (e) {}
-  var ALL = base.concat(local).filter(function (a) { return a.published; });
+  var ALL = ((typeof FALAW_ARTICLES !== 'undefined') ? FALAW_ARTICLES : []).filter(function (a) { return a.published; });
 
   var query    = '';
   var category = 'Todos';
