@@ -527,10 +527,7 @@
     <section id="tab-blog" class="admin-section active">
       <div class="section-header">
         <h2>Posts do Blog</h2>
-        <div class="blog-section-actions">
-          <button type="button" class="btn btn-ghost" onclick="exportArticlesData()">Exportar articles-data.js</button>
-          <button type="button" class="btn btn-primary" onclick="openPostModal()">+ Novo artigo</button>
-        </div>
+        <button type="button" class="btn btn-primary" onclick="openPostModal()">+ Novo artigo</button>
       </div>
       <div class="stats-bar" id="blog-stats"></div>
       <div id="blog-no-token" class="blog-no-token" hidden>
@@ -1012,8 +1009,9 @@ async function savePost() {
 
   if (!title) { alert('Por favor, preencha o título.'); return; }
 
-  const id   = editingPostId || (title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now().toString(36));
-  const url  = 'blog/reader.html?id=' + encodeURIComponent(id);
+  const snapshot = ALL_ARTICLES.slice(); // backup para reverter se falhar
+  const id  = editingPostId || (title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now().toString(36));
+  const url = 'blog/reader.html?id=' + encodeURIComponent(id);
 
   if (editingPostId) {
     const idx = ALL_ARTICLES.findIndex(a => a.id === editingPostId);
@@ -1023,19 +1021,30 @@ async function savePost() {
   }
 
   closePostModal();
-  renderBlog();
   showToast('Salvando no GitHub…');
   const ok = await pushArticlesToGitHub();
-  if (ok) showToast(editingPostId ? 'Artigo atualizado.' : 'Artigo publicado.');
+  if (ok) {
+    renderBlog();
+    showToast(editingPostId ? 'Artigo atualizado.' : 'Artigo publicado.');
+  } else {
+    ALL_ARTICLES = snapshot; // reverte — nada foi salvo
+    renderBlog();
+  }
 }
 
 async function deletePost(id) {
   if (!confirm('Excluir este artigo? Esta ação não pode ser desfeita.')) return;
+  const snapshot = ALL_ARTICLES.slice();
   ALL_ARTICLES = ALL_ARTICLES.filter(a => a.id !== id);
-  renderBlog();
   showToast('Excluindo…');
   const ok = await pushArticlesToGitHub();
-  if (ok) showToast('Artigo excluído.');
+  if (ok) {
+    renderBlog();
+    showToast('Artigo excluído.');
+  } else {
+    ALL_ARTICLES = snapshot;
+    renderBlog();
+  }
 }
 
 /* ══════════════════════════════════════
