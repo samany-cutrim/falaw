@@ -634,8 +634,8 @@
         <textarea id="post-excerpt" rows="3" placeholder="Breve descrição do artigo (aparece na listagem)"></textarea>
       </div>
       <div class="form-field">
-        <label>URL do artigo</label>
-        <input type="text" id="post-url" placeholder="blog/meu-artigo.html" />
+        <label>Conteúdo do artigo</label>
+        <textarea id="post-content" rows="12" placeholder="Escreva o conteúdo completo do artigo aqui…"></textarea>
       </div>
       <div class="form-field">
         <label>Foto de capa</label>
@@ -912,7 +912,7 @@ function openPostModal(id) {
       document.getElementById('post-title').value     = art.title;
       document.getElementById('post-category').value  = art.category;
       document.getElementById('post-excerpt').value   = art.excerpt;
-      document.getElementById('post-url').value       = art.url || '';
+      document.getElementById('post-content').value   = art.content || '';
       setPostPhotoPreview(art.photo || '');
       document.getElementById('post-date').value      = art.date || '';
       document.getElementById('post-readtime').value  = art.readTime || '';
@@ -922,7 +922,7 @@ function openPostModal(id) {
     document.getElementById('post-id').value       = '';
     document.getElementById('post-title').value    = '';
     document.getElementById('post-excerpt').value  = '';
-    document.getElementById('post-url').value      = '';
+    document.getElementById('post-content').value  = '';
     removePostPhoto();
     document.getElementById('post-date').value     = '';
     document.getElementById('post-readtime').value = '';
@@ -941,7 +941,7 @@ function savePost() {
   const title    = document.getElementById('post-title').value.trim();
   const category = document.getElementById('post-category').value;
   const excerpt  = document.getElementById('post-excerpt').value.trim();
-  const url      = document.getElementById('post-url').value.trim();
+  const content  = document.getElementById('post-content').value.trim();
   const photo    = document.getElementById('post-photo').value.trim();
   const date     = document.getElementById('post-date').value.trim();
   const readTime = document.getElementById('post-readtime').value.trim();
@@ -951,13 +951,14 @@ function savePost() {
 
   const articles = load(KEYS.articles) || [];
   const id = editingPostId;
-  const slug = id || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const slug = id || title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36);
+  const url = 'blog/reader.html?id=' + encodeURIComponent(id || slug);
 
   if (id) {
     const idx = articles.findIndex(a => a.id === id);
-    if (idx !== -1) articles[idx] = { ...articles[idx], title, category, excerpt, url, photo, date, readTime, published };
+    if (idx !== -1) articles[idx] = { ...articles[idx], title, category, excerpt, content, url, photo, date, readTime, published };
   } else {
-    articles.unshift({ id: slug + '-' + Date.now().toString(36), title, category, excerpt, url, photo, date, readTime, published });
+    articles.unshift({ id: slug, title, category, excerpt, content, url, photo, date, readTime, published });
   }
 
   save(KEYS.articles, articles);

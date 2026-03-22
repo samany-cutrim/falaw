@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Artigo — Ferraz Andrade Advogados</title>
+  <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
+  <link rel="stylesheet" href="../falaw-design.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+  <script src="../falaw-main.js" defer></script>
+</head>
+<body>
+
+<div id="cursor" aria-hidden="true"></div>
+
+<nav class="nav" role="navigation" aria-label="Principal">
+  <div class="nav-progress" aria-hidden="true"></div>
+  <a href="../index.html" class="nav-logo" aria-label="Ferraz Andrade — Início">
+    <img src="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/Logo-FA-Advogados-v3-e1718109070110.png"
+         alt="Ferraz Andrade Advogados" />
+  </a>
+  <span class="nav-counter" aria-live="polite">— Blog</span>
+  <ul class="nav-links" role="list">
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="../founder.html">Founder</a></li>
+    <li><a href="../atuacoes/index.html">Atuações</a></li>
+    <li><a href="../equipe.html">Nossa Equipe</a></li>
+    <li><a href="../contato/index.html">Contato</a></li>
+    <li><a href="../blog.html" class="active">Blog</a></li>
+  </ul>
+  <button type="button" class="nav-burger" aria-label="Menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<main class="article-page" id="article-main">
+
+  <div class="article-back">
+    <a href="../blog.html">← Voltar ao Blog</a>
+  </div>
+
+  <div id="article-content"></div>
+
+  <div id="article-not-found" hidden>
+    <header class="article-header">
+      <div class="article-kicker">Erro</div>
+      <h1>Artigo não encontrado</h1>
+      <p class="article-lede">Este artigo não foi encontrado ou não está disponível neste navegador.</p>
+    </header>
+    <div class="article-back" style="margin-top:40px;">
+      <a href="../blog.html">← Voltar ao Blog</a>
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/Logo-FA-Advogados-v3-e1718109070110.png"
+           alt="Ferraz Andrade Advogados" class="footer-logo" />
+      <address class="footer-address">
+        Av. Francisco Matarazzo, 1752 · Salas&nbsp;414&nbsp;e&nbsp;415<br/>
+        Água Branca · São Paulo / SP · CEP&nbsp;05001-200
+      </address>
+    </div>
+    <ul class="footer-links" role="list">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../founder.html">Founder</a></li>
+      <li><a href="../atuacoes/index.html">Atuações</a></li>
+      <li><a href="../equipe.html">Nossa Equipe</a></li>
+      <li><a href="../contato/index.html">Contato</a></li>
+      <li><a href="../blog.html">Blog</a></li>
+    </ul>
+    <div class="footer-social">
+      <a href="https://www.instagram.com/ferrazandrade_adv" target="_blank" rel="noopener" aria-label="Instagram">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      </a>
+      <a href="https://www.linkedin.com/company/ferraz-andrade-adogados" target="_blank" rel="noopener" aria-label="LinkedIn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+      </a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="footer-copy">© 2026 · Ferraz Andrade Advogados · Todos os direitos reservados</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var id = params.get('id');
+
+  if (!id) { showNotFound(); return; }
+
+  var articles = [];
+  try { articles = JSON.parse(localStorage.getItem('fa_blog_articles') || '[]'); } catch (e) {}
+
+  var article = articles.find(function (a) { return a.id === id; });
+
+  if (!article) { showNotFound(); return; }
+
+  document.title = article.title + ' — Ferraz Andrade Advogados';
+
+  var coverHtml = article.photo
+    ? '<div class="article-cover"><img src="' + esc(article.photo) + '" alt="' + esc(article.title) + '" style="width:100%;max-height:420px;object-fit:cover;border-radius:4px;" /></div>'
+    : '';
+
+  document.getElementById('article-content').innerHTML =
+    '<header class="article-header">' +
+      '<div class="article-kicker">' + esc(article.category) + '</div>' +
+      '<h1>' + esc(article.title) + '</h1>' +
+      '<div class="article-meta">' +
+        '<span>' + esc(article.date) + '</span>' +
+        '<span class="sep">·</span>' +
+        '<span>' + esc(article.category) + '</span>' +
+        (article.readTime ? '<span class="sep">·</span><span>' + esc(article.readTime) + ' de leitura</span>' : '') +
+      '</div>' +
+      (article.excerpt ? '<p class="article-lede">' + esc(article.excerpt) + '</p>' : '') +
+    '</header>' +
+    coverHtml +
+    '<div class="article-body">' + renderContent(article.content || '') + '</div>';
+
+  function renderContent(text) {
+    return text
+      .split(/\n{2,}/)
+      .map(function (para) {
+        para = para.trim();
+        if (!para) return '';
+        return '<p>' + esc(para).replace(/\n/g, '<br>') + '</p>';
+      })
+      .join('');
+  }
+
+  function showNotFound() {
+    document.getElementById('article-not-found').hidden = false;
+  }
+
+  function esc(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+})();
+</script>
+</body>
+</html>
