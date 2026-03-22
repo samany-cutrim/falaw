@@ -7,6 +7,7 @@
   <title>Blog — Ferraz Andrade Advogados</title>
   <link rel="icon" type="image/png" href="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
   <link rel="stylesheet" href="falaw-design.css" />
+  <script src="blog/articles-data.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
   <script src="falaw-main.js" defer></script>
@@ -41,24 +42,7 @@
     <h1 class="reveal">Artigos &amp;<br/>Reflexões</h1>
   </div>
 
-  <div class="blog-grid">
-
-    <!-- ARTICLE CARD: BERNA -->
-    <article class="blog-card reveal">
-      <div class="blog-card-category">Inovação Judicial</div>
-      <h2 class="blog-card-title">BERNA: a IA brasileira que desafia a litigância predatória em escala nacional</h2>
-      <p class="blog-card-excerpt">
-        Em março de 2026, o CNJ nacionalizou a BERNA — ferramenta de inteligência artificial desenvolvida pelo TJGO que analisa petições por similaridade semântica. O que muda para advogados, magistrados e escritórios de contencioso de massa.
-      </p>
-      <div class="blog-card-meta">
-        <span>Março de 2026</span>
-        <span>·</span>
-        <span>7 min de leitura</span>
-      </div>
-      <a href="blog/berna-artigo.html" class="blog-card-link">Ler artigo <span class="arr">→</span></a>
-    </article>
-
-  </div>
+  <div class="blog-grid" id="blog-grid"></div>
 
 </main>
 
@@ -94,5 +78,39 @@
   </div>
 </footer>
 
+<script>
+(function () {
+  var grid = document.getElementById('blog-grid');
+  if (!grid) return;
+
+  /* Merge articles from data file + localStorage (published only) */
+  var base = (typeof FALAW_ARTICLES !== 'undefined') ? FALAW_ARTICLES : [];
+  var local = [];
+  try {
+    local = JSON.parse(localStorage.getItem('fa_blog_articles') || '[]');
+  } catch (e) {}
+
+  var all = base.concat(local).filter(function (a) { return a.published; });
+
+  if (!all.length) {
+    grid.innerHTML = '<p style="padding:48px 56px;font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--c-muted)">Nenhum artigo publicado ainda.</p>';
+    return;
+  }
+
+  grid.innerHTML = all.map(function (a, i) {
+    return '<article class="blog-card reveal">' +
+      '<div class="blog-card-category">' + escHtml(a.category) + '</div>' +
+      '<h2 class="blog-card-title">' + escHtml(a.title) + '</h2>' +
+      '<p class="blog-card-excerpt">' + escHtml(a.excerpt) + '</p>' +
+      '<div class="blog-card-meta"><span>' + escHtml(a.date) + '</span><span>·</span><span>' + escHtml(a.readTime) + ' de leitura</span></div>' +
+      '<a href="' + escHtml(a.url) + '" class="blog-card-link">Ler artigo <span class="arr">→</span></a>' +
+      '</article>';
+  }).join('');
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+})();
+</script>
 </body>
 </html>
