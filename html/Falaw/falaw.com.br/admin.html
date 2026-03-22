@@ -449,6 +449,18 @@
     .photo-remove-btn:hover { background: #c0392b; }
     .file-input-hidden { display: none; }
 
+    /* ── BLOG SUBSECTIONS ── */
+    .blog-section-actions { display: flex; gap: 8px; }
+    .blog-sub-label {
+      font-family: var(--f-mono);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--c-muted);
+      margin-bottom: 12px;
+    }
+    .blog-sub-list { margin-bottom: 32px; }
+
     /* ── TEAM ROLE TAG ── */
     .role-badge {
       font-family: var(--f-mono);
@@ -505,10 +517,23 @@
     <section id="tab-blog" class="admin-section active">
       <div class="section-header">
         <h2>Posts do Blog</h2>
-        <button class="btn btn-primary" onclick="openPostModal()">+ Novo post</button>
+        <div class="blog-section-actions">
+          <button type="button" class="btn btn-ghost" onclick="exportArticlesData()">Exportar articles-data.js</button>
+          <button type="button" class="btn btn-primary" onclick="openPostModal()">+ Novo artigo</button>
+        </div>
       </div>
       <div class="stats-bar" id="blog-stats"></div>
-      <div class="item-list" id="blog-list"></div>
+      <div id="blog-arquivo-section" hidden>
+        <p class="blog-sub-label">Arquivo (articles-data.js)</p>
+        <div class="item-list blog-sub-list" id="blog-arquivo-list"></div>
+      </div>
+      <div id="blog-local-section" hidden>
+        <p class="blog-sub-label">Locais (localStorage)</p>
+        <div class="item-list blog-sub-list" id="blog-local-list"></div>
+      </div>
+      <div id="blog-empty" hidden>
+        <div class="empty-state"><p>Nenhum artigo ainda.</p><p>Clique em "+ Novo artigo" para começar.</p></div>
+      </div>
     </section>
 
     <!-- ── EQUIPE ── -->
@@ -609,8 +634,8 @@
         <textarea id="post-excerpt" rows="3" placeholder="Breve descrição do artigo (aparece na listagem)"></textarea>
       </div>
       <div class="form-field">
-        <label>Conteúdo</label>
-        <textarea id="post-content" rows="8" placeholder="Texto completo do artigo"></textarea>
+        <label>URL do artigo</label>
+        <input type="text" id="post-url" placeholder="blog/meu-artigo.html" />
       </div>
       <div class="form-field">
         <label>Foto de capa</label>
@@ -630,13 +655,17 @@
       </div>
       <div class="form-field">
         <label>Data de publicação</label>
-        <input type="date" id="post-date" />
+        <input type="text" id="post-date" placeholder="Março de 2026" />
+      </div>
+      <div class="form-field">
+        <label>Tempo de leitura</label>
+        <input type="text" id="post-readtime" placeholder="7 min" />
       </div>
       <div class="form-field">
         <label>Status</label>
         <select id="post-status">
-          <option value="published">Publicado</option>
-          <option value="draft">Rascunho</option>
+          <option value="true">Publicado</option>
+          <option value="false">Rascunho</option>
         </select>
       </div>
     </div>
@@ -697,7 +726,8 @@
    CONSTANTS
 ══════════════════════════════════════ */
 const ADMIN_PASSWORD = 'falaw2026';
-const KEYS = { posts: 'fa_blog_posts', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions' };
+const KEYS = { articles: 'fa_blog_articles', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions' };
+let BASE_ARTICLES = [];
 
 /* ══════════════════════════════════════
    STORAGE HELPERS
@@ -725,7 +755,7 @@ function seedData() {
       { id: uid(), name: 'Stefhane Félix de Almeida', role: 'In Memoriam', status: 'memoriam', bio: 'Graduada em Direito pela Universidade Paulista (2014) e especialista em Direito e Processo do Trabalho pela Escola Superior de Advocacia Paulista (2018). Advogada do Ferraz Andrade Advogados, cuja dedicação e contribuição permanecem vivas no espírito do escritório.' },
     ]);
   }
-  if (!load(KEYS.posts)) save(KEYS.posts, []);
+  if (!load(KEYS.articles)) save(KEYS.articles, []);
   if (!load(KEYS.newsletter)) save(KEYS.newsletter, []);
   if (!load(KEYS.contato)) save(KEYS.contato, []);
   if (!load(KEYS.config)) {
@@ -749,7 +779,7 @@ function doLogin() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-shell').style.display = 'block';
     seedData();
-    renderBlog();
+    fetchBaseArticles().then(renderBlog);
     renderEquipe();
     renderNewsletter();
     renderContato();
@@ -793,41 +823,77 @@ function showToast(msg) {
 }
 
 /* ══════════════════════════════════════
-   BLOG
+   BLOG — fetch base articles
+══════════════════════════════════════ */
+function fetchBaseArticles() {
+  return fetch('blog/articles-data.js')
+    .then(r => r.text())
+    .then(code => {
+      try {
+        var normalised = code.replace(/\b(const|let)\s+FALAW_ARTICLES\b/, 'var FALAW_ARTICLES');
+        var fn = new Function(normalised + '\nreturn FALAW_ARTICLES;');
+        BASE_ARTICLES = fn() || [];
+      } catch (e) {
+        BASE_ARTICLES = [];
+      }
+    })
+    .catch(() => { BASE_ARTICLES = []; });
+}
+
+/* ══════════════════════════════════════
+   BLOG — render
 ══════════════════════════════════════ */
 function renderBlog() {
-  const posts = load(KEYS.posts) || [];
-  const stats = document.getElementById('blog-stats');
-  const list  = document.getElementById('blog-list');
+  const local   = load(KEYS.articles) || [];
+  const allPub  = BASE_ARTICLES.filter(a => a.published).length + local.filter(a => a.published).length;
+  const drafts  = local.filter(a => !a.published).length;
+  const total   = BASE_ARTICLES.length + local.length;
 
-  const published = posts.filter(p => p.status === 'published').length;
-  const drafts    = posts.filter(p => p.status === 'draft').length;
-
-  stats.innerHTML = `
-    <div class="stat-pill"><div class="stat-pill-num">${posts.length}</div><div class="stat-pill-label">Total</div></div>
-    <div class="stat-pill"><div class="stat-pill-num">${published}</div><div class="stat-pill-label">Publicados</div></div>
+  document.getElementById('blog-stats').innerHTML = `
+    <div class="stat-pill"><div class="stat-pill-num">${total}</div><div class="stat-pill-label">Total</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${allPub}</div><div class="stat-pill-label">Publicados</div></div>
     <div class="stat-pill"><div class="stat-pill-num">${drafts}</div><div class="stat-pill-label">Rascunhos</div></div>
   `;
 
-  if (!posts.length) {
-    list.innerHTML = `<div class="empty-state"><p>Nenhum post ainda.</p><p>Clique em "+ Novo post" para começar.</p></div>`;
-    return;
-  }
+  const arquivoSec = document.getElementById('blog-arquivo-section');
+  const localSec   = document.getElementById('blog-local-section');
+  const emptyDiv   = document.getElementById('blog-empty');
 
-  list.innerHTML = posts.map(p => `
+  arquivoSec.hidden = BASE_ARTICLES.length === 0;
+  localSec.hidden   = local.length === 0;
+  emptyDiv.hidden   = total > 0;
+
+  document.getElementById('blog-arquivo-list').innerHTML = BASE_ARTICLES.map(a => `
     <div class="item-card">
-      ${p.photo ? `<img src="${escHtml(p.photo)}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:4px;flex-shrink:0;" />` : ''}
       <div class="item-card-body">
         <div class="item-card-title">
-          ${escHtml(p.title)}
-          ${p.status === 'draft' ? '<span class="post-tag" style="background:#888">Rascunho</span>' : '<span class="post-tag">Publicado</span>'}
+          ${escHtml(a.title)}
+          <span class="post-tag" style="background:#555">Arquivo</span>
+          ${a.published ? '<span class="post-tag">Publicado</span>' : '<span class="post-tag" style="background:#888">Rascunho</span>'}
         </div>
-        <div class="item-card-meta">${escHtml(p.category)} · ${formatDate(p.date)}</div>
-        <div class="item-card-preview">${escHtml(p.excerpt)}</div>
+        <div class="item-card-meta">${escHtml(a.category)} · ${escHtml(a.date)} · ${escHtml(a.readTime)}</div>
+        <div class="item-card-preview">${escHtml(a.excerpt)}</div>
       </div>
       <div class="item-card-actions">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="editPost('${p.id}')">Editar</button>
-        <button type="button" class="btn btn-danger btn-sm" onclick="deletePost('${p.id}')">Excluir</button>
+        <a href="${escHtml(a.url)}" target="_blank" class="btn btn-ghost btn-sm">Ver</a>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('blog-local-list').innerHTML = local.map(a => `
+    <div class="item-card">
+      <div class="item-card-body">
+        <div class="item-card-title">
+          ${escHtml(a.title)}
+          ${a.published ? '<span class="post-tag">Publicado</span>' : '<span class="post-tag" style="background:#888">Rascunho</span>'}
+        </div>
+        <div class="item-card-meta">${escHtml(a.category)} · ${escHtml(a.date)} · ${escHtml(a.readTime)}</div>
+        <div class="item-card-preview">${escHtml(a.excerpt)}</div>
+      </div>
+      <div class="item-card-actions">
+        ${a.url ? `<a href="${escHtml(a.url)}" target="_blank" class="btn btn-ghost btn-sm">Ver</a>` : ''}
+        <button type="button" class="btn btn-ghost btn-sm" onclick="editPost('${a.id}')">Editar</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="deletePost('${a.id}')">Excluir</button>
       </div>
     </div>
   `).join('');
@@ -837,31 +903,32 @@ let editingPostId = null;
 
 function openPostModal(id) {
   editingPostId = id || null;
-  const modal = document.getElementById('post-modal');
-  document.getElementById('post-modal-title').textContent = id ? 'Editar Post' : 'Novo Post';
+  document.getElementById('post-modal-title').textContent = id ? 'Editar Artigo' : 'Novo Artigo';
 
   if (id) {
-    const post = (load(KEYS.posts) || []).find(p => p.id === id);
-    if (post) {
-      document.getElementById('post-id').value       = post.id;
-      document.getElementById('post-title').value    = post.title;
-      document.getElementById('post-category').value = post.category;
-      document.getElementById('post-excerpt').value  = post.excerpt;
-      document.getElementById('post-content').value  = post.content;
-      setPostPhotoPreview(post.photo || '');
-      document.getElementById('post-date').value     = post.date;
-      document.getElementById('post-status').value   = post.status;
+    const art = (load(KEYS.articles) || []).find(a => a.id === id);
+    if (art) {
+      document.getElementById('post-id').value        = art.id;
+      document.getElementById('post-title').value     = art.title;
+      document.getElementById('post-category').value  = art.category;
+      document.getElementById('post-excerpt').value   = art.excerpt;
+      document.getElementById('post-url').value       = art.url || '';
+      setPostPhotoPreview(art.photo || '');
+      document.getElementById('post-date').value      = art.date || '';
+      document.getElementById('post-readtime').value  = art.readTime || '';
+      document.getElementById('post-status').value    = String(art.published !== false);
     }
   } else {
     document.getElementById('post-id').value       = '';
     document.getElementById('post-title').value    = '';
     document.getElementById('post-excerpt').value  = '';
-    document.getElementById('post-content').value  = '';
+    document.getElementById('post-url').value      = '';
     removePostPhoto();
-    document.getElementById('post-date').value     = new Date().toISOString().slice(0,10);
-    document.getElementById('post-status').value   = 'draft';
+    document.getElementById('post-date').value     = '';
+    document.getElementById('post-readtime').value = '';
+    document.getElementById('post-status').value   = 'false';
   }
-  modal.classList.add('open');
+  document.getElementById('post-modal').classList.add('open');
 }
 
 function closePostModal() {
@@ -874,35 +941,55 @@ function savePost() {
   const title    = document.getElementById('post-title').value.trim();
   const category = document.getElementById('post-category').value;
   const excerpt  = document.getElementById('post-excerpt').value.trim();
-  const content  = document.getElementById('post-content').value.trim();
+  const url      = document.getElementById('post-url').value.trim();
   const photo    = document.getElementById('post-photo').value.trim();
-  const date     = document.getElementById('post-date').value;
-  const status   = document.getElementById('post-status').value;
+  const date     = document.getElementById('post-date').value.trim();
+  const readTime = document.getElementById('post-readtime').value.trim();
+  const published = document.getElementById('post-status').value === 'true';
 
   if (!title) { alert('Por favor, preencha o título.'); return; }
 
-  const posts = load(KEYS.posts) || [];
-  const id    = editingPostId;
+  const articles = load(KEYS.articles) || [];
+  const id = editingPostId;
+  const slug = id || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
   if (id) {
-    const idx = posts.findIndex(p => p.id === id);
-    if (idx !== -1) posts[idx] = { ...posts[idx], title, category, excerpt, content, photo, date, status };
+    const idx = articles.findIndex(a => a.id === id);
+    if (idx !== -1) articles[idx] = { ...articles[idx], title, category, excerpt, url, photo, date, readTime, published };
   } else {
-    posts.unshift({ id: uid(), title, category, excerpt, content, photo, date, status });
+    articles.unshift({ id: slug + '-' + Date.now().toString(36), title, category, excerpt, url, photo, date, readTime, published });
   }
 
-  save(KEYS.posts, posts);
+  save(KEYS.articles, articles);
   closePostModal();
   renderBlog();
-  showToast(id ? 'Post atualizado.' : 'Post criado.');
+  showToast(id ? 'Artigo atualizado.' : 'Artigo criado.');
 }
 
 function deletePost(id) {
-  if (!confirm('Excluir este post? Esta ação não pode ser desfeita.')) return;
-  const posts = (load(KEYS.posts) || []).filter(p => p.id !== id);
-  save(KEYS.posts, posts);
+  if (!confirm('Excluir este artigo? Esta ação não pode ser desfeita.')) return;
+  save(KEYS.articles, (load(KEYS.articles) || []).filter(a => a.id !== id));
   renderBlog();
-  showToast('Post excluído.');
+  showToast('Artigo excluído.');
+}
+
+/* ══════════════════════════════════════
+   BLOG — export articles-data.js
+══════════════════════════════════════ */
+function exportArticlesData() {
+  const local = (load(KEYS.articles) || []).filter(a => a.published);
+  const all = BASE_ARTICLES.concat(local.filter(la => !BASE_ARTICLES.find(b => b.id === la.id)));
+  const lines = all.map(a => {
+    const e = s => String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `  {\n    id: '${e(a.id)}',\n    title: '${e(a.title)}',\n    category: '${e(a.category)}',\n    excerpt: '${e(a.excerpt)}',\n    date: '${e(a.date)}',\n    readTime: '${e(a.readTime)}',\n    url: '${e(a.url)}',\n    published: ${a.published !== false}\n  }`;
+  });
+  const content = 'var FALAW_ARTICLES = [\n' + lines.join(',\n') + '\n];\n';
+  const blob = new Blob([content], { type: 'text/javascript;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'articles-data.js';
+  link.click();
+  showToast('articles-data.js exportado.');
 }
 
 /* ══════════════════════════════════════
