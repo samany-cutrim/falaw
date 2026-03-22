@@ -581,7 +581,7 @@
           <span class="ai-panel-title">Assistente IA — Gerar Artigo</span>
           <div style="display:flex;align-items:center;gap:12px;">
             <select id="ai-engine-select" style="background:rgba(247,245,242,.08);border:1px solid rgba(247,245,242,.15);color:rgba(247,245,242,.8);font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;padding:4px 8px;border-radius:3px;cursor:pointer;">
-              <option value="grok">Grok (xAI)</option>
+              <option value="gemini">Gemini (Google)</option>
               <option value="claude">Claude (Anthropic)</option>
             </select>
             <button type="button" class="ai-toggle-btn" onclick="toggleAiPanel()">ocultar ▲</button>
@@ -696,13 +696,14 @@
           <h3 class="cfg-card-title">IA — Geração de Artigos</h3>
           <p class="cfg-card-desc">As chaves ficam salvas apenas neste navegador e nunca são enviadas ao repositório.</p>
           <div class="form-field">
-            <label>Grok API Key (xAI)</label>
-            <input type="password" id="cfg-grok-key" placeholder="xai-…" autocomplete="off" />
+            <label>Gemini API Key (Google)</label>
+            <input type="password" id="cfg-gemini-key" placeholder="AIza…" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">Obtenha gratuitamente em <strong>aistudio.google.com</strong> → Get API Key.</p>
           </div>
           <div class="form-field">
-            <label>Modelo Grok</label>
-            <input type="text" id="cfg-grok-model" placeholder="grok-3-fast" autocomplete="off" />
-            <p class="cfg-hint" style="margin-top:6px;">Modelos disponíveis: <strong>grok-3-fast</strong>, grok-3, grok-2-latest. Deixe em branco para usar grok-3-fast.</p>
+            <label>Modelo Gemini</label>
+            <input type="text" id="cfg-gemini-model" placeholder="gemini-2.0-flash" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">Modelos: <strong>gemini-2.0-flash</strong> (grátis), gemini-1.5-pro, gemini-2.5-pro. Deixe em branco para usar gemini-2.0-flash.</p>
           </div>
           <div class="form-field" style="margin-top:20px;padding-top:20px;border-top:1px solid rgba(26,10,13,.08);">
             <label>Claude Proxy URL (Cloudflare Worker)</label>
@@ -1432,8 +1433,8 @@ function loadConfig() {
   document.getElementById('cfg-instagram').value    = cfg.instagram || '';
   document.getElementById('cfg-linkedin').value     = cfg.linkedin  || '';
   document.getElementById('cfg-github-token').value = ghToken();
-  document.getElementById('cfg-grok-key').value    = localStorage.getItem('fa_grok_key')      || '';
-  document.getElementById('cfg-grok-model').value  = localStorage.getItem('fa_grok_model')    || '';
+  document.getElementById('cfg-gemini-key').value   = localStorage.getItem('fa_gemini_key')   || '';
+  document.getElementById('cfg-gemini-model').value = localStorage.getItem('fa_gemini_model') || '';
   document.getElementById('cfg-claude-proxy').value = localStorage.getItem('fa_claude_proxy') || '';
   document.getElementById('cfg-claude-model').value = localStorage.getItem('fa_claude_model') || '';
 }
@@ -1444,22 +1445,22 @@ async function testAPIs() {
   box.innerHTML = 'Testando…';
   const lines = [];
 
-  // Test Grok
-  const grokKey   = localStorage.getItem('fa_grok_key') || '';
-  const grokModel = localStorage.getItem('fa_grok_model') || 'grok-3-fast';
-  if (!grokKey) {
-    lines.push('❌ Grok: chave não salva');
+  // Test Gemini
+  const geminiKey   = localStorage.getItem('fa_gemini_key') || '';
+  const geminiModel = localStorage.getItem('fa_gemini_model') || 'gemini-2.0-flash';
+  if (!geminiKey) {
+    lines.push('❌ Gemini: chave não salva');
   } else {
-    lines.push('🔑 Grok key: ' + grokKey.slice(0,8) + '… (model: ' + grokModel + ')');
+    lines.push('🔑 Gemini key: ' + geminiKey.slice(0,8) + '… (model: ' + geminiModel + ')');
     try {
-      const r = await fetch('https://api.x.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + grokKey },
-        body: JSON.stringify({ model: grokModel, messages: [{ role: 'user', content: 'ok' }], max_tokens: 5, stream: false })
-      });
+      const r = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/' + geminiModel + ':generateContent?key=' + geminiKey,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'ok' }] }], generationConfig: { maxOutputTokens: 5 } }) }
+      );
       const txt = await r.text();
-      lines.push((r.ok ? '✅' : '❌') + ' Grok HTTP ' + r.status + ' — ' + txt.slice(0, 120));
-    } catch(e) { lines.push('❌ Grok network error: ' + e.message); }
+      lines.push((r.ok ? '✅' : '❌') + ' Gemini HTTP ' + r.status + ' — ' + txt.slice(0, 120));
+    } catch(e) { lines.push('❌ Gemini network error: ' + e.message); }
   }
 
   // Test Claude Worker
@@ -1495,12 +1496,12 @@ function saveConfig() {
   const token = document.getElementById('cfg-github-token').value.trim();
   if (token) localStorage.setItem(KEYS.githubToken, token);
   else localStorage.removeItem(KEYS.githubToken);
-  const grokKey     = document.getElementById('cfg-grok-key').value.trim();
-  const grokModel   = document.getElementById('cfg-grok-model').value.trim();
+  const geminiKey   = document.getElementById('cfg-gemini-key').value.trim();
+  const geminiModel = document.getElementById('cfg-gemini-model').value.trim();
   const claudeProxy = document.getElementById('cfg-claude-proxy').value.trim();
   const claudeModel = document.getElementById('cfg-claude-model').value.trim();
-  if (grokKey)     localStorage.setItem('fa_grok_key', grokKey);       else localStorage.removeItem('fa_grok_key');
-  if (grokModel)   localStorage.setItem('fa_grok_model', grokModel);   else localStorage.removeItem('fa_grok_model');
+  if (geminiKey)   localStorage.setItem('fa_gemini_key', geminiKey);     else localStorage.removeItem('fa_gemini_key');
+  if (geminiModel) localStorage.setItem('fa_gemini_model', geminiModel); else localStorage.removeItem('fa_gemini_model');
   if (claudeProxy) localStorage.setItem('fa_claude_proxy', claudeProxy); else localStorage.removeItem('fa_claude_proxy');
   if (claudeModel) localStorage.setItem('fa_claude_model', claudeModel); else localStorage.removeItem('fa_claude_model');
   document.getElementById('blog-no-token').hidden = !!token;
@@ -1618,28 +1619,39 @@ async function callClaude(messages, temperature) {
 }
 
 async function callAI(messages, temperature) {
-  const engine = document.getElementById('ai-engine-select')?.value || 'grok';
+  const engine = document.getElementById('ai-engine-select')?.value || 'gemini';
   if (engine === 'claude') return callClaude(messages, temperature);
-  return callGrok(messages, temperature);
+  return callGemini(messages, temperature);
 }
 
-async function callGrok(messages, temperature) {
-  const key   = localStorage.getItem('fa_grok_key') || '';
-  const model = localStorage.getItem('fa_grok_model') || 'grok-3-fast';
-  if (!key) throw new Error('Grok API Key não configurada — vá em Configurações e salve a chave.');
-  const res = await fetch('https://api.x.ai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-    body: JSON.stringify({ model, messages, temperature: temperature || 0.7, stream: false })
-  });
+async function callGemini(messages, temperature) {
+  const key   = localStorage.getItem('fa_gemini_key') || '';
+  const model = localStorage.getItem('fa_gemini_model') || 'gemini-2.0-flash';
+  if (!key) throw new Error('Gemini API Key não configurada — vá em Configurações, cole a chave do Google AI Studio e salve.');
+  const system = messages.find(m => m.role === 'system');
+  const turns  = messages.filter(m => m.role !== 'system').map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }]
+  }));
+  const body = {
+    contents: turns,
+    generationConfig: { temperature: temperature || 0.7, maxOutputTokens: 8192 },
+    ...(system ? { systemInstruction: { parts: [{ text: system.content }] } } : {})
+  };
+  const res = await fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+  );
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     const msg = e.error?.message || '';
-    if (res.status === 401 || res.status === 403) throw new Error('Chave inválida ou revogada. Crie uma nova chave em platform.x.ai e salve em Configurações.');
+    if (res.status === 400) throw new Error('Chave inválida ou requisição incorreta: ' + msg);
+    if (res.status === 403) throw new Error('Chave inválida ou sem permissão. Verifique em aistudio.google.com.');
     if (res.status === 404) throw new Error('Modelo "' + model + '" não encontrado. Verifique o nome em Configurações.');
     throw new Error(msg || 'HTTP ' + res.status);
   }
-  return (await res.json()).choices[0].message.content;
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
 function parseJSON(text) {
