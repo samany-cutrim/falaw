@@ -580,6 +580,10 @@
         <div class="ai-panel-header">
           <span class="ai-panel-title">Assistente IA — Gerar Artigo</span>
           <div style="display:flex;align-items:center;gap:12px;">
+            <select id="ai-engine-select" style="background:rgba(247,245,242,.08);border:1px solid rgba(247,245,242,.15);color:rgba(247,245,242,.8);font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;padding:4px 8px;border-radius:3px;cursor:pointer;">
+              <option value="grok">Grok (xAI)</option>
+              <option value="claude">Claude (Anthropic)</option>
+            </select>
             <button type="button" class="ai-toggle-btn" onclick="toggleAiPanel()">ocultar ▲</button>
           </div>
         </div>
@@ -699,6 +703,16 @@
             <label>Modelo Grok</label>
             <input type="text" id="cfg-grok-model" placeholder="grok-3-fast" autocomplete="off" />
             <p class="cfg-hint" style="margin-top:6px;">Modelos disponíveis: <strong>grok-3-fast</strong>, grok-3, grok-2-latest. Deixe em branco para usar grok-3-fast.</p>
+          </div>
+          <div class="form-field" style="margin-top:20px;padding-top:20px;border-top:1px solid rgba(26,10,13,.08);">
+            <label>Claude Proxy URL (Cloudflare Worker)</label>
+            <input type="text" id="cfg-claude-proxy" placeholder="https://broken-bread-b32d.saah-cutrim.workers.dev" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">URL do Worker configurado. A chave da Anthropic fica no Worker, nunca aqui.</p>
+          </div>
+          <div class="form-field">
+            <label>Modelo Claude</label>
+            <input type="text" id="cfg-claude-model" placeholder="claude-sonnet-4-5" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">Modelos: <strong>claude-sonnet-4-5</strong>, claude-opus-4-5, claude-haiku-4-5-20251001.</p>
           </div>
           <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar chaves</button>
         </div>
@@ -1412,8 +1426,10 @@ function loadConfig() {
   document.getElementById('cfg-instagram').value    = cfg.instagram || '';
   document.getElementById('cfg-linkedin').value     = cfg.linkedin  || '';
   document.getElementById('cfg-github-token').value = ghToken();
-  document.getElementById('cfg-grok-key').value   = localStorage.getItem('fa_grok_key')    || '';
-  document.getElementById('cfg-grok-model').value = localStorage.getItem('fa_grok_model')  || '';
+  document.getElementById('cfg-grok-key').value    = localStorage.getItem('fa_grok_key')      || '';
+  document.getElementById('cfg-grok-model').value  = localStorage.getItem('fa_grok_model')    || '';
+  document.getElementById('cfg-claude-proxy').value = localStorage.getItem('fa_claude_proxy') || '';
+  document.getElementById('cfg-claude-model').value = localStorage.getItem('fa_claude_model') || '';
 }
 
 function saveConfig() {
@@ -1428,10 +1444,14 @@ function saveConfig() {
   const token = document.getElementById('cfg-github-token').value.trim();
   if (token) localStorage.setItem(KEYS.githubToken, token);
   else localStorage.removeItem(KEYS.githubToken);
-  const grokKey   = document.getElementById('cfg-grok-key').value.trim();
-  const grokModel = document.getElementById('cfg-grok-model').value.trim();
-  if (grokKey)   localStorage.setItem('fa_grok_key', grokKey);     else localStorage.removeItem('fa_grok_key');
-  if (grokModel) localStorage.setItem('fa_grok_model', grokModel); else localStorage.removeItem('fa_grok_model');
+  const grokKey     = document.getElementById('cfg-grok-key').value.trim();
+  const grokModel   = document.getElementById('cfg-grok-model').value.trim();
+  const claudeProxy = document.getElementById('cfg-claude-proxy').value.trim();
+  const claudeModel = document.getElementById('cfg-claude-model').value.trim();
+  if (grokKey)     localStorage.setItem('fa_grok_key', grokKey);       else localStorage.removeItem('fa_grok_key');
+  if (grokModel)   localStorage.setItem('fa_grok_model', grokModel);   else localStorage.removeItem('fa_grok_model');
+  if (claudeProxy) localStorage.setItem('fa_claude_proxy', claudeProxy); else localStorage.removeItem('fa_claude_proxy');
+  if (claudeModel) localStorage.setItem('fa_claude_model', claudeModel); else localStorage.removeItem('fa_claude_model');
   document.getElementById('blog-no-token').hidden = !!token;
   showToast('Configurações salvas.');
 }
@@ -1517,6 +1537,41 @@ function toggleAiPanel() {
     aiPanelVisible ? 'ocultar ▲' : 'mostrar ▼';
 }
 
+async function callClaude(messages, temperature) {
+  const proxyUrl = localStorage.getItem('fa_claude_proxy') || '';
+  const model    = localStorage.getItem('fa_claude_model') || 'claude-sonnet-4-5';
+  if (!proxyUrl) throw new Error('Claude Proxy URL não configurada — vá em Configurações e cole a URL do Cloudflare Worker.');
+  const system  = messages.find(m => m.role === 'system');
+  const userMsg = messages.filter(m => m.role !== 'system');
+  const body = {
+    model,
+    max_tokens: 4096,
+    temperature: temperature || 0.7,
+    messages: userMsg,
+    ...(system ? { system: system.content } : {})
+  };
+  const res = await fetch(proxyUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    const msg = e.error?.message || e.error || '';
+    if (res.status === 401 || res.status === 403) throw new Error('Chave inválida no Worker. Verifique a variável ANTHROPIC_API_KEY nas Settings do Cloudflare Worker.');
+    if (res.status === 404) throw new Error('Modelo "' + model + '" não encontrado. Verifique o nome em Configurações.');
+    throw new Error(msg || 'HTTP ' + res.status);
+  }
+  const data = await res.json();
+  return data.content?.[0]?.text || '';
+}
+
+async function callAI(messages, temperature) {
+  const engine = document.getElementById('ai-engine-select')?.value || 'grok';
+  if (engine === 'claude') return callClaude(messages, temperature);
+  return callGrok(messages, temperature);
+}
+
 async function callGrok(messages, temperature) {
   const key   = localStorage.getItem('fa_grok_key') || '';
   const model = localStorage.getItem('fa_grok_model') || 'grok-3-fast';
@@ -1557,7 +1612,7 @@ async function fetchAISuggestions() {
   aiSelected = null;
 
   try {
-    const raw = await callGrok([
+    const raw = await callAI([
       { role: 'system', content: 'Você é especialista em Direito do Trabalho e inovação jurídica no Brasil. Cria conteúdo para o blog do escritório Ferraz Andrade Advogados (São Paulo). Responda SEMPRE em JSON válido, sem texto fora do JSON.' },
       { role: 'user',   content: `Sugira 5 temas de artigos jurídicos sobre: "${topic}"\n\nFormato de resposta (somente JSON):\n{"sugestoes":[{"titulo":"...","angulo":"frase curta com o diferencial editorial","categoria":"Direito Trabalhista|Inovação Jurídica|Startups & Tecnologia|Compliance|Relações Sindicais"}]}` }
     ]);
@@ -1601,7 +1656,7 @@ async function generateAIArticle() {
 
   try {
     status.textContent = 'Escrevendo artigo…';
-    const raw = await callGrok([
+    const raw = await callAI([
       { role: 'system', content: 'Você é redator jurídico sênior especializado para o blog Ferraz Andrade Advogados. Escreva artigos com linguagem técnica mas acessível, tom analítico e direto, em português brasileiro. Estruture o conteúdo em seções com títulos em MAIÚSCULAS seguidos de dois pontos, separadas por linha em branco. Responda APENAS em JSON válido, sem texto fora do JSON.' },
       { role: 'user',   content: `Escreva um artigo jurídico completo:\nTítulo: "${aiSelected.titulo}"\nÂngulo: "${aiSelected.angulo}"\nCategoria: "${aiSelected.categoria}"\n\nRequisitos:\n- excerpt: resumo atrativo de até 220 caracteres\n- content: mínimo 900 palavras, seções com título em MAIÚSCULAS seguido de dois pontos\n- date: "${dateStr}"\n- readTime: estimativa em minutos\n\nFormato (somente JSON):\n{"title":"...","category":"...","excerpt":"...","date":"...","readTime":"X min","content":"..."}` }
     ], 0.85);
