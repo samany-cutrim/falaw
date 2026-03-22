@@ -438,7 +438,7 @@
 
   <div class="adm-wrap">
 
-    <!-- ── ARTIGOS PUBLICADOS ── -->
+    <!-- ── TODOS OS ARTIGOS ── -->
     <div class="adm-section">
       <div class="adm-section-head">
         <span class="adm-section-title">Artigos publicados</span>
@@ -447,10 +447,10 @@
       <div id="pubList"></div>
     </div>
 
-    <!-- ── RASCUNHOS / LOCAIS ── -->
+    <!-- ── RASCUNHOS ── -->
     <div class="adm-section">
       <div class="adm-section-head">
-        <span class="adm-section-title">Rascunhos e pendentes</span>
+        <span class="adm-section-title">Rascunhos</span>
         <span class="adm-count" id="draftCount">0</span>
       </div>
       <div class="adm-notice">
@@ -606,44 +606,59 @@
   }
 
   function renderPub() {
-    var base = getBase().filter(function (a) { return a.published; });
-    document.getElementById('pubCount').textContent = base.length;
+    /* Published = data file (published:true) + localStorage (published:true) */
+    var fromFile  = getBase().filter(function (a) { return a.published; });
+    var fromLocal = getLocal().filter(function (a) { return a.published; });
 
-    var html = base.map(function (a) {
+    /* Deduplicate: localStorage item with same id overrides file item */
+    var localIds = fromLocal.map(function (a) { return a.id; });
+    var merged = fromFile.filter(function (a) { return localIds.indexOf(a.id) === -1; })
+                         .map(function (a) { return { art: a, source: 'file' }; })
+      .concat(fromLocal.map(function (a) { return { art: a, source: 'local' }; }));
+
+    document.getElementById('pubCount').textContent = merged.length;
+
+    if (!merged.length) {
+      document.getElementById('pubList').innerHTML =
+        '<p style="font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;color:var(--c-muted);">Nenhum artigo publicado ainda.</p>';
+      return;
+    }
+
+    document.getElementById('pubList').innerHTML = merged.map(function (item) {
+      var a      = item.art;
+      var isFile = item.source === 'file';
+      var badge  = isFile
+        ? '<span class="adm-badge adm-badge-pub">Arquivo</span>'
+        : '<span class="adm-badge adm-badge-local">Local</span>';
+      /* local published articles can be moved back to draft */
+      var actions = isFile
+        ? '<a href="../' + esc(a.url) + '" target="_blank" class="adm-btn adm-btn-view">Ver →</a>'
+        : '<a href="../' + esc(a.url) + '" target="_blank" class="adm-btn adm-btn-view">Ver →</a>' +
+          '<button class="adm-btn adm-btn-draft" onclick="togglePubLocal(\'' + esc(a.id) + '\')">Despublicar</button>';
+
       return '<div class="adm-article-row">' +
         '<div><span class="adm-article-cat">' + esc(a.category) + '</span></div>' +
         '<div class="adm-article-title">' + esc(a.title) + '</div>' +
         '<div class="adm-article-date">' + esc(a.date) + '</div>' +
-        '<div class="adm-article-actions">' +
-          '<span class="adm-badge adm-badge-pub">Publicado</span>' +
-          '<a href="../' + esc(a.url) + '" target="_blank" class="adm-btn adm-btn-view">Ver →</a>' +
-        '</div>' +
+        '<div class="adm-article-actions">' + badge + actions + '</div>' +
         '</div>';
     }).join('');
-
-    document.getElementById('pubList').innerHTML = html || '<p style="font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;color:var(--c-muted);">Nenhum artigo publicado no arquivo de dados.</p>';
   }
 
   function renderDrafts() {
-    var local = getLocal();
-    document.getElementById('draftCount').textContent = local.length;
+    /* Drafts = localStorage items with published:false only */
+    var drafts = getLocal().filter(function (a) { return !a.published; });
+    document.getElementById('draftCount').textContent = drafts.length;
 
-    var html = local.map(function (a, i) {
-      var badge = a.published
-        ? '<span class="adm-badge adm-badge-local">Publicado (local)</span>'
-        : '<span class="adm-badge adm-badge-draft">Rascunho</span>';
-
-      var toggleBtn = a.published
-        ? '<button class="adm-btn adm-btn-draft" onclick="togglePub(' + i + ')">Despublicar</button>'
-        : '<button class="adm-btn adm-btn-publish" onclick="togglePub(' + i + ')">Publicar</button>';
-
+    var html = drafts.map(function (a) {
       return '<div class="adm-article-row">' +
         '<div><span class="adm-article-cat">' + esc(a.category) + '</span></div>' +
         '<div class="adm-article-title">' + esc(a.title) + '</div>' +
         '<div class="adm-article-date">' + esc(a.date) + '</div>' +
         '<div class="adm-article-actions">' +
-          badge + toggleBtn +
-          '<button class="adm-btn adm-btn-delete" onclick="deleteArticle(' + i + ')">Excluir</button>' +
+          '<span class="adm-badge adm-badge-draft">Rascunho</span>' +
+          '<button class="adm-btn adm-btn-publish" onclick="togglePubLocal(\'' + esc(a.id) + '\')">Publicar</button>' +
+          '<button class="adm-btn adm-btn-delete" onclick="deleteArticle(\'' + esc(a.id) + '\')">Excluir</button>' +
         '</div>' +
         '</div>';
     }).join('');
@@ -652,20 +667,22 @@
   }
 
   /* ── ACTIONS ── */
-  window.togglePub = function (i) {
+  window.togglePubLocal = function (id) {
     var local = getLocal();
-    local[i].published = !local[i].published;
+    var idx = local.findIndex ? local.findIndex(function(a){return a.id===id;})
+                              : (function(){ for(var i=0;i<local.length;i++){if(local[i].id===id)return i;} return -1; })();
+    if (idx === -1) return;
+    local[idx].published = !local[idx].published;
     saveLocal(local);
-    renderDrafts();
-    toast(local[i].published ? 'Publicado neste navegador.' : 'Movido para rascunhos.');
+    renderAll();
+    toast(local[idx].published ? 'Publicado neste navegador.' : 'Movido para rascunhos.');
   };
 
-  window.deleteArticle = function (i) {
+  window.deleteArticle = function (id) {
     if (!confirm('Excluir este artigo dos rascunhos?')) return;
-    var local = getLocal();
-    local.splice(i, 1);
+    var local = getLocal().filter(function (a) { return a.id !== id; });
     saveLocal(local);
-    renderDrafts();
+    renderAll();
     toast('Artigo excluído dos rascunhos.');
   };
 
