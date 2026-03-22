@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin — Ferraz Andrade Advogados</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --c-dark:   #1A0A0D;
+      --c-off:    #F7F5F2;
+      --c-accent: #7B1A2E;
+      --c-accent-h: #9B2238;
+      --c-muted:  #7A7672;
+      --c-divider: rgba(26,10,13,.1);
+      --f-body:   'Inter', sans-serif;
+      --f-mono:   'IBM Plex Mono', monospace;
+      --f-display:'Sora', sans-serif;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@700&display=swap');
+
+    body {
+      font-family: var(--f-body);
+      background: #f4f2ef;
+      color: var(--c-dark);
+      min-height: 100vh;
+    }
+
+    /* ── LOGIN ── */
+    #login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: var(--c-dark);
+    }
+    .login-box {
+      background: #231018;
+      border: 1px solid rgba(247,245,242,.08);
+      border-radius: 4px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+    }
+    .login-box h1 {
+      font-family: var(--f-display);
+      font-size: 22px;
+      color: var(--c-off);
+      letter-spacing: -.02em;
+      margin-bottom: 8px;
+    }
+    .login-box p {
+      font-family: var(--f-mono);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(247,245,242,.3);
+      margin-bottom: 32px;
+    }
+    .login-box input {
+      width: 100%;
+      background: rgba(247,245,242,.05);
+      border: 1px solid rgba(247,245,242,.12);
+      border-radius: 2px;
+      padding: 14px 16px;
+      font-family: var(--f-body);
+      font-size: 14px;
+      color: var(--c-off);
+      outline: none;
+      margin-bottom: 12px;
+      transition: border-color .2s;
+    }
+    .login-box input:focus { border-color: var(--c-accent); }
+    .login-box button {
+      width: 100%;
+      background: var(--c-accent);
+      color: #fff;
+      border: none;
+      border-radius: 2px;
+      padding: 14px;
+      font-family: var(--f-mono);
+      font-size: 11px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .2s;
+      margin-top: 4px;
+    }
+    .login-box button:hover { background: var(--c-accent-h); }
+    .login-error {
+      font-family: var(--f-mono);
+      font-size: 10px;
+      letter-spacing: .08em;
+      color: #e05a5a;
+      margin-top: 12px;
+      display: none;
+    }
+
+    /* ── ADMIN SHELL ── */
+    #admin-shell { display: none; }
+
+    .admin-nav {
+      background: var(--c-dark);
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .admin-nav-brand {
+      font-family: var(--f-display);
+      font-size: 14px;
+      color: var(--c-off);
+      letter-spacing: -.01em;
+      margin-right: 40px;
+    }
+    .admin-nav-brand span {
+      font-family: var(--f-mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--c-accent);
+      margin-left: 8px;
+    }
+    .admin-tabs { display: flex; gap: 0; flex: 1; }
+    .admin-tab {
+      font-family: var(--f-mono);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(247,245,242,.35);
+      padding: 0 20px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color .2s, border-color .2s;
+    }
+    .admin-tab:hover { color: rgba(247,245,242,.7); }
+    .admin-tab.active { color: var(--c-off); border-bottom-color: var(--c-accent); }
+    .admin-logout {
+      font-family: var(--f-mono);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(247,245,242,.25);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px 12px;
+      transition: color .2s;
+    }
+    .admin-logout:hover { color: #e05a5a; }
+
+    .admin-body { padding: 40px 40px 80px; max-width: 1100px; margin: 0 auto; }
+
+    .admin-section { display: none; }
+    .admin-section.active { display: block; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--c-divider);
+    }
+    .section-header h2 {
+      font-family: var(--f-display);
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 2px;
+      font-family: var(--f-mono);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: none;
+      transition: background .2s, color .2s;
+    }
+    .btn-primary { background: var(--c-accent); color: #fff; }
+    .btn-primary:hover { background: var(--c-accent-h); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--c-muted);
+      border: 1px solid var(--c-divider);
+    }
+    .btn-ghost:hover { border-color: var(--c-dark); color: var(--c-dark); }
+    .btn-danger { background: transparent; color: #c0392b; border: 1px solid #c0392b; }
+    .btn-danger:hover { background: #c0392b; color: #fff; }
+    .btn-sm { padding: 6px 12px; font-size: 9px; }
+
+    /* ── CARDS / LIST ── */
+    .item-list { display: flex; flex-direction: column; gap: 12px; }
+    .item-card {
+      background: #fff;
+      border: 1px solid var(--c-divider);
+      border-radius: 4px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+    }
+    .item-card-body { flex: 1; }
+    .item-card-title {
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+    .item-card-meta {
+      font-family: var(--f-mono);
+      font-size: 10px;
+      letter-spacing: .08em;
+      color: var(--c-muted);
+      text-transform: uppercase;
+    }
+    .item-card-preview {
+      font-size: 13px;
+      color: var(--c-muted);
+      margin-top: 6px;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .item-card-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(26,10,13,.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 24px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 4px;
+      width: 100%;
+      max-width: 640px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 28px 20px;
+      border-bottom: 1px solid var(--c-divider);
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 1;
+    }
+    .modal-header h3 {
+      font-family: var(--f-display);
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--c-muted);
+      line-height: 1;
+      padding: 4px;
+    }
+    .modal-close:hover { color: var(--c-dark); }
+    .modal-body { padding: 28px; }
+    .modal-footer {
+      padding: 16px 28px 24px;
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      border-top: 1px solid var(--c-divider);
+    }
+
+    /* ── FORM ── */
+    .form-field { margin-bottom: 20px; }
+    .form-field label {
+      display: block;
+      font-family: var(--f-mono);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--c-muted);
+      margin-bottom: 8px;
+    }
+    .form-field input,
+    .form-field textarea,
+    .form-field select {
+      width: 100%;
+      border: 1px solid var(--c-divider);
+      border-radius: 2px;
+      padding: 12px 14px;
+      font-family: var(--f-body);
+      font-size: 14px;
+      color: var(--c-dark);
+      background: #fafaf8;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .form-field input:focus,
+    .form-field textarea:focus,
+    .form-field select:focus { border-color: var(--c-accent); background: #fff; }
+    .form-field textarea { resize: vertical; min-height: 120px; }
+
+    /* ── BLOG POST TAG ── */
+    .post-tag {
+      display: inline-block;
+      font-family: var(--f-mono);
+      font-size: 9px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 2px;
+      background: var(--c-accent);
+      color: #fff;
+      margin-left: 8px;
+    }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 64px 32px;
+      color: var(--c-muted);
+    }
+    .empty-state p {
+      font-family: var(--f-mono);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      background: var(--c-dark);
+      color: var(--c-off);
+      font-family: var(--f-mono);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 14px 20px;
+      border-radius: 2px;
+      border-left: 3px solid var(--c-accent);
+      transform: translateY(20px);
+      opacity: 0;
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    .stat-pill {
+      background: #fff;
+      border: 1px solid var(--c-divider);
+      border-radius: 4px;
+      padding: 16px 24px;
+      text-align: center;
+      min-width: 120px;
+    }
+    .stat-pill-num {
+      font-family: var(--f-display);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--c-accent);
+    }
+    .stat-pill-label {
+      font-family: var(--f-mono);
+      font-size: 9px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--c-muted);
+      margin-top: 4px;
+    }
+
+    /* ── LOGIN LOGO ── */
+    .login-logo { height: 48px; margin-bottom: 20px; }
+
+    /* ── ADMIN NAV LOGO ── */
+    .admin-nav-logo { height: 28px; }
+    .admin-nav-brand { display: flex; align-items: center; gap: 10px; margin-right: 40px; }
+    .admin-nav-brand > span {
+      font-family: var(--f-mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--c-accent);
+    }
+
+    /* ── PHOTO UPLOAD ── */
+    .photo-upload-wrap { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+    .photo-upload-btn { cursor: pointer; }
+    .photo-upload-name {
+      font-family: var(--f-mono);
+      font-size: 11px;
+      color: var(--c-muted);
+      letter-spacing: .04em;
+    }
+    .photo-preview { margin-top: 12px; position: relative; display: inline-block; }
+    .photo-preview img { max-width: 100%; max-height: 180px; border-radius: 4px; display: block; }
+    .photo-preview-hidden { display: none; }
+    .photo-remove-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: rgba(26,10,13,.7);
+      color: #fff;
+      border: none;
+      border-radius: 2px;
+      font-family: var(--f-mono);
+      font-size: 10px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    .photo-remove-btn:hover { background: #c0392b; }
+    .file-input-hidden { display: none; }
+
+    /* ── TEAM ROLE TAG ── */
+    .role-badge {
+      font-family: var(--f-mono);
+      font-size: 9px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--c-muted);
+      border: 1px solid var(--c-divider);
+      padding: 2px 8px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     LOGIN SCREEN
+══════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png"
+         alt="Ferraz Andrade Advogados" class="login-logo" />
+    <p>Área Administrativa</p>
+    <input type="password" id="login-pwd" placeholder="Senha de acesso" />
+    <button onclick="doLogin()">Entrar →</button>
+    <p class="login-error" id="login-error">Senha incorreta. Tente novamente.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     ADMIN SHELL
+══════════════════════════════════════ -->
+<div id="admin-shell">
+
+  <nav class="admin-nav">
+    <div class="admin-nav-brand">
+      <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png"
+           alt="Ferraz Andrade Advogados" class="admin-nav-logo" />
+      <span>Admin</span>
+    </div>
+    <div class="admin-tabs">
+      <div class="admin-tab active" onclick="switchTab('blog')">Blog</div>
+      <div class="admin-tab" onclick="switchTab('equipe')">Equipe</div>
+      <div class="admin-tab" onclick="switchTab('newsletter')">Newsletter</div>
+      <div class="admin-tab" onclick="switchTab('contato')">Contato</div>
+      <div class="admin-tab" onclick="switchTab('config')">Configurações</div>
+    </div>
+    <button class="admin-logout" onclick="doLogout()">Sair</button>
+  </nav>
+
+  <div class="admin-body">
+
+    <!-- ── BLOG ── -->
+    <section id="tab-blog" class="admin-section active">
+      <div class="section-header">
+        <h2>Posts do Blog</h2>
+        <button class="btn btn-primary" onclick="openPostModal()">+ Novo post</button>
+      </div>
+      <div class="stats-bar" id="blog-stats"></div>
+      <div class="item-list" id="blog-list"></div>
+    </section>
+
+    <!-- ── EQUIPE ── -->
+    <section id="tab-equipe" class="admin-section">
+      <div class="section-header">
+        <h2>Nossa Equipe</h2>
+        <button class="btn btn-primary" onclick="openMemberModal()">+ Novo membro</button>
+      </div>
+      <div class="stats-bar" id="equipe-stats"></div>
+      <div class="item-list" id="equipe-list"></div>
+    </section>
+
+    <!-- ── NEWSLETTER ── -->
+    <section id="tab-newsletter" class="admin-section">
+      <div class="section-header">
+        <h2>Newsletter — Inscrições</h2>
+        <button class="btn btn-ghost" onclick="exportNewsletter()">Exportar CSV</button>
+      </div>
+      <div class="stats-bar" id="newsletter-stats"></div>
+      <div class="item-list" id="newsletter-list"></div>
+    </section>
+
+    <!-- ── CONTATO ── -->
+    <section id="tab-contato" class="admin-section">
+      <div class="section-header">
+        <h2>Solicitações de Contato</h2>
+        <button class="btn btn-ghost" onclick="exportContato()">Exportar CSV</button>
+      </div>
+      <div class="stats-bar" id="contato-stats"></div>
+      <div class="item-list" id="contato-list"></div>
+    </section>
+
+    <!-- ── CONFIG ── -->
+    <section id="tab-config" class="admin-section">
+      <div class="section-header">
+        <h2>Configurações do Site</h2>
+        <button class="btn btn-primary" onclick="saveConfig()">Salvar</button>
+      </div>
+      <div style="background:#fff; border:1px solid var(--c-divider); border-radius:4px; padding:28px; max-width:560px;">
+        <div class="form-field">
+          <label>Telefone</label>
+          <input type="text" id="cfg-tel" placeholder="+55 11 2936-0076" />
+        </div>
+        <div class="form-field">
+          <label>WhatsApp</label>
+          <input type="text" id="cfg-wa" placeholder="+55 11 91001-1551" />
+        </div>
+        <div class="form-field">
+          <label>E-mail</label>
+          <input type="email" id="cfg-email" placeholder="ferrazandrade@falaw.com.br" />
+        </div>
+        <div class="form-field">
+          <label>Endereço</label>
+          <input type="text" id="cfg-address" placeholder="Av. Francisco Matarazzo, 1752 — Salas 414 e 415" />
+        </div>
+        <div class="form-field">
+          <label>Instagram (handle)</label>
+          <input type="text" id="cfg-instagram" placeholder="@ferrazandrade_adv" />
+        </div>
+        <div class="form-field">
+          <label>LinkedIn (URL)</label>
+          <input type="text" id="cfg-linkedin" placeholder="https://www.linkedin.com/company/..." />
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MODAL — POST
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="post-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="post-modal-title">Novo Post</h3>
+      <button class="modal-close" onclick="closePostModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="post-id" />
+      <div class="form-field">
+        <label>Título</label>
+        <input type="text" id="post-title" placeholder="Título do artigo" />
+      </div>
+      <div class="form-field">
+        <label>Categoria</label>
+        <select id="post-category">
+          <option value="Direito Trabalhista">Direito Trabalhista</option>
+          <option value="Startups & Tecnologia">Startups & Tecnologia</option>
+          <option value="Compliance">Compliance</option>
+          <option value="Inovação Jurídica">Inovação Jurídica</option>
+          <option value="Relações Sindicais">Relações Sindicais</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Resumo</label>
+        <textarea id="post-excerpt" rows="3" placeholder="Breve descrição do artigo (aparece na listagem)"></textarea>
+      </div>
+      <div class="form-field">
+        <label>Conteúdo</label>
+        <textarea id="post-content" rows="8" placeholder="Texto completo do artigo"></textarea>
+      </div>
+      <div class="form-field">
+        <label>Foto de capa</label>
+        <div class="photo-upload-wrap">
+          <label for="post-photo-file" class="btn btn-ghost photo-upload-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Selecionar imagem
+          </label>
+          <input type="file" id="post-photo-file" accept="image/*" class="file-input-hidden" />
+          <span class="photo-upload-name" id="photo-upload-name">Nenhuma imagem</span>
+        </div>
+        <div id="post-photo-preview" class="photo-preview photo-preview-hidden">
+          <img id="post-photo-preview-img" src="" alt="Pré-visualização" />
+          <button type="button" class="photo-remove-btn" onclick="removePostPhoto()">✕ Remover</button>
+        </div>
+        <input type="hidden" id="post-photo" />
+      </div>
+      <div class="form-field">
+        <label>Data de publicação</label>
+        <input type="date" id="post-date" />
+      </div>
+      <div class="form-field">
+        <label>Status</label>
+        <select id="post-status">
+          <option value="published">Publicado</option>
+          <option value="draft">Rascunho</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closePostModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePost()">Salvar post</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MODAL — MEMBRO
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="member-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="member-modal-title">Novo Membro</h3>
+      <button class="modal-close" onclick="closeMemberModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="member-id" />
+      <div class="form-field">
+        <label>Nome completo</label>
+        <input type="text" id="member-name" placeholder="Nome Sobrenome" />
+      </div>
+      <div class="form-field">
+        <label>E-mail</label>
+        <input type="email" id="member-email" placeholder="nome@falaw.com.br" />
+      </div>
+      <div class="form-field">
+        <label>Cargo / Papel</label>
+        <input type="text" id="member-role" placeholder="Advogado(a)" />
+      </div>
+      <div class="form-field">
+        <label>Biografia</label>
+        <textarea id="member-bio" rows="6" placeholder="Formação, especializações e áreas de atuação"></textarea>
+      </div>
+      <div class="form-field">
+        <label>Status</label>
+        <select id="member-status">
+          <option value="active">Ativo</option>
+          <option value="memoriam">In Memoriam</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeMemberModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveMember()">Salvar membro</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════
+   CONSTANTS
+══════════════════════════════════════ */
+const ADMIN_PASSWORD = 'falaw2026';
+const KEYS = { posts: 'fa_blog_posts', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions' };
+
+/* ══════════════════════════════════════
+   STORAGE HELPERS
+══════════════════════════════════════ */
+const load  = key => JSON.parse(localStorage.getItem(key) || 'null');
+const save  = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+const uid   = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+/* ══════════════════════════════════════
+   DEFAULT DATA (first run)
+══════════════════════════════════════ */
+function seedData() {
+  if (!load(KEYS.members)) {
+    save(KEYS.members, [
+      { id: uid(), name: 'Beatriz Domingues', role: 'Advogada', status: 'active', bio: 'Graduada em Direito e pós-graduanda em Direito do Trabalho pela PUC-RS. Atua nas frentes trabalhista, consultiva e empresarial, com experiência em contencioso estratégico e advocacia preventiva. Especialista em Compliance Trabalhista e investigações corporativas, com foco em mitigação de riscos e prevenção de passivos.' },
+      { id: uid(), name: 'Camilla Martinez', role: 'Advogada', status: 'active', bio: 'Graduada em Direito e pós-graduanda em Direito e Processo do Trabalho pela PUC-RS. Atua no contencioso trabalhista com experiência em acompanhamento processual, suporte à litigância e organização de rotinas jurídicas. Integra o Comitê de Inteligência Artificial do escritório.' },
+      { id: uid(), name: 'Fernando Trevisan Jr.', role: 'Advogado', status: 'active', bio: 'Graduado em Direito e pós-graduado em Prática Trabalhista Avançada pelo Damasio Educacional. Advogado Pleno com atuação voltada à defesa de reclamadas. Experiência consolidada em contencioso, consultivo e acompanhamento processual na esfera trabalhista.' },
+      { id: uid(), name: 'Indyara Brito', role: 'Advogada', status: 'active', bio: 'Graduada em Direito pelas Faculdades Metropolitanas Unidas (FMU) e pós-graduada em Direito Processual Civil pela Escola Paulista de Direito (EPD). Extensões em Direito Digital e Proteção de Dados pela PUC-SP e em Compliance Empresarial pela EPD. Atua com foco em conformidade regulatória, segurança da informação e riscos jurídicos no ambiente digital.' },
+      { id: uid(), name: 'Letícia Silva', role: 'Advogada Controller', status: 'active', bio: 'Formada em Direito pela Universidade Paulista (UNIP), pós-graduada em Direito Processual do Trabalho pela Universidade Anhembi Morumbi e pós-graduanda em Legal Operations pela PUC-SP. Atua como Controller Jurídica com especialização em gestão de operações jurídicas e indicadores de performance.' },
+      { id: uid(), name: 'Lilian Matsumoto', role: 'Advogada', status: 'active', bio: 'Graduada em Direito pela Universidade Presbiteriana Mackenzie e pós-graduada em Direito e Processo do Trabalho pela PUC-RS. Com mais de uma década de experiência na área trabalhista, combina sólida base acadêmica ao domínio técnico das normas e ritos processuais.' },
+      { id: uid(), name: 'Natany Valentim', role: 'Advogada', status: 'active', bio: 'Graduada em Direito pela UNICASTELO e pós-graduada em Direito e Processo do Trabalho pela Universidade Legale. Atua na defesa de reclamantes e reclamadas, com experiência em audiências, sustentações orais e gestão de prazos.' },
+      { id: uid(), name: 'Pollyanna Dias', role: 'Advogada', status: 'active', bio: 'Formada em Direito pela Universidade Cruzeiro do Sul com láurea acadêmica. Pós-graduada em Direito Empresarial e Tributário pela UniCidade e em Direito do Trabalho e Previdenciário pelo Mackenzie. Certificada em Labor 4.0. Fluente em inglês e francês.' },
+      { id: uid(), name: 'Samany Cutrim', role: 'Advogada', status: 'active', bio: 'Graduada em Direito pela UNICID e pós-graduada em Direito e Processo do Trabalho pelo Damasio Educacional. Graduanda em Inteligência Artificial pela FMU. Atua no contencioso e na controladoria do escritório.' },
+      { id: uid(), name: 'Zanilda Monteiro', role: 'Advogada', status: 'active', bio: 'Bacharela em Direito pela Universidade Paulista, pós-graduanda em Direito e Processo do Trabalho e em Legal Ops & Controladoria Jurídica. Responsável pela Controladoria Jurídica do escritório, com atuação em gestão de prazos e monitoramento de indicadores.' },
+      { id: uid(), name: 'Stefhane Félix de Almeida', role: 'In Memoriam', status: 'memoriam', bio: 'Graduada em Direito pela Universidade Paulista (2014) e especialista em Direito e Processo do Trabalho pela Escola Superior de Advocacia Paulista (2018). Advogada do Ferraz Andrade Advogados, cuja dedicação e contribuição permanecem vivas no espírito do escritório.' },
+    ]);
+  }
+  if (!load(KEYS.posts)) save(KEYS.posts, []);
+  if (!load(KEYS.newsletter)) save(KEYS.newsletter, []);
+  if (!load(KEYS.contato)) save(KEYS.contato, []);
+  if (!load(KEYS.config)) {
+    save(KEYS.config, {
+      tel: '+55 11 2936-0076',
+      wa: '+55 11 91001-1551',
+      email: 'ferrazandrade@falaw.com.br',
+      address: 'Av. Francisco Matarazzo, 1752 — Salas 414 e 415, Água Branca, São Paulo/SP',
+      instagram: '@ferrazandrade_adv',
+      linkedin: 'https://www.linkedin.com/company/ferraz-andrade-adogados',
+    });
+  }
+}
+
+/* ══════════════════════════════════════
+   AUTH
+══════════════════════════════════════ */
+function doLogin() {
+  const pwd = document.getElementById('login-pwd').value;
+  if (pwd === ADMIN_PASSWORD) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-shell').style.display = 'block';
+    seedData();
+    renderBlog();
+    renderEquipe();
+    renderNewsletter();
+    renderContato();
+    loadConfig();
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
+
+document.getElementById('login-pwd').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+function doLogout() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('admin-shell').style.display = 'none';
+  document.getElementById('login-pwd').value = '';
+}
+
+/* ══════════════════════════════════════
+   TABS
+══════════════════════════════════════ */
+function switchTab(name) {
+  document.querySelectorAll('.admin-tab').forEach((t, i) => {
+    t.classList.toggle('active', ['blog','equipe','newsletter','contato','config'][i] === name);
+  });
+  document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+/* ══════════════════════════════════════
+   TOAST
+══════════════════════════════════════ */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ══════════════════════════════════════
+   BLOG
+══════════════════════════════════════ */
+function renderBlog() {
+  const posts = load(KEYS.posts) || [];
+  const stats = document.getElementById('blog-stats');
+  const list  = document.getElementById('blog-list');
+
+  const published = posts.filter(p => p.status === 'published').length;
+  const drafts    = posts.filter(p => p.status === 'draft').length;
+
+  stats.innerHTML = `
+    <div class="stat-pill"><div class="stat-pill-num">${posts.length}</div><div class="stat-pill-label">Total</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${published}</div><div class="stat-pill-label">Publicados</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${drafts}</div><div class="stat-pill-label">Rascunhos</div></div>
+  `;
+
+  if (!posts.length) {
+    list.innerHTML = `<div class="empty-state"><p>Nenhum post ainda.</p><p>Clique em "+ Novo post" para começar.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = posts.map(p => `
+    <div class="item-card">
+      ${p.photo ? `<img src="${escHtml(p.photo)}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:4px;flex-shrink:0;" />` : ''}
+      <div class="item-card-body">
+        <div class="item-card-title">
+          ${escHtml(p.title)}
+          ${p.status === 'draft' ? '<span class="post-tag" style="background:#888">Rascunho</span>' : '<span class="post-tag">Publicado</span>'}
+        </div>
+        <div class="item-card-meta">${escHtml(p.category)} · ${formatDate(p.date)}</div>
+        <div class="item-card-preview">${escHtml(p.excerpt)}</div>
+      </div>
+      <div class="item-card-actions">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="editPost('${p.id}')">Editar</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="deletePost('${p.id}')">Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+let editingPostId = null;
+
+function openPostModal(id) {
+  editingPostId = id || null;
+  const modal = document.getElementById('post-modal');
+  document.getElementById('post-modal-title').textContent = id ? 'Editar Post' : 'Novo Post';
+
+  if (id) {
+    const post = (load(KEYS.posts) || []).find(p => p.id === id);
+    if (post) {
+      document.getElementById('post-id').value       = post.id;
+      document.getElementById('post-title').value    = post.title;
+      document.getElementById('post-category').value = post.category;
+      document.getElementById('post-excerpt').value  = post.excerpt;
+      document.getElementById('post-content').value  = post.content;
+      setPostPhotoPreview(post.photo || '');
+      document.getElementById('post-date').value     = post.date;
+      document.getElementById('post-status').value   = post.status;
+    }
+  } else {
+    document.getElementById('post-id').value       = '';
+    document.getElementById('post-title').value    = '';
+    document.getElementById('post-excerpt').value  = '';
+    document.getElementById('post-content').value  = '';
+    removePostPhoto();
+    document.getElementById('post-date').value     = new Date().toISOString().slice(0,10);
+    document.getElementById('post-status').value   = 'draft';
+  }
+  modal.classList.add('open');
+}
+
+function closePostModal() {
+  document.getElementById('post-modal').classList.remove('open');
+}
+
+function editPost(id) { openPostModal(id); }
+
+function savePost() {
+  const title    = document.getElementById('post-title').value.trim();
+  const category = document.getElementById('post-category').value;
+  const excerpt  = document.getElementById('post-excerpt').value.trim();
+  const content  = document.getElementById('post-content').value.trim();
+  const photo    = document.getElementById('post-photo').value.trim();
+  const date     = document.getElementById('post-date').value;
+  const status   = document.getElementById('post-status').value;
+
+  if (!title) { alert('Por favor, preencha o título.'); return; }
+
+  const posts = load(KEYS.posts) || [];
+  const id    = editingPostId;
+
+  if (id) {
+    const idx = posts.findIndex(p => p.id === id);
+    if (idx !== -1) posts[idx] = { ...posts[idx], title, category, excerpt, content, photo, date, status };
+  } else {
+    posts.unshift({ id: uid(), title, category, excerpt, content, photo, date, status });
+  }
+
+  save(KEYS.posts, posts);
+  closePostModal();
+  renderBlog();
+  showToast(id ? 'Post atualizado.' : 'Post criado.');
+}
+
+function deletePost(id) {
+  if (!confirm('Excluir este post? Esta ação não pode ser desfeita.')) return;
+  const posts = (load(KEYS.posts) || []).filter(p => p.id !== id);
+  save(KEYS.posts, posts);
+  renderBlog();
+  showToast('Post excluído.');
+}
+
+/* ══════════════════════════════════════
+   EQUIPE
+══════════════════════════════════════ */
+function renderEquipe() {
+  const members = load(KEYS.members) || [];
+  const stats   = document.getElementById('equipe-stats');
+  const list    = document.getElementById('equipe-list');
+
+  const active   = members.filter(m => m.status === 'active').length;
+  const memoriam = members.filter(m => m.status === 'memoriam').length;
+
+  stats.innerHTML = `
+    <div class="stat-pill"><div class="stat-pill-num">${members.length}</div><div class="stat-pill-label">Total</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${active}</div><div class="stat-pill-label">Ativos</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${memoriam}</div><div class="stat-pill-label">In Memoriam</div></div>
+  `;
+
+  if (!members.length) {
+    list.innerHTML = `<div class="empty-state"><p>Nenhum membro cadastrado.</p></div>`;
+    return;
+  }
+
+  const sorted = [...members].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+  list.innerHTML = sorted.map(m => `
+    <div class="item-card">
+      <div class="item-card-body">
+        <div class="item-card-title">
+          ${escHtml(m.name)}
+          <span class="role-badge">${escHtml(m.role)}</span>
+          ${m.status === 'memoriam' ? '<span class="post-tag" style="background:#555">In Memoriam</span>' : ''}
+        </div>
+        ${m.email ? `<div class="item-card-meta">${escHtml(m.email)}</div>` : ''}
+        <div class="item-card-preview">${escHtml(m.bio)}</div>
+      </div>
+      <div class="item-card-actions">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="editMember('${m.id}')">Editar</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteMember('${m.id}')">Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+let editingMemberId = null;
+
+function openMemberModal(id) {
+  editingMemberId = id || null;
+  document.getElementById('member-modal-title').textContent = id ? 'Editar Membro' : 'Novo Membro';
+
+  if (id) {
+    const m = (load(KEYS.members) || []).find(m => m.id === id);
+    if (m) {
+      document.getElementById('member-id').value     = m.id;
+      document.getElementById('member-name').value   = m.name;
+      document.getElementById('member-email').value  = m.email || '';
+      document.getElementById('member-role').value   = m.role;
+      document.getElementById('member-bio').value    = m.bio;
+      document.getElementById('member-status').value = m.status;
+    }
+  } else {
+    document.getElementById('member-id').value     = '';
+    document.getElementById('member-name').value   = '';
+    document.getElementById('member-email').value  = '';
+    document.getElementById('member-role').value   = 'Advogada';
+    document.getElementById('member-bio').value    = '';
+    document.getElementById('member-status').value = 'active';
+  }
+  document.getElementById('member-modal').classList.add('open');
+}
+
+function closeMemberModal() {
+  document.getElementById('member-modal').classList.remove('open');
+}
+
+function editMember(id) { openMemberModal(id); }
+
+function saveMember() {
+  const name   = document.getElementById('member-name').value.trim();
+  const email  = document.getElementById('member-email').value.trim();
+  const role   = document.getElementById('member-role').value.trim();
+  const bio    = document.getElementById('member-bio').value.trim();
+  const status = document.getElementById('member-status').value;
+
+  if (!name) { alert('Por favor, preencha o nome.'); return; }
+
+  const members = load(KEYS.members) || [];
+  const id      = editingMemberId;
+
+  if (id) {
+    const idx = members.findIndex(m => m.id === id);
+    if (idx !== -1) members[idx] = { ...members[idx], name, email, role, bio, status };
+  } else {
+    members.push({ id: uid(), name, email, role, bio, status });
+  }
+
+  members.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  save(KEYS.members, members);
+  closeMemberModal();
+  renderEquipe();
+  showToast(id ? 'Membro atualizado.' : 'Membro adicionado.');
+}
+
+function deleteMember(id) {
+  if (!confirm('Excluir este membro? Esta ação não pode ser desfeita.')) return;
+  const members = (load(KEYS.members) || []).filter(m => m.id !== id);
+  save(KEYS.members, members);
+  renderEquipe();
+  showToast('Membro excluído.');
+}
+
+/* ══════════════════════════════════════
+   NEWSLETTER
+══════════════════════════════════════ */
+function renderNewsletter() {
+  const emails = load(KEYS.newsletter) || [];
+  const stats  = document.getElementById('newsletter-stats');
+  const list   = document.getElementById('newsletter-list');
+
+  stats.innerHTML = `
+    <div class="stat-pill"><div class="stat-pill-num">${emails.length}</div><div class="stat-pill-label">Inscrições</div></div>
+  `;
+
+  if (!emails.length) {
+    list.innerHTML = `<div class="empty-state"><p>Nenhuma inscrição de newsletter ainda.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = emails.map(e => `
+    <div class="item-card">
+      <div class="item-card-body">
+        <div class="item-card-title">${escHtml(e.email)}</div>
+        <div class="item-card-meta">${formatDate(e.date)}</div>
+      </div>
+      <div class="item-card-actions">
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteNewsletter('${e.id}')">Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function deleteNewsletter(id) {
+  if (!confirm('Excluir este e-mail?')) return;
+  save(KEYS.newsletter, (load(KEYS.newsletter) || []).filter(e => e.id !== id));
+  renderNewsletter();
+  showToast('E-mail excluído.');
+}
+
+function exportNewsletter() {
+  const emails = load(KEYS.newsletter) || [];
+  if (!emails.length) { alert('Nenhuma inscrição para exportar.'); return; }
+  const csv = 'E-mail,Data\n' + emails.map(e => `"${e.email}","${e.date}"`).join('\n');
+  downloadCSV(csv, 'newsletter.csv');
+}
+
+/* ══════════════════════════════════════
+   CONTATO
+══════════════════════════════════════ */
+function renderContato() {
+  const items = load(KEYS.contato) || [];
+  const stats = document.getElementById('contato-stats');
+  const list  = document.getElementById('contato-list');
+
+  stats.innerHTML = `
+    <div class="stat-pill"><div class="stat-pill-num">${items.length}</div><div class="stat-pill-label">Solicitações</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${items.filter(i => !i.read).length}</div><div class="stat-pill-label">Não lidas</div></div>
+  `;
+
+  if (!items.length) {
+    list.innerHTML = `<div class="empty-state"><p>Nenhuma solicitação de contato ainda.</p></div>`;
+    return;
+  }
+
+  const sorted = [...items].sort((a, b) => b.date.localeCompare(a.date));
+  list.innerHTML = sorted.map(c => `
+    <div class="item-card" style="${!c.read ? 'border-left:3px solid var(--c-accent)' : ''}">
+      <div class="item-card-body">
+        <div class="item-card-title">
+          ${escHtml(c.nome)}
+          ${!c.read ? '<span class="post-tag">Novo</span>' : ''}
+        </div>
+        <div class="item-card-meta">${escHtml(c.email)}${c.telefone ? ' · ' + escHtml(c.telefone) : ''}${c.empresa ? ' · ' + escHtml(c.empresa) : ''} · ${formatDate(c.date)}</div>
+        <div class="item-card-preview">${escHtml(c.mensagem)}</div>
+      </div>
+      <div class="item-card-actions">
+        ${!c.read ? `<button type="button" class="btn btn-ghost btn-sm" onclick="markRead('${c.id}')">Marcar lida</button>` : ''}
+        <a href="mailto:${escHtml(c.email)}?subject=Re: Contato Ferraz Andrade" class="btn btn-ghost btn-sm">Responder</a>
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteContato('${c.id}')">Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function markRead(id) {
+  const items = load(KEYS.contato) || [];
+  const idx = items.findIndex(c => c.id === id);
+  if (idx !== -1) { items[idx].read = true; save(KEYS.contato, items); renderContato(); }
+}
+
+function deleteContato(id) {
+  if (!confirm('Excluir esta solicitação?')) return;
+  save(KEYS.contato, (load(KEYS.contato) || []).filter(c => c.id !== id));
+  renderContato();
+  showToast('Solicitação excluída.');
+}
+
+function exportContato() {
+  const items = load(KEYS.contato) || [];
+  if (!items.length) { alert('Nenhuma solicitação para exportar.'); return; }
+  const csv = 'Nome,Empresa,E-mail,Telefone,Mensagem,Data\n' +
+    items.map(c => `"${c.nome}","${c.empresa||''}","${c.email}","${c.telefone||''}","${(c.mensagem||'').replace(/"/g,'""')}","${c.date}"`).join('\n');
+  downloadCSV(csv, 'contato.csv');
+}
+
+function downloadCSV(csv, filename) {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+/* ══════════════════════════════════════
+   CONFIG
+══════════════════════════════════════ */
+function loadConfig() {
+  const cfg = load(KEYS.config) || {};
+  document.getElementById('cfg-tel').value       = cfg.tel       || '';
+  document.getElementById('cfg-wa').value        = cfg.wa        || '';
+  document.getElementById('cfg-email').value     = cfg.email     || '';
+  document.getElementById('cfg-address').value   = cfg.address   || '';
+  document.getElementById('cfg-instagram').value = cfg.instagram || '';
+  document.getElementById('cfg-linkedin').value  = cfg.linkedin  || '';
+}
+
+function saveConfig() {
+  save(KEYS.config, {
+    tel:       document.getElementById('cfg-tel').value.trim(),
+    wa:        document.getElementById('cfg-wa').value.trim(),
+    email:     document.getElementById('cfg-email').value.trim(),
+    address:   document.getElementById('cfg-address').value.trim(),
+    instagram: document.getElementById('cfg-instagram').value.trim(),
+    linkedin:  document.getElementById('cfg-linkedin').value.trim(),
+  });
+  showToast('Configurações salvas.');
+}
+
+/* ══════════════════════════════════════
+   UTILS
+══════════════════════════════════════ */
+function escHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+/* ══════════════════════════════════════
+   PHOTO UPLOAD
+══════════════════════════════════════ */
+document.getElementById('post-photo-file').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  document.getElementById('photo-upload-name').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    document.getElementById('post-photo').value = dataUrl;
+    const preview = document.getElementById('post-photo-preview');
+    document.getElementById('post-photo-preview-img').src = dataUrl;
+    preview.classList.remove('photo-preview-hidden');
+  };
+  reader.readAsDataURL(file);
+});
+
+function removePostPhoto() {
+  document.getElementById('post-photo').value = '';
+  document.getElementById('post-photo-file').value = '';
+  document.getElementById('photo-upload-name').textContent = 'Nenhuma imagem';
+  const preview = document.getElementById('post-photo-preview');
+  preview.classList.add('photo-preview-hidden');
+  document.getElementById('post-photo-preview-img').src = '';
+}
+
+function setPostPhotoPreview(src) {
+  if (src) {
+    document.getElementById('post-photo').value = src;
+    document.getElementById('post-photo-preview-img').src = src;
+    document.getElementById('post-photo-preview').classList.remove('photo-preview-hidden');
+    document.getElementById('photo-upload-name').textContent = 'Imagem carregada';
+  } else {
+    removePostPhoto();
+  }
+}
+
+/* Close modals on overlay click */
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) {
+      closePostModal();
+      closeMemberModal();
+    }
+  });
+});
+</script>
+</body>
+</html>

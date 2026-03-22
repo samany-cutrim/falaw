@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Contato — Ferraz Andrade Advogados. Av. Francisco Matarazzo, 1752 — São Paulo/SP. +55 11 2936-0076." />
+  <title>Contato — Ferraz Andrade Advogados</title>
+
+  <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
+  <link rel="stylesheet" href="../falaw-design.css" />
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+  <script src="../falaw-main.js" defer></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var form = document.querySelector('.contato-form form');
+    if (!form) return;
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var submission = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+        nome:     form.querySelector('#nome').value.trim(),
+        empresa:  form.querySelector('#empresa').value.trim(),
+        email:    form.querySelector('#email').value.trim(),
+        telefone: form.querySelector('#telefone').value.trim(),
+        mensagem: form.querySelector('#mensagem').value.trim(),
+        date:     new Date().toISOString().slice(0,10),
+        read:     false
+      };
+      var items = JSON.parse(localStorage.getItem('fa_contact_submissions') || '[]');
+      items.unshift(submission);
+      localStorage.setItem('fa_contact_submissions', JSON.stringify(items));
+
+      // Open mailto to notify ferrazandrade@falaw.com.br
+      var body = 'Nome: ' + submission.nome +
+        '\nEmpresa: ' + submission.empresa +
+        '\nE-mail: ' + submission.email +
+        '\nTelefone: ' + submission.telefone +
+        '\n\nMensagem:\n' + submission.mensagem;
+      window.open('mailto:ferrazandrade@falaw.com.br?subject=Nova solicitação de contato – ' + encodeURIComponent(submission.nome) + '&body=' + encodeURIComponent(body));
+
+      var btn = form.querySelector('button[type="submit"]');
+      var orig = btn.innerHTML;
+      btn.innerHTML = 'Mensagem enviada ✓';
+      btn.disabled = true;
+      form.reset();
+      setTimeout(function() { btn.innerHTML = orig; btn.disabled = false; }, 4000);
+    });
+  });
+  </script>
+</head>
+<body>
+
+<div id="cursor" aria-hidden="true"></div>
+
+<!-- NAVBAR -->
+<nav class="nav" role="navigation" aria-label="Principal">
+  <div class="nav-progress" aria-hidden="true"></div>
+  <a href="../index.html" class="nav-logo" aria-label="Ferraz Andrade — Início">
+    <img src="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/Logo-FA-Advogados-v3-e1718109070110.png"
+         alt="Ferraz Andrade Advogados" />
+  </a>
+  <span class="nav-counter" aria-live="polite">01 — Contato</span>
+  <ul class="nav-links" role="list">
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="../founder.html">Founder</a></li>
+    <li><a href="../atuacoes/index.html">Atuações</a></li>
+    <li><a href="../equipe.html">Nossa Equipe</a></li>
+    <li><a href="index.html" class="active">Contato</a></li>
+    <li><a href="../blog.html">Blog</a></li>
+  </ul>
+  <button type="button" class="nav-burger" aria-label="Menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- DOT NAV -->
+<nav class="dot-nav" aria-label="Navegação por seções">
+  <div class="dot active" role="button" tabindex="0" aria-label="Contato"></div>
+</nav>
+
+<main>
+
+  <!-- 01 CONTATO -->
+  <section id="s-contato" class="section-stack s-contato contato-bg-section" data-label="Contato">
+    <img class="contato-bg-img" src="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2025/03/escritorio.jpeg" alt="" aria-hidden="true" />
+    <div class="contato-bg-overlay"></div>
+    <div class="section-inner contato-bg-content">
+      <div class="container">
+        <div class="contato-grid">
+
+          <div class="contato-info">
+            <span class="label reveal" style="color:rgba(247,245,242,0.4)">Fale Conosco</span>
+            <h1 class="reveal" style="color:var(--c-light-text)">Vamos<br/>Conversar!</h1>
+            <p class="reveal" style="color:rgba(247,245,242,0.70); margin-top:20px; font-size:16px; line-height:1.8; max-width:400px">
+              Localizado no coração de São Paulo, nosso escritório está preparado
+              para recebê-lo com toda a estrutura necessária para uma assessoria
+              jurídica de alta performance. Sediados em São Paulo, atuamos em
+              todo o Brasil por intermédio de acordos operacionais com parceiros
+              credenciados.
+            </p>
+
+            <div class="contato-details">
+              <div>
+                <span class="detail-label reveal">Endereço</span>
+                <div class="detail-val reveal">
+                  Av. Francisco Matarazzo, 1752<br/>
+                  Salas 414 e 415 · Água Branca<br/>
+                  São Paulo / SP · CEP 05001-200
+                </div>
+                <a href="https://maps.google.com/?q=Av.+Francisco+Matarazzo+1752+São+Paulo" target="_blank" rel="noopener" class="contato-map-btn reveal">
+                  Ver no mapa <span class="arr">→</span>
+                </a>
+              </div>
+              <div>
+                <span class="detail-label reveal">Telefone</span>
+                <div class="detail-val reveal">
+                  <a href="tel:+551129360076">+55 11 2936-0076</a>
+                </div>
+              </div>
+              <div>
+                <span class="detail-label reveal">WhatsApp</span>
+                <div class="detail-val reveal">
+                  <a href="https://wa.me/5511910011551">+55 11 91001-1551</a>
+                </div>
+              </div>
+              <div>
+                <span class="detail-label reveal">E-mail</span>
+                <div class="detail-val reveal">
+                  <a href="mailto:ferrazandrade@falaw.com.br">ferrazandrade@falaw.com.br</a>
+                </div>
+              </div>
+              <div>
+                <span class="detail-label reveal">Horário de Atendimento</span>
+                <div class="detail-val reveal">Segunda a Sexta · 09h às 18h</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="contato-form contato-form-ice">
+            <form action="#" method="post" novalidate>
+              <div class="form-group">
+                <input type="text" id="nome" name="nome" required placeholder=" " autocomplete="name" />
+                <label for="nome">Nome completo</label>
+              </div>
+              <div class="form-group">
+                <input type="text" id="empresa" name="empresa" placeholder=" " />
+                <label for="empresa">Empresa</label>
+              </div>
+              <div class="form-group">
+                <input type="email" id="email" name="email" required placeholder=" " autocomplete="email" />
+                <label for="email">E-mail</label>
+              </div>
+              <div class="form-group">
+                <input type="tel" id="telefone" name="telefone" placeholder=" " autocomplete="tel" />
+                <label for="telefone">Telefone / WhatsApp</label>
+              </div>
+              <div class="form-group">
+                <textarea id="mensagem" name="mensagem" rows="4" placeholder=" "></textarea>
+                <label for="mensagem">Como podemos ajudar?</label>
+              </div>
+              <button type="submit" class="form-submit form-submit--rounded">
+                Enviar mensagem <span class="arr">→</span>
+              </button>
+            </form>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/Logo-FA-Advogados-v3-e1718109070110.png"
+           alt="Ferraz Andrade Advogados" class="footer-logo" />
+      <address class="footer-address">
+        Av. Francisco Matarazzo, 1752 · Salas&nbsp;414&nbsp;e&nbsp;415<br/>
+        Água Branca · São Paulo / SP · CEP&nbsp;05001-200
+      </address>
+    </div>
+    <ul class="footer-links" role="list">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../founder.html">Founder</a></li>
+      <li><a href="../atuacoes/index.html">Atuações</a></li>
+      <li><a href="../equipe.html">Nossa Equipe</a></li>
+      <li><a href="index.html">Contato</a></li>
+      <li><a href="../blog.html">Blog</a></li>
+    </ul>
+    <div class="footer-social">
+      <a href="https://www.instagram.com/ferrazandrade_adv" target="_blank" rel="noopener" aria-label="Instagram">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      </a>
+      <a href="https://www.linkedin.com/company/ferraz-andrade-adogados" target="_blank" rel="noopener" aria-label="LinkedIn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+      </a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="footer-copy">© 2026 · Ferraz Andrade Advogados · Todos os direitos reservados</span>
+  </div>
+</footer>
+
+</body>
+</html>

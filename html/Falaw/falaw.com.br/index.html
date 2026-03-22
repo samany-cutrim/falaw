@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Ferraz Andrade Advogados — Mais do que um escritório de advocacia, somos parceiros de negócio. Especialistas em Direito Trabalhista para startups e tecnologia." />
+  <title>Home — Ferraz Andrade Advogados</title>
+  <link rel="icon" type="image/png" href="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
+  <link rel="stylesheet" href="falaw-design.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+  <script src="falaw-main.js" defer></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var form = document.querySelector('.newsletter-form');
+    if (!form) return;
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var emailVal = document.getElementById('newsletter-email').value.trim();
+      if (!emailVal) return;
+      var list = JSON.parse(localStorage.getItem('fa_newsletter_emails') || '[]');
+      if (list.some(function(x) { return x.email === emailVal; })) {
+        var btn = form.querySelector('button[type="submit"]');
+        var orig = btn.innerHTML;
+        btn.innerHTML = 'Já inscrito ✓';
+        setTimeout(function() { btn.innerHTML = orig; }, 3000);
+        return;
+      }
+      list.push({ id: Date.now().toString(36), email: emailVal, date: new Date().toISOString().slice(0,10) });
+      localStorage.setItem('fa_newsletter_emails', JSON.stringify(list));
+      var btn = form.querySelector('button[type="submit"]');
+      var orig = btn.innerHTML;
+      btn.innerHTML = 'Inscrito ✓';
+      btn.disabled = true;
+      form.reset();
+      setTimeout(function() { btn.innerHTML = orig; btn.disabled = false; }, 4000);
+    });
+  });
+  </script>
+</head>
+<body>
+
+<div id="cursor" aria-hidden="true"></div>
+
+<nav class="nav" role="navigation" aria-label="Principal">
+  <div class="nav-progress" aria-hidden="true"></div>
+  <a href="index.html" class="nav-logo" aria-label="Ferraz Andrade — Home">
+    <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/Logo-FA-Advogados-v3-e1718109070110.png" alt="Ferraz Andrade Advogados" />
+  </a>
+  <span class="nav-counter" aria-live="polite">01 — Home</span>
+  <ul class="nav-links" role="list">
+    <li><a href="index.html" class="active">Home</a></li>
+    <li><a href="founder.html">Founder</a></li>
+    <li><a href="atuacoes/index.html">Atuações</a></li>
+    <li><a href="equipe.html">Nossa Equipe</a></li>
+    <li><a href="contato/index.html">Contato</a></li>
+    <li><a href="blog.html">Blog</a></li>
+  </ul>
+  <button type="button" class="nav-burger" aria-label="Menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<nav class="dot-nav" aria-label="Navegação por seções">
+  <div class="dot active" role="button" tabindex="0" aria-label="Hero"></div>
+  <div class="dot" role="button" tabindex="0" aria-label="Como Atuamos"></div>
+  <div class="dot" role="button" tabindex="0" aria-label="Nossas Atuações"></div>
+  <div class="dot" role="button" tabindex="0" aria-label="Como Iremos Te Ajudar"></div>
+  <div class="dot" role="button" tabindex="0" aria-label="Newsletter"></div>
+</nav>
+
+<main>
+
+  <!-- 01 HERO -->
+  <section id="s-hero" class="section-stack s-hero" data-label="Home">
+    <div class="hero-split">
+
+      <!-- Lado esquerdo: foto -->
+      <div class="hero-photo">
+        <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2025/03/escritorio.jpeg"
+             alt="Equipe Ferraz Andrade Advogados" class="img-grayscale" />
+        <span class="hero-caption">Ferraz Andrade Advogados · São Paulo, Brasil</span>
+      </div>
+
+      <!-- Lado direito: copy -->
+      <div class="hero-copy">
+        <span class="label reveal">Direito Trabalhista · São Paulo, Brasil</span>
+        <h1 class="hero-title reveal">
+          Mais do que<br/>
+          um Escritório,<br/>
+          somos Parceiros<br/>
+          de Negócio
+        </h1>
+        <p class="hero-sub reveal">
+          Promova o crescimento sustentável de sua empresa
+          com assessoria trabalhista especializada em startups
+          e tecnologia.
+        </p>
+        <a href="contato/index.html" class="cta reveal">
+          Fale conosco <span class="arr">→</span>
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 02 COMO ATUAMOS -->
+  <section id="s-como" class="section-stack s-como" data-label="Como Atuamos">
+    <div class="como-shape" aria-hidden="true"></div>
+    <div class="section-inner">
+      <div class="container">
+        <div class="como-grid">
+          <div class="como-text">
+            <span class="label reveal">02 — Como Atuamos</span>
+            <h2 class="reveal">Como<br/>Atuamos!</h2>
+            <div class="hr reveal"></div>
+            <p class="reveal">
+              Apaixonados por ambientes disruptivos, desenvolvemos um trabalho
+              diferenciado de adequação de empresas à legislação trabalhista,
+              com construção de práticas que permitam o crescimento sustentável
+              de nossos clientes — dentro da visão de negócio, mas mitigando
+              problemas futuros de passivo trabalhista.
+            </p>
+            <a href="contato/index.html" class="cta reveal">
+              Solicite um contato <span class="arr">→</span>
+            </a>
+          </div>
+          <div class="como-visual reveal">
+            <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2025/03/equipe.jpg"
+                 alt="Equipe Ferraz Andrade Advogados" class="img-soft-blur" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 NOSSAS ATUAÇÕES -->
+  <section id="s-areas" class="section-stack s-areas" data-label="Nossas Atuações">
+    <div class="section-inner">
+      <div class="container">
+        <div class="areas-split reveal">
+          <div class="areas-menu">
+            <div class="areas-meta">
+              <span class="label">03 — Nossas Atuações</span>
+            </div>
+            <ul class="areas-list" role="list">
+              <li class="area-item active" data-idx="0" tabindex="0" role="button" aria-pressed="true">
+                <span class="area-item-n">01</span>
+                <span class="area-item-title">Startup &amp; Tecnologia</span>
+                <span class="area-item-arr">→</span>
+              </li>
+              <li class="area-item" data-idx="1" tabindex="0" role="button" aria-pressed="false">
+                <span class="area-item-n">02</span>
+                <span class="area-item-title">Preventivo / Consultivo</span>
+                <span class="area-item-arr">→</span>
+              </li>
+              <li class="area-item" data-idx="2" tabindex="0" role="button" aria-pressed="false">
+                <span class="area-item-n">03</span>
+                <span class="area-item-title">Contencioso Estratégico</span>
+                <span class="area-item-arr">→</span>
+              </li>
+              <li class="area-item" data-idx="3" tabindex="0" role="button" aria-pressed="false">
+                <span class="area-item-n">04</span>
+                <span class="area-item-title">Palestras &amp; Workshops</span>
+                <span class="area-item-arr">→</span>
+              </li>
+              <li class="area-item" data-idx="4" tabindex="0" role="button" aria-pressed="false">
+                <span class="area-item-n">05</span>
+                <span class="area-item-title">Consultoria Trabalhista</span>
+                <span class="area-item-arr">→</span>
+              </li>
+              <li class="area-item" data-idx="5" tabindex="0" role="button" aria-pressed="false">
+                <span class="area-item-n">06</span>
+                <span class="area-item-title">Relações Sindicais</span>
+                <span class="area-item-arr">→</span>
+              </li>
+            </ul>
+          </div>
+          <div class="areas-panel">
+            <div class="area-panel active" data-panel="0">
+              <span class="area-panel-n">01</span>
+              <h2 class="area-panel-title">Startup &amp;<br/>Tecnologia</h2>
+              <p class="area-panel-desc">Vasta experiência com startups e unicórnios brasileiros. Assessoramos nossos clientes antes mesmo do lançamento das plataformas ao público, construindo estruturas trabalhistas sólidas desde a origem do negócio.</p>
+              <a href="contato/index.html" class="cta">Fale conosco <span class="arr">→</span></a>
+            </div>
+            <div class="area-panel" data-panel="1">
+              <span class="area-panel-n">02</span>
+              <h2 class="area-panel-title">Preventivo /<br/>Consultivo</h2>
+              <p class="area-panel-desc">Suporte jurídico constante nas mais variadas matérias trabalhistas do cotidiano empresarial. Garantimos conformidade e segurança jurídica para que seus negócios cresçam sem passivos.</p>
+              <a href="contato/index.html" class="cta">Fale conosco <span class="arr">→</span></a>
+            </div>
+            <div class="area-panel" data-panel="2">
+              <span class="area-panel-n">03</span>
+              <h2 class="area-panel-title">Contencioso<br/>Estratégico</h2>
+              <p class="area-panel-desc">Atuação estratégica nas esferas contenciosa e administrativa — MPT e MTE — em qualquer instância ou Tribunal do país, com gestão inteligente do passivo e redução de custos processuais.</p>
+              <a href="contato/index.html" class="cta">Fale conosco <span class="arr">→</span></a>
+            </div>
+            <div class="area-panel" data-panel="3">
+              <span class="area-panel-n">04</span>
+              <h2 class="area-panel-title">Palestras &amp;<br/>Workshops</h2>
+              <p class="area-panel-desc">Treinamentos e workshops — inclusive em inglês e espanhol — que apresentam soluções que agregam valor ao cliente e atuam diretamente na sua cultura empresarial e na prevenção de conflitos.</p>
+              <a href="contato/index.html" class="cta">Fale conosco <span class="arr">→</span></a>
+            </div>
+            <div class="area-panel" data-panel="4">
+              <span class="area-panel-n">05</span>
+              <h2 class="area-panel-title">Consultoria<br/>Trabalhista</h2>
+              <p class="area-panel-desc">Suporte permanente nas mais diversas questões do cotidiano empresarial. Adequação contínua às mudanças na legislação, garantindo conformidade, segurança jurídica e tranquilidade operacional.</p>
+              <a href="contato/index.html" class="cta">Fale conosco <span class="arr">→</span></a>
+            </div>
+            <div class="area-panel" data-panel="5">
+              <span class="area-panel-n">06</span>
+              <h2 class="area-panel-title">Relações<br/>Sindicais</h2>
+              <p class="area-panel-desc">Gestão estratégica das relações sindicais, negociação coletiva e assessoria em acordos e convenções coletivas de trabalho. Proteção dos interesses empresariais com visão preventiva e dialógica.</p>
+              <a href="contato/index.html" class="cta">Fale conosco <span class="arr">→</span></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 COMO IREMOS TE AJUDAR -->
+  <section id="s-ajudar" class="section-stack s-stats" data-label="Como Iremos Te Ajudar">
+    <div class="section-inner">
+      <div class="container">
+        <span class="label reveal" style="color:rgba(247,245,242,0.4)">04 — Como Iremos Te Ajudar</span>
+        <h2 class="reveal" style="color:var(--c-light-text)">Como iremos<br/>te ajudar!</h2>
+        <div class="ajudar-grid reveal">
+          <div class="ajudar-card">
+            <span class="ajudar-n">01</span>
+            <h3 class="ajudar-title">Foco no Crescimento</h3>
+            <p class="ajudar-desc">Contamos com uma equipe motivada, comprometida e apaixonada por ambientes disruptivos.</p>
+          </div>
+          <div class="ajudar-card">
+            <span class="ajudar-n">02</span>
+            <h3 class="ajudar-title">Processos Otimizados</h3>
+            <p class="ajudar-desc">Temos uma vasta experiência na área de Direito do Trabalho com startups e empresas na área de tecnologia.</p>
+          </div>
+          <div class="ajudar-card">
+            <span class="ajudar-n">03</span>
+            <h3 class="ajudar-title">Experiência no Novo</h3>
+            <p class="ajudar-desc">Atuamos com os principais unicórnios brasileiros e acompanhamos toda evolução de tais empresas nas mais diferentes fases de crescimento.</p>
+          </div>
+        </div>
+        <div style="margin-top:48px" class="reveal">
+          <a href="contato/index.html" class="cta cta-light">
+            Solicite um contato <span class="arr">→</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 NEWSLETTER -->
+  <section id="s-newsletter" class="section-stack s-newsletter" data-label="Newsletter">
+    <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2025/03/sorriso.jpg"
+         alt="" aria-hidden="true" class="newsletter-bg" />
+    <div class="newsletter-overlay" aria-hidden="true"></div>
+    <div class="section-inner newsletter-inner">
+      <div class="container">
+        <div class="newsletter-wrap">
+          <span class="label reveal" style="color:rgba(247,245,242,0.4)">Newsletter</span>
+          <h2 class="reveal" style="color:var(--c-light-text)">Fique por<br/>dentro do<br/>Direito 4.0</h2>
+          <p class="reveal" style="color:rgba(247,245,242,0.55); margin:20px auto 0; max-width:440px; font-size:17px; line-height:1.7">
+            Receba artigos, análises e novidades sobre Direito Trabalhista,
+            startups e inovação jurídica diretamente no seu e-mail.
+          </p>
+          <form class="newsletter-form reveal" action="#" method="post" novalidate>
+            <div class="newsletter-input-wrap">
+              <input type="email" name="email" id="newsletter-email"
+                     placeholder="Seu melhor e-mail" required autocomplete="email" />
+              <button type="submit">Inscrever <span class="arr">→</span></button>
+            </div>
+            <p class="newsletter-disclaimer">Sem spam. Apenas conteúdo relevante. Cancele quando quiser.</p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/Logo-FA-Advogados-v3-e1718109070110.png"
+           alt="Ferraz Andrade Advogados" class="footer-logo" />
+      <address class="footer-address">
+        Av. Francisco Matarazzo, 1752 · Salas&nbsp;414&nbsp;e&nbsp;415<br/>
+        Água Branca · São Paulo / SP · CEP&nbsp;05001-200
+      </address>
+    </div>
+    <ul class="footer-links" role="list">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="founder.html">Founder</a></li>
+      <li><a href="atuacoes/index.html">Atuações</a></li>
+      <li><a href="equipe.html">Nossa Equipe</a></li>
+      <li><a href="contato/index.html">Contato</a></li>
+      <li><a href="blog.html">Blog</a></li>
+    </ul>
+    <div class="footer-social">
+      <a href="https://www.instagram.com/ferrazandrade_adv" target="_blank" rel="noopener" aria-label="Instagram">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      </a>
+      <a href="https://www.linkedin.com/company/ferraz-andrade-adogados" target="_blank" rel="noopener" aria-label="LinkedIn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+      </a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="footer-copy">© 2026 · Ferraz Andrade Advogados · Todos os direitos reservados</span>
+  </div>
+</footer>
+
+</body>
+</html>
