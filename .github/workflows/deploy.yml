@@ -29,12 +29,7 @@ jobs:
           mkdir -p deploy
           cp -r html/Falaw/falaw.com.br/. deploy/
           cp -r assets deploy/
-          # Converte todos os caminhos de assets para absolutos (/falaw/assets/)
-          # Funciona tanto para ../../../assets/ (raiz) quanto ../../../../assets/ (subpastas)
-          find deploy -name "*.html" -exec sed -i \
-            -e 's|\.\./\.\./\.\./\.\./assets/|/falaw/assets/|g' \
-            -e 's|\.\./\.\./\.\./assets/|/falaw/assets/|g' \
-            {} \;
+          find deploy -name "*.html" -exec sed -i 's|\.\./\.\./\.\./\.\./assets/|/falaw/assets/|g;s|\.\./\.\./\.\./assets/|/falaw/assets/|g' {} \;
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
