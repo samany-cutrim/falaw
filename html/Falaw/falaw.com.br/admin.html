@@ -471,6 +471,20 @@
     }
     .blog-sub-list { margin-bottom: 32px; }
 
+    /* ── EMAIL MODAL ── */
+    .modal-wide { max-width: 780px; }
+    .email-tabs { display: flex; gap: 0; margin-bottom: 16px; border: 1px solid var(--c-divider); border-radius: 2px; overflow: hidden; }
+    .email-tab-btn {
+      flex: 1; padding: 10px; background: #fafaf8; border: none; cursor: pointer;
+      font-family: var(--f-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--c-muted); transition: background .15s, color .15s;
+    }
+    .email-tab-btn.active { background: var(--c-accent); color: #fff; }
+    .email-subscribers-list { max-height: 120px; overflow-y: auto; border: 1px solid var(--c-divider); border-radius: 2px; padding: 10px 14px; background: #fafaf8; font-size: 13px; line-height: 1.8; }
+    .email-preview-frame { border: 1px solid var(--c-divider); border-radius: 2px; max-height: 380px; overflow-y: auto; }
+    .copy-success { color: #2e7d32; font-family: var(--f-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; margin-left: 8px; opacity: 0; transition: opacity .3s; }
+    .copy-success.show { opacity: 1; }
+
     /* ── TEAM ROLE TAG ── */
     .role-badge {
       font-family: var(--f-mono);
@@ -754,6 +768,52 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════
+     MODAL — E-MAIL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="email-modal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h3>Enviar artigo por e-mail</h3>
+      <button class="modal-close" onclick="closeEmailModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-field">
+        <label>Destinatários</label>
+        <div class="email-tabs">
+          <button type="button" class="email-tab-btn active" id="tab-newsletter-btn" onclick="setEmailMode('newsletter')">Inscritos na Newsletter</button>
+          <button type="button" class="email-tab-btn" id="tab-custom-btn" onclick="setEmailMode('custom')">E-mail específico</button>
+        </div>
+        <div id="email-mode-newsletter">
+          <div class="email-subscribers-list" id="email-subscribers-list"></div>
+        </div>
+        <div id="email-mode-custom" hidden>
+          <input type="email" id="email-custom-to" placeholder="email@exemplo.com" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-size:14px;outline:none;" />
+          <p style="font-size:11px;color:var(--c-muted);margin-top:6px;">Para múltiplos e-mails, separe por vírgula.</p>
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label>Assunto do e-mail</label>
+        <input type="text" id="email-subject" placeholder="Newsletter — Ferraz Andrade Advogados" />
+      </div>
+
+      <div class="form-field">
+        <label>Pré-visualização</label>
+        <div class="email-preview-frame" id="email-preview-frame"></div>
+      </div>
+
+    </div>
+    <div class="modal-footer" style="flex-wrap:wrap;gap:10px;">
+      <button type="button" class="btn btn-ghost" onclick="closeEmailModal()">Fechar</button>
+      <button type="button" class="btn btn-ghost" onclick="copyEmailHTML()">Copiar HTML</button>
+      <span class="copy-success" id="copy-success-msg">✓ Copiado!</span>
+      <button type="button" class="btn btn-primary" onclick="sendEmailViaMailto()">Abrir no e-mail →</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -952,6 +1012,7 @@ function renderBlog() {
       </div>
       <div class="item-card-actions">
         ${a.url ? `<a href="${escHtml(a.url)}" target="_blank" class="btn btn-ghost btn-sm">Ver</a>` : ''}
+        <button type="button" class="btn btn-ghost btn-sm" onclick="openEmailModal('${escHtml(a.id)}')">✉ Enviar</button>
         <button type="button" class="btn btn-ghost btn-sm" onclick="editPost('${escHtml(a.id)}')">Editar</button>
         <button type="button" class="btn btn-danger btn-sm" onclick="deletePost('${escHtml(a.id)}')">Excluir</button>
       </div>
@@ -1372,9 +1433,136 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
     if (e.target === overlay) {
       closePostModal();
       closeMemberModal();
+      closeEmailModal();
     }
   });
 });
+
+/* ══════════════════════════════════════
+   E-MAIL
+══════════════════════════════════════ */
+const SITE_BASE = 'https://samany-cutrim.github.io/falaw/';
+let emailArticle = null;
+let emailMode = 'newsletter';
+
+function openEmailModal(id) {
+  emailArticle = ALL_ARTICLES.find(a => a.id === id);
+  if (!emailArticle) return;
+
+  // Subject
+  document.getElementById('email-subject').value =
+    'Newsletter FA · ' + emailArticle.title;
+
+  // Subscribers list
+  const subs = load(KEYS.newsletter) || [];
+  const subList = document.getElementById('email-subscribers-list');
+  if (subs.length) {
+    subList.innerHTML = subs.map(s => `<span style="margin-right:12px;">${escHtml(s.email)}</span>`).join('');
+  } else {
+    subList.innerHTML = '<span style="color:var(--c-muted);font-size:12px;">Nenhum inscrito ainda.</span>';
+  }
+
+  setEmailMode('newsletter');
+  renderEmailPreview();
+  document.getElementById('email-modal').classList.add('open');
+}
+
+function closeEmailModal() {
+  document.getElementById('email-modal').classList.remove('open');
+}
+
+function setEmailMode(mode) {
+  emailMode = mode;
+  document.getElementById('email-mode-newsletter').hidden = mode !== 'newsletter';
+  document.getElementById('email-mode-custom').hidden     = mode !== 'custom';
+  document.getElementById('tab-newsletter-btn').classList.toggle('active', mode === 'newsletter');
+  document.getElementById('tab-custom-btn').classList.toggle('active', mode === 'custom');
+}
+
+function renderEmailPreview() {
+  const html = generateEmailHTML(emailArticle);
+  const frame = document.getElementById('email-preview-frame');
+  // Use srcdoc iframe for isolated preview
+  frame.innerHTML = '<iframe srcdoc="" style="width:100%;border:none;min-height:420px;" title="Pré-visualização do e-mail"></iframe>';
+  frame.querySelector('iframe').srcdoc = html;
+}
+
+function generateEmailHTML(a) {
+  const base = SITE_BASE;
+  const articleUrl = a.url ? (base + a.url) : base;
+  const preview = a.excerpt || '';
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escHtml(a.title)}</title></head>
+<body style="margin:0;padding:0;background:#f4f2ef;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+  <!-- Header -->
+  <tr><td style="background:#1A0A0D;padding:28px 40px;border-radius:4px 4px 0 0;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#7B1A2E;margin:0 0 6px 0;">FERRAZ ANDRADE ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.35);margin:0;">Newsletter · ${escHtml(a.category)}</p>
+  </td></tr>
+
+  <!-- Body -->
+  <tr><td style="background:#ffffff;padding:40px;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#7B1A2E;margin:0 0 16px 0;">${escHtml(a.category)}</p>
+    <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:700;color:#1A0A0D;margin:0 0 14px 0;line-height:1.25;">${escHtml(a.title)}</h1>
+    <p style="font-family:monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#7A7672;margin:0 0 28px 0;">${escHtml(a.date || '')}${a.date && a.readTime ? ' &nbsp;·&nbsp; ' : ''}${escHtml(a.readTime || '')}${a.readTime ? ' de leitura' : ''}</p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.75;color:#1A0A0D;margin:0 0 32px 0;">${escHtml(preview)}</p>
+    <table cellpadding="0" cellspacing="0"><tr>
+      <td style="background:#7B1A2E;border-radius:2px;">
+        <a href="${articleUrl}" style="display:inline-block;padding:14px 28px;font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#ffffff;text-decoration:none;">Ler artigo completo &rarr;</a>
+      </td>
+    </tr></table>
+  </td></tr>
+
+  <!-- Divider -->
+  <tr><td style="background:#ffffff;padding:0 40px;"><hr style="border:none;border-top:1px solid rgba(26,10,13,.08);margin:0;"></td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background:#f7f5f2;padding:24px 40px;border-radius:0 0 4px 4px;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FERRAZ ANDRADE ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;color:#7A7672;margin:0;">Av. Francisco Matarazzo, 1752 &middot; Salas 414 e 415 &middot; São Paulo / SP</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
+function copyEmailHTML() {
+  if (!emailArticle) return;
+  navigator.clipboard.writeText(generateEmailHTML(emailArticle)).then(() => {
+    const msg = document.getElementById('copy-success-msg');
+    msg.classList.add('show');
+    setTimeout(() => msg.classList.remove('show'), 2500);
+  });
+}
+
+function sendEmailViaMailto() {
+  if (!emailArticle) return;
+  const subject = encodeURIComponent(document.getElementById('email-subject').value.trim() || emailArticle.title);
+  const body    = encodeURIComponent(
+    emailArticle.title + '\n\n' +
+    (emailArticle.excerpt || '') + '\n\n' +
+    'Leia o artigo completo: ' + SITE_BASE + (emailArticle.url || '')
+  );
+
+  let to = '';
+  if (emailMode === 'newsletter') {
+    const subs = load(KEYS.newsletter) || [];
+    to = subs.map(s => encodeURIComponent(s.email)).join(',');
+  } else {
+    to = encodeURIComponent(document.getElementById('email-custom-to').value.trim());
+  }
+
+  window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+}
 </script>
 </body>
 </html>
