@@ -24,13 +24,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Prepare deployment
+        run: |
+          mkdir -p deploy
+          cp -r html/Falaw/falaw.com.br/. deploy/
+          cp -r assets deploy/
+          # Corrige caminhos nas páginas raiz (../../../assets/ → assets/)
+          find deploy -maxdepth 1 -name "*.html" -exec sed -i 's|\.\./\.\./\.\./assets/|assets/|g' {} \;
+          # Corrige caminhos nas subpastas (../../../../assets/ → ../assets/)
+          find deploy -mindepth 2 -name "*.html" -exec sed -i 's|\.\./\.\./\.\./\.\./assets/|../assets/|g' {} \;
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'html/Falaw/falaw.com.br'
+          path: 'deploy'
 
       - name: Deploy to GitHub Pages
         id: deployment
