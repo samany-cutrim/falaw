@@ -25,6 +25,7 @@ var FALAW_ARTICLES = [
     date: 'Março de 2026',
     readTime: '7 min',
     url: 'blog/berna-artigo.html',
-    published: true
+    published: true,
+    content: ''
   }
 ];

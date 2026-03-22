@@ -449,6 +449,16 @@
     .photo-remove-btn:hover { background: #c0392b; }
     .file-input-hidden { display: none; }
 
+    /* ── CONFIG GRID ── */
+    .cfg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; align-items: start; }
+    .cfg-card { background: #fff; border: 1px solid var(--c-divider); border-radius: 4px; padding: 28px; }
+    .cfg-card-title { font-family: var(--f-display); font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+    .cfg-card-desc { font-size: 13px; color: var(--c-muted); line-height: 1.6; margin-bottom: 20px; }
+    .cfg-hint { font-size: 11px; color: var(--c-muted); line-height: 1.6; margin-bottom: 20px; }
+    .cfg-hint strong { color: var(--c-dark); }
+    .cfg-link-btn { background: none; border: none; color: var(--c-accent); cursor: pointer; font-size: 13px; font-weight: 600; padding: 0; text-decoration: underline; }
+    .blog-no-token { background: #fff8e1; border: 1px solid #ffe082; border-radius: 4px; padding: 14px 18px; margin-bottom: 24px; font-size: 13px; }
+
     /* ── BLOG SUBSECTIONS ── */
     .blog-section-actions { display: flex; gap: 8px; }
     .blog-sub-label {
@@ -523,14 +533,10 @@
         </div>
       </div>
       <div class="stats-bar" id="blog-stats"></div>
-      <div id="blog-arquivo-section" hidden>
-        <p class="blog-sub-label">Arquivo (articles-data.js)</p>
-        <div class="item-list blog-sub-list" id="blog-arquivo-list"></div>
+      <div id="blog-no-token" class="blog-no-token" hidden>
+        ⚠ Configure o <strong>GitHub Token</strong> em <button type="button" class="cfg-link-btn" onclick="switchTab('config')">Configurações</button> para publicar artigos diretamente no site.
       </div>
-      <div id="blog-local-section" hidden>
-        <p class="blog-sub-label">Locais (localStorage)</p>
-        <div class="item-list blog-sub-list" id="blog-local-list"></div>
-      </div>
+      <div class="item-list" id="blog-list"></div>
       <div id="blog-empty" hidden>
         <div class="empty-state"><p>Nenhum artigo ainda.</p><p>Clique em "+ Novo artigo" para começar.</p></div>
       </div>
@@ -570,33 +576,66 @@
     <section id="tab-config" class="admin-section">
       <div class="section-header">
         <h2>Configurações do Site</h2>
-        <button class="btn btn-primary" onclick="saveConfig()">Salvar</button>
+        <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar</button>
       </div>
-      <div style="background:#fff; border:1px solid var(--c-divider); border-radius:4px; padding:28px; max-width:560px;">
-        <div class="form-field">
-          <label>Telefone</label>
-          <input type="text" id="cfg-tel" placeholder="+55 11 2936-0076" />
+
+      <div class="cfg-grid">
+
+        <!-- Contato -->
+        <div class="cfg-card">
+          <h3 class="cfg-card-title">Informações de Contato</h3>
+          <div class="form-field">
+            <label>Telefone</label>
+            <input type="text" id="cfg-tel" placeholder="+55 11 2936-0076" />
+          </div>
+          <div class="form-field">
+            <label>WhatsApp</label>
+            <input type="text" id="cfg-wa" placeholder="+55 11 91001-1551" />
+          </div>
+          <div class="form-field">
+            <label>E-mail</label>
+            <input type="email" id="cfg-email" placeholder="ferrazandrade@falaw.com.br" />
+          </div>
+          <div class="form-field">
+            <label>Endereço</label>
+            <input type="text" id="cfg-address" placeholder="Av. Francisco Matarazzo, 1752 — Salas 414 e 415" />
+          </div>
+          <div class="form-field">
+            <label>Instagram (handle)</label>
+            <input type="text" id="cfg-instagram" placeholder="@ferrazandrade_adv" />
+          </div>
+          <div class="form-field">
+            <label>LinkedIn (URL)</label>
+            <input type="text" id="cfg-linkedin" placeholder="https://www.linkedin.com/company/..." />
+          </div>
         </div>
-        <div class="form-field">
-          <label>WhatsApp</label>
-          <input type="text" id="cfg-wa" placeholder="+55 11 91001-1551" />
+
+        <!-- GitHub -->
+        <div class="cfg-card">
+          <h3 class="cfg-card-title">Publicação no GitHub</h3>
+          <p class="cfg-card-desc">Com o token configurado, os artigos criados no admin são salvos diretamente no repositório e ficam visíveis para todos imediatamente.</p>
+          <div class="form-field">
+            <label>GitHub Personal Access Token</label>
+            <input type="password" id="cfg-github-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+          </div>
+          <p class="cfg-hint">Crie um token em <strong>github.com → Settings → Developer settings → Personal access tokens → Fine-grained</strong> com permissão de escrita no repositório <strong>falaw</strong>.</p>
+          <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar token</button>
         </div>
-        <div class="form-field">
-          <label>E-mail</label>
-          <input type="email" id="cfg-email" placeholder="ferrazandrade@falaw.com.br" />
+
+        <!-- Senha -->
+        <div class="cfg-card">
+          <h3 class="cfg-card-title">Alterar Senha do Admin</h3>
+          <div class="form-field">
+            <label>Nova senha</label>
+            <input type="password" id="cfg-new-pwd" placeholder="Nova senha" autocomplete="new-password" />
+          </div>
+          <div class="form-field">
+            <label>Confirmar nova senha</label>
+            <input type="password" id="cfg-confirm-pwd" placeholder="Confirmar nova senha" autocomplete="new-password" />
+          </div>
+          <button type="button" class="btn btn-primary" onclick="changePassword()">Alterar senha</button>
         </div>
-        <div class="form-field">
-          <label>Endereço</label>
-          <input type="text" id="cfg-address" placeholder="Av. Francisco Matarazzo, 1752 — Salas 414 e 415" />
-        </div>
-        <div class="form-field">
-          <label>Instagram (handle)</label>
-          <input type="text" id="cfg-instagram" placeholder="@ferrazandrade_adv" />
-        </div>
-        <div class="form-field">
-          <label>LinkedIn (URL)</label>
-          <input type="text" id="cfg-linkedin" placeholder="https://www.linkedin.com/company/..." />
-        </div>
+
       </div>
     </section>
 
@@ -725,9 +764,15 @@
 /* ══════════════════════════════════════
    CONSTANTS
 ══════════════════════════════════════ */
-const ADMIN_PASSWORD = 'falaw2026';
-const KEYS = { articles: 'fa_blog_articles', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions' };
-let BASE_ARTICLES = [];
+const ADMIN_PASSWORD_DEFAULT = 'falaw2026';
+const GITHUB_OWNER  = 'samany-cutrim';
+const GITHUB_REPO   = 'falaw';
+const GITHUB_BRANCH = 'master';
+const GITHUB_PATH   = 'html/Falaw/falaw.com.br/blog/articles-data.js';
+const KEYS = { adminPwd: 'fa_admin_pwd', githubToken: 'fa_github_token', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions' };
+
+let ALL_ARTICLES    = [];
+let GH_FILE_SHA     = '';
 
 /* ══════════════════════════════════════
    STORAGE HELPERS
@@ -755,7 +800,6 @@ function seedData() {
       { id: uid(), name: 'Stefhane Félix de Almeida', role: 'In Memoriam', status: 'memoriam', bio: 'Graduada em Direito pela Universidade Paulista (2014) e especialista em Direito e Processo do Trabalho pela Escola Superior de Advocacia Paulista (2018). Advogada do Ferraz Andrade Advogados, cuja dedicação e contribuição permanecem vivas no espírito do escritório.' },
     ]);
   }
-  if (!load(KEYS.articles)) save(KEYS.articles, []);
   if (!load(KEYS.newsletter)) save(KEYS.newsletter, []);
   if (!load(KEYS.contato)) save(KEYS.contato, []);
   if (!load(KEYS.config)) {
@@ -773,13 +817,17 @@ function seedData() {
 /* ══════════════════════════════════════
    AUTH
 ══════════════════════════════════════ */
+function getAdminPassword() {
+  return localStorage.getItem(KEYS.adminPwd) || ADMIN_PASSWORD_DEFAULT;
+}
+
 function doLogin() {
   const pwd = document.getElementById('login-pwd').value;
-  if (pwd === ADMIN_PASSWORD) {
+  if (pwd === getAdminPassword()) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-shell').style.display = 'block';
     seedData();
-    fetchBaseArticles().then(renderBlog);
+    loadArticlesFromGitHub().then(renderBlog);
     renderEquipe();
     renderNewsletter();
     renderContato();
@@ -823,77 +871,92 @@ function showToast(msg) {
 }
 
 /* ══════════════════════════════════════
-   BLOG — fetch base articles
+   GITHUB API
 ══════════════════════════════════════ */
-function fetchBaseArticles() {
-  return fetch('blog/articles-data.js')
-    .then(r => r.text())
-    .then(code => {
-      try {
-        var normalised = code.replace(/\b(const|let)\s+FALAW_ARTICLES\b/, 'var FALAW_ARTICLES');
-        var fn = new Function(normalised + '\nreturn FALAW_ARTICLES;');
-        BASE_ARTICLES = fn() || [];
-      } catch (e) {
-        BASE_ARTICLES = [];
+function ghToken() { return localStorage.getItem(KEYS.githubToken) || ''; }
+
+function ghHeaders() {
+  const h = { 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
+  if (ghToken()) h['Authorization'] = 'token ' + ghToken();
+  return h;
+}
+
+function generateArticlesJS(articles) {
+  const j = v => JSON.stringify(v == null ? '' : v);
+  const lines = articles.map(a =>
+    `  {\n    id: ${j(a.id)},\n    title: ${j(a.title)},\n    category: ${j(a.category)},\n    excerpt: ${j(a.excerpt)},\n    date: ${j(a.date)},\n    readTime: ${j(a.readTime)},\n    url: ${j(a.url)},\n    published: ${a.published !== false},\n    content: ${j(a.content || '')}\n  }`
+  );
+  return 'var FALAW_ARTICLES = [\n' + lines.join(',\n') + '\n];\n';
+}
+
+async function loadArticlesFromGitHub() {
+  document.getElementById('blog-no-token').hidden = !!ghToken();
+  try {
+    const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}?ref=${GITHUB_BRANCH}&t=${Date.now()}`;
+    const res = await fetch(url, { headers: ghHeaders() });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    GH_FILE_SHA = data.sha;
+    const code = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
+    const fn = new Function(code.replace(/\b(const|let)\s+FALAW_ARTICLES\b/, 'var FALAW_ARTICLES') + '\nreturn FALAW_ARTICLES;');
+    ALL_ARTICLES = fn() || [];
+  } catch (e) {
+    console.warn('GitHub load failed:', e.message);
+    ALL_ARTICLES = [];
+  }
+}
+
+async function pushArticlesToGitHub() {
+  if (!ghToken()) { showToast('⚠ Token do GitHub não configurado.'); return false; }
+  try {
+    const content = btoa(unescape(encodeURIComponent(generateArticlesJS(ALL_ARTICLES))));
+    const res = await fetch(
+      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`,
+      {
+        method: 'PUT',
+        headers: ghHeaders(),
+        body: JSON.stringify({ message: 'Admin: update blog articles', content, sha: GH_FILE_SHA, branch: GITHUB_BRANCH })
       }
-    })
-    .catch(() => { BASE_ARTICLES = []; });
+    );
+    if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'HTTP ' + res.status); }
+    const data = await res.json();
+    GH_FILE_SHA = data.content.sha;
+    return true;
+  } catch (e) {
+    showToast('Erro GitHub: ' + e.message);
+    return false;
+  }
 }
 
 /* ══════════════════════════════════════
    BLOG — render
 ══════════════════════════════════════ */
 function renderBlog() {
-  const local   = load(KEYS.articles) || [];
-  const allPub  = BASE_ARTICLES.filter(a => a.published).length + local.filter(a => a.published).length;
-  const drafts  = local.filter(a => !a.published).length;
-  const total   = BASE_ARTICLES.length + local.length;
+  const published = ALL_ARTICLES.filter(a => a.published !== false).length;
+  const drafts    = ALL_ARTICLES.filter(a => a.published === false).length;
 
   document.getElementById('blog-stats').innerHTML = `
-    <div class="stat-pill"><div class="stat-pill-num">${total}</div><div class="stat-pill-label">Total</div></div>
-    <div class="stat-pill"><div class="stat-pill-num">${allPub}</div><div class="stat-pill-label">Publicados</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${ALL_ARTICLES.length}</div><div class="stat-pill-label">Total</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${published}</div><div class="stat-pill-label">Publicados</div></div>
     <div class="stat-pill"><div class="stat-pill-num">${drafts}</div><div class="stat-pill-label">Rascunhos</div></div>
   `;
 
-  const arquivoSec = document.getElementById('blog-arquivo-section');
-  const localSec   = document.getElementById('blog-local-section');
-  const emptyDiv   = document.getElementById('blog-empty');
+  document.getElementById('blog-empty').hidden = ALL_ARTICLES.length > 0;
 
-  arquivoSec.hidden = BASE_ARTICLES.length === 0;
-  localSec.hidden   = local.length === 0;
-  emptyDiv.hidden   = total > 0;
-
-  document.getElementById('blog-arquivo-list').innerHTML = BASE_ARTICLES.map(a => `
+  document.getElementById('blog-list').innerHTML = ALL_ARTICLES.map(a => `
     <div class="item-card">
       <div class="item-card-body">
         <div class="item-card-title">
           ${escHtml(a.title)}
-          <span class="post-tag" style="background:#555">Arquivo</span>
-          ${a.published ? '<span class="post-tag">Publicado</span>' : '<span class="post-tag" style="background:#888">Rascunho</span>'}
+          ${a.published !== false ? '<span class="post-tag">Publicado</span>' : '<span class="post-tag" style="background:#888">Rascunho</span>'}
         </div>
-        <div class="item-card-meta">${escHtml(a.category)} · ${escHtml(a.date)} · ${escHtml(a.readTime)}</div>
-        <div class="item-card-preview">${escHtml(a.excerpt)}</div>
-      </div>
-      <div class="item-card-actions">
-        <a href="${escHtml(a.url)}" target="_blank" class="btn btn-ghost btn-sm">Ver</a>
-      </div>
-    </div>
-  `).join('');
-
-  document.getElementById('blog-local-list').innerHTML = local.map(a => `
-    <div class="item-card">
-      <div class="item-card-body">
-        <div class="item-card-title">
-          ${escHtml(a.title)}
-          ${a.published ? '<span class="post-tag">Publicado</span>' : '<span class="post-tag" style="background:#888">Rascunho</span>'}
-        </div>
-        <div class="item-card-meta">${escHtml(a.category)} · ${escHtml(a.date)} · ${escHtml(a.readTime)}</div>
+        <div class="item-card-meta">${escHtml(a.category)}${a.date ? ' · ' + escHtml(a.date) : ''}${a.readTime ? ' · ' + escHtml(a.readTime) : ''}</div>
         <div class="item-card-preview">${escHtml(a.excerpt)}</div>
       </div>
       <div class="item-card-actions">
         ${a.url ? `<a href="${escHtml(a.url)}" target="_blank" class="btn btn-ghost btn-sm">Ver</a>` : ''}
-        <button type="button" class="btn btn-ghost btn-sm" onclick="editPost('${a.id}')">Editar</button>
-        <button type="button" class="btn btn-danger btn-sm" onclick="deletePost('${a.id}')">Excluir</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="editPost('${escHtml(a.id)}')">Editar</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="deletePost('${escHtml(a.id)}')">Excluir</button>
       </div>
     </div>
   `).join('');
@@ -906,7 +969,7 @@ function openPostModal(id) {
   document.getElementById('post-modal-title').textContent = id ? 'Editar Artigo' : 'Novo Artigo';
 
   if (id) {
-    const art = (load(KEYS.articles) || []).find(a => a.id === id);
+    const art = ALL_ARTICLES.find(a => a.id === id);
     if (art) {
       document.getElementById('post-id').value        = art.id;
       document.getElementById('post-title').value     = art.title;
@@ -937,60 +1000,42 @@ function closePostModal() {
 
 function editPost(id) { openPostModal(id); }
 
-function savePost() {
-  const title    = document.getElementById('post-title').value.trim();
-  const category = document.getElementById('post-category').value;
-  const excerpt  = document.getElementById('post-excerpt').value.trim();
-  const content  = document.getElementById('post-content').value.trim();
-  const photo    = document.getElementById('post-photo').value.trim();
-  const date     = document.getElementById('post-date').value.trim();
-  const readTime = document.getElementById('post-readtime').value.trim();
+async function savePost() {
+  const title     = document.getElementById('post-title').value.trim();
+  const category  = document.getElementById('post-category').value;
+  const excerpt   = document.getElementById('post-excerpt').value.trim();
+  const content   = document.getElementById('post-content').value.trim();
+  const photo     = document.getElementById('post-photo').value.trim();
+  const date      = document.getElementById('post-date').value.trim();
+  const readTime  = document.getElementById('post-readtime').value.trim();
   const published = document.getElementById('post-status').value === 'true';
 
   if (!title) { alert('Por favor, preencha o título.'); return; }
 
-  const articles = load(KEYS.articles) || [];
-  const id = editingPostId;
-  const slug = id || title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36);
-  const url = 'blog/reader.html?id=' + encodeURIComponent(id || slug);
+  const id   = editingPostId || (title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now().toString(36));
+  const url  = 'blog/reader.html?id=' + encodeURIComponent(id);
 
-  if (id) {
-    const idx = articles.findIndex(a => a.id === id);
-    if (idx !== -1) articles[idx] = { ...articles[idx], title, category, excerpt, content, url, photo, date, readTime, published };
+  if (editingPostId) {
+    const idx = ALL_ARTICLES.findIndex(a => a.id === editingPostId);
+    if (idx !== -1) ALL_ARTICLES[idx] = { ...ALL_ARTICLES[idx], title, category, excerpt, content, url, photo, date, readTime, published };
   } else {
-    articles.unshift({ id: slug, title, category, excerpt, content, url, photo, date, readTime, published });
+    ALL_ARTICLES.unshift({ id, title, category, excerpt, content, url, photo, date, readTime, published });
   }
 
-  save(KEYS.articles, articles);
   closePostModal();
   renderBlog();
-  showToast(id ? 'Artigo atualizado.' : 'Artigo criado.');
+  showToast('Salvando no GitHub…');
+  const ok = await pushArticlesToGitHub();
+  if (ok) showToast(editingPostId ? 'Artigo atualizado.' : 'Artigo publicado.');
 }
 
-function deletePost(id) {
+async function deletePost(id) {
   if (!confirm('Excluir este artigo? Esta ação não pode ser desfeita.')) return;
-  save(KEYS.articles, (load(KEYS.articles) || []).filter(a => a.id !== id));
+  ALL_ARTICLES = ALL_ARTICLES.filter(a => a.id !== id);
   renderBlog();
-  showToast('Artigo excluído.');
-}
-
-/* ══════════════════════════════════════
-   BLOG — export articles-data.js
-══════════════════════════════════════ */
-function exportArticlesData() {
-  const local = (load(KEYS.articles) || []).filter(a => a.published);
-  const all = BASE_ARTICLES.concat(local.filter(la => !BASE_ARTICLES.find(b => b.id === la.id)));
-  const lines = all.map(a => {
-    const e = s => String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return `  {\n    id: '${e(a.id)}',\n    title: '${e(a.title)}',\n    category: '${e(a.category)}',\n    excerpt: '${e(a.excerpt)}',\n    date: '${e(a.date)}',\n    readTime: '${e(a.readTime)}',\n    url: '${e(a.url)}',\n    published: ${a.published !== false}\n  }`;
-  });
-  const content = 'var FALAW_ARTICLES = [\n' + lines.join(',\n') + '\n];\n';
-  const blob = new Blob([content], { type: 'text/javascript;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'articles-data.js';
-  link.click();
-  showToast('articles-data.js exportado.');
+  showToast('Excluindo…');
+  const ok = await pushArticlesToGitHub();
+  if (ok) showToast('Artigo excluído.');
 }
 
 /* ══════════════════════════════════════
@@ -1219,12 +1264,13 @@ function downloadCSV(csv, filename) {
 ══════════════════════════════════════ */
 function loadConfig() {
   const cfg = load(KEYS.config) || {};
-  document.getElementById('cfg-tel').value       = cfg.tel       || '';
-  document.getElementById('cfg-wa').value        = cfg.wa        || '';
-  document.getElementById('cfg-email').value     = cfg.email     || '';
-  document.getElementById('cfg-address').value   = cfg.address   || '';
-  document.getElementById('cfg-instagram').value = cfg.instagram || '';
-  document.getElementById('cfg-linkedin').value  = cfg.linkedin  || '';
+  document.getElementById('cfg-tel').value          = cfg.tel       || '';
+  document.getElementById('cfg-wa').value           = cfg.wa        || '';
+  document.getElementById('cfg-email').value        = cfg.email     || '';
+  document.getElementById('cfg-address').value      = cfg.address   || '';
+  document.getElementById('cfg-instagram').value    = cfg.instagram || '';
+  document.getElementById('cfg-linkedin').value     = cfg.linkedin  || '';
+  document.getElementById('cfg-github-token').value = ghToken();
 }
 
 function saveConfig() {
@@ -1236,7 +1282,23 @@ function saveConfig() {
     instagram: document.getElementById('cfg-instagram').value.trim(),
     linkedin:  document.getElementById('cfg-linkedin').value.trim(),
   });
+  const token = document.getElementById('cfg-github-token').value.trim();
+  if (token) localStorage.setItem(KEYS.githubToken, token);
+  else localStorage.removeItem(KEYS.githubToken);
+  document.getElementById('blog-no-token').hidden = !!token;
   showToast('Configurações salvas.');
+}
+
+function changePassword() {
+  const np = document.getElementById('cfg-new-pwd').value;
+  const cp = document.getElementById('cfg-confirm-pwd').value;
+  if (!np) { alert('Digite a nova senha.'); return; }
+  if (np !== cp) { alert('As senhas não coincidem.'); return; }
+  if (np.length < 6) { alert('A senha deve ter pelo menos 6 caracteres.'); return; }
+  localStorage.setItem(KEYS.adminPwd, np);
+  document.getElementById('cfg-new-pwd').value    = '';
+  document.getElementById('cfg-confirm-pwd').value = '';
+  showToast('Senha alterada com sucesso.');
 }
 
 /* ══════════════════════════════════════

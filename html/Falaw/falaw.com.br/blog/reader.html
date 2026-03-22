@@ -7,6 +7,8 @@
   <title>Artigo — Ferraz Andrade Advogados</title>
   <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
   <link rel="stylesheet" href="../falaw-design.css" />
+  <style>.article-back--spaced { margin-top: 40px; }</style>
+  <script src="articles-data.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
   <script src="../falaw-main.js" defer></script>
@@ -35,7 +37,7 @@
   </button>
 </nav>
 
-<main class="article-page" id="article-main">
+<main class="article-page">
 
   <div class="article-back">
     <a href="../blog.html">← Voltar ao Blog</a>
@@ -47,9 +49,9 @@
     <header class="article-header">
       <div class="article-kicker">Erro</div>
       <h1>Artigo não encontrado</h1>
-      <p class="article-lede">Este artigo não foi encontrado ou não está disponível neste navegador.</p>
+      <p class="article-lede">Este artigo não está disponível.</p>
     </header>
-    <div class="article-back" style="margin-top:40px;">
+    <div class="article-back article-back--spaced">
       <a href="../blog.html">← Voltar ao Blog</a>
     </div>
   </div>
@@ -90,60 +92,48 @@
 
 <script>
 (function () {
-  var params = new URLSearchParams(window.location.search);
-  var id = params.get('id');
+  var id = new URLSearchParams(window.location.search).get('id');
+  if (!id) { show404(); return; }
 
-  if (!id) { showNotFound(); return; }
+  var articles = (typeof FALAW_ARTICLES !== 'undefined') ? FALAW_ARTICLES : [];
+  var art = articles.find(function (a) { return a.id === id; });
+  if (!art) { show404(); return; }
 
-  var articles = [];
-  try { articles = JSON.parse(localStorage.getItem('fa_blog_articles') || '[]'); } catch (e) {}
+  document.title = art.title + ' — Ferraz Andrade Advogados';
 
-  var article = articles.find(function (a) { return a.id === id; });
-
-  if (!article) { showNotFound(); return; }
-
-  document.title = article.title + ' — Ferraz Andrade Advogados';
-
-  var coverHtml = article.photo
-    ? '<div class="article-cover"><img src="' + esc(article.photo) + '" alt="' + esc(article.title) + '" style="width:100%;max-height:420px;object-fit:cover;border-radius:4px;" /></div>'
+  var coverHtml = art.photo
+    ? '<div class="article-cover"><img src="' + esc(art.photo) + '" alt="' + esc(art.title) + '" style="width:100%;max-height:420px;object-fit:cover;border-radius:4px;" /></div>'
     : '';
 
   document.getElementById('article-content').innerHTML =
     '<header class="article-header">' +
-      '<div class="article-kicker">' + esc(article.category) + '</div>' +
-      '<h1>' + esc(article.title) + '</h1>' +
+      '<div class="article-kicker">' + esc(art.category) + '</div>' +
+      '<h1>' + esc(art.title) + '</h1>' +
       '<div class="article-meta">' +
-        '<span>' + esc(article.date) + '</span>' +
-        '<span class="sep">·</span>' +
-        '<span>' + esc(article.category) + '</span>' +
-        (article.readTime ? '<span class="sep">·</span><span>' + esc(article.readTime) + ' de leitura</span>' : '') +
+        (art.date ? '<span>' + esc(art.date) + '</span>' : '') +
+        (art.date && art.category ? '<span class="sep">·</span>' : '') +
+        '<span>' + esc(art.category) + '</span>' +
+        (art.readTime ? '<span class="sep">·</span><span>' + esc(art.readTime) + ' de leitura</span>' : '') +
       '</div>' +
-      (article.excerpt ? '<p class="article-lede">' + esc(article.excerpt) + '</p>' : '') +
+      (art.excerpt ? '<p class="article-lede">' + esc(art.excerpt) + '</p>' : '') +
     '</header>' +
     coverHtml +
-    '<div class="article-body">' + renderContent(article.content || '') + '</div>';
+    '<div class="article-body">' + renderContent(art.content || '') + '</div>';
 
   function renderContent(text) {
-    return text
-      .split(/\n{2,}/)
-      .map(function (para) {
-        para = para.trim();
-        if (!para) return '';
-        return '<p>' + esc(para).replace(/\n/g, '<br>') + '</p>';
-      })
-      .join('');
+    return text.split(/\n{2,}/).map(function (p) {
+      p = p.trim();
+      if (!p) return '';
+      return '<p>' + esc(p).replace(/\n/g, '<br>') + '</p>';
+    }).join('');
   }
 
-  function showNotFound() {
+  function show404() {
     document.getElementById('article-not-found').hidden = false;
   }
 
   function esc(s) {
-    return String(s || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 })();
 </script>
