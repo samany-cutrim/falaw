@@ -37,38 +37,49 @@
 
 <main class="blog-page">
 
-  <!-- HEADER + SEARCH -->
-  <div class="blog-header">
-    <span class="label reveal">Blog · Ferraz Andrade Advogados</span>
-    <h1 class="reveal">Artigos &amp;<br/>Reflexões</h1>
+  <!-- HERO SPLIT -->
+  <div class="hero-split blog-hero-split">
 
-    <div class="blog-search reveal">
-      <div class="blog-search-bar" role="search">
-        <span class="blog-search-icon" aria-hidden="true">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-        </span>
-        <input
-          type="search"
-          id="blogSearch"
-          class="blog-search-input"
-          placeholder="Buscar por título, categoria ou conteúdo…"
-          aria-label="Buscar artigos"
-          autocomplete="off"
-        />
-        <button
-          type="button"
-          id="searchClear"
-          class="blog-search-clear"
-          aria-label="Limpar busca"
-        >×</button>
-      </div>
+    <!-- Foto esquerda -->
+    <div class="hero-photo">
+      <img src="../../../assets/images/Falaw/falaw.com.br/blog.png"
+           alt="Blog Ferraz Andrade Advogados" class="img-grayscale img-soft-blur" />
+      <span class="hero-caption">Ferraz Andrade Advogados · São Paulo, Brasil</span>
+    </div>
 
-      <div class="blog-filter-row" id="filterRow">
-        <!-- pills rendered by JS -->
+    <!-- Copy direita -->
+    <div class="hero-copy">
+      <span class="label reveal">Blog · Ferraz Andrade Advogados</span>
+      <h1 class="hero-title reveal">Artigos &amp;<br/>Reflexões</h1>
+      <p class="hero-sub reveal">
+        Reflexões sobre Direito do Trabalho, inovação jurídica e estratégia empresarial.
+        Conteúdo produzido pelo time do Ferraz Andrade Advogados para manter
+        clientes e parceiros sempre informados.
+      </p>
+
+      <!-- SEARCH inline no hero -->
+      <div class="blog-search reveal" style="margin-top: 32px;">
+        <div class="blog-search-bar" role="search">
+          <span class="blog-search-icon" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </span>
+          <input
+            type="search"
+            id="blogSearch"
+            class="blog-search-input"
+            placeholder="Buscar artigos…"
+            aria-label="Buscar artigos"
+            autocomplete="off"
+          />
+          <button type="button" id="searchClear" class="blog-search-clear" aria-label="Limpar busca">×</button>
+        </div>
+
+        <div class="blog-filter-row" id="filterRow"></div>
       </div>
     </div>
+
   </div>
 
   <!-- RESULTS COUNT -->
@@ -121,26 +132,22 @@
   var filterRow   = document.getElementById('filterRow');
   var countEl     = document.getElementById('resultsCount');
 
-  /* ── Load articles ── */
   var base = (typeof FALAW_ARTICLES !== 'undefined') ? FALAW_ARTICLES : [];
   var local = [];
   try { local = JSON.parse(localStorage.getItem('fa_blog_articles') || '[]'); } catch (e) {}
   var ALL = base.concat(local).filter(function (a) { return a.published; });
 
-  /* ── State ── */
   var query    = '';
   var category = 'Todos';
 
-  /* ── Build category pills ── */
+  /* Category pills */
   var cats = ['Todos'];
   ALL.forEach(function (a) {
     if (a.category && cats.indexOf(a.category) === -1) cats.push(a.category);
   });
-
   filterRow.innerHTML = cats.map(function (c) {
     return '<button type="button" class="blog-filter-pill' + (c === 'Todos' ? ' active' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>';
   }).join('');
-
   filterRow.addEventListener('click', function (e) {
     var pill = e.target.closest('.blog-filter-pill');
     if (!pill) return;
@@ -151,13 +158,12 @@
     render();
   });
 
-  /* ── Search input ── */
+  /* Search */
   searchInput.addEventListener('input', function () {
     query = this.value.trim().toLowerCase();
     clearBtn.classList.toggle('visible', query.length > 0);
     render();
   });
-
   clearBtn.addEventListener('click', function () {
     searchInput.value = '';
     query = '';
@@ -166,18 +172,16 @@
     render();
   });
 
-  /* ── Render ── */
   function render() {
     var filtered = ALL.filter(function (a) {
       var matchCat = (category === 'Todos') || (a.category === category);
       var matchQ   = !query ||
-        normalize(a.title).indexOf(query) !== -1 ||
-        normalize(a.category).indexOf(query) !== -1 ||
-        normalize(a.excerpt).indexOf(query) !== -1;
+        norm(a.title).indexOf(query) !== -1 ||
+        norm(a.category).indexOf(query) !== -1 ||
+        norm(a.excerpt).indexOf(query) !== -1;
       return matchCat && matchQ;
     });
 
-    /* results count */
     if (query || category !== 'Todos') {
       countEl.textContent = filtered.length + (filtered.length === 1 ? ' artigo encontrado' : ' artigos encontrados');
     } else {
@@ -194,35 +198,26 @@
     }
 
     grid.innerHTML = filtered.map(function (a) {
-      var excerpt = highlight(esc(a.excerpt), query);
-      var title   = highlight(esc(a.title), query);
       return '<article class="blog-card">' +
         '<div class="blog-card-category">' + esc(a.category) + '</div>' +
-        '<h2 class="blog-card-title">' + title + '</h2>' +
-        '<p class="blog-card-excerpt">' + excerpt + '</p>' +
+        '<h2 class="blog-card-title">' + highlight(esc(a.title), query) + '</h2>' +
+        '<p class="blog-card-excerpt">' + highlight(esc(a.excerpt), query) + '</p>' +
         '<div class="blog-card-meta"><span>' + esc(a.date) + '</span><span>·</span><span>' + esc(a.readTime) + ' de leitura</span></div>' +
         '<a href="' + esc(a.url) + '" class="blog-card-link">Ler artigo <span class="arr">→</span></a>' +
         '</article>';
     }).join('');
   }
 
-  /* ── Helpers ── */
-  function normalize(s) { return String(s || '').toLowerCase(); }
-
+  function norm(s) { return String(s || '').toLowerCase(); }
   function esc(s) {
-    return String(s || '')
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-
   function highlight(html, q) {
     if (!q) return html;
-    /* highlight on the already-escaped string — safe since q is plain text */
     var safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return html.replace(new RegExp('(' + safe + ')', 'gi'),
       '<mark style="background:rgba(123,26,46,0.12);color:var(--c-accent);border-radius:2px;padding:0 2px;">$1</mark>');
   }
-
-  /* exposed for the "Limpar busca" button inside grid */
   window.clearSearch = function () {
     searchInput.value = '';
     query = '';

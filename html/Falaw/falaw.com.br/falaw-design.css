@@ -1473,6 +1473,22 @@ h3 {
   padding-top: var(--nav-h);
 }
 
+/* Hero variant for blog page (reuses .hero-split) */
+.blog-hero-split {
+  min-height: calc(100vh - var(--nav-h));
+  margin-top: var(--nav-h);
+  padding-top: 0;
+}
+/* Search inside hero-copy: remove outer padding from blog-search */
+.hero-copy .blog-search {
+  padding-top: 0;
+}
+.hero-copy .blog-filter-row {
+  padding-bottom: 0;
+  border-bottom: none;
+  margin-top: 12px;
+}
+
 .blog-header {
   padding: 72px 72px 0;
 }
