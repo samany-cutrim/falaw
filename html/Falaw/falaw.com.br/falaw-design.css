@@ -1474,8 +1474,7 @@ h3 {
 }
 
 .blog-header {
-  padding: 72px 72px 48px;
-  border-bottom: 1px solid var(--c-divider);
+  padding: 72px 72px 0;
 }
 .blog-header .label { display: block; margin-bottom: 12px; }
 .blog-header h1 {
@@ -1486,7 +1485,137 @@ h3 {
   letter-spacing: -.03em;
   text-transform: uppercase;
   color: var(--c-dark);
+  margin-bottom: 40px;
 }
+
+/* ── BLOG SEARCH ── */
+.blog-search {
+  padding: 28px 0 0;
+}
+.blog-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--c-divider);
+  border-radius: 2px;
+  background: white;
+  overflow: hidden;
+  transition: border-color .2s, box-shadow .2s;
+}
+.blog-search-bar:focus-within {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 3px rgba(123,26,46,0.08);
+}
+.blog-search-icon {
+  flex-shrink: 0;
+  padding: 0 18px 0 20px;
+  color: var(--c-muted);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+.blog-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--f-body);
+  font-size: 15px;
+  color: var(--c-dark);
+  padding: 16px 0;
+  line-height: 1;
+}
+.blog-search-input::placeholder {
+  color: var(--c-muted);
+  opacity: .7;
+}
+.blog-search-clear {
+  flex-shrink: 0;
+  padding: 0 16px;
+  background: none;
+  border: none;
+  color: var(--c-muted);
+  font-size: 18px;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  transition: color .15s;
+}
+.blog-search-clear:hover { color: var(--c-accent); }
+.blog-search-clear.visible { display: flex; }
+
+.blog-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--c-divider);
+}
+.blog-filter-pill {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  background: none;
+  border: 1px solid var(--c-divider);
+  color: var(--c-muted);
+  padding: 6px 14px;
+  border-radius: 20px;
+  transition: background .15s, color .15s, border-color .15s;
+  white-space: nowrap;
+}
+.blog-filter-pill:hover {
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+}
+.blog-filter-pill.active {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+  color: var(--c-off);
+}
+
+.blog-results-bar {
+  padding: 20px 72px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.blog-results-count {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+.blog-no-results {
+  padding: 64px 72px;
+  text-align: left;
+}
+.blog-no-results p {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+  margin-bottom: 20px;
+}
+.blog-no-results button {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  background: none;
+  border: 1px solid var(--c-divider);
+  color: var(--c-dark);
+  padding: 8px 18px;
+  border-radius: 2px;
+  transition: border-color .15s, color .15s;
+}
+.blog-no-results button:hover { border-color: var(--c-accent); color: var(--c-accent); }
 
 .blog-grid {
   display: grid;
@@ -1943,7 +2072,9 @@ h3 {
 
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
-  .blog-header { padding: 48px 32px 36px; }
+  .blog-header { padding: 48px 32px 0; }
+  .blog-results-bar { padding: 20px 32px 0; }
+  .blog-no-results { padding: 48px 32px; }
   .blog-card { padding: 36px 32px; }
   .article-header { padding: 48px 28px 32px; }
   .article-cover { padding: 0 28px; }
@@ -1953,7 +2084,9 @@ h3 {
 }
 
 @media (max-width: 600px) {
-  .blog-header { padding: 36px 22px 28px; }
+  .blog-header { padding: 36px 22px 0; }
+  .blog-results-bar { padding: 16px 22px 0; }
+  .blog-no-results { padding: 40px 22px; }
   .blog-grid { grid-template-columns: 1fr; }
   .blog-card { padding: 32px 22px; border-left: none; }
   .article-stats { grid-template-columns: 1fr; }
