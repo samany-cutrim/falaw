@@ -16,7 +16,7 @@
  *   url       — caminho para o HTML, relativo à raiz do site (ex: "blog/meu-artigo.html")
  *   published — true = aparece na listagem | false = rascunho (não aparece)
  */
-const FALAW_ARTICLES = [
+var FALAW_ARTICLES = [
   {
     id: 'berna-artigo',
     title: 'BERNA: a IA brasileira que desafia a litigância predatória em escala nacional',

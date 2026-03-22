@@ -6,7 +6,6 @@
   <title>Admin — Blog FA Law</title>
   <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
   <link rel="stylesheet" href="../falaw-design.css" />
-  <script src="articles-data.js"></script>
   <style>
     /* ── ADMIN LAYOUT ── */
     html { cursor: auto !important; }
@@ -541,6 +540,9 @@
   var LS_KEY    = 'fa_blog_articles';
   var LS_SESS   = 'fa_admin_session';
 
+  /* Articles loaded from articles-data.js via fetch */
+  var BASE_ARTICLES = [];
+
   /* ── HELPERS ── */
   function esc(s) {
     return String(s || '')
@@ -558,8 +560,37 @@
   function saveLocal(arr) {
     localStorage.setItem(LS_KEY, JSON.stringify(arr));
   }
-  function getBase() {
-    return (typeof FALAW_ARTICLES !== 'undefined') ? FALAW_ARTICLES : [];
+  function getBase() { return BASE_ARTICLES; }
+
+  /* ── LOAD DATA FILE ── */
+  function loadData(callback) {
+    /* 1. Try global already defined by <script src> (fallback) */
+    if (typeof FALAW_ARTICLES !== 'undefined' && FALAW_ARTICLES.length) {
+      BASE_ARTICLES = FALAW_ARTICLES;
+      callback();
+      return;
+    }
+    /* 2. Fetch dynamically — works on all servers including GitHub Pages */
+    fetch('articles-data.js')
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+      })
+      .then(function (code) {
+        try {
+          /* Normalise declaration and execute; returns the array */
+          var normalised = code.replace(/\b(const|let)\s+FALAW_ARTICLES\b/, 'var FALAW_ARTICLES');
+          var fn = new Function(normalised + '\nreturn FALAW_ARTICLES;');
+          BASE_ARTICLES = fn() || [];
+        } catch (e) {
+          BASE_ARTICLES = [];
+        }
+        callback();
+      })
+      .catch(function () {
+        BASE_ARTICLES = [];
+        callback();
+      });
   }
 
   /* ── AUTH ── */
@@ -570,7 +601,10 @@
     return btoa(pwd) === PASS_HASH;
   }
 
-  if (checkSession()) showAdmin();
+  /* Init: load data first, then check session */
+  loadData(function () {
+    if (checkSession()) showAdmin();
+  });
 
   document.getElementById('btnLogin').addEventListener('click', tryLogin);
   document.getElementById('pwd').addEventListener('keydown', function (e) {
@@ -707,7 +741,7 @@
     local.unshift(art);
     saveLocal(local);
     this.reset();
-    renderDrafts();
+    renderAll();
     toast('Artigo publicado (neste navegador). Exporte e faça push para publicar para todos.');
   });
 
