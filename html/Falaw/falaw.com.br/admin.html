@@ -701,8 +701,8 @@
           </div>
           <div class="form-field">
             <label>Modelo</label>
-            <input type="text" id="cfg-or-model" placeholder="google/gemini-2.0-flash-exp:free" autocomplete="off" />
-            <p class="cfg-hint" style="margin-top:6px;">Modelos gratuitos: <strong>google/gemini-2.0-flash-exp:free</strong>, meta-llama/llama-3.3-70b-instruct:free. Pagos: anthropic/claude-sonnet-4-5.</p>
+            <input type="text" id="cfg-or-model" placeholder="meta-llama/llama-3.3-70b-instruct:free" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">Modelos gratuitos: <strong>meta-llama/llama-3.3-70b-instruct:free</strong>, mistralai/mistral-7b-instruct:free. Veja todos em openrouter.ai/models (filtro: free).</p>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
             <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar chaves</button>
@@ -1434,7 +1434,7 @@ async function testAPIs() {
 
   // Test OpenRouter
   const orKey   = localStorage.getItem('fa_or_key') || '';
-  const orModel = localStorage.getItem('fa_or_model') || 'google/gemini-2.0-flash-exp:free';
+  const orModel = localStorage.getItem('fa_or_model') || 'meta-llama/llama-3.3-70b-instruct:free';
   if (!orKey) {
     lines.push('❌ OpenRouter: chave não salva');
   } else {
@@ -1590,7 +1590,7 @@ async function callAI(messages, temperature) {
 
 async function callOpenRouter(messages, temperature) {
   const key   = localStorage.getItem('fa_or_key') || '';
-  const model = localStorage.getItem('fa_or_model') || 'google/gemini-2.0-flash-exp:free';
+  const model = localStorage.getItem('fa_or_model') || 'meta-llama/llama-3.3-70b-instruct:free';
   if (!key) throw new Error('OpenRouter API Key não configurada — vá em Configurações, crie uma chave em openrouter.ai e salve.');
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
