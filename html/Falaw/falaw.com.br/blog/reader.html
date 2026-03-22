@@ -124,6 +124,14 @@
     return text.split(/\n{2,}/).map(function (p) {
       p = p.trim();
       if (!p) return '';
+      // Detecta títulos de seção: linha curta em MAIÚSCULAS terminando com ':'
+      if (/^[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ\s\-–]{4,60}:$/.test(p)) {
+        return '<h2 class="article-section-title">' + esc(p.replace(/:$/, '')) + '</h2>';
+      }
+      // Linha curta toda maiúscula sem dois pontos (cabeçalho alternativo)
+      if (/^[A-ZÁÉÍÓÚÀÂÊÔÃÕÇ\s\-–]{4,60}$/.test(p) && p === p.toUpperCase()) {
+        return '<h2 class="article-section-title">' + esc(p) + '</h2>';
+      }
       return '<p>' + esc(p).replace(/\n/g, '<br>') + '</p>';
     }).join('');
   }

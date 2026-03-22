@@ -471,6 +471,37 @@
     }
     .blog-sub-list { margin-bottom: 32px; }
 
+    /* ── AI PANEL ── */
+    .ai-panel { background: linear-gradient(135deg,#1A0A0D 0%,#231018 100%); border-radius: 4px; padding: 24px 28px; margin-bottom: 32px; }
+    .ai-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .ai-panel-title { font-family: var(--f-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--c-accent); display: flex; align-items: center; gap: 8px; }
+    .ai-panel-title::before { content: ''; display: inline-block; width: 6px; height: 6px; background: var(--c-accent); border-radius: 50%; animation: aipulse 1.6s ease-in-out infinite; }
+    @keyframes aipulse { 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:.4; transform:scale(.7); } }
+    .ai-toggle-btn { background: none; border: none; font-family: var(--f-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: rgba(247,245,242,.35); cursor: pointer; }
+    .ai-toggle-btn:hover { color: rgba(247,245,242,.7); }
+    .ai-input-row { display: flex; gap: 10px; }
+    .ai-text-input { flex: 1; background: rgba(247,245,242,.06); border: 1px solid rgba(247,245,242,.12); border-radius: 2px; padding: 12px 16px; font-family: var(--f-body); font-size: 14px; color: #f7f5f2; outline: none; transition: border-color .2s; }
+    .ai-text-input::placeholder { color: rgba(247,245,242,.28); }
+    .ai-text-input:focus { border-color: var(--c-accent); }
+    .btn-ai { background: var(--c-accent); color: #fff; border: none; border-radius: 2px; padding: 12px 22px; font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; transition: background .2s; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+    .btn-ai:hover { background: var(--c-accent-h); }
+    .btn-ai:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-ai-ghost { background: transparent; color: rgba(247,245,242,.5); border: 1px solid rgba(247,245,242,.14); border-radius: 2px; padding: 12px 22px; font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; transition: border-color .2s, color .2s; }
+    .btn-ai-ghost:hover { border-color: rgba(247,245,242,.4); color: rgba(247,245,242,.8); }
+    .ai-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(247,245,242,.2); border-top-color: #f7f5f2; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ai-suggestions { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+    .ai-card { background: rgba(247,245,242,.04); border: 1px solid rgba(247,245,242,.09); border-radius: 4px; padding: 14px 18px; cursor: pointer; transition: background .15s, border-color .15s; }
+    .ai-card:hover { background: rgba(123,26,46,.18); border-color: rgba(123,26,46,.5); }
+    .ai-card.selected { background: rgba(123,26,46,.25); border-color: var(--c-accent); }
+    .ai-card-title { font-size: 14px; font-weight: 600; color: #f7f5f2; margin-bottom: 4px; }
+    .ai-card-meta { font-family: var(--f-mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: rgba(247,245,242,.38); }
+    .ai-actions { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+    .ai-status-msg { font-family: var(--f-mono); font-size: 10px; letter-spacing: .06em; color: rgba(247,245,242,.4); }
+    .ai-error-msg { font-family: var(--f-mono); font-size: 10px; color: #e05a5a; }
+    .ai-model-select { background: rgba(247,245,242,.06); border: 1px solid rgba(247,245,242,.12); border-radius: 2px; padding: 8px 12px; font-family: var(--f-mono); font-size: 10px; letter-spacing: .06em; color: rgba(247,245,242,.6); outline: none; cursor: pointer; }
+    .ai-model-select option { background: #231018; }
+
     /* ── EMAIL MODAL ── */
     .modal-wide { max-width: 780px; }
     .email-tabs { display: flex; gap: 0; margin-bottom: 16px; border: 1px solid var(--c-divider); border-radius: 2px; overflow: hidden; }
@@ -544,6 +575,33 @@
         <button type="button" class="btn btn-primary" onclick="openPostModal()">+ Novo artigo</button>
       </div>
       <div class="stats-bar" id="blog-stats"></div>
+      <!-- IA -->
+      <div class="ai-panel" id="ai-panel">
+        <div class="ai-panel-header">
+          <span class="ai-panel-title">Assistente IA — Gerar Artigo</span>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <select class="ai-model-select" id="ai-model">
+              <option value="grok">Grok</option>
+              <option value="claude">Claude</option>
+            </select>
+            <button type="button" class="ai-toggle-btn" onclick="toggleAiPanel()">ocultar ▲</button>
+          </div>
+        </div>
+        <div id="ai-panel-body">
+          <div class="ai-input-row">
+            <input type="text" class="ai-text-input" id="ai-topic"
+              placeholder="Ex: inovação jurídica, reforma trabalhista, compliance em startups…"
+              onkeydown="if(event.key==='Enter')fetchAISuggestions()" />
+            <button type="button" class="btn-ai" id="ai-suggest-btn" onclick="fetchAISuggestions()">Sugerir temas</button>
+          </div>
+          <div class="ai-suggestions" id="ai-suggestions"></div>
+          <div class="ai-actions" id="ai-actions" hidden>
+            <button type="button" class="btn-ai" id="ai-generate-btn" onclick="generateAIArticle()">Gerar artigo →</button>
+            <span class="ai-status-msg" id="ai-status"></span>
+          </div>
+        </div>
+      </div>
+
       <div id="blog-no-token" class="blog-no-token" hidden>
         ⚠ Configure o <strong>GitHub Token</strong> em <button type="button" class="cfg-link-btn" onclick="switchTab('config')">Configurações</button> para publicar artigos diretamente no site.
       </div>
@@ -631,6 +689,22 @@
           </div>
           <p class="cfg-hint">Crie um token em <strong>github.com → Settings → Developer settings → Personal access tokens → Fine-grained</strong> com permissão de escrita no repositório <strong>falaw</strong>.</p>
           <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar token</button>
+        </div>
+
+        <!-- IA -->
+        <div class="cfg-card">
+          <h3 class="cfg-card-title">IA — Geração de Artigos</h3>
+          <p class="cfg-card-desc">As chaves ficam salvas apenas neste navegador e nunca são enviadas ao repositório.</p>
+          <div class="form-field">
+            <label>Grok API Key (xAI)</label>
+            <input type="password" id="cfg-grok-key" placeholder="xai-…" autocomplete="off" />
+          </div>
+          <div class="form-field">
+            <label>Claude API Key (Anthropic)</label>
+            <input type="password" id="cfg-claude-key" placeholder="sk-ant-…" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">O Claude não suporta chamadas diretas do browser (CORS). Use o <strong>Grok</strong> como modelo principal.</p>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar chaves</button>
         </div>
 
         <!-- Senha -->
@@ -1342,6 +1416,8 @@ function loadConfig() {
   document.getElementById('cfg-instagram').value    = cfg.instagram || '';
   document.getElementById('cfg-linkedin').value     = cfg.linkedin  || '';
   document.getElementById('cfg-github-token').value = ghToken();
+  document.getElementById('cfg-grok-key').value   = localStorage.getItem('fa_grok_key')   || '';
+  document.getElementById('cfg-claude-key').value = localStorage.getItem('fa_claude_key') || '';
 }
 
 function saveConfig() {
@@ -1356,6 +1432,10 @@ function saveConfig() {
   const token = document.getElementById('cfg-github-token').value.trim();
   if (token) localStorage.setItem(KEYS.githubToken, token);
   else localStorage.removeItem(KEYS.githubToken);
+  const grokKey   = document.getElementById('cfg-grok-key').value.trim();
+  const claudeKey = document.getElementById('cfg-claude-key').value.trim();
+  if (grokKey)   localStorage.setItem('fa_grok_key', grokKey);   else localStorage.removeItem('fa_grok_key');
+  if (claudeKey) localStorage.setItem('fa_claude_key', claudeKey); else localStorage.removeItem('fa_claude_key');
   document.getElementById('blog-no-token').hidden = !!token;
   showToast('Configurações salvas.');
 }
@@ -1425,6 +1505,128 @@ function setPostPhotoPreview(src) {
   } else {
     removePostPhoto();
   }
+}
+
+/* ══════════════════════════════════════
+   AI — ASSISTENTE DE ARTIGOS
+══════════════════════════════════════ */
+let aiPanelVisible = true;
+let aiSuggestions  = [];
+let aiSelected     = null;
+
+function toggleAiPanel() {
+  aiPanelVisible = !aiPanelVisible;
+  document.getElementById('ai-panel-body').hidden = !aiPanelVisible;
+  document.querySelector('#ai-panel .ai-toggle-btn').textContent =
+    aiPanelVisible ? 'ocultar ▲' : 'mostrar ▼';
+}
+
+async function callGrok(messages, temperature) {
+  const key = localStorage.getItem('fa_grok_key') || '';
+  if (!key) throw new Error('Configure a Grok API Key em Configurações.');
+  const model = document.getElementById('ai-model').value === 'claude' ? 'grok-3-fast' : 'grok-3-fast';
+  const res = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+    body: JSON.stringify({ model: 'grok-3-fast', messages, temperature: temperature || 0.7, stream: false })
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.error?.message || 'HTTP ' + res.status); }
+  return (await res.json()).choices[0].message.content;
+}
+
+function parseJSON(text) {
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('Resposta inválida da IA.');
+  return JSON.parse(m[0]);
+}
+
+async function fetchAISuggestions() {
+  const topic = document.getElementById('ai-topic').value.trim();
+  if (!topic) { alert('Digite um tema para pesquisar.'); return; }
+
+  const btn  = document.getElementById('ai-suggest-btn');
+  const area = document.getElementById('ai-suggestions');
+  const acts = document.getElementById('ai-actions');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="ai-spinner"></span> Buscando…';
+  area.innerHTML = '';
+  acts.hidden = true;
+  aiSelected = null;
+
+  try {
+    const raw = await callGrok([
+      { role: 'system', content: 'Você é especialista em Direito do Trabalho e inovação jurídica no Brasil. Cria conteúdo para o blog do escritório Ferraz Andrade Advogados (São Paulo). Responda SEMPRE em JSON válido, sem texto fora do JSON.' },
+      { role: 'user',   content: `Sugira 5 temas de artigos jurídicos sobre: "${topic}"\n\nFormato de resposta (somente JSON):\n{"sugestoes":[{"titulo":"...","angulo":"frase curta com o diferencial editorial","categoria":"Direito Trabalhista|Inovação Jurídica|Startups & Tecnologia|Compliance|Relações Sindicais"}]}` }
+    ]);
+
+    const data = parseJSON(raw);
+    aiSuggestions = data.sugestoes || [];
+
+    area.innerHTML = aiSuggestions.map((s, i) => `
+      <div class="ai-card" onclick="selectAISuggestion(${i})" id="ai-card-${i}">
+        <div class="ai-card-title">${escHtml(s.titulo)}</div>
+        <div class="ai-card-meta">${escHtml(s.categoria)} &nbsp;·&nbsp; ${escHtml(s.angulo)}</div>
+      </div>`).join('');
+
+  } catch(e) {
+    area.innerHTML = `<p class="ai-error-msg">Erro: ${escHtml(e.message)}</p>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Sugerir temas';
+}
+
+function selectAISuggestion(i) {
+  document.querySelectorAll('.ai-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('ai-card-' + i).classList.add('selected');
+  aiSelected = aiSuggestions[i];
+  document.getElementById('ai-actions').hidden = false;
+  document.getElementById('ai-status').textContent = '';
+}
+
+async function generateAIArticle() {
+  if (!aiSelected) return;
+  const btn    = document.getElementById('ai-generate-btn');
+  const status = document.getElementById('ai-status');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="ai-spinner"></span> Gerando…';
+  status.textContent = '';
+
+  const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const now = new Date();
+  const dateStr = months[now.getMonth()] + ' de ' + now.getFullYear();
+
+  try {
+    status.textContent = 'Escrevendo artigo…';
+    const raw = await callGrok([
+      { role: 'system', content: 'Você é redator jurídico sênior especializado para o blog Ferraz Andrade Advogados. Escreva artigos com linguagem técnica mas acessível, tom analítico e direto, em português brasileiro. Estruture o conteúdo em seções com títulos em MAIÚSCULAS seguidos de dois pontos, separadas por linha em branco. Responda APENAS em JSON válido, sem texto fora do JSON.' },
+      { role: 'user',   content: `Escreva um artigo jurídico completo:\nTítulo: "${aiSelected.titulo}"\nÂngulo: "${aiSelected.angulo}"\nCategoria: "${aiSelected.categoria}"\n\nRequisitos:\n- excerpt: resumo atrativo de até 220 caracteres\n- content: mínimo 900 palavras, seções com título em MAIÚSCULAS seguido de dois pontos\n- date: "${dateStr}"\n- readTime: estimativa em minutos\n\nFormato (somente JSON):\n{"title":"...","category":"...","excerpt":"...","date":"...","readTime":"X min","content":"..."}` }
+    ], 0.85);
+
+    const art = parseJSON(raw);
+
+    // Abre modal pré-preenchido para revisão
+    editingPostId = null;
+    document.getElementById('post-modal-title').textContent = 'Revisar Artigo Gerado pela IA';
+    document.getElementById('post-id').value       = '';
+    document.getElementById('post-title').value    = art.title    || aiSelected.titulo;
+    document.getElementById('post-category').value = art.category || aiSelected.categoria;
+    document.getElementById('post-excerpt').value  = art.excerpt  || '';
+    document.getElementById('post-content').value  = art.content  || '';
+    removePostPhoto();
+    document.getElementById('post-date').value     = art.date     || dateStr;
+    document.getElementById('post-readtime').value = art.readTime || '5 min';
+    document.getElementById('post-status').value   = 'false';
+    document.getElementById('post-modal').classList.add('open');
+    status.textContent = '';
+
+  } catch(e) {
+    status.textContent = 'Erro: ' + e.message;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Gerar artigo →';
 }
 
 /* Close modals on overlay click */
