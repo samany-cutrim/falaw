@@ -581,8 +581,7 @@
           <span class="ai-panel-title">Assistente IA — Gerar Artigo</span>
           <div style="display:flex;align-items:center;gap:12px;">
             <select id="ai-engine-select" style="background:rgba(247,245,242,.08);border:1px solid rgba(247,245,242,.15);color:rgba(247,245,242,.8);font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;padding:4px 8px;border-radius:3px;cursor:pointer;">
-              <option value="gemini">Gemini (Google)</option>
-              <option value="claude">Claude (Anthropic)</option>
+              <option value="openrouter">OpenRouter</option>
             </select>
             <button type="button" class="ai-toggle-btn" onclick="toggleAiPanel()">ocultar ▲</button>
           </div>
@@ -696,24 +695,14 @@
           <h3 class="cfg-card-title">IA — Geração de Artigos</h3>
           <p class="cfg-card-desc">As chaves ficam salvas apenas neste navegador e nunca são enviadas ao repositório.</p>
           <div class="form-field">
-            <label>Gemini API Key (Google)</label>
-            <input type="password" id="cfg-gemini-key" placeholder="AIza…" autocomplete="off" />
-            <p class="cfg-hint" style="margin-top:6px;">Obtenha gratuitamente em <strong>aistudio.google.com</strong> → Get API Key.</p>
+            <label>OpenRouter API Key</label>
+            <input type="password" id="cfg-or-key" placeholder="sk-or-v1-…" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">Crie gratuitamente em <strong>openrouter.ai</strong> → Keys → Create Key. Dá acesso a Claude, Gemini, Llama e outros.</p>
           </div>
           <div class="form-field">
-            <label>Modelo Gemini</label>
-            <input type="text" id="cfg-gemini-model" placeholder="gemini-2.0-flash" autocomplete="off" />
-            <p class="cfg-hint" style="margin-top:6px;">Modelos: <strong>gemini-2.0-flash</strong> (grátis), gemini-1.5-pro, gemini-2.5-pro. Deixe em branco para usar gemini-2.0-flash.</p>
-          </div>
-          <div class="form-field" style="margin-top:20px;padding-top:20px;border-top:1px solid rgba(26,10,13,.08);">
-            <label>Claude Proxy URL (Cloudflare Worker)</label>
-            <input type="text" id="cfg-claude-proxy" placeholder="https://broken-bread-b32d.saah-cutrim.workers.dev" autocomplete="off" />
-            <p class="cfg-hint" style="margin-top:6px;">URL do Worker configurado. A chave da Anthropic fica no Worker, nunca aqui.</p>
-          </div>
-          <div class="form-field">
-            <label>Modelo Claude</label>
-            <input type="text" id="cfg-claude-model" placeholder="claude-sonnet-4-5" autocomplete="off" />
-            <p class="cfg-hint" style="margin-top:6px;">Modelos: <strong>claude-sonnet-4-5</strong>, claude-opus-4-5, claude-haiku-4-5-20251001.</p>
+            <label>Modelo</label>
+            <input type="text" id="cfg-or-model" placeholder="google/gemini-2.0-flash-exp:free" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">Modelos gratuitos: <strong>google/gemini-2.0-flash-exp:free</strong>, meta-llama/llama-3.3-70b-instruct:free. Pagos: anthropic/claude-sonnet-4-5.</p>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
             <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar chaves</button>
@@ -1433,10 +1422,8 @@ function loadConfig() {
   document.getElementById('cfg-instagram').value    = cfg.instagram || '';
   document.getElementById('cfg-linkedin').value     = cfg.linkedin  || '';
   document.getElementById('cfg-github-token').value = ghToken();
-  document.getElementById('cfg-gemini-key').value   = localStorage.getItem('fa_gemini_key')   || '';
-  document.getElementById('cfg-gemini-model').value = localStorage.getItem('fa_gemini_model') || '';
-  document.getElementById('cfg-claude-proxy').value = localStorage.getItem('fa_claude_proxy') || '';
-  document.getElementById('cfg-claude-model').value = localStorage.getItem('fa_claude_model') || '';
+  document.getElementById('cfg-or-key').value   = localStorage.getItem('fa_or_key')   || '';
+  document.getElementById('cfg-or-model').value = localStorage.getItem('fa_or_model') || '';
 }
 
 async function testAPIs() {
@@ -1445,40 +1432,23 @@ async function testAPIs() {
   box.innerHTML = 'Testando…';
   const lines = [];
 
-  // Test Gemini
-  const geminiKey   = localStorage.getItem('fa_gemini_key') || '';
-  const geminiModel = localStorage.getItem('fa_gemini_model') || 'gemini-2.0-flash';
-  if (!geminiKey) {
-    lines.push('❌ Gemini: chave não salva');
+  // Test OpenRouter
+  const orKey   = localStorage.getItem('fa_or_key') || '';
+  const orModel = localStorage.getItem('fa_or_model') || 'google/gemini-2.0-flash-exp:free';
+  if (!orKey) {
+    lines.push('❌ OpenRouter: chave não salva');
   } else {
-    lines.push('🔑 Gemini key: ' + geminiKey.slice(0,8) + '… (model: ' + geminiModel + ')');
+    lines.push('🔑 OpenRouter key: ' + orKey.slice(0,12) + '… (model: ' + orModel + ')');
     try {
-      const r = await fetch(
-        'https://generativelanguage.googleapis.com/v1beta/models/' + geminiModel + ':generateContent?key=' + geminiKey,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'ok' }] }], generationConfig: { maxOutputTokens: 5 } }) }
-      );
-      const txt = await r.text();
-      lines.push((r.ok ? '✅' : '❌') + ' Gemini HTTP ' + r.status + ' — ' + txt.slice(0, 120));
-    } catch(e) { lines.push('❌ Gemini network error: ' + e.message); }
-  }
-
-  // Test Claude Worker
-  const proxyUrl = localStorage.getItem('fa_claude_proxy') || '';
-  const clModel  = localStorage.getItem('fa_claude_model') || 'claude-sonnet-4-5';
-  if (!proxyUrl) {
-    lines.push('❌ Claude: URL do Worker não salva');
-  } else {
-    lines.push('🔗 Claude proxy: ' + proxyUrl + ' (model: ' + clModel + ')');
-    try {
-      const r = await fetch(proxyUrl, {
+      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: clModel, max_tokens: 5, messages: [{ role: 'user', content: 'ok' }] })
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + orKey,
+          'HTTP-Referer': 'https://samany-cutrim.github.io/falaw/', 'X-Title': 'Ferraz Andrade Advogados' },
+        body: JSON.stringify({ model: orModel, messages: [{ role: 'user', content: 'Responda apenas: ok' }], max_tokens: 5 })
       });
       const txt = await r.text();
-      lines.push((r.ok ? '✅' : '❌') + ' Claude HTTP ' + r.status + ' — ' + txt.slice(0, 120));
-    } catch(e) { lines.push('❌ Claude network error: ' + e.message); }
+      lines.push((r.ok ? '✅' : '❌') + ' OpenRouter HTTP ' + r.status + ' — ' + txt.slice(0, 150));
+    } catch(e) { lines.push('❌ OpenRouter network error: ' + e.message); }
   }
 
   box.innerHTML = lines.join('<br>');
@@ -1496,14 +1466,10 @@ function saveConfig() {
   const token = document.getElementById('cfg-github-token').value.trim();
   if (token) localStorage.setItem(KEYS.githubToken, token);
   else localStorage.removeItem(KEYS.githubToken);
-  const geminiKey   = document.getElementById('cfg-gemini-key').value.trim();
-  const geminiModel = document.getElementById('cfg-gemini-model').value.trim();
-  const claudeProxy = document.getElementById('cfg-claude-proxy').value.trim();
-  const claudeModel = document.getElementById('cfg-claude-model').value.trim();
-  if (geminiKey)   localStorage.setItem('fa_gemini_key', geminiKey);     else localStorage.removeItem('fa_gemini_key');
-  if (geminiModel) localStorage.setItem('fa_gemini_model', geminiModel); else localStorage.removeItem('fa_gemini_model');
-  if (claudeProxy) localStorage.setItem('fa_claude_proxy', claudeProxy); else localStorage.removeItem('fa_claude_proxy');
-  if (claudeModel) localStorage.setItem('fa_claude_model', claudeModel); else localStorage.removeItem('fa_claude_model');
+  const orKey   = document.getElementById('cfg-or-key').value.trim();
+  const orModel = document.getElementById('cfg-or-model').value.trim();
+  if (orKey)   localStorage.setItem('fa_or_key', orKey);     else localStorage.removeItem('fa_or_key');
+  if (orModel) localStorage.setItem('fa_or_model', orModel); else localStorage.removeItem('fa_or_model');
   document.getElementById('blog-no-token').hidden = !!token;
   showToast('Configurações salvas.');
 }
@@ -1619,39 +1585,32 @@ async function callClaude(messages, temperature) {
 }
 
 async function callAI(messages, temperature) {
-  const engine = document.getElementById('ai-engine-select')?.value || 'gemini';
-  if (engine === 'claude') return callClaude(messages, temperature);
-  return callGemini(messages, temperature);
+  return callOpenRouter(messages, temperature);
 }
 
-async function callGemini(messages, temperature) {
-  const key   = localStorage.getItem('fa_gemini_key') || '';
-  const model = localStorage.getItem('fa_gemini_model') || 'gemini-2.0-flash';
-  if (!key) throw new Error('Gemini API Key não configurada — vá em Configurações, cole a chave do Google AI Studio e salve.');
-  const system = messages.find(m => m.role === 'system');
-  const turns  = messages.filter(m => m.role !== 'system').map(m => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }]
-  }));
-  const body = {
-    contents: turns,
-    generationConfig: { temperature: temperature || 0.7, maxOutputTokens: 8192 },
-    ...(system ? { systemInstruction: { parts: [{ text: system.content }] } } : {})
-  };
-  const res = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-  );
+async function callOpenRouter(messages, temperature) {
+  const key   = localStorage.getItem('fa_or_key') || '';
+  const model = localStorage.getItem('fa_or_model') || 'google/gemini-2.0-flash-exp:free';
+  if (!key) throw new Error('OpenRouter API Key não configurada — vá em Configurações, crie uma chave em openrouter.ai e salve.');
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + key,
+      'HTTP-Referer': 'https://samany-cutrim.github.io/falaw/',
+      'X-Title': 'Ferraz Andrade Advogados'
+    },
+    body: JSON.stringify({ model, messages, temperature: temperature || 0.7, max_tokens: 8192 })
+  });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     const msg = e.error?.message || '';
-    if (res.status === 400) throw new Error('Chave inválida ou requisição incorreta: ' + msg);
-    if (res.status === 403) throw new Error('Chave inválida ou sem permissão. Verifique em aistudio.google.com.');
+    if (res.status === 401) throw new Error('Chave inválida. Verifique em openrouter.ai → Keys.');
+    if (res.status === 402) throw new Error('Créditos insuficientes no OpenRouter. Adicione créditos ou use um modelo gratuito (:free).');
     if (res.status === 404) throw new Error('Modelo "' + model + '" não encontrado. Verifique o nome em Configurações.');
     throw new Error(msg || 'HTTP ' + res.status);
   }
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return (await res.json()).choices[0].message.content;
 }
 
 function parseJSON(text) {
