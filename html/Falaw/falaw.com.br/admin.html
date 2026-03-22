@@ -1011,7 +1011,8 @@ async function savePost() {
 
   const snapshot = ALL_ARTICLES.slice(); // backup para reverter se falhar
   const id  = editingPostId || (title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now().toString(36));
-  const url = 'blog/reader.html?id=' + encodeURIComponent(id);
+  const existing = editingPostId ? ALL_ARTICLES.find(a => a.id === editingPostId) : null;
+  const url = (existing && existing.url) || ('blog/reader.html?id=' + encodeURIComponent(id));
 
   if (editingPostId) {
     const idx = ALL_ARTICLES.findIndex(a => a.id === editingPostId);

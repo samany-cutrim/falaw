@@ -17,7 +17,7 @@ var FALAW_ARTICLES = [
     excerpt: "Em março de 2026, o CNJ nacionalizou a BERNA — ferramenta de inteligência artificial desenvolvida pelo TJGO que analisa petições por similaridade semântica. O que muda para advogados, magistrados e escritórios de contencioso de massa.",
     date: "Março de 2026",
     readTime: "7 min",
-    url: "blog/reader.html?id=berna-artigo",
+    url: "blog/berna-artigo.html",
     published: true,
     content: ""
   }
