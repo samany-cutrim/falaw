@@ -516,6 +516,50 @@
     .copy-success { color: #2e7d32; font-family: var(--f-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; margin-left: 8px; opacity: 0; transition: opacity .3s; }
     .copy-success.show { opacity: 1; }
 
+    /* ── PREVIEW MODAL ── */
+    #article-preview-modal { position: fixed; inset: 0; background: rgba(6,14,26,.7); z-index: 9999; display: flex; flex-direction: column; overflow: hidden; opacity: 0; pointer-events: none; transition: opacity .2s; }
+    #article-preview-modal.open { opacity: 1; pointer-events: all; }
+    .preview-modal-bar { background: #fff; border-bottom: 1px solid var(--c-divider); padding: 12px 24px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .preview-modal-bar-label { flex: 1; font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--c-muted); }
+    .preview-modal-body { flex: 1; overflow-y: auto; background: #f8f7f4; }
+    .preview-article-wrap { max-width: 760px; margin: 0 auto; padding: 0 24px 60px; }
+    /* article styles for preview */
+    .preview-article-wrap .article-header { padding: 60px 0 32px; }
+    .preview-article-wrap .article-kicker { font-family: var(--f-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--c-accent); margin-bottom: 16px; }
+    .preview-article-wrap h1 { font-family: var(--f-display); font-size: clamp(28px,4vw,48px); font-weight: 700; line-height: 1.12; color: var(--c-dark); margin: 0 0 20px; }
+    .preview-article-wrap .article-meta { font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; color: var(--c-muted); display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 24px; }
+    .preview-article-wrap .article-lede { font-family: Georgia,serif; font-size: 18px; line-height: 1.6; color: var(--c-dark); opacity: .8; font-style: italic; margin-bottom: 8px; }
+    .preview-article-wrap .article-cover { margin: 0 -24px 40px; }
+    .preview-article-wrap .article-cover svg { display: block; width: 100%; }
+    .preview-article-wrap .article-cover-caption { font-family: var(--f-mono); font-size: 10px; color: var(--c-muted); text-align: center; margin-top: 8px; }
+    .preview-article-wrap .article-stats { display: flex; gap: 0; border: 1px solid var(--c-divider); border-radius: 4px; margin: 40px 0; overflow: hidden; }
+    .preview-article-wrap .article-stat-cell { flex: 1; padding: 24px 20px; border-right: 1px solid var(--c-divider); }
+    .preview-article-wrap .article-stat-cell:last-child { border-right: none; }
+    .preview-article-wrap .article-stat-num { font-family: var(--f-display); font-size: 36px; font-weight: 700; color: var(--c-accent); line-height: 1; }
+    .preview-article-wrap .article-stat-num span { font-size: 18px; }
+    .preview-article-wrap .article-stat-label { font-family: var(--f-mono); font-size: 10px; color: var(--c-muted); letter-spacing: .06em; margin-top: 8px; line-height: 1.5; }
+    .preview-article-wrap .article-body p { font-family: Georgia,serif; font-size: 17px; line-height: 1.78; color: var(--c-dark); margin-bottom: 24px; }
+    .preview-article-wrap .article-section { margin-bottom: 40px; }
+    .preview-article-wrap .article-section-label { font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--c-accent); margin-bottom: 12px; }
+    .preview-article-wrap h2 { font-family: var(--f-display); font-size: 24px; font-weight: 700; color: var(--c-dark); margin: 0 0 20px; line-height: 1.25; }
+    .preview-article-wrap .article-pull-quote { border-left: 3px solid var(--c-accent); padding: 4px 0 4px 20px; margin: 24px 0; }
+    .preview-article-wrap .article-pull-quote p { font-family: Georgia,serif; font-size: 18px; font-style: italic; color: var(--c-dark); margin: 0 0 8px; }
+    .preview-article-wrap .article-pull-quote cite { font-family: var(--f-mono); font-size: 10px; color: var(--c-muted); }
+    .preview-article-wrap .article-feature-box { background: var(--c-accent); color: #fff; border-radius: 4px; padding: 24px 28px; margin: 24px 0; }
+    .preview-article-wrap .article-feature-box h3 { font-family: var(--f-display); font-size: 14px; font-weight: 700; margin: 0 0 16px; }
+    .preview-article-wrap .article-feature-box ul { margin: 0; padding-left: 20px; }
+    .preview-article-wrap .article-feature-box li { font-family: Georgia,serif; font-size: 15px; line-height: 1.65; margin-bottom: 8px; opacity: .92; }
+    .preview-article-wrap .article-highlight { background: rgba(13,43,94,.06); border-left: 3px solid var(--c-accent); padding: 16px 20px; margin: 24px 0; border-radius: 0 4px 4px 0; }
+    .preview-article-wrap .article-highlight p { font-family: Georgia,serif; font-size: 16px; line-height: 1.7; color: var(--c-dark); margin: 0; }
+    .preview-article-wrap .article-ornament { text-align: center; color: var(--c-accent); opacity: .4; margin: 32px 0; letter-spacing: 8px; }
+    .preview-article-wrap .article-timeline-item { border-left: 2px solid var(--c-divider); padding-left: 20px; margin-bottom: 24px; }
+    .preview-article-wrap .article-timeline-year { font-family: var(--f-mono); font-size: 10px; color: var(--c-accent); letter-spacing: .08em; margin-bottom: 6px; }
+    .preview-article-wrap .article-timeline-item h4 { font-family: var(--f-display); font-size: 16px; font-weight: 700; margin: 0 0 8px; }
+    .preview-article-wrap .article-end { border-top: 1px solid var(--c-divider); padding-top: 24px; margin-top: 40px; }
+    .preview-article-wrap .article-end-meta { font-family: var(--f-mono); font-size: 10px; color: var(--c-muted); margin-bottom: 16px; }
+    .preview-article-wrap .article-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .preview-article-wrap .article-tag { font-family: var(--f-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; border: 1px solid var(--c-divider); padding: 4px 10px; border-radius: 2px; color: var(--c-muted); }
+
     /* ── TEAM ROLE TAG ── */
     .role-badge {
       font-family: var(--f-mono);
@@ -724,6 +768,20 @@
       </div>
     </section>
 
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MODAL — PRÉVIA DO ARTIGO
+══════════════════════════════════════ -->
+<div id="article-preview-modal">
+  <div class="preview-modal-bar">
+    <span class="preview-modal-bar-label">Pré-visualização do artigo</span>
+    <button class="btn btn-ghost btn-sm" onclick="closeArticlePreview()">Descartar</button>
+    <button class="btn btn-sm" onclick="publishPreviewArticle()" style="background:var(--c-accent);color:#fff;border-color:var(--c-accent);">Publicar →</button>
+  </div>
+  <div class="preview-modal-body">
+    <div class="preview-article-wrap" id="preview-article-content"></div>
   </div>
 </div>
 
@@ -1715,20 +1773,7 @@ async function generateAIArticle() {
     ], 0.85);
 
     const art = parseJSON(raw);
-
-    // Abre modal pré-preenchido para revisão
-    editingPostId = null;
-    document.getElementById('post-modal-title').textContent = 'Revisar Artigo Gerado pela IA';
-    document.getElementById('post-id').value       = '';
-    document.getElementById('post-title').value    = art.title    || aiSelected.titulo;
-    document.getElementById('post-category').value = art.category || aiSelected.categoria;
-    document.getElementById('post-excerpt').value  = art.excerpt  || '';
-    document.getElementById('post-content').value  = art.content  || '';
-    removePostPhoto();
-    document.getElementById('post-date').value     = art.date     || dateStr;
-    document.getElementById('post-readtime').value = art.readTime || '5 min';
-    document.getElementById('post-status').value   = 'false';
-    document.getElementById('post-modal').classList.add('open');
+    openArticlePreview(art, aiSelected, dateStr);
     status.textContent = '';
 
   } catch(e) {
@@ -1737,6 +1782,126 @@ async function generateAIArticle() {
 
   btn.disabled = false;
   btn.textContent = 'Gerar artigo →';
+}
+
+/* ══════════════════════════════════════
+   PRÉVIA DO ARTIGO
+══════════════════════════════════════ */
+let _previewArtData = null;
+
+function openArticlePreview(artJSON, aiSelected, dateStr) {
+  _previewArtData = { artJSON, aiSelected, dateStr };
+  const html = buildPreviewHTML(artJSON);
+  document.getElementById('preview-article-content').innerHTML = html;
+  document.getElementById('article-preview-modal').classList.add('open');
+  document.getElementById('article-preview-modal').scrollTop = 0;
+}
+
+function closeArticlePreview() {
+  document.getElementById('article-preview-modal').classList.remove('open');
+  _previewArtData = null;
+}
+
+async function publishPreviewArticle() {
+  if (!_previewArtData) return;
+  const { artJSON, aiSelected, dateStr } = _previewArtData;
+  const title    = artJSON.title    || aiSelected.titulo;
+  const category = artJSON.category || aiSelected.categoria;
+  const excerpt  = artJSON.excerpt  || '';
+  const content  = JSON.stringify(artJSON);
+  const date     = artJSON.date     || dateStr;
+  const readTime = artJSON.readTime || '5 min';
+  const id = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now().toString(36);
+  const url = 'blog/reader.html?id=' + encodeURIComponent(id);
+
+  closeArticlePreview();
+  const snapshot = ALL_ARTICLES.slice();
+  ALL_ARTICLES.unshift({ id, title, category, excerpt, content, url, photo: '', date, readTime, published: true });
+  showToast('Publicando no GitHub…');
+  const ok = await pushArticlesToGitHub();
+  if (ok) { renderBlog(); showToast('Artigo publicado com sucesso!'); }
+  else { ALL_ARTICLES = snapshot; renderBlog(); }
+}
+
+function buildPreviewHTML(d) {
+  const e = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const eSVG = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let h = '';
+
+  // Header
+  h += '<header class="article-header">'
+    + '<div class="article-kicker">' + e(d.kicker || d.category) + '</div>'
+    + '<h1>' + e(d.title) + '</h1>'
+    + '<div class="article-meta"><span>' + e(d.date||'') + '</span><span class="sep">·</span><span>' + e(d.category) + '</span>'
+    + (d.readTime ? '<span class="sep">·</span><span>' + e(d.readTime) + ' de leitura</span>' : '')
+    + '</div>';
+  if (d.lede) {
+    h += '<p class="article-lede">\u201c' + e(d.lede) + '\u201d';
+    if (d.ledeCite) h += '<br>' + e(d.ledeCite);
+    h += '</p>';
+  }
+  h += '</header>';
+
+  // SVG cover
+  const kicker = (d.kicker || d.category || '').toUpperCase().substring(0,42);
+  const words = (d.title||'').split(' ');
+  const mid = Math.ceil(words.length/2);
+  let l1 = words.slice(0,mid).join(' ').toUpperCase();
+  let l2 = words.slice(mid).join(' ').toUpperCase();
+  if (l1.length>16) l1=l1.substring(0,16)+'\u2026';
+  if (l2.length>16) l2=l2.substring(0,16)+'\u2026';
+  const fs = Math.min(68,Math.max(38,Math.floor(900/Math.max(l1.length,l2.length,1))));
+  const y2 = 155+fs+12, divY = y2+fs+10;
+  const svg = '<svg width="100%" viewBox="0 0 680 420" xmlns="http://www.w3.org/2000/svg">'
+    +'<defs><linearGradient id="p-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0b1e38"/><stop offset="100%" stop-color="#0d2a4a"/></linearGradient>'
+    +'<radialGradient id="p-glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#1a5fa8" stop-opacity="0.35"/><stop offset="100%" stop-color="#0b1e38" stop-opacity="0"/></radialGradient>'
+    +'<linearGradient id="p-div" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#0D2B5E" stop-opacity="0"/><stop offset="20%" stop-color="#0D2B5E" stop-opacity="1"/><stop offset="80%" stop-color="#0D2B5E" stop-opacity="1"/><stop offset="100%" stop-color="#0D2B5E" stop-opacity="0"/></linearGradient>'
+    +'<clipPath id="p-clip"><rect x="0" y="0" width="680" height="420"/></clipPath></defs>'
+    +'<rect x="0" y="0" width="680" height="420" fill="url(#p-bg)"/>'
+    +'<rect x="0" y="0" width="680" height="420" fill="url(#p-glow)"/>'
+    +'<g opacity="0.12" clip-path="url(#p-clip)"><circle cx="580" cy="200" r="180" fill="none" stroke="#4a90d9" stroke-width="0.8"/><circle cx="580" cy="200" r="130" fill="none" stroke="#4a90d9" stroke-width="0.6"/><circle cx="580" cy="200" r="80" fill="none" stroke="#4a90d9" stroke-width="0.5"/></g>'
+    +'<circle cx="580" cy="200" r="22" fill="#1a5fa8" opacity="0.5"/><circle cx="580" cy="200" r="14" fill="#2a7fce" opacity="0.6"/><circle cx="580" cy="200" r="6" fill="#4a9fe8"/>'
+    +'<rect x="40" y="40" width="4" height="340" rx="2" fill="#0D2B5E" opacity="0.9"/>'
+    +'<rect x="56" y="44" width="210" height="22" rx="3" fill="#0D2B5E" opacity="0.18"/>'
+    +'<text x="68" y="59" font-family="\'IBM Plex Mono\',monospace" font-size="10" fill="#e87060" letter-spacing="2">'+eSVG(kicker)+'</text>'
+    +'<text x="56" y="155" font-family="\'Sora\',sans-serif" font-size="'+fs+'" font-weight="700" fill="#f0ece0" letter-spacing="-2" opacity="0.97">'+eSVG(l1)+'</text>'
+    +(l2?'<text x="56" y="'+y2+'" font-family="\'Sora\',sans-serif" font-size="'+fs+'" font-weight="700" fill="#f0ece0" letter-spacing="-2" opacity="0.85">'+eSVG(l2)+'</text>':'')
+    +'<rect x="56" y="'+divY+'" width="320" height="2" rx="1" fill="url(#p-div)"/>'
+    +'<text x="44" y="412" font-family="\'IBM Plex Mono\',monospace" font-size="9" fill="#5a7a9a" letter-spacing="1.5">'+eSVG(kicker)+'</text>'
+    +'<text x="636" y="412" text-anchor="end" font-family="\'IBM Plex Mono\',monospace" font-size="9" fill="#5a7a9a" letter-spacing="1">FALAW BLOG</text>'
+    +'</svg>';
+  h += '<div class="article-cover">' + svg + '<p class="article-cover-caption">' + e(d.title) + ' · Falaw Blog · ' + e(d.date||'') + '</p></div>';
+
+  // Stats
+  if (d.stats && d.stats.length) {
+    h += '<div class="article-stats" role="region">';
+    d.stats.forEach(s => { h += '<div class="article-stat-cell"><div class="article-stat-num">'+e(s.num)+'<span>'+e(s.suffix||'')+'</span></div><div class="article-stat-label">'+e(s.label||'').replace(/\n/g,'<br>')+'</div></div>'; });
+    h += '</div>';
+  }
+
+  // Sections
+  h += '<div class="article-body">';
+  (d.sections||[]).forEach((sec, i) => {
+    h += '<div class="article-section">';
+    if (sec.label) h += '<div class="article-section-label">'+e(sec.label)+'</div>';
+    if (sec.title) h += '<h2>'+e(sec.title)+'</h2>';
+    if (sec.quote) h += '<blockquote class="article-pull-quote"><p>\u201c'+e(sec.quote.text)+'\u201d</p>'+(sec.quote.cite?'<cite>'+e(sec.quote.cite)+'</cite>':'')+'</blockquote>';
+    const ps = sec.paragraphs||[], half = Math.ceil(ps.length/2);
+    ps.slice(0,half).forEach(p => { h += '<p>'+e(p)+'</p>'; });
+    if (sec.featureBox) { h += '<div class="article-feature-box"><h3>'+e(sec.featureBox.title||'')+'</h3><ul>'; (sec.featureBox.items||[]).forEach(item => { h += '<li>'+e(item)+'</li>'; }); h += '</ul></div>'; }
+    ps.slice(half).forEach(p => { h += '<p>'+e(p)+'</p>'; });
+    if (sec.highlight) h += '<div class="article-highlight"><p>'+e(sec.highlight)+'</p></div>';
+    if (sec.timeline) { h += '<div class="article-timeline">'; sec.timeline.forEach(t => { h += '<div class="article-timeline-item"><div class="article-timeline-year">'+e(t.year)+'</div><h4>'+e(t.title)+'</h4><p>'+e(t.text)+'</p></div>'; }); h += '</div>'; }
+    h += '</div>';
+    if (i < (d.sections||[]).length-1) h += '<div class="article-ornament" aria-hidden="true">\u2726 \u2726 \u2726</div>';
+  });
+  h += '</div>';
+
+  // End
+  h += '<div class="article-end"><p class="article-end-meta">Falaw · Blog Jurídico · '+e(d.date||'')+'</p>';
+  if (d.tags && d.tags.length) { h += '<div class="article-tags">'; d.tags.forEach(t => { h += '<span class="article-tag">'+e(t)+'</span>'; }); h += '</div>'; }
+  h += '</div>';
+  return h;
 }
 
 /* Close modals on overlay click */
