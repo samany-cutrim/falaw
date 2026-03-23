@@ -495,6 +495,11 @@ h3 {
 .ajudar-card:hover::before { width: 100%; }
 .ajudar-card:hover { background: rgba(13,43,94,.12); }
 
+/* ── Diferenciais — 4 colunas ── */
+#s-diferenciais .ajudar-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 /* ── Diferenciais — hover interativo ── */
 #s-diferenciais .ajudar-card {
   cursor: default;
