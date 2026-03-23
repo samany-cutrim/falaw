@@ -699,8 +699,7 @@ h3 {
 .atuacao-photo img {
   width: 100%;
   height: auto;
-  max-height: 80vh;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 24px;
   object-position: center;
   display: block;
