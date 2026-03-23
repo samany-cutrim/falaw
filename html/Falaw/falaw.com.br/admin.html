@@ -9,10 +9,10 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --c-dark:   #1A0A0D;
+      --c-dark:   #060E1A;
       --c-off:    #F7F5F2;
-      --c-accent: #7B1A2E;
-      --c-accent-h: #9B2238;
+      --c-accent: #0D2B5E;
+      --c-accent-h: #1A4080;
       --c-muted:  #7A7672;
       --c-divider: rgba(26,10,13,.1);
       --f-body:   'Inter', sans-serif;
@@ -472,7 +472,7 @@
     .blog-sub-list { margin-bottom: 32px; }
 
     /* ── AI PANEL ── */
-    .ai-panel { background: linear-gradient(135deg,#1A0A0D 0%,#231018 100%); border-radius: 4px; padding: 24px 28px; margin-bottom: 32px; }
+    .ai-panel { background: linear-gradient(135deg,#060E1A 0%,#231018 100%); border-radius: 4px; padding: 24px 28px; margin-bottom: 32px; }
     .ai-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
     .ai-panel-title { font-family: var(--f-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--c-accent); display: flex; align-items: center; gap: 8px; }
     .ai-panel-title::before { content: ''; display: inline-block; width: 6px; height: 6px; background: var(--c-accent); border-radius: 50%; animation: aipulse 1.6s ease-in-out infinite; }
@@ -1805,19 +1805,19 @@ function generateEmailHTML(a) {
 <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
 
   <!-- Header -->
-  <tr><td style="background:#1A0A0D;padding:28px 40px;border-radius:4px 4px 0 0;">
-    <p style="font-family:monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#7B1A2E;margin:0 0 6px 0;">FERRAZ ANDRADE ADVOGADOS</p>
+  <tr><td style="background:#060E1A;padding:28px 40px;border-radius:4px 4px 0 0;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#0D2B5E;margin:0 0 6px 0;">FERRAZ ANDRADE ADVOGADOS</p>
     <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.35);margin:0;">Newsletter · ${escHtml(a.category)}</p>
   </td></tr>
 
   <!-- Body -->
   <tr><td style="background:#ffffff;padding:40px;">
-    <p style="font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#7B1A2E;margin:0 0 16px 0;">${escHtml(a.category)}</p>
-    <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:700;color:#1A0A0D;margin:0 0 14px 0;line-height:1.25;">${escHtml(a.title)}</h1>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#0D2B5E;margin:0 0 16px 0;">${escHtml(a.category)}</p>
+    <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:700;color:#060E1A;margin:0 0 14px 0;line-height:1.25;">${escHtml(a.title)}</h1>
     <p style="font-family:monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#7A7672;margin:0 0 28px 0;">${escHtml(a.date || '')}${a.date && a.readTime ? ' &nbsp;·&nbsp; ' : ''}${escHtml(a.readTime || '')}${a.readTime ? ' de leitura' : ''}</p>
-    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.75;color:#1A0A0D;margin:0 0 32px 0;">${escHtml(preview)}</p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.75;color:#060E1A;margin:0 0 32px 0;">${escHtml(preview)}</p>
     <table cellpadding="0" cellspacing="0"><tr>
-      <td style="background:#7B1A2E;border-radius:2px;">
+      <td style="background:#0D2B5E;border-radius:2px;">
         <a href="${articleUrl}" style="display:inline-block;padding:14px 28px;font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#ffffff;text-decoration:none;">Ler artigo completo &rarr;</a>
       </td>
     </tr></table>

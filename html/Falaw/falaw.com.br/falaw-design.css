@@ -13,13 +13,13 @@ button, input, textarea, select { font: inherit; }
 :root {
   --c-white:       #FFFFFF;
   --c-off:         #F7F5F2;
-  --c-dark:        #1A0A0D;
-  --c-text:        #1A0A0D;
-  --c-muted:       #6B6360;
-  --c-light-text:  #F7F5F2;
-  --c-accent:      #7B1A2E;
-  --c-accent-h:    #9B2238;
-  --c-divider:     rgba(26,10,13,0.10);
+  --c-dark:        #060E1A;
+  --c-text:        #060E1A;
+  --c-muted:       #5A6070;
+  --c-light-text:  #F0F4F8;
+  --c-accent:      #0D2B5E;
+  --c-accent-h:    #1A4080;
+  --c-divider:     rgba(6,14,26,0.10);
 
   --f-display:  'Sora', sans-serif;
   --f-mono:     'IBM Plex Mono', monospace;
