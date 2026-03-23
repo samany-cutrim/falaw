@@ -1626,13 +1626,22 @@ async function callN8N(messages, temperature) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ provider, model, messages, temperature: temperature || 0.7 })
   });
+  const rawText = await res.text().catch(() => '');
   if (!res.ok) {
-    const txt = await res.text().catch(() => '');
-    throw new Error('n8n HTTP ' + res.status + (txt ? ': ' + txt.slice(0, 120) : ''));
+    throw new Error('n8n HTTP ' + res.status + (rawText ? ': ' + rawText.slice(0, 120) : ''));
   }
-  const data = await res.json();
+  if (!rawText || !rawText.trim()) {
+    throw new Error('n8n retornou resposta vazia. Verifique o nó "Respond to Webhook" no seu workflow n8n.');
+  }
+  let data;
+  try { data = JSON.parse(rawText); }
+  catch(e) {
+    // n8n às vezes retorna texto puro — usa direto
+    if (rawText.length > 10) return rawText.trim();
+    throw new Error('n8n resposta inválida: ' + rawText.slice(0, 120));
+  }
   const item = Array.isArray(data) ? data[0] : data;
-  return item?.text || item?.json?.text || '';
+  return item?.text || item?.output || item?.json?.text || item?.message || JSON.stringify(item);
 }
 
 function parseJSON(text) {
