@@ -711,9 +711,9 @@ h3 {
 
 /* Seção selos — split layout: selos esquerda / foto direita */
 #s-selos .container { display: grid; grid-template-columns: 1fr 38%; gap: 64px; align-items: center; }
-#s-selos .selos-left { position: relative; overflow: hidden; border-radius: 4px; height: 100%; min-height: 360px; }
+#s-selos .selos-right { grid-column: 1; display: flex; flex-direction: column; align-items: flex-start; }
+#s-selos .selos-left { grid-column: 2; position: relative; overflow: hidden; border-radius: 4px; height: 100%; min-height: 360px; }
 #s-selos .selos-left img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; border-radius: 16px; }
-#s-selos .selos-right { display: flex; flex-direction: column; align-items: flex-start; }
 #s-selos .hr { width: 100%; }
 .selos-desc { color: var(--c-muted); font-size: 16px; max-width: 480px; line-height: 1.7; margin-bottom: 40px; }
 
