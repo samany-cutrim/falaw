@@ -1,0 +1,210 @@
+{
+  "name": "Ferraz Andrade — Gerador de Artigos IA",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "falaw-ia",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "node-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "k1",
+              "name": "ANTHROPIC_KEY",
+              "value": "SUA_CHAVE_ANTHROPIC_AQUI",
+              "type": "string"
+            },
+            {
+              "id": "k2",
+              "name": "GEMINI_KEY",
+              "value": "SUA_CHAVE_GEMINI_AQUI",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-keys",
+      "name": "Configurar Chaves",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $('Webhook').item.json.body.provider }}",
+              "rightValue": "claude",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-if",
+      "name": "Claude ou Gemini?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key",          "value": "={{ $('Configurar Chaves').item.json.ANTHROPIC_KEY }}" },
+            { "name": "anthropic-version",   "value": "2023-06-01" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $('Webhook').item.json.body.model || 'claude-sonnet-4-5', max_tokens: 8192, temperature: $('Webhook').item.json.body.temperature || 0.7, system: ($('Webhook').item.json.body.messages.find(m => m.role === 'system') || {content: ''}).content, messages: $('Webhook').item.json.body.messages.filter(m => m.role !== 'system') }) }}"
+      },
+      "id": "node-claude",
+      "name": "Chamar Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 160]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "text",
+              "value": "={{ $json.content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-claude-set",
+      "name": "Extrair Claude",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1080, 160]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "node-resp-claude",
+      "name": "Responder Claude",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1300, 160]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook').item.json.body;\nconst messages = body.messages || [];\nconst systemMsg = messages.find(m => m.role === 'system');\nconst turns = messages\n  .filter(m => m.role !== 'system')\n  .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));\n\nreturn [{\n  json: {\n    geminiBody: {\n      contents: turns,\n      generationConfig: { temperature: body.temperature || 0.7, maxOutputTokens: 8192 },\n      ...(systemMsg ? { systemInstruction: { parts: [{ text: systemMsg.content }] } } : {})\n    },\n    geminiModel: body.model || 'gemini-2.0-flash',\n    geminiKey: $('Configurar Chaves').item.json.GEMINI_KEY\n  }\n}];"
+      },
+      "id": "node-gemini-prep",
+      "name": "Preparar Gemini",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 440]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/' + $json.geminiModel + ':generateContent?key=' + $json.geminiKey }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.geminiBody) }}"
+      },
+      "id": "node-gemini",
+      "name": "Chamar Gemini",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 440]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "g1",
+              "name": "text",
+              "value": "={{ $json.candidates[0].content.parts[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-gemini-set",
+      "name": "Extrair Gemini",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1300, 440]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "node-resp-gemini",
+      "name": "Responder Gemini",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1520, 440]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Configurar Chaves", "type": "main", "index": 0 }]]
+    },
+    "Configurar Chaves": {
+      "main": [[{ "node": "Claude ou Gemini?", "type": "main", "index": 0 }]]
+    },
+    "Claude ou Gemini?": {
+      "main": [
+        [{ "node": "Chamar Claude",   "type": "main", "index": 0 }],
+        [{ "node": "Preparar Gemini", "type": "main", "index": 0 }]
+      ]
+    },
+    "Chamar Claude": {
+      "main": [[{ "node": "Extrair Claude", "type": "main", "index": 0 }]]
+    },
+    "Extrair Claude": {
+      "main": [[{ "node": "Responder Claude", "type": "main", "index": 0 }]]
+    },
+    "Preparar Gemini": {
+      "main": [[{ "node": "Chamar Gemini", "type": "main", "index": 0 }]]
+    },
+    "Chamar Gemini": {
+      "main": [[{ "node": "Extrair Gemini", "type": "main", "index": 0 }]]
+    },
+    "Extrair Gemini": {
+      "main": [[{ "node": "Responder Gemini", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": []
+}
