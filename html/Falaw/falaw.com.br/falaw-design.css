@@ -493,7 +493,37 @@ h3 {
   transition: width .4s ease;
 }
 .ajudar-card:hover::before { width: 100%; }
-.ajudar-card:hover { background: rgba(123,26,46,.12); }
+.ajudar-card:hover { background: rgba(13,43,94,.12); }
+
+/* ── Diferenciais — hover interativo ── */
+#s-diferenciais .ajudar-card {
+  cursor: default;
+  border: 1px solid rgba(255,255,255,.04);
+  transition: transform .35s cubic-bezier(.25,.46,.45,.94),
+              box-shadow .35s ease,
+              background .3s,
+              border-color .3s;
+}
+#s-diferenciais .ajudar-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 24px 64px rgba(6,14,26,.35);
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+}
+#s-diferenciais .ajudar-card:hover .ajudar-n {
+  color: rgba(255,255,255,.5);
+  letter-spacing: .2em;
+  transition: letter-spacing .3s ease, color .3s;
+}
+#s-diferenciais .ajudar-card:hover .ajudar-title {
+  color: #ffffff;
+}
+#s-diferenciais .ajudar-card:hover .ajudar-desc {
+  color: rgba(255,255,255,.75);
+}
+#s-diferenciais .ajudar-card:hover::before {
+  background: rgba(255,255,255,.3);
+}
 .ajudar-n {
   font-family: var(--f-mono);
   font-size: 10px;
