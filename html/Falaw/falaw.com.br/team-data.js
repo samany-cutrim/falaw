@@ -14,7 +14,7 @@ var FALAW_TEAM = [
     "email": "ferrazandrade@falaw.com.br",
     "role": "Assistente Administrativa",
     "bio": "Profissional da área administrativa, com formação técnica em Secretariado pelo Centro Paula Souza e atualmente em processo de graduação em Administração pela Universidade Anhembi Morumbi. Possui sólida base em organização, gestão de processos e suporte executivo, aliando conhecimento técnico à formação acadêmica em desenvolvimento.",
-    "status": "memoriam"
+    "status": "active"
   },
   {
     "id": "mn1yd8t2ymn4",
