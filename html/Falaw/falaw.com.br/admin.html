@@ -1704,8 +1704,26 @@ async function callN8N(messages, temperature) {
 
 function parseJSON(text) {
   const m = text.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error('Resposta inválida da IA.');
-  return JSON.parse(m[0]);
+  if (!m) throw new Error('Resposta inválida da IA — JSON não encontrado.');
+  let raw = m[0];
+  // Tenta parse direto
+  try { return JSON.parse(raw); } catch(e) {}
+  // Corrige quebras de linha reais dentro de strings
+  try {
+    const fixed = raw.replace(/"(?:[^"\\]|\\.)*"/g, s =>
+      s.replace(/\n/g,'\\n').replace(/\r/g,'\\r').replace(/\t/g,'\\t')
+    );
+    return JSON.parse(fixed);
+  } catch(e) {}
+  // Corrige trailing commas + quebras
+  try {
+    const fixed2 = raw
+      .replace(/"(?:[^"\\]|\\.)*"/g, s => s.replace(/\n/g,'\\n').replace(/\r/g,'\\r'))
+      .replace(/,\s*([}\]])/g,'$1');
+    return JSON.parse(fixed2);
+  } catch(e) {
+    throw new Error('JSON da IA com erro de sintaxe. Tente gerar novamente.');
+  }
 }
 
 async function fetchAISuggestions() {
