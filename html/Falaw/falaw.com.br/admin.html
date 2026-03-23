@@ -899,11 +899,13 @@ const ADMIN_PASSWORD_DEFAULT = 'falaw2026';
 const GITHUB_OWNER  = 'samany-cutrim';
 const GITHUB_REPO   = 'falaw';
 const GITHUB_BRANCH = 'master';
-const GITHUB_PATH   = 'html/Falaw/falaw.com.br/blog/articles-data.js';
+const GITHUB_PATH        = 'html/Falaw/falaw.com.br/blog/articles-data.js';
+const GITHUB_PATH_TEAM   = 'html/Falaw/falaw.com.br/team-data.js';
 const KEYS = { adminPwd: 'fa_admin_pwd', githubToken: 'fa_github_token', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions' };
 
 let ALL_ARTICLES    = [];
 let GH_FILE_SHA     = '';
+let GH_TEAM_SHA     = '';
 
 /* ══════════════════════════════════════
    STORAGE HELPERS
@@ -1054,6 +1056,35 @@ async function pushArticlesToGitHub() {
     GH_FILE_SHA = data.content.sha;
     // GitHub é a fonte de verdade — limpa cópias locais antigas
     localStorage.removeItem('fa_blog_articles');
+    return true;
+  } catch (e) {
+    showToast('Erro GitHub: ' + e.message);
+    return false;
+  }
+}
+
+function generateTeamJS(members) {
+  return '/* team-data.js — gerado pelo admin Ferraz Andrade. Não editar manualmente. */\nvar FALAW_TEAM = ' + JSON.stringify(members, null, 2) + ';\n';
+}
+
+async function pushTeamToGitHub() {
+  const token = localStorage.getItem('fa_github_token') || '';
+  if (!token) { showToast('Token GitHub não configurado.'); return false; }
+  try {
+    // busca SHA atual se não tiver
+    if (!GH_TEAM_SHA) {
+      const r = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH_TEAM}?ref=${GITHUB_BRANCH}&t=${Date.now()}`,
+        { headers: { 'Authorization': 'token ' + token } });
+      if (r.ok) { const d = await r.json(); GH_TEAM_SHA = d.sha; }
+    }
+    const members = load(KEYS.members) || [];
+    const content = btoa(unescape(encodeURIComponent(generateTeamJS(members))));
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH_TEAM}`,
+      { method: 'PUT', headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Admin: update team members', content, sha: GH_TEAM_SHA, branch: GITHUB_BRANCH }) });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'HTTP ' + res.status); }
+    const data = await res.json();
+    GH_TEAM_SHA = data.content.sha;
     return true;
   } catch (e) {
     showToast('Erro GitHub: ' + e.message);
@@ -1284,15 +1315,18 @@ function saveMember() {
   save(KEYS.members, members);
   closeMemberModal();
   renderEquipe();
-  showToast(id ? 'Membro atualizado.' : 'Membro adicionado.');
+  showToast('Salvando no GitHub…');
+  pushTeamToGitHub().then(ok => showToast(ok ? (id ? 'Membro atualizado.' : 'Membro adicionado.') : 'Salvo localmente, mas falhou no GitHub.'));
 }
 
-function deleteMember(id) {
+async function deleteMember(id) {
   if (!confirm('Excluir este membro? Esta ação não pode ser desfeita.')) return;
   const members = (load(KEYS.members) || []).filter(m => m.id !== id);
   save(KEYS.members, members);
   renderEquipe();
-  showToast('Membro excluído.');
+  showToast('Salvando no GitHub…');
+  const ok = await pushTeamToGitHub();
+  showToast(ok ? 'Membro excluído.' : 'Excluído localmente, mas falhou no GitHub.');
 }
 
 /* ══════════════════════════════════════

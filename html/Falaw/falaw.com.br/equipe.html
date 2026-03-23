@@ -10,6 +10,29 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
   <script src="falaw-main.js" defer></script>
+  <script src="team-data.js"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof FALAW_TEAM === 'undefined' || !FALAW_TEAM.length) return;
+    var emailIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>';
+    var html = FALAW_TEAM.map(function (m) {
+      var memoriam = m.status === 'memoriam';
+      var emailBtn = m.email ? '<a href="mailto:' + m.email + '" class="team-email-icon" data-tooltip="' + m.email + '" aria-label="Enviar e-mail">' + emailIcon + '</a>' : '';
+      return '<div class="team-row' + (memoriam ? ' team-row-memoriam' : '') + '">' +
+        '<div class="team-row-header">' +
+          '<h3>' + m.name + '</h3>' +
+          '<span class="team-role-tag">' + m.role + '</span>' +
+          emailBtn +
+        '</div>' +
+        '<div class="team-bio-wrap"><div class="team-bio-inner">' +
+          '<p class="team-bio">' + m.bio + '</p>' +
+        '</div></div>' +
+      '</div>';
+    }).join('');
+    var container = document.getElementById('team-list-container');
+    if (container) container.innerHTML = html;
+  });
+  </script>
 </head>
 <body>
 
@@ -79,7 +102,7 @@
     <div class="section-inner">
       <div class="container">
 
-        <div class="team-list reveal">
+        <div class="team-list reveal" id="team-list-container">
 
           <div class="team-row">
             <div class="team-row-header">
