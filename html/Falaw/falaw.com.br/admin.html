@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin — Ferraz Andrade Advogados</title>
+  <title>Admin — Falaw Advogados</title>
   <meta name="robots" content="noindex, nofollow" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -537,7 +537,7 @@
 <div id="login-screen">
   <div class="login-box">
     <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png"
-         alt="Ferraz Andrade Advogados" class="login-logo" />
+         alt="Falaw Advogados" class="login-logo" />
     <p>Área Administrativa</p>
     <input type="password" id="login-pwd" placeholder="Senha de acesso" />
     <button onclick="doLogin()">Entrar →</button>
@@ -553,7 +553,7 @@
   <nav class="admin-nav">
     <div class="admin-nav-brand">
       <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png"
-           alt="Ferraz Andrade Advogados" class="admin-nav-logo" />
+           alt="Falaw Advogados" class="admin-nav-logo" />
       <span>Admin</span>
     </div>
     <div class="admin-tabs">
@@ -870,7 +870,7 @@
 
       <div class="form-field">
         <label>Assunto do e-mail</label>
-        <input type="text" id="email-subject" placeholder="Newsletter — Ferraz Andrade Advogados" />
+        <input type="text" id="email-subject" placeholder="Newsletter — Falaw Advogados" />
       </div>
 
       <div class="form-field">
@@ -930,7 +930,7 @@ function seedData() {
       { id: uid(), name: 'Pollyanna Dias', role: 'Advogada', status: 'active', bio: 'Formada em Direito pela Universidade Cruzeiro do Sul com láurea acadêmica. Pós-graduada em Direito Empresarial e Tributário pela UniCidade e em Direito do Trabalho e Previdenciário pelo Mackenzie. Certificada em Labor 4.0. Fluente em inglês e francês.' },
       { id: uid(), name: 'Samany Cutrim', role: 'Advogada', status: 'active', bio: 'Graduada em Direito pela UNICID e pós-graduada em Direito e Processo do Trabalho pelo Damasio Educacional. Graduanda em Inteligência Artificial pela FMU. Atua no contencioso e na controladoria do escritório.' },
       { id: uid(), name: 'Zanilda Monteiro', role: 'Advogada', status: 'active', bio: 'Bacharela em Direito pela Universidade Paulista, pós-graduanda em Direito e Processo do Trabalho e em Legal Ops & Controladoria Jurídica. Responsável pela Controladoria Jurídica do escritório, com atuação em gestão de prazos e monitoramento de indicadores.' },
-      { id: uid(), name: 'Stefhane Félix de Almeida', role: 'In Memoriam', status: 'memoriam', bio: 'Graduada em Direito pela Universidade Paulista (2014) e especialista em Direito e Processo do Trabalho pela Escola Superior de Advocacia Paulista (2018). Advogada do Ferraz Andrade Advogados, cuja dedicação e contribuição permanecem vivas no espírito do escritório.' },
+      { id: uid(), name: 'Stefhane Félix de Almeida', role: 'In Memoriam', status: 'memoriam', bio: 'Graduada em Direito pela Universidade Paulista (2014) e especialista em Direito e Processo do Trabalho pela Escola Superior de Advocacia Paulista (2018). Advogada do Falaw Advogados, cuja dedicação e contribuição permanecem vivas no espírito do escritório.' },
     ]);
   }
   if (!load(KEYS.newsletter)) save(KEYS.newsletter, []);
@@ -1657,7 +1657,7 @@ async function fetchAISuggestions() {
 
   try {
     const raw = await callAI([
-      { role: 'system', content: 'Você é especialista em Direito do Trabalho e inovação jurídica no Brasil. Cria conteúdo para o blog do escritório Ferraz Andrade Advogados (São Paulo). Responda SEMPRE em JSON válido, sem texto fora do JSON.' },
+      { role: 'system', content: 'Você é especialista em Direito do Trabalho e inovação jurídica no Brasil. Cria conteúdo para o blog do escritório Falaw Advogados (São Paulo). Responda SEMPRE em JSON válido, sem texto fora do JSON.' },
       { role: 'user',   content: `Sugira 5 temas de artigos jurídicos sobre: "${topic}"\n\nFormato de resposta (somente JSON):\n{"sugestoes":[{"titulo":"...","angulo":"frase curta com o diferencial editorial","categoria":"Direito Trabalhista|Inovação Jurídica|Startups & Tecnologia|Compliance|Relações Sindicais"}]}` }
     ]);
 
@@ -1701,7 +1701,7 @@ async function generateAIArticle() {
   try {
     status.textContent = 'Escrevendo artigo…';
     const raw = await callAI([
-      { role: 'system', content: 'Você é redator jurídico sênior especializado para o blog Ferraz Andrade Advogados. Escreva artigos com linguagem técnica mas acessível, tom analítico e direto, em português brasileiro. Estruture o conteúdo em seções com títulos em MAIÚSCULAS seguidos de dois pontos, separadas por linha em branco. Responda APENAS em JSON válido, sem texto fora do JSON.' },
+      { role: 'system', content: 'Você é redator jurídico sênior especializado para o blog Falaw Advogados. Escreva artigos com linguagem técnica mas acessível, tom analítico e direto, em português brasileiro. Estruture o conteúdo em seções com títulos em MAIÚSCULAS seguidos de dois pontos, separadas por linha em branco. Responda APENAS em JSON válido, sem texto fora do JSON.' },
       { role: 'user',   content: `Escreva um artigo jurídico completo:\nTítulo: "${aiSelected.titulo}"\nÂngulo: "${aiSelected.angulo}"\nCategoria: "${aiSelected.categoria}"\n\nRequisitos:\n- excerpt: resumo atrativo de até 220 caracteres\n- content: mínimo 900 palavras, seções com título em MAIÚSCULAS seguido de dois pontos\n- date: "${dateStr}"\n- readTime: estimativa em minutos\n\nFormato (somente JSON):\n{"title":"...","category":"...","excerpt":"...","date":"...","readTime":"X min","content":"..."}` }
     ], 0.85);
 

@@ -85,7 +85,7 @@ var FALAW_TEAM = [
     "name": "Stefhane Félix de Almeida",
     "role": "In Memoriam",
     "status": "memoriam",
-    "bio": "Graduada em Direito pela Universidade Paulista (2014) e especialista em Direito e Processo do Trabalho pela Escola Superior de Advocacia Paulista (2018). Advogada do Ferraz Andrade Advogados, cuja dedicação e contribuição permanecem vivas no espírito do escritório."
+    "bio": "Graduada em Direito pela Universidade Paulista (2014) e especialista em Direito e Processo do Trabalho pela Escola Superior de Advocacia Paulista (2018). Advogada do Falaw Advogados, cuja dedicação e contribuição permanecem vivas no espírito do escritório."
   },
   {
     "id": "mn1yd8t27uu5",
