@@ -1783,14 +1783,25 @@ async function generateAIArticle() {
   const now = new Date();
   const dateStr = months[now.getMonth()] + ' de ' + now.getFullYear();
 
-  try {
-    status.textContent = 'Escrevendo artigo…';
-    const raw = await callAI([
-      { role: 'system', content: 'Você é redator jurídico sênior do blog Falaw Advogados. Escreva em português brasileiro com linguagem técnica e tom analítico. Responda APENAS com JSON válido, sem texto fora do JSON, sem blocos markdown.' },
-      { role: 'user', content: `Escreva um artigo jurídico completo sobre:\nTítulo: "${aiSelected.titulo}"\nÂngulo: "${aiSelected.angulo}"\nCategoria: "${aiSelected.categoria}"\n\nRetorne EXATAMENTE este JSON (sem texto fora):\n{\n  "title": "título",\n  "category": "${aiSelected.categoria}",\n  "kicker": "subcategoria curta · ${now.getFullYear()}",\n  "excerpt": "resumo atrativo até 220 caracteres",\n  "lede": "frase de impacto ou citação de abertura",\n  "ledeCite": "— Autor, cargo (omita se não for citação real)",\n  "date": "${dateStr}",\n  "readTime": "X min",\n  "tags": ["tag1","tag2","tag3","tag4"],\n  "stats": [\n    {"num":"XX","suffix":"k","label":"Descrição\\ncomplemento"},\n    {"num":"XX","suffix":"%","label":"Descrição\\ncomplemento"},\n    {"num":"XX","suffix":"+","label":"Descrição\\ncomplemento"}\n  ],\n  "sections": [\n    {"label":"01 · O que é","title":"Título da seção","paragraphs":["§1","§2"],"quote":{"text":"citação","cite":"— Autor, cargo"},"featureBox":{"title":"Título","items":["item1","item2","item3"]}},\n    {"label":"02 · Contexto","title":"...","paragraphs":["§1","§2","§3"]},\n    {"label":"03 · Impacto","title":"...","paragraphs":["§1","§2"],"highlight":"texto callout destacado"},\n    {"label":"04 · Análise","title":"...","paragraphs":["§1","§2"],"featureBox":{"title":"...","items":["..."]}},\n    {"label":"05 · Conclusão","title":"...","paragraphs":["§1","§2","§3"]}\n  ]\n}\nRegras: mín. 5 seções, 2+ parágrafos cada, pelo menos 1 quote + 1 featureBox + 1 highlight distribuídos, stats com números reais do tema, omita campos opcionais quando não aplicável.` }
-    ], 0.85);
+  const sysPrompt = 'Você é redator jurídico sênior do blog Falaw Advogados. Escreva em português brasileiro. REGRAS CRÍTICAS DE JSON: (1) Nunca use aspas duplas dentro de valores — use aspas simples ou reescreva. (2) Nunca inclua quebras de linha reais dentro de strings — cada parágrafo é uma string separada no array. (3) Retorne SOMENTE o objeto JSON, sem texto antes ou depois, sem markdown.';
+  const userPrompt = `Artigo sobre: "${aiSelected.titulo}" — ângulo: "${aiSelected.angulo}" — categoria: "${aiSelected.categoria}".
 
-    const art = parseJSON(raw);
+Retorne exatamente este JSON (substitua os exemplos pelo conteúdo real):
+{"title":"${aiSelected.titulo}","category":"${aiSelected.categoria}","kicker":"${aiSelected.categoria} · ${now.getFullYear()}","excerpt":"resumo do artigo em até 200 caracteres","lede":"frase de impacto de abertura sem aspas duplas","ledeCite":"— Fonte se for citação real","date":"${dateStr}","readTime":"7 min","tags":["tag1","tag2","tag3","tag4"],"stats":[{"num":"80","suffix":"M","label":"processos ativos no Brasil"},{"num":"39","suffix":"M","label":"novas demandas por ano"},{"num":"3","suffix":"x","label":"crescimento em 5 anos"}],"sections":[{"label":"01 · O que é","title":"Título desta seção","paragraphs":["Primeiro parágrafo completo sem aspas duplas.","Segundo parágrafo completo."],"quote":{"text":"citação sem aspas duplas internas","cite":"— Autor, cargo"},"featureBox":{"title":"Como funciona","items":["Item um","Item dois","Item três"]}},{"label":"02 · Contexto","title":"Título da seção 2","paragraphs":["Parágrafo 1.","Parágrafo 2.","Parágrafo 3."]},{"label":"03 · Impacto","title":"Título da seção 3","paragraphs":["Parágrafo 1.","Parágrafo 2."],"highlight":"Texto de destaque especial desta seção sem aspas duplas."},{"label":"04 · Análise","title":"Título da seção 4","paragraphs":["Parágrafo 1.","Parágrafo 2."],"featureBox":{"title":"Pontos de atenção","items":["Ponto um","Ponto dois","Ponto três"]}},{"label":"05 · Conclusão","title":"Título da seção 5","paragraphs":["Parágrafo 1.","Parágrafo 2.","Parágrafo 3."]}]}`;
+
+  try {
+    const messages = [{ role: 'system', content: sysPrompt }, { role: 'user', content: userPrompt }];
+    let raw, art, lastErr;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      status.textContent = attempt === 1 ? 'Escrevendo artigo…' : `Tentativa ${attempt}/3…`;
+      try {
+        raw = await callAI(messages, 0.7);
+        art = parseJSON(raw);
+        break;
+      } catch(err) { lastErr = err; }
+    }
+    if (!art) throw lastErr;
+
     openArticlePreview(art, aiSelected, dateStr);
     status.textContent = '';
 
