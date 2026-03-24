@@ -233,25 +233,30 @@
       text-decoration: none;
     }
     .btn-back {
-      display: block;
-      text-align: center;
-      margin-top: 16px;
-      padding: 11px;
-      background: rgba(255,255,255,0.04);
+      position: fixed;
+      top: 20px;
+      left: 24px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.1);
       border-radius: 6px;
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 11px;
+      font-size: 10px;
       letter-spacing: .1em;
       text-transform: uppercase;
-      color: rgba(232,235,240,0.55);
+      color: rgba(232,235,240,0.5);
       text-decoration: none;
+      z-index: 10;
       transition: background .2s, color .2s, border-color .2s;
+      backdrop-filter: blur(8px);
     }
     .btn-back:hover {
-      background: rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.1);
       color: var(--text);
-      border-color: rgba(255,255,255,0.2);
+      border-color: rgba(255,255,255,0.25);
     }
   </style>
 </head>
@@ -259,6 +264,8 @@
 
 <div class="bg-glow"></div>
 <div class="grid-lines"></div>
+
+<a href="../index.html" class="btn-back">← Voltar ao site</a>
 
 <div class="login-wrap">
   <div class="login-card">
@@ -292,8 +299,6 @@
     </p>
 
   </div>
-
-  <a href="../index.html" class="btn-back">← Voltar ao site</a>
 
   <div class="login-footer">
     © 2026 · Falaw Advogados · Acesso Seguro
