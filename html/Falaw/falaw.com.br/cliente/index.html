@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Área do Cliente — Falaw Advogados</title>
+  <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #080D16;
+      --bg-card:  #0D1525;
+      --bg-input: #111A2E;
+      --border:   rgba(255,255,255,0.07);
+      --gold:     #B8952A;
+      --gold-l:   #D4AD3A;
+      --text:     #E8EBF0;
+      --muted:    rgba(232,235,240,0.45);
+      --accent:   #0D2B5E;
+      --error:    #E05454;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Animated background */
+    .bg-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .bg-glow::before {
+      content: '';
+      position: absolute;
+      top: -20%;
+      left: -10%;
+      width: 60%;
+      height: 60%;
+      background: radial-gradient(ellipse, rgba(13,43,94,0.35) 0%, transparent 65%);
+      filter: blur(60px);
+      animation: drift1 12s ease-in-out infinite alternate;
+    }
+    .bg-glow::after {
+      content: '';
+      position: absolute;
+      bottom: -10%;
+      right: -10%;
+      width: 55%;
+      height: 55%;
+      background: radial-gradient(ellipse, rgba(184,149,42,0.12) 0%, transparent 65%);
+      filter: blur(80px);
+      animation: drift2 15s ease-in-out infinite alternate;
+    }
+    @keyframes drift1 { from { transform: translate(0,0); } to { transform: translate(5%,8%); } }
+    @keyframes drift2 { from { transform: translate(0,0); } to { transform: translate(-6%,-5%); } }
+
+    /* Grid lines decoration */
+    .grid-lines {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Card */
+    .login-wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 440px;
+      padding: 24px;
+    }
+
+    .login-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 48px 40px 40px;
+      box-shadow:
+        0 0 0 1px rgba(184,149,42,0.06),
+        0 32px 80px rgba(0,0,0,0.5);
+    }
+
+    /* Logo */
+    .login-logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 36px;
+    }
+    .login-logo img {
+      height: 44px;
+      width: auto;
+      filter: brightness(0) invert(1);
+      margin-bottom: 14px;
+    }
+    .login-badge {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: rgba(184,149,42,0.1);
+      border: 1px solid rgba(184,149,42,0.2);
+      padding: 4px 12px;
+      border-radius: 2px;
+    }
+
+    /* Title */
+    .login-title {
+      font-family: 'Sora', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      color: var(--text);
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .login-subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    /* Form */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .form-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s;
+    }
+    .form-input:focus {
+      border-color: rgba(184,149,42,0.4);
+    }
+    .form-input::placeholder { color: rgba(232,235,240,0.25); }
+
+    /* Error */
+    .form-error {
+      display: none;
+      font-size: 12px;
+      color: var(--error);
+      margin-top: 4px;
+      margin-bottom: 4px;
+    }
+    .form-error.show { display: block; }
+
+    /* Button */
+    .btn-login {
+      width: 100%;
+      margin-top: 8px;
+      padding: 13px;
+      background: var(--gold);
+      border: none;
+      border-radius: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: #080D16;
+      cursor: pointer;
+      transition: background .2s, transform .15s;
+    }
+    .btn-login:hover { background: var(--gold-l); transform: translateY(-1px); }
+    .btn-login:active { transform: translateY(0); }
+    .btn-login:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    /* Footer */
+    .login-footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 11px;
+      color: rgba(232,235,240,0.2);
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: .06em;
+    }
+
+    /* Divider */
+    .login-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 28px 0 24px;
+    }
+
+    .login-info {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+    .login-info a {
+      color: var(--gold);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+<div class="grid-lines"></div>
+
+<div class="login-wrap">
+  <div class="login-card">
+
+    <div class="login-logo">
+      <img loading="lazy" src="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png" alt="Falaw Advogados" />
+      <span class="login-badge">Área do Cliente</span>
+    </div>
+
+    <h1 class="login-title">Acesso Restrito</h1>
+    <p class="login-subtitle">Entre com suas credenciais para acessar seus relatórios</p>
+
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label class="form-label" for="email">E-mail</label>
+        <input id="email" type="email" class="form-input" placeholder="seu@email.com.br" required autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="code">Código de Acesso</label>
+        <input id="code" type="password" class="form-input" placeholder="••••••••" required autocomplete="current-password" />
+      </div>
+      <div class="form-error" id="loginError">E-mail ou código de acesso inválidos.</div>
+      <button type="submit" class="btn-login" id="loginBtn">Entrar</button>
+    </form>
+
+    <hr class="login-divider" />
+
+    <p class="login-info">
+      Não possui acesso? Entre em contato com o escritório.<br/>
+      <a href="../contato/index.html">Fale Conosco →</a>
+    </p>
+
+  </div>
+
+  <div class="login-footer">
+    © 2026 · Falaw Advogados · Acesso Seguro
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'falaw_portal';
+
+function getClients() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+
+function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim().toLowerCase();
+  const code  = document.getElementById('code').value.trim();
+  const err   = document.getElementById('loginError');
+  const btn   = document.getElementById('loginBtn');
+
+  err.classList.remove('show');
+  btn.disabled = true;
+  btn.textContent = 'Verificando…';
+
+  setTimeout(() => {
+    const clients = getClients();
+    const client  = clients.find(c => c.email.toLowerCase() === email && c.code === code);
+
+    if (client) {
+      sessionStorage.setItem('falaw_session', JSON.stringify({
+        id: client.id,
+        name: client.name,
+        company: client.company,
+        email: client.email,
+        loginAt: new Date().toISOString()
+      }));
+      window.location.href = 'dashboard.html';
+    } else {
+      err.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    }
+  }, 600);
+}
+
+// Redirect if already logged in
+(function() {
+  const s = sessionStorage.getItem('falaw_session');
+  if (s) window.location.href = 'dashboard.html';
+})();
+</script>
+
+</body>
+</html>

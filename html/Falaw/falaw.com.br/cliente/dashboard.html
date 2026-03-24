@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Relatórios — Falaw Advogados</title>
+  <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #080D16;
+      --bg-card:   #0D1525;
+      --bg-panel:  #0A1020;
+      --bg-hover:  #111A2E;
+      --border:    rgba(255,255,255,0.07);
+      --border-h:  rgba(255,255,255,0.13);
+      --gold:      #B8952A;
+      --gold-l:    #D4AD3A;
+      --gold-dim:  rgba(184,149,42,0.15);
+      --text:      #E8EBF0;
+      --muted:     rgba(232,235,240,0.45);
+      --muted-l:   rgba(232,235,240,0.2);
+      --green:     #2DD4A0;
+      --sidebar-w: 260px;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
+
+    /* ── LAYOUT ── */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+    }
+    .sidebar-top {
+      padding: 28px 24px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo img {
+      height: 32px;
+      width: auto;
+      filter: brightness(0) invert(1);
+      display: block;
+      margin-bottom: 20px;
+    }
+    .sidebar-client-badge {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: var(--gold-dim);
+      border: 1px solid rgba(184,149,42,0.2);
+      padding: 3px 8px;
+      border-radius: 2px;
+      display: inline-block;
+      margin-bottom: 14px;
+    }
+    .sidebar-client-name {
+      font-family: 'Sora', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+      margin-bottom: 3px;
+    }
+    .sidebar-client-company {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .sidebar-client-email {
+      font-size: 11px;
+      color: var(--muted-l);
+      margin-top: 4px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 20px 12px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      margin-bottom: 2px;
+    }
+    .nav-item.active, .nav-item:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+    .nav-item.active { color: var(--gold); }
+    .nav-icon { font-size: 15px; width: 20px; text-align: center; }
+
+    .sidebar-bottom {
+      padding: 16px 12px;
+      border-top: 1px solid var(--border);
+    }
+    .btn-logout {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 12px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+    }
+    .btn-logout:hover { border-color: rgba(224,84,84,0.4); color: #E05454; }
+
+    /* ── MAIN ── */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .topbar-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .topbar-title span { color: var(--text); }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .status-dot {
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    /* ── CONTENT ── */
+    .content {
+      flex: 1;
+      padding: 40px 32px;
+      max-width: 1100px;
+    }
+
+    /* ── PAGE HEADER ── */
+    .page-header {
+      margin-bottom: 40px;
+    }
+    .page-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 10px;
+    }
+    .page-title {
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(24px, 3vw, 36px);
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -.02em;
+      line-height: 1.1;
+      margin-bottom: 10px;
+    }
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* ── STATS ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--gold), transparent);
+    }
+    .stat-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .stat-value {
+      font-family: 'Sora', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+    .stat-value.gold { color: var(--gold); }
+    .stat-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── REPORTS ── */
+    .reports-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .reports-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .reports-count {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--muted-l);
+    }
+
+    .reports-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .report-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      transition: border-color .2s, transform .2s, box-shadow .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .report-card:hover {
+      border-color: rgba(184,149,42,0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    }
+    .report-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, var(--gold), transparent 60%);
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .report-card:hover::after { opacity: 1; }
+
+    .report-icon {
+      width: 44px; height: 44px;
+      background: rgba(13,43,94,0.4);
+      border: 1px solid rgba(13,43,94,0.6);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin-bottom: 16px;
+    }
+    .report-title {
+      font-family: 'Sora', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+    .report-period {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+    .report-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    .report-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+    .report-date {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--muted-l);
+    }
+    .report-size {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--muted-l);
+    }
+
+    .btn-download {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 16px;
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(184,149,42,0.1);
+      border: 1px solid rgba(184,149,42,0.25);
+      border-radius: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--gold);
+      cursor: pointer;
+      transition: background .2s, border-color .2s;
+    }
+    .btn-download:hover {
+      background: rgba(184,149,42,0.18);
+      border-color: rgba(184,149,42,0.45);
+    }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 80px 32px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 20px; opacity: .4; }
+    .empty-title {
+      font-family: 'Sora', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: rgba(232,235,240,0.5);
+      margin-bottom: 8px;
+    }
+    .empty-text { font-size: 13px; line-height: 1.6; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stats-row { grid-template-columns: 1fr; }
+      .content { padding: 24px 20px; }
+      .topbar { padding: 0 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-logo">
+        <img loading="lazy" src="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png" alt="Falaw Advogados" />
+      </div>
+      <span class="sidebar-client-badge">Portal do Cliente</span>
+      <div class="sidebar-client-name" id="sidebarName">—</div>
+      <div class="sidebar-client-company" id="sidebarCompany">—</div>
+      <div class="sidebar-client-email" id="sidebarEmail">—</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-item active">
+        <span class="nav-icon">📊</span>
+        Relatórios
+      </div>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <button class="btn-logout" onclick="logout()">
+        <span>⎋</span> Sair da conta
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <span class="topbar-title">Falaw Advogados · <span id="topbarCompany">Portal</span></span>
+      <div class="topbar-right">
+        <span><span class="status-dot"></span>Sessão ativa</span>
+        <span id="topbarDate" style="font-family:'IBM Plex Mono',monospace;font-size:11px;"></span>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <div class="page-header">
+        <div class="page-label">Área do Cliente · Falaw Advogados</div>
+        <h1 class="page-title" id="pageTitle">Seus Relatórios</h1>
+        <p class="page-subtitle" id="pageSubtitle">Documentos e análises preparados pelo escritório.</p>
+      </div>
+
+      <!-- STATS -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total de Relatórios</div>
+          <div class="stat-value gold" id="statTotal">0</div>
+          <div class="stat-sub">disponíveis para download</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Último Relatório</div>
+          <div class="stat-value" id="statLast" style="font-size:18px;">—</div>
+          <div class="stat-sub" id="statLastTitle">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Acesso em</div>
+          <div class="stat-value" id="statLogin" style="font-size:18px;">—</div>
+          <div class="stat-sub">horário de Brasília</div>
+        </div>
+      </div>
+
+      <!-- REPORTS -->
+      <div class="reports-header">
+        <span class="reports-title">Relatórios Disponíveis</span>
+        <span class="reports-count" id="reportsCount">0 arquivos</span>
+      </div>
+
+      <div class="reports-grid" id="reportsGrid">
+        <!-- populated by JS -->
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'falaw_portal';
+
+function getClients() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function formatTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function logout() {
+  sessionStorage.removeItem('falaw_session');
+  window.location.href = 'index.html';
+}
+
+function downloadReport(report) {
+  const a = document.createElement('a');
+  a.href = report.fileData;
+  a.download = report.fileName || 'relatorio.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function renderReports(reports) {
+  const grid = document.getElementById('reportsGrid');
+  document.getElementById('statTotal').textContent = reports.length;
+  document.getElementById('reportsCount').textContent = reports.length + ' arquivo' + (reports.length !== 1 ? 's' : '');
+
+  if (reports.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-icon">📁</div>
+        <div class="empty-title">Nenhum relatório disponível</div>
+        <div class="empty-text">Seus relatórios aparecerão aqui assim que forem disponibilizados pelo escritório.</div>
+      </div>`;
+    document.getElementById('statLast').textContent = '—';
+    document.getElementById('statLastTitle').textContent = '—';
+    return;
+  }
+
+  const sorted = [...reports].sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+  document.getElementById('statLast').textContent  = formatDate(sorted[0].uploadedAt);
+  document.getElementById('statLastTitle').textContent = sorted[0].title;
+
+  grid.innerHTML = sorted.map(r => `
+    <div class="report-card">
+      <div class="report-icon">📈</div>
+      <div class="report-period">${r.period || ''}</div>
+      <div class="report-title">${r.title}</div>
+      ${r.description ? `<div class="report-desc">${r.description}</div>` : ''}
+      <div class="report-meta">
+        <span class="report-date">${formatDate(r.uploadedAt)}</span>
+        <span class="report-size">${formatSize(r.fileSize)}</span>
+      </div>
+      <button class="btn-download" onclick='downloadReport(${JSON.stringify(r)})'>
+        ⬇ Baixar Relatório Excel
+      </button>
+    </div>
+  `).join('');
+}
+
+(function init() {
+  const raw = sessionStorage.getItem('falaw_session');
+  if (!raw) { window.location.href = 'index.html'; return; }
+
+  const session = JSON.parse(raw);
+  const clients  = getClients();
+  const client   = clients.find(c => c.id === session.id);
+
+  if (!client) { logout(); return; }
+
+  // Populate UI
+  document.getElementById('sidebarName').textContent    = client.name;
+  document.getElementById('sidebarCompany').textContent = client.company || '';
+  document.getElementById('sidebarEmail').textContent   = client.email;
+  document.getElementById('topbarCompany').textContent  = client.company || client.name;
+  document.getElementById('pageTitle').textContent      = 'Olá, ' + client.name.split(' ')[0];
+  document.getElementById('pageSubtitle').textContent   = 'Documentos e análises preparados exclusivamente para ' + (client.company || 'você') + '.';
+  document.getElementById('statLogin').textContent      = formatTime(session.loginAt);
+
+  // Date in topbar
+  document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('pt-BR', {
+    weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
+  });
+
+  renderReports(client.reports || []);
+})();
+</script>
+
+</body>
+</html>

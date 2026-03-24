@@ -473,6 +473,67 @@
 
     /* ── AI PANEL ── */
     .ai-panel { background: linear-gradient(135deg,#060E1A 0%,#231018 100%); border-radius: 4px; padding: 24px 28px; margin-bottom: 32px; }
+
+    /* ── CLIENT PORTAL STYLES ── */
+    .stats-card { background: var(--c-surface); border: 1px solid var(--c-divider); border-radius: 4px; padding: 18px 20px; }
+    .stats-label { font-family: var(--f-mono); font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--c-muted); margin-bottom: 8px; }
+    .stats-val { font-family: var(--f-display); font-size: 26px; font-weight: 700; color: var(--c-light-text); }
+    .client-row {
+      background: var(--c-surface);
+      border: 1px solid var(--c-divider);
+      border-radius: 4px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .client-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .client-header:hover { background: rgba(255,255,255,0.03); }
+    .client-info { display: flex; flex-direction: column; gap: 3px; }
+    .client-name { font-weight: 600; font-size: 14px; color: var(--c-light-text); }
+    .client-meta { font-family: var(--f-mono); font-size: 10px; color: var(--c-muted); letter-spacing: .06em; }
+    .client-code-badge {
+      background: rgba(13,43,94,0.3);
+      border: 1px solid rgba(13,43,94,0.5);
+      border-radius: 2px;
+      padding: 2px 8px;
+      font-family: var(--f-mono);
+      font-size: 10px;
+      color: var(--c-accent);
+      letter-spacing: .08em;
+    }
+    .client-actions { display: flex; align-items: center; gap: 8px; }
+    .client-reports-count {
+      font-family: var(--f-mono);
+      font-size: 10px;
+      color: var(--c-muted);
+      background: var(--c-bg);
+      border: 1px solid var(--c-divider);
+      border-radius: 2px;
+      padding: 2px 8px;
+    }
+    .client-body { padding: 0 20px 16px; border-top: 1px solid var(--c-divider); display: none; }
+    .client-body.open { display: block; }
+    .report-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--c-divider);
+      font-size: 13px;
+    }
+    .report-item:last-child { border-bottom: none; }
+    .report-item-info { display: flex; flex-direction: column; gap: 2px; }
+    .report-item-title { color: var(--c-light-text); font-weight: 500; }
+    .report-item-meta { font-family: var(--f-mono); font-size: 10px; color: var(--c-muted); }
+    .btn-icon { background: none; border: 1px solid var(--c-divider); border-radius: 2px; padding: 4px 8px; font-size: 12px; cursor: pointer; color: var(--c-muted); transition: color .15s, border-color .15s; }
+    .btn-icon:hover { color: #E05454; border-color: rgba(224,84,84,0.4); }
+    .cli-empty { text-align:center; padding: 60px 20px; color: var(--c-muted); font-size: 14px; }
     .ai-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
     .ai-panel-title { font-family: var(--f-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--c-accent); display: flex; align-items: center; gap: 8px; }
     .ai-panel-title::before { content: ''; display: inline-block; width: 6px; height: 6px; background: var(--c-accent); border-radius: 50%; animation: aipulse 1.6s ease-in-out infinite; }
@@ -605,6 +666,7 @@
       <div class="admin-tab" onclick="switchTab('equipe')">Equipe</div>
       <div class="admin-tab" onclick="switchTab('newsletter')">Newsletter</div>
       <div class="admin-tab" onclick="switchTab('contato')">Contato</div>
+      <div class="admin-tab" onclick="switchTab('clientes')">Clientes</div>
       <div class="admin-tab" onclick="switchTab('config')">Configurações</div>
     </div>
     <button class="admin-logout" onclick="doLogout()">Sair</button>
@@ -683,6 +745,108 @@
       </div>
       <div class="stats-bar" id="contato-stats"></div>
       <div class="item-list" id="contato-list"></div>
+    </section>
+
+    <!-- ── CLIENTES ── -->
+    <section id="tab-clientes" class="admin-section">
+      <div class="section-header">
+        <h2>Área do Cliente</h2>
+        <button type="button" class="btn btn-primary" onclick="openClientModal()">+ Novo Cliente</button>
+      </div>
+
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;">
+        <div class="stats-card"><div class="stats-label">Clientes Cadastrados</div><div class="stats-val" id="cli-stat-total">0</div></div>
+        <div class="stats-card"><div class="stats-label">Relatórios Enviados</div><div class="stats-val" id="cli-stat-reports">0</div></div>
+        <div class="stats-card"><div class="stats-label">Link do Portal</div><div class="stats-val" style="font-size:12px;word-break:break-all"><a href="cliente/index.html" target="_blank" style="color:var(--c-accent)">cliente/index.html</a></div></div>
+      </div>
+
+      <!-- Client list -->
+      <div id="clientList"></div>
+
+      <!-- Client Modal -->
+      <div id="clientModal" class="modal" style="display:none">
+        <div class="modal-backdrop" onclick="closeClientModal()"></div>
+        <div class="modal-box" style="max-width:520px">
+          <div class="modal-header">
+            <h3 id="clientModalTitle">Novo Cliente</h3>
+            <button class="modal-close" onclick="closeClientModal()">✕</button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="cli-id" />
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Nome Completo *</label>
+                <input id="cli-name" type="text" class="form-input" placeholder="João da Silva" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Empresa</label>
+                <input id="cli-company" type="text" class="form-input" placeholder="Empresa ABC Ltda" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">E-mail de Acesso *</label>
+                <input id="cli-email" type="email" class="form-input" placeholder="cliente@empresa.com" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Código de Acesso *</label>
+                <div style="display:flex;gap:8px">
+                  <input id="cli-code" type="text" class="form-input" placeholder="Ex: FALAW2026@ABC" style="flex:1" />
+                  <button type="button" class="btn btn-secondary" onclick="genCode()" style="white-space:nowrap">Gerar</button>
+                </div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--c-muted);margin-top:-8px;margin-bottom:16px">
+              O cliente usará o e-mail + código para acessar o portal.
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn btn-secondary" onclick="closeClientModal()">Cancelar</button>
+              <button type="button" class="btn btn-primary" onclick="saveClient()">Salvar Cliente</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Report Upload Modal -->
+      <div id="reportModal" class="modal" style="display:none">
+        <div class="modal-backdrop" onclick="closeReportModal()"></div>
+        <div class="modal-box" style="max-width:520px">
+          <div class="modal-header">
+            <h3>Enviar Relatório</h3>
+            <button class="modal-close" onclick="closeReportModal()">✕</button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="rep-client-id" />
+            <div class="form-group">
+              <label class="form-label">Título do Relatório *</label>
+              <input id="rep-title" type="text" class="form-input" placeholder="Ex: Relatório de Passivo Trabalhista - Q1 2026" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Período</label>
+                <input id="rep-period" type="text" class="form-input" placeholder="Jan - Mar 2026" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Arquivo Excel *</label>
+                <input id="rep-file" type="file" class="form-input" accept=".xlsx,.xls,.csv,.pdf" style="padding:6px" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Descrição (opcional)</label>
+              <textarea id="rep-desc" class="form-input" rows="3" placeholder="Breve descrição do conteúdo do relatório..."></textarea>
+            </div>
+            <div id="rep-upload-progress" style="display:none;margin-bottom:12px">
+              <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Processando arquivo…</div>
+              <div style="height:3px;background:var(--c-divider);border-radius:2px"><div id="rep-progress-bar" style="height:100%;width:0%;background:var(--c-accent);border-radius:2px;transition:width .3s"></div></div>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn btn-secondary" onclick="closeReportModal()">Cancelar</button>
+              <button type="button" class="btn btn-primary" id="repSaveBtn" onclick="saveReport()">Enviar Relatório</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ── CONFIG ── -->
@@ -2069,6 +2233,230 @@ function sendEmailViaMailto() {
 
   window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
 }
+
+/* ══════════════════════════════════════════
+   ÁREA DO CLIENTE
+══════════════════════════════════════════ */
+const CLI_KEY = 'falaw_portal';
+
+function getClients()       { try { return JSON.parse(localStorage.getItem(CLI_KEY)) || []; } catch { return []; } }
+function saveClients(list)  { localStorage.setItem(CLI_KEY, JSON.stringify(list)); }
+function uid()              { return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+
+function genCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'FALAW-';
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  document.getElementById('cli-code').value = code;
+}
+
+function openClientModal(clientId) {
+  document.getElementById('clientModal').style.display = 'flex';
+  if (clientId) {
+    const c = getClients().find(x => x.id === clientId);
+    if (!c) return;
+    document.getElementById('clientModalTitle').textContent = 'Editar Cliente';
+    document.getElementById('cli-id').value      = c.id;
+    document.getElementById('cli-name').value    = c.name;
+    document.getElementById('cli-company').value = c.company || '';
+    document.getElementById('cli-email').value   = c.email;
+    document.getElementById('cli-code').value    = c.code;
+  } else {
+    document.getElementById('clientModalTitle').textContent = 'Novo Cliente';
+    document.getElementById('cli-id').value      = '';
+    document.getElementById('cli-name').value    = '';
+    document.getElementById('cli-company').value = '';
+    document.getElementById('cli-email').value   = '';
+    document.getElementById('cli-code').value    = '';
+    genCode();
+  }
+}
+
+function closeClientModal() { document.getElementById('clientModal').style.display = 'none'; }
+
+function saveClient() {
+  const name    = document.getElementById('cli-name').value.trim();
+  const company = document.getElementById('cli-company').value.trim();
+  const email   = document.getElementById('cli-email').value.trim().toLowerCase();
+  const code    = document.getElementById('cli-code').value.trim();
+  const id      = document.getElementById('cli-id').value;
+
+  if (!name || !email || !code) { alert('Preencha nome, e-mail e código de acesso.'); return; }
+
+  const clients = getClients();
+
+  if (id) {
+    const idx = clients.findIndex(c => c.id === id);
+    if (idx >= 0) {
+      clients[idx] = { ...clients[idx], name, company, email, code };
+    }
+  } else {
+    clients.push({ id: uid(), name, company, email, code, createdAt: new Date().toISOString(), reports: [] });
+  }
+
+  saveClients(clients);
+  closeClientModal();
+  renderClients();
+}
+
+function deleteClient(id) {
+  if (!confirm('Excluir este cliente e todos os seus relatórios?')) return;
+  const clients = getClients().filter(c => c.id !== id);
+  saveClients(clients);
+  renderClients();
+}
+
+function toggleClientBody(id) {
+  const el = document.getElementById('cbody-' + id);
+  el.classList.toggle('open');
+}
+
+/* Reports */
+let _repClientId = null;
+
+function openReportModal(clientId) {
+  _repClientId = clientId;
+  document.getElementById('rep-client-id').value = clientId;
+  document.getElementById('rep-title').value  = '';
+  document.getElementById('rep-period').value = '';
+  document.getElementById('rep-desc').value   = '';
+  document.getElementById('rep-file').value   = '';
+  document.getElementById('rep-upload-progress').style.display = 'none';
+  document.getElementById('repSaveBtn').disabled = false;
+  document.getElementById('reportModal').style.display = 'flex';
+}
+
+function closeReportModal() { document.getElementById('reportModal').style.display = 'none'; }
+
+function saveReport() {
+  const clientId = document.getElementById('rep-client-id').value;
+  const title    = document.getElementById('rep-title').value.trim();
+  const period   = document.getElementById('rep-period').value.trim();
+  const desc     = document.getElementById('rep-desc').value.trim();
+  const fileEl   = document.getElementById('rep-file');
+  const file     = fileEl.files[0];
+
+  if (!title)  { alert('Informe o título do relatório.'); return; }
+  if (!file)   { alert('Selecione um arquivo.'); return; }
+
+  const btn = document.getElementById('repSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+  document.getElementById('rep-upload-progress').style.display = 'block';
+  document.getElementById('rep-progress-bar').style.width = '0%';
+
+  const reader = new FileReader();
+  reader.onprogress = e => {
+    if (e.lengthComputable) {
+      document.getElementById('rep-progress-bar').style.width = Math.round(e.loaded / e.total * 90) + '%';
+    }
+  };
+  reader.onload = () => {
+    document.getElementById('rep-progress-bar').style.width = '100%';
+    const clients = getClients();
+    const idx = clients.findIndex(c => c.id === clientId);
+    if (idx < 0) { alert('Cliente não encontrado.'); return; }
+
+    const report = {
+      id: uid(),
+      title,
+      period,
+      description: desc,
+      fileName: file.name,
+      fileData: reader.result,
+      fileSize: file.size,
+      uploadedAt: new Date().toISOString()
+    };
+
+    clients[idx].reports = clients[idx].reports || [];
+    clients[idx].reports.push(report);
+    saveClients(clients);
+
+    setTimeout(() => {
+      closeReportModal();
+      renderClients();
+    }, 400);
+  };
+  reader.onerror = () => { alert('Erro ao ler o arquivo.'); btn.disabled = false; btn.textContent = 'Enviar Relatório'; };
+  reader.readAsDataURL(file);
+}
+
+function deleteReport(clientId, reportId) {
+  if (!confirm('Excluir este relatório?')) return;
+  const clients = getClients();
+  const idx = clients.findIndex(c => c.id === clientId);
+  if (idx < 0) return;
+  clients[idx].reports = (clients[idx].reports || []).filter(r => r.id !== reportId);
+  saveClients(clients);
+  renderClients();
+}
+
+function formatDateAdmin(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function formatSizeAdmin(b) {
+  if (!b) return '';
+  if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB';
+  return (b / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function renderClients() {
+  const clients = getClients();
+  const totalReports = clients.reduce((s, c) => s + (c.reports || []).length, 0);
+  document.getElementById('cli-stat-total').textContent   = clients.length;
+  document.getElementById('cli-stat-reports').textContent = totalReports;
+
+  const list = document.getElementById('clientList');
+  if (!list) return;
+
+  if (clients.length === 0) {
+    list.innerHTML = '<div class="cli-empty">Nenhum cliente cadastrado. Clique em <strong>+ Novo Cliente</strong> para começar.</div>';
+    return;
+  }
+
+  list.innerHTML = clients.map(c => {
+    const reports = c.reports || [];
+    const reportsHtml = reports.length === 0
+      ? '<div style="padding:14px 0;color:var(--c-muted);font-size:13px">Nenhum relatório enviado ainda.</div>'
+      : reports.map(r => `
+          <div class="report-item">
+            <div class="report-item-info">
+              <div class="report-item-title">📊 ${r.title}</div>
+              <div class="report-item-meta">${r.period ? r.period + ' · ' : ''}${formatDateAdmin(r.uploadedAt)} · ${formatSizeAdmin(r.fileSize)} · ${r.fileName}</div>
+            </div>
+            <button class="btn-icon" onclick="deleteReport('${c.id}','${r.id}')" title="Excluir relatório">🗑</button>
+          </div>`).join('');
+
+    return `
+      <div class="client-row">
+        <div class="client-header" onclick="toggleClientBody('${c.id}')">
+          <div class="client-info">
+            <div class="client-name">${c.name}${c.company ? ' <span style="font-weight:400;opacity:.6">— ' + c.company + '</span>' : ''}</div>
+            <div class="client-meta">${c.email} · Cadastrado em ${formatDateAdmin(c.createdAt)}</div>
+          </div>
+          <div class="client-actions">
+            <span class="client-reports-count">${reports.length} relatório${reports.length !== 1 ? 's' : ''}</span>
+            <span class="client-code-badge">${c.code}</span>
+            <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="event.stopPropagation();openReportModal('${c.id}')">+ Relatório</button>
+            <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="event.stopPropagation();openClientModal('${c.id}')">Editar</button>
+            <button class="btn-icon" onclick="event.stopPropagation();deleteClient('${c.id}')" title="Excluir cliente">🗑</button>
+          </div>
+        </div>
+        <div class="client-body" id="cbody-${c.id}">
+          ${reportsHtml}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Init clients tab when switching to it
+const _origSwitchTab = window.switchTab;
+window.switchTab = function(tab) {
+  _origSwitchTab(tab);
+  if (tab === 'clientes') renderClients();
+};
 </script>
 </body>
 </html>
