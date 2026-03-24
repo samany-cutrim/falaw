@@ -256,6 +256,8 @@ h3 {
   display: grid;
   grid-template-columns: 55% 1fr;
   height: 100vh;
+  position: relative;
+  z-index: 1;
 }
 
 /* Lado esquerdo — foto */
@@ -319,16 +321,18 @@ h3 {
   pointer-events: none;
   z-index: 0;
 }
-.s-hero--home .hero-photo::after {
+.s-hero--home {
+  background: linear-gradient(135deg, rgba(13,43,94,0.18) 0%, rgba(13,43,94,0.32) 100%) !important;
+}
+.s-hero--home::before {
   content: '';
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 30% 40%, rgba(13,43,94,0.5) 0%, rgba(13,43,94,0.25) 50%, transparent 80%),
-    linear-gradient(180deg, rgba(13,43,94,0.2) 0%, rgba(13,43,94,0.35) 100%);
+    radial-gradient(ellipse at 15% 50%, rgba(13,43,94,0.45) 0%, rgba(13,43,94,0.2) 50%, transparent 75%),
+    radial-gradient(ellipse at 85% 30%, rgba(13,43,94,0.35) 0%, rgba(13,43,94,0.1) 55%, transparent 80%);
   pointer-events: none;
-  z-index: 1;
-  border-radius: inherit;
+  z-index: 0;
 }
 .hero-sub {
   font-size: 16px;
