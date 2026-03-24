@@ -1293,7 +1293,6 @@ h3 {
   height: 32px;
   width: auto;
   opacity: 0.75;
-  filter: brightness(0) invert(1);
   transition: opacity .3s;
 }
 .footer-social-brand:hover img { opacity: 1; }
