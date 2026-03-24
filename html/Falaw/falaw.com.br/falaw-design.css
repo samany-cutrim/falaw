@@ -289,7 +289,14 @@ h3 {
   justify-content: center;
   padding: calc(var(--nav-h) + 56px) 64px 64px;
 }
-.hero-title { margin-bottom: 24px; }
+.hero-title {
+  margin-bottom: 24px;
+  text-shadow:
+    1px 1px 0 #B8952A,
+    2px 2px 0 rgba(184,149,42,0.45),
+    3px 3px 0 rgba(13,43,94,0.30),
+    0 8px 32px rgba(13,43,94,0.15);
+}
 .hero-sub {
   font-size: 16px;
   color: var(--c-muted);
