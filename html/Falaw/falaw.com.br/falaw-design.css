@@ -1292,8 +1292,8 @@ h3 {
 .footer-social-brand img {
   height: 32px;
   width: auto;
-  mix-blend-mode: screen;
-  opacity: 0.8;
+  opacity: 0.75;
+  filter: brightness(0) invert(1);
   transition: opacity .3s;
 }
 .footer-social-brand:hover img { opacity: 1; }
