@@ -1279,7 +1279,8 @@ h3 {
   transition: color .3s;
 }
 .footer-links a:hover { color: var(--c-accent); }
-.footer-social { display: flex; flex-direction: row; gap: 20px; align-items: center; }
+.footer-social { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.footer-social-icons { display: flex; flex-direction: row; gap: 20px; align-items: center; }
 .footer-social a {
   color: rgba(247,245,242,.3);
   transition: color .3s;
@@ -1287,11 +1288,12 @@ h3 {
   align-items: center;
 }
 .footer-social a:hover { color: var(--c-accent); }
+.footer-social-brand { display: block; }
 .footer-social-brand img {
-  height: 36px;
+  height: 32px;
   width: auto;
-  opacity: 0.75;
-  filter: brightness(0) invert(1);
+  mix-blend-mode: screen;
+  opacity: 0.8;
   transition: opacity .3s;
 }
 .footer-social-brand:hover img { opacity: 1; }
