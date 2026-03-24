@@ -1472,8 +1472,11 @@ h3 {
   /* Hamburger: aparece em mobile */
   .nav-burger { display: flex; }
   .nav-links {
+    display: flex !important;
     position: fixed;
-    inset: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw;
+    height: 100vh;
     background: var(--c-dark);
     flex-direction: column;
     align-items: center;
@@ -1484,14 +1487,24 @@ h3 {
     pointer-events: none;
     transition: opacity .3s ease;
     list-style: none;
-    display: flex;
+    margin: 0;
+    padding: 0;
   }
-  .nav.nav-open .nav-links { opacity: 1; pointer-events: auto; }
-  .nav-links a { color: var(--c-light-text); font-size: 13px; letter-spacing: .18em; }
+  .nav.nav-open .nav-links {
+    opacity: 1 !important;
+    pointer-events: auto;
+  }
+  .nav-links li { list-style: none; }
+  .nav-links a {
+    color: #F7F5F2 !important;
+    font-size: 18px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+  }
   .nav-links a.active::after,
-  .nav-links a:hover::after { background: var(--c-light-text); }
+  .nav-links a:hover::after { background: #F7F5F2; }
   .nav-burger span { background: var(--c-text); }
-  .nav.nav-open .nav-burger span { background: var(--c-light-text); }
+  .nav.nav-open .nav-burger span { background: #F7F5F2; }
 
   /* Título hero menor */
   .hero-title { font-size: clamp(28px, 7vw, 48px); }
