@@ -2295,3 +2295,31 @@ h3 {
   .article-header, .article-cover, .article-body { padding-left: 22px; padding-right: 22px; }
   .article-back { padding-left: 22px; padding-right: 22px; }
 }
+
+/* ────────────────────────────────────────
+   WHATSAPP FLOATING BUTTON
+──────────────────────────────────────── */
+.whatsapp-btn {
+  position: fixed;
+  right: 24px;
+  bottom: 32px;
+  z-index: 1200;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  transition: transform .25s ease, box-shadow .25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.whatsapp-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.whatsapp-btn img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: block;
+}
