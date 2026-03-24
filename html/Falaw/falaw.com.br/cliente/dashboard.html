@@ -113,6 +113,25 @@
       padding: 16px 12px;
       border-top: 1px solid var(--border);
     }
+    .btn-back-site {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 12px;
+      background: none;
+      border: 1px solid rgba(184,149,42,0.2);
+      border-radius: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--gold);
+      text-decoration: none;
+      margin-bottom: 8px;
+      transition: border-color .2s, background .2s;
+    }
+    .btn-back-site:hover { background: rgba(184,149,42,0.08); border-color: rgba(184,149,42,0.4); }
     .btn-logout {
       display: flex;
       align-items: center;
@@ -431,6 +450,9 @@
     </nav>
 
     <div class="sidebar-bottom">
+      <a href="../index.html" class="btn-back-site">
+        <span>←</span> Voltar ao site
+      </a>
       <button class="btn-logout" onclick="logout()">
         <span>⎋</span> Sair da conta
       </button>
