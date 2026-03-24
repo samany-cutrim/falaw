@@ -307,7 +307,7 @@ h3 {
     0 10px 30px rgba(184,149,42,0.22);
   position: relative;
 }
-.hero-copy::before {
+#s-hero .hero-copy::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -318,6 +318,17 @@ h3 {
   filter: blur(30px);
   pointer-events: none;
   z-index: 0;
+}
+#s-hero .hero-photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 30% 40%, rgba(13,43,94,0.5) 0%, rgba(13,43,94,0.25) 50%, transparent 80%),
+    linear-gradient(180deg, rgba(13,43,94,0.2) 0%, rgba(13,43,94,0.35) 100%);
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
 }
 .hero-sub {
   font-size: 16px;
