@@ -1290,7 +1290,7 @@ h3 {
 .footer-social a:hover { color: var(--c-accent); }
 .footer-social-brand { display: block; }
 .footer-social-brand img {
-  height: 52px;
+  height: 40px;
   width: auto;
   opacity: 0.75;
   transition: opacity .3s;
