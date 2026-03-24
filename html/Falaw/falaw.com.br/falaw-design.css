@@ -309,31 +309,21 @@ h3 {
     0 10px 30px rgba(184,149,42,0.22);
   position: relative;
 }
-.s-hero--home .hero-copy::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 80% 20%, rgba(13,43,94,0.45) 0%, rgba(13,43,94,0.22) 40%, transparent 70%),
-    radial-gradient(ellipse at 20% 80%, rgba(13,43,94,0.3) 0%, rgba(13,43,94,0.12) 50%, transparent 75%),
-    linear-gradient(135deg, rgba(13,43,94,0.08) 0%, rgba(13,43,94,0.25) 100%);
-  filter: blur(30px);
-  pointer-events: none;
-  z-index: 0;
+.s-hero--home .hero-title,
+.s-hero--home .ht-accent {
+  color: #FFFFFF;
+}
+.s-hero--home .label,
+.s-hero--home .hero-sub {
+  color: rgba(255,255,255,0.8);
+}
+.s-hero--home .hero-caption {
+  color: rgba(255,255,255,0.4);
 }
 .s-hero--home {
-  background: linear-gradient(135deg, rgba(13,43,94,0.18) 0%, rgba(13,43,94,0.32) 100%) !important;
+  background: rgba(13,43,94,0.28) !important;
 }
-.s-hero--home::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 15% 50%, rgba(13,43,94,0.45) 0%, rgba(13,43,94,0.2) 50%, transparent 75%),
-    radial-gradient(ellipse at 85% 30%, rgba(13,43,94,0.35) 0%, rgba(13,43,94,0.1) 55%, transparent 80%);
-  pointer-events: none;
-  z-index: 0;
-}
+.s-hero--home .hero-copy::before { display: none; }
 .hero-sub {
   font-size: 16px;
   color: var(--c-muted);
