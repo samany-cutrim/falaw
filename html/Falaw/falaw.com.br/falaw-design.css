@@ -310,15 +310,14 @@ h3 {
 .hero-copy::before {
   content: '';
   position: absolute;
-  top: 5%;
-  right: 0;
-  width: 85%;
-  height: 65%;
-  background: radial-gradient(ellipse at 65% 25%, rgba(13,43,94,0.22) 0%, rgba(13,43,94,0.1) 45%, transparent 72%);
-  filter: blur(55px);
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 80% 20%, rgba(13,43,94,0.45) 0%, rgba(13,43,94,0.22) 40%, transparent 70%),
+    radial-gradient(ellipse at 20% 80%, rgba(13,43,94,0.3) 0%, rgba(13,43,94,0.12) 50%, transparent 75%),
+    linear-gradient(135deg, rgba(13,43,94,0.08) 0%, rgba(13,43,94,0.25) 100%);
+  filter: blur(30px);
   pointer-events: none;
   z-index: 0;
-  border-radius: 50%;
 }
 .hero-sub {
   font-size: 16px;
