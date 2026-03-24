@@ -1299,7 +1299,29 @@ h3 {
 .footer-bottom {
   padding: 14px 72px;
   border-top: 1px solid rgba(247,245,242,.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 }
+.footer-legal-links {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-family: var(--f-mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(247,245,242,.15);
+}
+.footer-legal-links a {
+  color: rgba(247,245,242,.15);
+  text-decoration: none;
+  transition: color .2s;
+}
+.footer-legal-links a:hover { color: rgba(247,245,242,.5); }
+.footer-legal-links span { opacity: .4; }
 .footer-copy {
   font-family: var(--f-mono);
   font-size: 10px;
