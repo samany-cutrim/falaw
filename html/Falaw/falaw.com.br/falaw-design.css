@@ -307,7 +307,7 @@ h3 {
     0 10px 30px rgba(184,149,42,0.22);
   position: relative;
 }
-#s-hero .hero-copy::before {
+.s-hero--home .hero-copy::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -319,7 +319,7 @@ h3 {
   pointer-events: none;
   z-index: 0;
 }
-#s-hero .hero-photo::after {
+.s-hero--home .hero-photo::after {
   content: '';
   position: absolute;
   inset: 0;
