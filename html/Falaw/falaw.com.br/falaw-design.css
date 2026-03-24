@@ -321,7 +321,13 @@ h3 {
   color: rgba(255,255,255,0.4);
 }
 .s-hero--home {
-  background: rgb(10,50,120) !important;
+  background: #0D2347 !important;
+}
+.s-hero--home .cta {
+  color: #FFFFFF;
+}
+.s-hero--home .cta::after {
+  background: #FFFFFF;
 }
 .s-hero--home .hero-copy::before { display: none; }
 .hero-sub {
