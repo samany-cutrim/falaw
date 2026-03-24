@@ -24,6 +24,7 @@
       --muted:     rgba(232,235,240,0.45);
       --muted-l:   rgba(232,235,240,0.2);
       --green:     #2DD4A0;
+      --blue:      #3B82F6;
       --sidebar-w: 260px;
     }
 
@@ -75,10 +76,7 @@
       line-height: 1.3;
       margin-bottom: 3px;
     }
-    .sidebar-client-company {
-      font-size: 12px;
-      color: var(--muted);
-    }
+    .sidebar-client-company { font-size: 12px; color: var(--muted); }
     .sidebar-client-email {
       font-size: 11px;
       color: var(--muted-l);
@@ -86,10 +84,7 @@
       font-family: 'IBM Plex Mono', monospace;
     }
 
-    .sidebar-nav {
-      flex: 1;
-      padding: 20px 12px;
-    }
+    .sidebar-nav { flex: 1; padding: 20px 12px; }
     .nav-item {
       display: flex;
       align-items: center;
@@ -102,17 +97,11 @@
       transition: background .15s, color .15s;
       margin-bottom: 2px;
     }
-    .nav-item.active, .nav-item:hover {
-      background: var(--bg-hover);
-      color: var(--text);
-    }
+    .nav-item.active, .nav-item:hover { background: var(--bg-hover); color: var(--text); }
     .nav-item.active { color: var(--gold); }
     .nav-icon { font-size: 15px; width: 20px; text-align: center; }
 
-    .sidebar-bottom {
-      padding: 16px 12px;
-      border-top: 1px solid var(--border);
-    }
+    .sidebar-bottom { padding: 16px 12px; border-top: 1px solid var(--border); }
     .btn-back-site {
       display: flex;
       align-items: center;
@@ -152,13 +141,7 @@
     .btn-logout:hover { border-color: rgba(224,84,84,0.4); color: #E05454; }
 
     /* ── MAIN ── */
-    .main {
-      margin-left: var(--sidebar-w);
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
+    .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
 
     /* ── TOPBAR ── */
     .topbar {
@@ -181,13 +164,7 @@
       color: var(--muted);
     }
     .topbar-title span { color: var(--text); }
-    .topbar-right {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      font-size: 12px;
-      color: var(--muted);
-    }
+    .topbar-right { display: flex; align-items: center; gap: 16px; font-size: 12px; color: var(--muted); }
     .status-dot {
       width: 6px; height: 6px;
       background: var(--green);
@@ -198,15 +175,24 @@
     }
 
     /* ── CONTENT ── */
-    .content {
-      flex: 1;
-      padding: 40px 32px;
-      max-width: 1100px;
-    }
+    .content { flex: 1; padding: 40px 32px; max-width: 1100px; }
 
     /* ── PAGE HEADER ── */
     .page-header {
-      margin-bottom: 40px;
+      margin-bottom: 36px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px 32px 0;
+      overflow: hidden;
+      position: relative;
+    }
+    .page-header-glow {
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 300px; height: 300px;
+      background: radial-gradient(ellipse, rgba(184,149,42,0.08) 0%, transparent 70%);
+      pointer-events: none;
     }
     .page-label {
       font-family: 'IBM Plex Mono', monospace;
@@ -218,24 +204,29 @@
     }
     .page-title {
       font-family: 'Sora', sans-serif;
-      font-size: clamp(24px, 3vw, 36px);
+      font-size: clamp(22px, 2.8vw, 32px);
       font-weight: 800;
       color: var(--text);
       letter-spacing: -.02em;
       line-height: 1.1;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
-    .page-subtitle {
-      font-size: 14px;
-      color: var(--muted);
+    .page-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+
+    /* ── MAIN CHART (decorative timeline) ── */
+    .main-chart-wrap {
+      position: relative;
+      height: 90px;
+      margin: 0 -32px;
     }
+    .main-chart-wrap svg { width: 100%; height: 100%; display: block; }
 
     /* ── STATS ── */
     .stats-row {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 16px;
-      margin-bottom: 40px;
+      margin-bottom: 36px;
     }
     .stat-card {
       background: var(--bg-card);
@@ -244,7 +235,9 @@
       padding: 20px 22px;
       position: relative;
       overflow: hidden;
+      transition: border-color .2s;
     }
+    .stat-card:hover { border-color: var(--border-h); }
     .stat-card::before {
       content: '';
       position: absolute;
@@ -252,13 +245,16 @@
       height: 2px;
       background: linear-gradient(90deg, var(--gold), transparent);
     }
+    .stat-card:nth-child(2)::before { background: linear-gradient(90deg, var(--green), transparent); }
+    .stat-card:nth-child(3)::before { background: linear-gradient(90deg, var(--blue), transparent); }
+    .stat-icon { font-size: 20px; margin-bottom: 10px; }
     .stat-label {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 9px;
       letter-spacing: .15em;
       text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .stat-value {
       font-family: 'Sora', sans-serif;
@@ -268,13 +264,10 @@
       line-height: 1;
     }
     .stat-value.gold { color: var(--gold); }
-    .stat-sub {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 4px;
-    }
+    .stat-value.green { color: var(--green); }
+    .stat-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
 
-    /* ── REPORTS ── */
+    /* ── REPORTS SECTION ── */
     .reports-header {
       display: flex;
       align-items: center;
@@ -296,116 +289,136 @@
 
     .reports-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
     }
 
+    /* ── REPORT CARD ── */
     .report-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 24px;
-      transition: border-color .2s, transform .2s, box-shadow .2s;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color .25s, transform .25s, box-shadow .25s;
+      display: flex;
+      flex-direction: column;
+    }
+    .report-card:hover {
+      border-color: rgba(184,149,42,0.35);
+      transform: translateY(-3px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.35);
+    }
+
+    /* chart preview area */
+    .report-chart-area {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 20px 0;
+      height: 100px;
       position: relative;
       overflow: hidden;
     }
-    .report-card:hover {
-      border-color: rgba(184,149,42,0.3);
-      transform: translateY(-2px);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
-    }
-    .report-card::after {
-      content: '';
+    .report-chart-area svg { width: 100%; height: 100%; display: block; }
+    .report-chart-badge {
       position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, var(--gold), transparent 60%);
-      opacity: 0;
-      transition: opacity .2s;
+      top: 10px; right: 12px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 8px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: rgba(184,149,42,0.12);
+      border: 1px solid rgba(184,149,42,0.2);
+      padding: 2px 7px;
+      border-radius: 2px;
     }
-    .report-card:hover::after { opacity: 1; }
+    .report-new-badge {
+      position: absolute;
+      top: 10px; left: 12px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 8px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--green);
+      background: rgba(45,212,160,0.1);
+      border: 1px solid rgba(45,212,160,0.25);
+      padding: 2px 7px;
+      border-radius: 2px;
+    }
 
-    .report-icon {
-      width: 44px; height: 44px;
-      background: rgba(13,43,94,0.4);
-      border: 1px solid rgba(13,43,94,0.6);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      margin-bottom: 16px;
-    }
-    .report-title {
-      font-family: 'Sora', sans-serif;
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 6px;
-      line-height: 1.3;
-    }
+    /* card body */
+    .report-body { padding: 20px 20px 0; flex: 1; }
     .report-period {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 10px;
       letter-spacing: .1em;
       text-transform: uppercase;
       color: var(--gold);
+      margin-bottom: 6px;
+    }
+    .report-title {
+      font-family: 'Sora', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
       margin-bottom: 8px;
+      line-height: 1.35;
     }
     .report-desc {
       font-size: 12px;
       color: var(--muted);
-      line-height: 1.6;
-      margin-bottom: 16px;
+      line-height: 1.65;
+      margin-bottom: 14px;
     }
     .report-meta {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding-top: 14px;
+      gap: 12px;
+      padding: 12px 0;
       border-top: 1px solid var(--border);
     }
-    .report-date {
+    .report-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
       font-family: 'IBM Plex Mono', monospace;
-      font-size: 10px;
+      font-size: 9px;
+      letter-spacing: .06em;
       color: var(--muted-l);
     }
-    .report-size {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 10px;
-      color: var(--muted-l);
-    }
+    .report-meta-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--border-h); }
 
+    /* download button */
+    .report-footer { padding: 16px 20px; }
     .btn-download {
       display: flex;
       align-items: center;
-      gap: 7px;
-      margin-top: 16px;
+      justify-content: center;
+      gap: 8px;
       width: 100%;
-      padding: 10px 14px;
-      background: rgba(184,149,42,0.1);
-      border: 1px solid rgba(184,149,42,0.25);
-      border-radius: 6px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, rgba(184,149,42,0.15), rgba(184,149,42,0.08));
+      border: 1px solid rgba(184,149,42,0.3);
+      border-radius: 7px;
       font-family: 'IBM Plex Mono', monospace;
       font-size: 10px;
       font-weight: 500;
-      letter-spacing: .1em;
+      letter-spacing: .12em;
       text-transform: uppercase;
-      color: var(--gold);
+      color: var(--gold-l);
       cursor: pointer;
-      transition: background .2s, border-color .2s;
+      transition: background .2s, border-color .2s, transform .15s;
     }
     .btn-download:hover {
-      background: rgba(184,149,42,0.18);
-      border-color: rgba(184,149,42,0.45);
+      background: linear-gradient(135deg, rgba(184,149,42,0.25), rgba(184,149,42,0.15));
+      border-color: rgba(184,149,42,0.55);
+      transform: translateY(-1px);
     }
+    .btn-download:active { transform: translateY(0); }
+    .btn-download svg { flex-shrink: 0; }
 
     /* ── EMPTY STATE ── */
-    .empty-state {
-      text-align: center;
-      padding: 80px 32px;
-      color: var(--muted);
-    }
+    .empty-state { text-align: center; padding: 80px 32px; color: var(--muted); grid-column: 1/-1; }
     .empty-icon { font-size: 48px; margin-bottom: 20px; opacity: .4; }
     .empty-title {
       font-family: 'Sora', sans-serif;
@@ -423,6 +436,7 @@
       .stats-row { grid-template-columns: 1fr; }
       .content { padding: 24px 20px; }
       .topbar { padding: 0 20px; }
+      .page-header { padding: 24px 20px 0; }
     }
   </style>
 </head>
@@ -474,26 +488,34 @@
     <!-- CONTENT -->
     <div class="content">
 
+      <!-- PAGE HEADER with decorative line chart -->
       <div class="page-header">
+        <div class="page-header-glow"></div>
         <div class="page-label">Área do Cliente · Falaw Advogados</div>
         <h1 class="page-title" id="pageTitle">Seus Relatórios</h1>
         <p class="page-subtitle" id="pageSubtitle">Documentos e análises preparados pelo escritório.</p>
+        <div class="main-chart-wrap" id="mainChartWrap">
+          <!-- decorative chart injected by JS -->
+        </div>
       </div>
 
       <!-- STATS -->
       <div class="stats-row">
         <div class="stat-card">
+          <div class="stat-icon">📁</div>
           <div class="stat-label">Total de Relatórios</div>
           <div class="stat-value gold" id="statTotal">0</div>
           <div class="stat-sub">disponíveis para download</div>
         </div>
         <div class="stat-card">
+          <div class="stat-icon">🗓</div>
           <div class="stat-label">Último Relatório</div>
           <div class="stat-value" id="statLast" style="font-size:18px;">—</div>
           <div class="stat-sub" id="statLastTitle">—</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Acesso em</div>
+          <div class="stat-icon">🕐</div>
+          <div class="stat-label">Login em</div>
           <div class="stat-value" id="statLogin" style="font-size:18px;">—</div>
           <div class="stat-sub">horário de Brasília</div>
         </div>
@@ -505,9 +527,7 @@
         <span class="reports-count" id="reportsCount">0 arquivos</span>
       </div>
 
-      <div class="reports-grid" id="reportsGrid">
-        <!-- populated by JS -->
-      </div>
+      <div class="reports-grid" id="reportsGrid"></div>
 
     </div>
   </div>
@@ -523,14 +543,12 @@ function getClients() {
 
 function formatDate(iso) {
   if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function formatTime(iso) {
   if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function formatSize(bytes) {
@@ -538,6 +556,11 @@ function formatSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function isNew(iso) {
+  if (!iso) return false;
+  return (Date.now() - new Date(iso).getTime()) < 7 * 24 * 60 * 60 * 1000;
 }
 
 function logout() {
@@ -554,14 +577,108 @@ function downloadReport(report) {
   document.body.removeChild(a);
 }
 
+/* ── Seeded pseudo-random to get consistent values per report ── */
+function seededRand(seed) {
+  let s = 0;
+  for (let i = 0; i < seed.length; i++) s = (s * 31 + seed.charCodeAt(i)) & 0xFFFFFF;
+  return function() {
+    s = (s * 1664525 + 1013904223) & 0xFFFFFF;
+    return s / 0xFFFFFF;
+  };
+}
+
+/* ── Mini bar chart SVG for each report card ── */
+function miniBarChart(seed, color) {
+  const rand = seededRand(seed);
+  const bars = 20;
+  const w = 300, h = 80;
+  const bw = (w / bars) - 2;
+  const vals = Array.from({length: bars}, () => 0.25 + rand() * 0.75);
+
+  const rects = vals.map((v, i) => {
+    const bh = v * (h - 10);
+    const x = i * (w / bars);
+    const y = h - bh;
+    const opacity = 0.3 + v * 0.5;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${color}" opacity="${opacity.toFixed(2)}" rx="2"/>`;
+  }).join('');
+
+  // line overlay on top bars
+  const points = vals.map((v, i) => {
+    const x = i * (w / bars) + bw / 2;
+    const y = h - v * (h - 10);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    ${rects}
+    <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.7" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+/* ── Main decorative line chart for page header ── */
+function mainLineChart(count) {
+  const w = 1200, h = 90;
+  const pts = Math.max(count + 4, 8);
+  const rand = seededRand('main' + count);
+  const vals = Array.from({length: pts}, (_, i) => {
+    const base = 0.3 + (i / pts) * 0.4;
+    return base + (rand() - 0.5) * 0.35;
+  }).map(v => Math.max(0.1, Math.min(0.95, v)));
+
+  const points = vals.map((v, i) => {
+    const x = (i / (pts - 1)) * w;
+    const y = h - v * (h - 12) - 6;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+
+  // smooth path using bezier
+  let d = `M ${points[0]}`;
+  for (let i = 1; i < points.length; i++) {
+    const [x0, y0] = points[i-1].split(',').map(Number);
+    const [x1, y1] = points[i].split(',').map(Number);
+    const cx = (x0 + x1) / 2;
+    d += ` C ${cx},${y0} ${cx},${y1} ${x1},${y1}`;
+  }
+
+  // fill area
+  const [lx, ly] = points[points.length-1].split(',').map(Number);
+  const fillD = d + ` L ${lx},${h} L 0,${h} Z`;
+
+  // dots at each real report point (the last `count` points)
+  const dotsStart = pts - count;
+  const dots = vals.slice(dotsStart).map((v, i) => {
+    const x = ((dotsStart + i) / (pts - 1)) * w;
+    const y = h - v * (h - 12) - 6;
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="#B8952A" opacity="0.9"/>
+            <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="7" fill="none" stroke="#B8952A" stroke-width="1" opacity="0.3"/>`;
+  }).join('');
+
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="areafill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#B8952A" stop-opacity="0.18"/>
+        <stop offset="100%" stop-color="#B8952A" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path d="${fillD}" fill="url(#areafill)"/>
+    <path d="${d}" fill="none" stroke="#B8952A" stroke-width="2" opacity="0.7" stroke-linecap="round"/>
+    ${dots}
+  </svg>`;
+}
+
+/* ── Chart colors cycling ── */
+const CHART_COLORS = ['#B8952A', '#3B82F6', '#2DD4A0', '#A78BFA', '#F59E0B'];
+
 function renderReports(reports) {
   const grid = document.getElementById('reportsGrid');
   document.getElementById('statTotal').textContent = reports.length;
   document.getElementById('reportsCount').textContent = reports.length + ' arquivo' + (reports.length !== 1 ? 's' : '');
+  document.getElementById('mainChartWrap').innerHTML = mainLineChart(reports.length);
 
   if (reports.length === 0) {
     grid.innerHTML = `
-      <div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-state">
         <div class="empty-icon">📁</div>
         <div class="empty-title">Nenhum relatório disponível</div>
         <div class="empty-text">Seus relatórios aparecerão aqui assim que forem disponibilizados pelo escritório.</div>
@@ -572,24 +689,50 @@ function renderReports(reports) {
   }
 
   const sorted = [...reports].sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-  document.getElementById('statLast').textContent  = formatDate(sorted[0].uploadedAt);
+  document.getElementById('statLast').textContent = formatDate(sorted[0].uploadedAt);
   document.getElementById('statLastTitle').textContent = sorted[0].title;
 
-  grid.innerHTML = sorted.map(r => `
+  grid.innerHTML = sorted.map((r, idx) => {
+    const color = CHART_COLORS[idx % CHART_COLORS.length];
+    const chart = miniBarChart(r.id || r.title, color);
+    const newBadge = isNew(r.uploadedAt) ? `<div class="report-new-badge">Novo</div>` : '';
+    const ext = (r.fileName || '').split('.').pop().toUpperCase() || 'XLSX';
+    const reportData = JSON.stringify(r).replace(/'/g, '&#39;');
+
+    return `
     <div class="report-card">
-      <div class="report-icon">📈</div>
-      <div class="report-period">${r.period || ''}</div>
-      <div class="report-title">${r.title}</div>
-      ${r.description ? `<div class="report-desc">${r.description}</div>` : ''}
-      <div class="report-meta">
-        <span class="report-date">${formatDate(r.uploadedAt)}</span>
-        <span class="report-size">${formatSize(r.fileSize)}</span>
+      <div class="report-chart-area">
+        ${chart}
+        ${newBadge}
+        <div class="report-chart-badge">${ext}</div>
       </div>
-      <button class="btn-download" onclick='downloadReport(${JSON.stringify(r)})'>
-        ⬇ Baixar Relatório Excel
-      </button>
-    </div>
-  `).join('');
+      <div class="report-body">
+        ${r.period ? `<div class="report-period">${r.period}</div>` : ''}
+        <div class="report-title">${r.title}</div>
+        ${r.description ? `<div class="report-desc">${r.description}</div>` : ''}
+        <div class="report-meta">
+          <span class="report-meta-item">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            ${formatDate(r.uploadedAt)}
+          </span>
+          ${r.fileSize ? `<span class="report-meta-dot"></span><span class="report-meta-item">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            ${formatSize(r.fileSize)}
+          </span>` : ''}
+        </div>
+      </div>
+      <div class="report-footer">
+        <button class="btn-download" onclick='downloadReport(${reportData})'>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Baixar Relatório
+        </button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 (function init() {
@@ -597,21 +740,19 @@ function renderReports(reports) {
   if (!raw) { window.location.href = 'index.html'; return; }
 
   const session = JSON.parse(raw);
-  const clients  = getClients();
-  const client   = clients.find(c => c.id === session.id);
+  const clients = getClients();
+  const client  = clients.find(c => c.id === session.id);
 
   if (!client) { logout(); return; }
 
-  // Populate UI
-  document.getElementById('sidebarName').textContent    = client.name;
-  document.getElementById('sidebarCompany').textContent = client.company || '';
-  document.getElementById('sidebarEmail').textContent   = client.email;
+  document.getElementById('sidebarName').textContent    = client.company || client.name;
+  document.getElementById('sidebarCompany').textContent = client.email;
+  document.getElementById('sidebarEmail').textContent   = '';
   document.getElementById('topbarCompany').textContent  = client.company || client.name;
-  document.getElementById('pageTitle').textContent      = 'Olá, ' + client.name.split(' ')[0];
+  document.getElementById('pageTitle').textContent      = 'Olá, ' + (client.company || client.name).split(' ')[0];
   document.getElementById('pageSubtitle').textContent   = 'Documentos e análises preparados exclusivamente para ' + (client.company || 'você') + '.';
   document.getElementById('statLogin').textContent      = formatTime(session.loginAt);
 
-  // Date in topbar
   document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('pt-BR', {
     weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
   });

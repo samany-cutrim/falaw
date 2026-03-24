@@ -765,45 +765,34 @@
       <div id="clientList"></div>
 
       <!-- Client Modal -->
-      <div id="clientModal" class="modal" style="display:none">
-        <div class="modal-backdrop" onclick="closeClientModal()"></div>
-        <div class="modal-box" style="max-width:520px">
+      <div class="modal-overlay" id="clientModal" onclick="if(event.target===this)closeClientModal()">
+        <div class="modal">
           <div class="modal-header">
             <h3 id="clientModalTitle">Novo Cliente</h3>
-            <button class="modal-close" onclick="closeClientModal()">✕</button>
+            <button class="modal-close" onclick="closeClientModal()">×</button>
           </div>
           <div class="modal-body">
             <input type="hidden" id="cli-id" />
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Nome Completo *</label>
-                <input id="cli-name" type="text" class="form-input" placeholder="João da Silva" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Empresa</label>
-                <input id="cli-company" type="text" class="form-input" placeholder="Empresa ABC Ltda" />
-              </div>
+            <div class="form-field">
+              <label>Empresa *</label>
+              <input id="cli-company" type="text" placeholder="Empresa ABC Ltda" />
             </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">E-mail de Acesso *</label>
-                <input id="cli-email" type="email" class="form-input" placeholder="cliente@empresa.com" />
+            <div class="form-field">
+              <label>E-mail de Acesso *</label>
+              <input id="cli-email" type="email" placeholder="cliente@empresa.com" />
+            </div>
+            <div class="form-field">
+              <label>Código de Acesso *</label>
+              <div style="display:flex;gap:8px">
+                <input id="cli-code" type="text" placeholder="Ex: FALAW2026@ABC" style="flex:1" />
+                <button type="button" class="btn btn-secondary" onclick="genCode()" style="white-space:nowrap;align-self:flex-end">Gerar</button>
               </div>
-              <div class="form-group">
-                <label class="form-label">Código de Acesso *</label>
-                <div style="display:flex;gap:8px">
-                  <input id="cli-code" type="text" class="form-input" placeholder="Ex: FALAW2026@ABC" style="flex:1" />
-                  <button type="button" class="btn btn-secondary" onclick="genCode()" style="white-space:nowrap">Gerar</button>
-                </div>
-              </div>
+              <small style="color:var(--c-muted)">O cliente usará o e-mail + código para acessar o portal.</small>
             </div>
-            <div style="font-size:11px;color:var(--c-muted);margin-top:-8px;margin-bottom:16px">
-              O cliente usará o e-mail + código para acessar o portal.
-            </div>
-            <div class="modal-actions">
-              <button type="button" class="btn btn-secondary" onclick="closeClientModal()">Cancelar</button>
-              <button type="button" class="btn btn-primary" onclick="saveClient()">Salvar Cliente</button>
-            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeClientModal()">Cancelar</button>
+            <button class="btn btn-primary" onclick="saveClient()">Salvar Cliente</button>
           </div>
         </div>
       </div>
@@ -1207,10 +1196,11 @@ function doLogout() {
 ══════════════════════════════════════ */
 function switchTab(name) {
   document.querySelectorAll('.admin-tab').forEach((t, i) => {
-    t.classList.toggle('active', ['blog','equipe','newsletter','contato','config'][i] === name);
+    t.classList.toggle('active', ['blog','equipe','newsletter','contato','clientes','config'][i] === name);
   });
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'clientes') renderClients();
 }
 
 /* ══════════════════════════════════════
@@ -2241,7 +2231,7 @@ const CLI_KEY = 'falaw_portal';
 
 function getClients()       { try { return JSON.parse(localStorage.getItem(CLI_KEY)) || []; } catch { return []; } }
 function saveClients(list)  { localStorage.setItem(CLI_KEY, JSON.stringify(list)); }
-function uid()              { return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+function cliUID()           { return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
 
 function genCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -2251,20 +2241,18 @@ function genCode() {
 }
 
 function openClientModal(clientId) {
-  document.getElementById('clientModal').style.display = 'flex';
+  document.getElementById('clientModal').classList.add('open');
   if (clientId) {
     const c = getClients().find(x => x.id === clientId);
     if (!c) return;
     document.getElementById('clientModalTitle').textContent = 'Editar Cliente';
     document.getElementById('cli-id').value      = c.id;
-    document.getElementById('cli-name').value    = c.name;
-    document.getElementById('cli-company').value = c.company || '';
+    document.getElementById('cli-company').value = c.company || c.name || '';
     document.getElementById('cli-email').value   = c.email;
     document.getElementById('cli-code').value    = c.code;
   } else {
     document.getElementById('clientModalTitle').textContent = 'Novo Cliente';
     document.getElementById('cli-id').value      = '';
-    document.getElementById('cli-name').value    = '';
     document.getElementById('cli-company').value = '';
     document.getElementById('cli-email').value   = '';
     document.getElementById('cli-code').value    = '';
@@ -2272,26 +2260,25 @@ function openClientModal(clientId) {
   }
 }
 
-function closeClientModal() { document.getElementById('clientModal').style.display = 'none'; }
+function closeClientModal() { document.getElementById('clientModal').classList.remove('open'); }
 
 function saveClient() {
-  const name    = document.getElementById('cli-name').value.trim();
   const company = document.getElementById('cli-company').value.trim();
   const email   = document.getElementById('cli-email').value.trim().toLowerCase();
   const code    = document.getElementById('cli-code').value.trim();
   const id      = document.getElementById('cli-id').value;
 
-  if (!name || !email || !code) { alert('Preencha nome, e-mail e código de acesso.'); return; }
+  if (!company || !email || !code) { alert('Preencha empresa, e-mail e código de acesso.'); return; }
 
   const clients = getClients();
 
   if (id) {
     const idx = clients.findIndex(c => c.id === id);
     if (idx >= 0) {
-      clients[idx] = { ...clients[idx], name, company, email, code };
+      clients[idx] = { ...clients[idx], name: company, company, email, code };
     }
   } else {
-    clients.push({ id: uid(), name, company, email, code, createdAt: new Date().toISOString(), reports: [] });
+    clients.push({ id: cliUID(), name: company, company, email, code, createdAt: new Date().toISOString(), reports: [] });
   }
 
   saveClients(clients);
@@ -2358,7 +2345,7 @@ function saveReport() {
     if (idx < 0) { alert('Cliente não encontrado.'); return; }
 
     const report = {
-      id: uid(),
+      id: cliUID(),
       title,
       period,
       description: desc,
@@ -2433,7 +2420,7 @@ function renderClients() {
       <div class="client-row">
         <div class="client-header" onclick="toggleClientBody('${c.id}')">
           <div class="client-info">
-            <div class="client-name">${c.name}${c.company ? ' <span style="font-weight:400;opacity:.6">— ' + c.company + '</span>' : ''}</div>
+            <div class="client-name">${c.company || c.name}</div>
             <div class="client-meta">${c.email} · Cadastrado em ${formatDateAdmin(c.createdAt)}</div>
           </div>
           <div class="client-actions">
@@ -2451,12 +2438,6 @@ function renderClients() {
   }).join('');
 }
 
-// Init clients tab when switching to it
-const _origSwitchTab = window.switchTab;
-window.switchTab = function(tab) {
-  _origSwitchTab(tab);
-  if (tab === 'clientes') renderClients();
-};
 </script>
 </body>
 </html>
