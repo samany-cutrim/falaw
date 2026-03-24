@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin — Falaw Advogados</title>
   <meta name="robots" content="noindex, nofollow" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -798,41 +799,46 @@
       </div>
 
       <!-- Report Upload Modal -->
-      <div id="reportModal" class="modal" style="display:none">
-        <div class="modal-backdrop" onclick="closeReportModal()"></div>
-        <div class="modal-box" style="max-width:520px">
+      <div class="modal-overlay" id="reportModal" onclick="if(event.target===this)closeReportModal()">
+        <div class="modal" style="max-width:560px">
           <div class="modal-header">
             <h3>Enviar Relatório</h3>
-            <button class="modal-close" onclick="closeReportModal()">✕</button>
+            <button type="button" class="modal-close" onclick="closeReportModal()">✕</button>
           </div>
           <div class="modal-body">
             <input type="hidden" id="rep-client-id" />
-            <div class="form-group">
-              <label class="form-label">Título do Relatório *</label>
-              <input id="rep-title" type="text" class="form-input" placeholder="Ex: Relatório de Passivo Trabalhista - Q1 2026" />
+            <div class="form-field">
+              <label>Título do Relatório *</label>
+              <input id="rep-title" type="text" placeholder="Ex: Relatório de Passivo Trabalhista - Q1 2026" />
             </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Período</label>
-                <input id="rep-period" type="text" class="form-input" placeholder="Jan - Mar 2026" />
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="form-field">
+                <label>Período</label>
+                <input id="rep-period" type="text" placeholder="Jan - Mar 2026" />
               </div>
-              <div class="form-group">
-                <label class="form-label">Arquivo Excel *</label>
-                <input id="rep-file" type="file" class="form-input" accept=".xlsx,.xls,.csv,.pdf" style="padding:6px" />
+              <div class="form-field">
+                <label>Arquivo *</label>
+                <input id="rep-file" type="file" accept=".xlsx,.xls,.csv,.pdf" style="padding:10px 14px" onchange="onRepFileChange(this)" />
               </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Descrição (opcional)</label>
-              <textarea id="rep-desc" class="form-input" rows="3" placeholder="Breve descrição do conteúdo do relatório..."></textarea>
+            <div class="form-field">
+              <label>Descrição (opcional)</label>
+              <textarea id="rep-desc" rows="2" placeholder="Breve descrição do conteúdo do relatório..."></textarea>
             </div>
-            <div id="rep-upload-progress" style="display:none;margin-bottom:12px">
+            <!-- Preview automático dos dados extraídos do Excel -->
+            <div id="rep-stats-preview" style="display:none;margin-bottom:8px">
+              <label style="display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:10px">Dados extraídos da planilha</label>
+              <div id="rep-stats-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+            </div>
+            <div id="rep-stats-status" style="font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-bottom:8px;display:none"></div>
+            <div id="rep-upload-progress" style="display:none;margin-top:12px;margin-bottom:4px">
               <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Processando arquivo…</div>
               <div style="height:3px;background:var(--c-divider);border-radius:2px"><div id="rep-progress-bar" style="height:100%;width:0%;background:var(--c-accent);border-radius:2px;transition:width .3s"></div></div>
             </div>
-            <div class="modal-actions">
-              <button type="button" class="btn btn-secondary" onclick="closeReportModal()">Cancelar</button>
-              <button type="button" class="btn btn-primary" id="repSaveBtn" onclick="saveReport()">Enviar Relatório</button>
-            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" onclick="closeReportModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="repSaveBtn" onclick="saveReport()">Enviar Relatório</button>
           </div>
         </div>
       </div>
@@ -2306,14 +2312,18 @@ function openReportModal(clientId) {
   document.getElementById('rep-client-id').value = clientId;
   document.getElementById('rep-title').value  = '';
   document.getElementById('rep-period').value = '';
-  document.getElementById('rep-desc').value   = '';
-  document.getElementById('rep-file').value   = '';
+  document.getElementById('rep-desc').value = '';
+  document.getElementById('rep-file').value = '';
+  document.getElementById('rep-stats-preview').style.display = 'none';
+  document.getElementById('rep-stats-status').style.display  = 'none';
+  document.getElementById('rep-stats-grid').innerHTML = '';
+  window._repExtractedStats = null;
   document.getElementById('rep-upload-progress').style.display = 'none';
   document.getElementById('repSaveBtn').disabled = false;
-  document.getElementById('reportModal').style.display = 'flex';
+  document.getElementById('reportModal').classList.add('open');
 }
 
-function closeReportModal() { document.getElementById('reportModal').style.display = 'none'; }
+function closeReportModal() { document.getElementById('reportModal').classList.remove('open'); }
 
 function saveReport() {
   const clientId = document.getElementById('rep-client-id').value;
@@ -2352,7 +2362,8 @@ function saveReport() {
       fileName: file.name,
       fileData: reader.result,
       fileSize: file.size,
-      uploadedAt: new Date().toISOString()
+      uploadedAt: new Date().toISOString(),
+      stats: window._repExtractedStats || null
     };
 
     clients[idx].reports = clients[idx].reports || [];
@@ -2366,6 +2377,126 @@ function saveReport() {
   };
   reader.onerror = () => { alert('Erro ao ler o arquivo.'); btn.disabled = false; btn.textContent = 'Enviar Relatório'; };
   reader.readAsDataURL(file);
+}
+
+/* ── EXTRAÇÃO AUTOMÁTICA DE STATS DO EXCEL ────────────────── */
+const _STAT_ALIASES = {
+  processos:     ['total de processos','processos ativos','total processos','quantidade de processos','qtd processos','processos'],
+  favoraveis:    ['decisoes favoraveis','decisões favoráveis','favoraveis','favoráveis','ganhos','procedente','procedentes','vitórias','vitorias'],
+  desfavoraveis: ['decisoes desfavoraveis','decisões desfavoráveis','desfavoraveis','desfavoráveis','perdas','improcedente','improcedentes'],
+  novas:         ['novas acoes','novas ações','novos processos','distribuidos','distribuídos','novas','ingressos'],
+  encerrados:    ['encerrados','arquivados','finalizados','extintos','processos encerrados','baixados'],
+  andamento:     ['em andamento','andamento','em curso','pendentes','aguardando'],
+};
+const _TOTAL_LABELS = ['total','totais','resumo','subtotal','geral','consolidado'];
+
+function _norm(s) {
+  return String(s||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+function _extractStatsFromWorkbook(wb) {
+  const stats = {};
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(ws, { header:1, defval:null });
+    if (!data.length) continue;
+
+    // Encontra linha de cabeçalho (primeira com ≥2 células preenchidas)
+    let hdrIdx = -1, hdrs = [];
+    for (let i = 0; i < Math.min(15, data.length); i++) {
+      const filled = data[i].filter(c => c !== null && String(c).trim() !== '').length;
+      if (filled >= 2) { hdrIdx = i; hdrs = data[i].map(c => _norm(String(c||''))); break; }
+    }
+    if (hdrIdx < 0) continue;
+
+    // Mapeia coluna → índice
+    const colMap = {};
+    for (const [key, aliases] of Object.entries(_STAT_ALIASES)) {
+      if (stats[key] !== undefined) continue;
+      for (let j = 0; j < hdrs.length; j++) {
+        if (aliases.some(a => hdrs[j] === _norm(a) || hdrs[j].includes(_norm(a)))) {
+          colMap[key] = j; break;
+        }
+      }
+    }
+    if (!Object.keys(colMap).length) continue;
+
+    const rows = data.slice(hdrIdx + 1).filter(r => r.some(c => c !== null));
+    for (const [key, idx] of Object.entries(colMap)) {
+      if (stats[key] !== undefined) continue;
+      // Procura linha de total
+      let found = false;
+      for (const row of rows) {
+        const lbl = _norm(String(row[0]||''));
+        if (_TOTAL_LABELS.some(t => lbl.includes(t))) {
+          const n = parseInt(row[idx]);
+          if (!isNaN(n)) { stats[key] = n; found = true; break; }
+        }
+      }
+      // Fallback: soma tudo
+      if (!found) {
+        const nums = rows.map(r => parseInt(r[idx])).filter(n => !isNaN(n) && n >= 0);
+        if (nums.length) stats[key] = nums.reduce((a,b)=>a+b,0);
+      }
+    }
+  }
+  return Object.keys(stats).length ? stats : null;
+}
+
+function onRepFileChange(input) {
+  const file = input.files[0];
+  const status  = document.getElementById('rep-stats-status');
+  const preview = document.getElementById('rep-stats-preview');
+  const grid    = document.getElementById('rep-stats-grid');
+  window._repExtractedStats = null;
+  preview.style.display = 'none';
+  status.style.display  = 'none';
+
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx','xls','csv'].includes(ext)) return; // PDF: sem extração
+
+  status.style.display = 'block';
+  status.style.color = 'var(--c-muted)';
+  status.textContent = '⏳ Analisando planilha…';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
+      const stats = _extractStatsFromWorkbook(wb);
+      if (!stats) {
+        status.textContent = '⚠️ Não foi possível identificar os dados. Verifique os nomes das colunas.';
+        status.style.color = '#F59E0B';
+        return;
+      }
+      window._repExtractedStats = stats;
+
+      const LABELS = {
+        processos:'Processos Ativos', favoraveis:'Favoráveis',
+        desfavoraveis:'Desfavoráveis', novas:'Novas Ações',
+        encerrados:'Encerrados', andamento:'Em Andamento'
+      };
+      const COLORS = {
+        processos:'#D4AD3A', favoraveis:'#2DD4A0', desfavoraveis:'#F87171',
+        novas:'#60A5FA', encerrados:'#A78BFA', andamento:'#FBBF24'
+      };
+
+      grid.innerHTML = Object.entries(stats).map(([k,v]) => `
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:10px 12px">
+          <div style="font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);margin-bottom:4px">${LABELS[k]||k}</div>
+          <div style="font-family:var(--f-display);font-size:20px;font-weight:700;color:${COLORS[k]||'#fff'}">${v}</div>
+        </div>`).join('');
+
+      preview.style.display = 'block';
+      status.textContent = '✓ ' + Object.keys(stats).length + ' indicadores extraídos automaticamente';
+      status.style.color = '#2DD4A0';
+    } catch(err) {
+      status.textContent = '❌ Erro ao ler planilha: ' + err.message;
+      status.style.color = '#F87171';
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 function deleteReport(clientId, reportId) {
