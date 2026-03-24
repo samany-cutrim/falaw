@@ -1287,6 +1287,14 @@ h3 {
   align-items: center;
 }
 .footer-social a:hover { color: var(--c-accent); }
+.footer-social-brand img {
+  height: 36px;
+  width: auto;
+  opacity: 0.75;
+  filter: brightness(0) invert(1);
+  transition: opacity .3s;
+}
+.footer-social-brand:hover img { opacity: 1; }
 .footer-bottom {
   padding: 14px 72px;
   border-top: 1px solid rgba(247,245,242,.06);
