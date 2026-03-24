@@ -74,7 +74,7 @@ button { cursor: none; }
   background: rgba(255,255,255,0.92);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(26,10,13,0.08);
-  overflow: hidden;
+  overflow: visible;
 }
 .nav-progress {
   position: absolute;
