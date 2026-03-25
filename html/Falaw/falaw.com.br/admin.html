@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin — Falaw Advogados</title>
   <meta name="robots" content="noindex, nofollow" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://api.github.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.github.com https://*.n8n.cloud https://*.n8n.io; img-src 'self' data: https:; frame-ancestors 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.github.com https://*.n8n.cloud https://*.n8n.io https://*.supabase.co; img-src 'self' data: https:; frame-ancestors 'none';" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha512-a2gua6VTIrUSSVJD5E9hG2IQCW2mJkqpwCZVtlqhX5FqjpsPADCMlEFerZ8bvLNFyEmoL3ELkKfTOGMCM1pQ==" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -925,13 +926,33 @@
         <!-- GitHub -->
         <div class="cfg-card">
           <h3 class="cfg-card-title">Publicação no GitHub</h3>
-          <p class="cfg-card-desc">Com o token configurado, os artigos criados no admin são salvos diretamente no repositório e ficam visíveis para todos imediatamente.</p>
+          <p class="cfg-card-desc">Com o token configurado, os artigos e membros da equipe criados no admin são salvos diretamente no repositório e ficam visíveis para todos imediatamente.</p>
           <div class="form-field">
             <label>GitHub Personal Access Token</label>
             <input type="password" id="cfg-github-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
           </div>
           <p class="cfg-hint">Crie um token em <strong>github.com → Settings → Developer settings → Personal access tokens → Fine-grained</strong> com permissão de escrita no repositório <strong>falaw</strong>.</p>
           <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar token</button>
+        </div>
+
+        <!-- Supabase -->
+        <div class="cfg-card">
+          <h3 class="cfg-card-title">Banco de Dados — Supabase</h3>
+          <p class="cfg-card-desc">Conecte ao Supabase para sincronizar clientes, newsletter, contato e currículos em tempo real entre todos os dispositivos. <strong>Requer executar o script SQL</strong> em <code>supabase-setup.sql</code> no SQL Editor do Supabase.</p>
+          <div class="form-field">
+            <label>Supabase URL</label>
+            <input type="text" id="cfg-supabase-url" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off" maxlength="200" />
+          </div>
+          <div class="form-field">
+            <label>Supabase Anon Key</label>
+            <input type="password" id="cfg-supabase-key" placeholder="eyJ…" autocomplete="off" maxlength="500" />
+          </div>
+          <p class="cfg-hint">Crie um projeto em <strong>supabase.com</strong>, vá em <strong>Settings → API</strong> e copie a <em>Project URL</em> e a <em>anon public</em> key. Com GitHub Token configurado, as páginas públicas são atualizadas automaticamente.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar</button>
+            <button type="button" class="btn btn-ghost" onclick="testSupabase()">Testar conexão</button>
+          </div>
+          <div id="sb-test-result" style="margin-top:10px;font-family:var(--f-mono);font-size:11px;line-height:1.6;display:none;"></div>
         </div>
 
         <!-- IA -->
@@ -1175,6 +1196,176 @@ let GH_CONTATO_SHA     = '';
 let GH_CURRICULOS_SHA  = '';
 
 /* ══════════════════════════════════════
+   SUPABASE — helpers
+══════════════════════════════════════ */
+function sbUrl() { return localStorage.getItem('fa_supabase_url') || ''; }
+function sbKey() { return localStorage.getItem('fa_supabase_key') || ''; }
+let _sbClient = null;
+function getSB() {
+  const url = sbUrl(), key = sbKey();
+  if (!url || !key) return null;
+  if (!_sbClient) _sbClient = supabase.createClient(url, key);
+  return _sbClient;
+}
+function sbReset() { _sbClient = null; }
+
+/* ── Newsletter ── */
+async function loadNewsletterFromSupabase() {
+  const sb = getSB();
+  if (!sb) { return loadNewsletterFromGitHub(); }
+  const { data, error } = await sb.from('newsletter').select('*').order('date', { ascending: false });
+  if (error) { console.warn('SB newsletter:', error.message); return loadNewsletterFromGitHub(); }
+  if (data && data.length) save(KEYS.newsletter, data.map(r => ({ id: r.id, email: r.email, date: r.date })));
+}
+
+async function sbDeleteNewsletter(id) {
+  const sb = getSB();
+  if (!sb) { pushNewsletterToGitHub(); return; }
+  const { error } = await sb.from('newsletter').delete().eq('id', id);
+  if (error) console.warn('SB delete newsletter:', error.message);
+}
+
+/* ── Contato ── */
+async function loadContatoFromSupabase() {
+  const sb = getSB();
+  if (!sb) { return loadContatoFromGitHub(); }
+  const { data, error } = await sb.from('contato').select('*').order('date', { ascending: false });
+  if (error) { console.warn('SB contato:', error.message); return loadContatoFromGitHub(); }
+  if (data) save(KEYS.contato, data.map(r => ({ id: r.id, nome: r.nome, empresa: r.empresa, email: r.email, telefone: r.telefone, mensagem: r.mensagem, date: r.date, read: r.read })));
+}
+
+async function sbDeleteContato(id) {
+  const sb = getSB();
+  if (!sb) { pushContatoToGitHub(); return; }
+  const { error } = await sb.from('contato').delete().eq('id', id);
+  if (error) console.warn('SB delete contato:', error.message);
+}
+
+async function sbMarkReadContato(id) {
+  const sb = getSB();
+  if (!sb) return;
+  await sb.from('contato').update({ read: true }).eq('id', id);
+}
+
+/* ── Currículos ── */
+async function loadCurriculosFromSupabase() {
+  const sb = getSB();
+  if (!sb) { return loadCurriculosFromGitHub(); }
+  const { data, error } = await sb.from('curriculos').select('*').order('submitted_at', { ascending: false });
+  if (error) { console.warn('SB curriculos:', error.message); return loadCurriculosFromGitHub(); }
+  if (data) {
+    const local = load(KEYS.curriculos) || [];
+    save(KEYS.curriculos, data.map(r => {
+      const lc = local.find(l => l.id === r.id);
+      return { id: r.id, nome: r.nome, email: r.email, telefone: r.telefone, linkedin: r.linkedin, apresentacao: r.apresentacao, cvFileName: r.cv_file_name, cvUrl: r.cv_url, submittedAt: r.submitted_at, source: r.source, cvData: lc ? lc.cvData : null };
+    }));
+  }
+}
+
+async function sbDeleteCurriculo(id) {
+  const sb = getSB();
+  if (!sb) { pushCurriculosToGitHub(); return; }
+  const { error } = await sb.from('curriculos').delete().eq('id', id);
+  if (error) console.warn('SB delete curriculo:', error.message);
+}
+
+async function sbInsertCurriculo(entry) {
+  const sb = getSB();
+  if (!sb) { pushCurriculosToGitHub(); return; }
+  const { error } = await sb.from('curriculos').insert({ id: entry.id, nome: entry.nome, email: entry.email, telefone: entry.telefone, linkedin: entry.linkedin, apresentacao: entry.apresentacao, cv_file_name: entry.cvFileName, cv_url: entry.cvUrl, submitted_at: entry.submittedAt, source: entry.source });
+  if (error) console.warn('SB insert curriculo:', error.message);
+}
+
+async function sbUploadCV(cvId, fileName, dataUrl) {
+  const sb = getSB();
+  if (!sb) return pushCurriculoFileToGitHub(cvId, fileName, dataUrl);
+  try {
+    const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+    const byteStr = atob(base64);
+    const arr = new Uint8Array(byteStr.length);
+    for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+    const ext = fileName.split('.').pop().toLowerCase();
+    const ct = ext === 'pdf' ? 'application/pdf' : 'application/octet-stream';
+    const path = cvId + '_' + fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const { error } = await sb.storage.from('curriculos').upload(path, arr, { contentType: ct, upsert: true });
+    if (error) { console.warn('SB CV upload:', error.message); return null; }
+    return sb.storage.from('curriculos').getPublicUrl(path).data.publicUrl;
+  } catch(e) { console.warn('SB CV upload err:', e.message); return null; }
+}
+
+/* ── Portal / Clients ── */
+async function loadPortalFromSupabase() {
+  const sb = getSB();
+  if (!sb) { return loadPortalFromGitHub(); }
+  const { data, error } = await sb.from('clients').select('*').order('created_at', { ascending: true });
+  if (error) { console.warn('SB portal:', error.message); return loadPortalFromGitHub(); }
+  if (data) {
+    const local = getClients();
+    const clients = data.map(r => {
+      const lc = local.find(l => l.id === r.id);
+      return { id: r.id, name: r.name || r.company, company: r.company, email: r.email, code: r.code, createdAt: r.created_at,
+        reports: (r.reports || []).map(rep => {
+          const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
+          return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
+        })
+      };
+    });
+    localStorage.setItem(CLI_KEY, JSON.stringify(clients));
+  }
+}
+
+function sbSaveClients(list) {
+  const sb = getSB();
+  if (!sb) { pushPortalToGitHub(); return; }
+  const stripped = list.map(c => ({ id: c.id, name: c.name, company: c.company, email: c.email, code: c.code, created_at: c.createdAt || new Date().toISOString(), reports: (c.reports || []).map(({ fileData, ...rest }) => rest) }));
+  sb.from('clients').upsert(stripped).then(({ error }) => { if (error) console.warn('SB clients upsert:', error.message); });
+}
+
+async function sbDeleteClientRecord(id) {
+  const sb = getSB();
+  if (!sb) return;
+  const { error } = await sb.from('clients').delete().eq('id', id);
+  if (error) console.warn('SB delete client:', error.message);
+}
+
+async function sbUploadReport(reportId, fileName, dataUrl) {
+  const sb = getSB();
+  if (!sb) return pushReportFileToGitHub(reportId, fileName, dataUrl);
+  try {
+    const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+    const byteStr = atob(base64);
+    const arr = new Uint8Array(byteStr.length);
+    for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+    const ext = fileName.split('.').pop().toLowerCase();
+    const ct = ext === 'pdf' ? 'application/pdf' : (ext === 'xlsx' || ext === 'xls') ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/octet-stream';
+    const path = reportId + '_' + fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const { error } = await sb.storage.from('reports').upload(path, arr, { contentType: ct, upsert: true });
+    if (error) { console.warn('SB report upload:', error.message); return null; }
+    return sb.storage.from('reports').getPublicUrl(path).data.publicUrl;
+  } catch(e) { console.warn('SB report upload err:', e.message); return null; }
+}
+
+async function sbDeleteReport(fileUrl) {
+  const sb = getSB();
+  if (!sb) { deleteReportFileFromGitHub(fileUrl); return; }
+  const m = fileUrl.match(/\/object\/public\/reports\/(.+)$/);
+  if (m) {
+    const { error } = await sb.storage.from('reports').remove([m[1]]);
+    if (error) console.warn('SB delete report:', error.message);
+  } else { deleteReportFileFromGitHub(fileUrl); }
+}
+
+async function testSupabase() {
+  const box = document.getElementById('sb-test-result');
+  box.style.display = 'block';
+  box.textContent = 'Testando…';
+  const sb = getSB();
+  if (!sb) { box.textContent = '❌ URL e Anon Key não configurados. Salve as credenciais primeiro.'; return; }
+  const { error } = await sb.from('newsletter').select('id', { count: 'exact', head: true });
+  box.textContent = error ? '❌ Erro: ' + error.message : '✅ Conectado ao Supabase com sucesso!';
+}
+
+/* ══════════════════════════════════════
    STORAGE HELPERS
 ══════════════════════════════════════ */
 const load  = key => JSON.parse(localStorage.getItem(key) || 'null');
@@ -1271,8 +1462,8 @@ async function doLogin() {
     seedData();
     loadArticlesFromGitHub().then(renderBlog);
     renderEquipe();
-    renderNewsletter();
-    renderContato();
+    loadNewsletterFromSupabase().then(renderNewsletter);
+    loadContatoFromSupabase().then(renderContato);
     loadConfig();
   } else {
     const lock = _getLock();
@@ -1325,10 +1516,10 @@ function switchTab(name) {
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'blog')        { loadArticlesFromGitHub().then(renderBlog); }
   if (name === 'equipe')      { loadTeamFromGitHub().then(renderEquipe); }
-  if (name === 'clientes')    { loadPortalFromGitHub().then(renderClients); }
-  if (name === 'newsletter')  { loadNewsletterFromGitHub().then(renderNewsletter); }
-  if (name === 'contato')     { loadContatoFromGitHub().then(renderContato); }
-  if (name === 'curriculos')  { loadCurriculosFromGitHub().then(renderCurriculos); }
+  if (name === 'clientes')    { loadPortalFromSupabase().then(renderClients); }
+  if (name === 'newsletter')  { loadNewsletterFromSupabase().then(renderNewsletter); }
+  if (name === 'contato')     { loadContatoFromSupabase().then(renderContato); }
+  if (name === 'curriculos')  { loadCurriculosFromSupabase().then(renderCurriculos); }
 }
 
 /* ══════════════════════════════════════
@@ -1941,7 +2132,7 @@ function renderNewsletter() {
 function deleteNewsletter(id) {
   if (!confirm('Excluir este e-mail?')) return;
   save(KEYS.newsletter, (load(KEYS.newsletter) || []).filter(e => e.id !== id));
-  pushNewsletterToGitHub();
+  sbDeleteNewsletter(id);
   renderNewsletter();
   showToast('E-mail excluído.');
 }
@@ -1994,13 +2185,13 @@ function renderContato() {
 function markRead(id) {
   const items = load(KEYS.contato) || [];
   const idx = items.findIndex(c => c.id === id);
-  if (idx !== -1) { items[idx].read = true; save(KEYS.contato, items); renderContato(); }
+  if (idx !== -1) { items[idx].read = true; save(KEYS.contato, items); sbMarkReadContato(id); renderContato(); }
 }
 
 function deleteContato(id) {
   if (!confirm('Excluir esta solicitação?')) return;
   save(KEYS.contato, (load(KEYS.contato) || []).filter(c => c.id !== id));
-  pushContatoToGitHub();
+  sbDeleteContato(id);
   renderContato();
   showToast('Solicitação excluída.');
 }
@@ -2034,6 +2225,8 @@ function loadConfig() {
   document.getElementById('cfg-linkedin').value     = cfg.linkedin  || '';
   document.getElementById('cfg-github-token').value = ghToken();
   document.getElementById('cfg-n8n-url').value = localStorage.getItem('fa_n8n_url') || '';
+  document.getElementById('cfg-supabase-url').value = sbUrl();
+  document.getElementById('cfg-supabase-key').value = sbKey();
 }
 
 async function testAPIs() {
@@ -2079,8 +2272,20 @@ function saveConfig() {
   else localStorage.removeItem(KEYS.githubToken);
   const n8nUrl = document.getElementById('cfg-n8n-url').value.trim();
   if (n8nUrl) localStorage.setItem('fa_n8n_url', n8nUrl); else localStorage.removeItem('fa_n8n_url');
+  const sbUrlVal = document.getElementById('cfg-supabase-url').value.trim();
+  const sbKeyVal = document.getElementById('cfg-supabase-key').value.trim();
+  if (sbUrlVal) localStorage.setItem('fa_supabase_url', sbUrlVal); else localStorage.removeItem('fa_supabase_url');
+  if (sbKeyVal) localStorage.setItem('fa_supabase_key', sbKeyVal); else localStorage.removeItem('fa_supabase_key');
+  sbReset(); // reseta o cliente para usar novas credenciais
   document.getElementById('blog-no-token').hidden = !!token;
-  showToast('Configurações salvas.');
+  // Se Supabase + GitHub configurados, atualiza sb-config.js no repositório
+  if (sbUrlVal && sbKeyVal && token) {
+    const sbCfg = `/* sb-config.js — gerado pelo admin Falaw. */\nwindow.SB_URL='${sbUrlVal}';\nwindow.SB_KEY='${sbKeyVal}';\n`;
+    _ghPush('html/Falaw/falaw.com.br/sb-config.js', sbCfg, null, 'Admin: update Supabase config')
+      .then(sha => { if (sha) showToast('✓ Configurações salvas e sb-config.js publicado.'); else showToast('Configurações salvas.'); });
+  } else {
+    showToast('Configurações salvas.');
+  }
 }
 
 async function changePassword() {
@@ -2603,7 +2808,7 @@ const CLI_KEY = 'falaw_portal';
 function getClients()       { try { return JSON.parse(localStorage.getItem(CLI_KEY)) || []; } catch { return []; } }
 function saveClients(list)  {
   localStorage.setItem(CLI_KEY, JSON.stringify(list));
-  pushPortalToGitHub(); // sync assíncrono em background
+  sbSaveClients(list); // sync ao Supabase (ou GitHub como fallback)
 }
 function cliUID()           { return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
 
@@ -2663,7 +2868,9 @@ function saveClient() {
 function deleteClient(id) {
   if (!confirm('Excluir este cliente e todos os seus relatórios?')) return;
   const clients = getClients().filter(c => c.id !== id);
-  saveClients(clients);
+  localStorage.setItem(CLI_KEY, JSON.stringify(clients));
+  const sb = getSB();
+  if (sb) { sbDeleteClientRecord(id); } else { pushPortalToGitHub(); }
   renderClients();
 }
 
@@ -2723,11 +2930,11 @@ function saveReport() {
     if (idx < 0) { alert('Cliente não encontrado.'); return; }
 
     const reportId = cliUID();
-    // Envia arquivo ao GitHub e obtém URL pública
+    // Envia arquivo ao Supabase Storage (ou GitHub como fallback)
     let fileUrl = null;
-    if (ghToken()) {
-      btn.textContent = 'Enviando ao GitHub…';
-      fileUrl = await pushReportFileToGitHub(reportId, file.name, reader.result);
+    if (getSB() || ghToken()) {
+      btn.textContent = 'Enviando arquivo…';
+      fileUrl = await sbUploadReport(reportId, file.name, reader.result);
     }
 
     const report = {
@@ -2750,7 +2957,7 @@ function saveReport() {
     setTimeout(() => {
       closeReportModal();
       renderClients();
-      showToast(fileUrl ? '✓ Relatório salvo e sincronizado com GitHub.' : '✓ Relatório salvo localmente.');
+      showToast(fileUrl ? '✓ Relatório salvo e sincronizado.' : '✓ Relatório salvo localmente.');
     }, 400);
   };
   reader.onerror = () => { alert('Erro ao ler o arquivo.'); btn.disabled = false; btn.textContent = 'Enviar Relatório'; };
@@ -2914,7 +3121,7 @@ function deleteReport(clientId, reportId) {
   const idx = clients.findIndex(c => c.id === clientId);
   if (idx < 0) return;
   const report = (clients[idx].reports || []).find(r => r.id === reportId);
-  if (report && report.fileUrl) deleteReportFileFromGitHub(report.fileUrl); // async em background
+  if (report && report.fileUrl) sbDeleteReport(report.fileUrl); // async em background
   clients[idx].reports = (clients[idx].reports || []).filter(r => r.id !== reportId);
   saveClients(clients);
   renderClients();
@@ -3014,7 +3221,7 @@ async function saveCurriculo() {
       r.onload = () => res(r.result);
       r.readAsDataURL(file);
     });
-    if (ghToken()) cvUrl = await pushCurriculoFileToGitHub(id, file.name, cvData);
+    cvUrl = await sbUploadCV(id, file.name, cvData); // Supabase ou GitHub como fallback
   }
 
   const entry = {
@@ -3032,7 +3239,7 @@ async function saveCurriculo() {
   const list = getCurriculos();
   list.unshift(entry);
   saveCurriculosLocal(list);
-  pushCurriculosToGitHub();
+  sbInsertCurriculo(entry); // Supabase (ou GitHub como fallback)
 
   btn.disabled = false; btn.textContent = 'Salvar';
   closeCurriculoModal();
@@ -3043,7 +3250,7 @@ async function saveCurriculo() {
 function deleteCurriculo(id) {
   if (!confirm('Excluir este currículo?')) return;
   saveCurriculosLocal(getCurriculos().filter(c => c.id !== id));
-  pushCurriculosToGitHub();
+  sbDeleteCurriculo(id);
   renderCurriculos();
   showToast('Currículo excluído.');
 }

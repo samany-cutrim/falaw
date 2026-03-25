@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Área do Cliente — Falaw Advogados</title>
   <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; frame-ancestors 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co; img-src 'self' data: https:; frame-ancestors 'none';" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <style>
@@ -260,6 +260,8 @@
       border-color: rgba(255,255,255,0.25);
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="../sb-config.js" onerror="void 0"></script>
 </head>
 <body>
 
@@ -317,17 +319,39 @@ function getClients() {
   catch { return []; }
 }
 
-// Carrega clientes do portal-data.js (GitHub) e sincroniza o localStorage
+// Carrega clientes do Supabase (ou portal-data.js como fallback) e sincroniza o localStorage
 async function syncClientsFromGitHub() {
+  const url = (window.SB_URL || '').trim();
+  const key = (window.SB_KEY || '').trim();
+  if (url && key && typeof supabase !== 'undefined') {
+    try {
+      const sb = supabase.createClient(url, key);
+      const { data, error } = await sb.from('clients').select('*');
+      if (!error && data && data.length) {
+        const local = getClients();
+        const clients = data.map(r => {
+          const lc = local.find(l => l.id === r.id);
+          return { id: r.id, name: r.name || r.company, company: r.company, email: r.email, code: r.code, createdAt: r.created_at,
+            reports: (r.reports || []).map(rep => {
+              const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
+              return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
+            })
+          };
+        });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+        return;
+      }
+    } catch(e) { /* fallback para GitHub */ }
+  }
+  // Fallback: portal-data.js no GitHub Pages
   try {
-    const res = await fetch('../cliente/portal-data.js?v=' + Date.now());
+    const res = await fetch('portal-data.js?v=' + Date.now());
     if (!res.ok) return;
     const text = await res.text();
     const match = text.match(/FALAW_PORTAL\s*=\s*(\[[\s\S]*?\]);\s*$/m);
     if (!match) return;
     const ghClients = JSON.parse(match[1]) || [];
     if (!ghClients.length) return;
-    // Mescla: mantém fileData local se existir
     const local = getClients();
     const merged = ghClients.map(ghc => {
       const lc = local.find(l => l.id === ghc.id);
@@ -338,7 +362,7 @@ async function syncClientsFromGitHub() {
       })};
     });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-  } catch (e) { /* offline ou arquivo ainda não existe */ }
+  } catch (e) { /* offline */ }
 }
 
 function _getCLILock() {

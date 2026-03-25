@@ -5,10 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Portal do Cliente — Falaw Advogados</title>
   <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data: https:; frame-ancestors 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co; img-src 'self' data: https:; frame-ancestors 'none';" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha256-oesEfJBQyJAR6kL/+7hDGiP9I2GXEQ1VLDRpqjXJFvU=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="../sb-config.js" onerror="void 0"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -823,6 +825,30 @@ async function init() {
   if (!raw) { window.location.href = 'index.html'; return; }
 
   const session = JSON.parse(raw);
+
+  // Tenta carregar dados atualizados do Supabase antes de renderizar
+  const sbUrl = (window.SB_URL || '').trim();
+  const sbKey = (window.SB_KEY || '').trim();
+  if (sbUrl && sbKey && typeof supabase !== 'undefined') {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { data } = await sb.from('clients').select('*').eq('id', session.id).single();
+      if (data) {
+        const local = (function(){ try { return JSON.parse(localStorage.getItem('falaw_portal'))||[]; } catch { return []; } })();
+        const lc = local.find(l => l.id === data.id);
+        const updated = { id: data.id, name: data.name || data.company, company: data.company, email: data.email, code: data.code, createdAt: data.created_at,
+          reports: (data.reports || []).map(rep => {
+            const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
+            return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
+          })
+        };
+        const all = local.map(c => c.id === updated.id ? updated : c);
+        if (!all.find(c => c.id === updated.id)) all.push(updated);
+        localStorage.setItem('falaw_portal', JSON.stringify(all));
+      }
+    } catch(e) { /* usa dados do localStorage */ }
+  }
+
   const clients = (function(){ try { return JSON.parse(localStorage.getItem('falaw_portal'))||[]; } catch { return []; } })();
   const client  = clients.find(c => c.id === session.id);
   if (!client) { logout(); return; }

@@ -46,6 +46,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
   <script src="../falaw-main.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="../sb-config.js" onerror="void 0"></script>
   <script>
   document.addEventListener('DOMContentLoaded', function() {
     var form = document.querySelector('.contato-form form');
@@ -66,22 +68,16 @@
       items.unshift(submission);
       localStorage.setItem('fa_contact_submissions', JSON.stringify(items));
 
-      // Sync ao GitHub se token disponível (mesmo domínio)
+      // Sync ao Supabase se configurado (sb-config.js)
       (function() {
-        var token = localStorage.getItem('fa_github_token');
-        if (!token) return;
-        var gh = { owner:'samany-cutrim', repo:'falaw', branch:'master', path:'html/Falaw/falaw.com.br/contato-data.js' };
-        var hdrs = { 'Accept':'application/vnd.github.v3+json','Content-Type':'application/json','Authorization':'token '+token };
-        fetch('https://api.github.com/repos/'+gh.owner+'/'+gh.repo+'/contents/'+gh.path+'?ref='+gh.branch+'&t='+Date.now(),{headers:hdrs})
-          .then(function(r){ return r.ok ? r.json() : null; })
-          .then(function(d) {
-            var sha = d ? d.sha : undefined;
-            var js = '/* contato-data.js */\nvar FALAW_CONTATO = '+JSON.stringify(items, null, 2)+';\n';
-            var body = { message:'Site: nova solicitação de contato', content:btoa(unescape(encodeURIComponent(js))), branch:gh.branch };
-            if (sha) body.sha = sha;
-            return fetch('https://api.github.com/repos/'+gh.owner+'/'+gh.repo+'/contents/'+gh.path,
-              { method:'PUT', headers:hdrs, body:JSON.stringify(body) });
-          }).catch(function(){});
+        var url = (window.SB_URL || '').trim();
+        var key = (window.SB_KEY || '').trim();
+        if (!url || !key || typeof supabase === 'undefined') return;
+        try {
+          var sb = supabase.createClient(url, key);
+          sb.from('contato').insert({ id: submission.id, nome: submission.nome, empresa: submission.empresa, email: submission.email, telefone: submission.telefone, mensagem: submission.mensagem, date: submission.date, read: false })
+            .then(function(res) { if (res.error) console.warn('Supabase contato:', res.error.message); });
+        } catch(e) { console.warn('Supabase push failed:', e.message); }
       })();
 
       // Open mailto to notify ferrazandrade@falaw.com.br

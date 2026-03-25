@@ -9,6 +9,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
   <script src="falaw-main.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="sb-config.js" onerror="void 0"></script>
   <style>
     /* ── HERO SPLIT ── */
     .careers-hero {
@@ -581,58 +583,37 @@ document.getElementById('careersForm').addEventListener('submit', function(e) {
   list.unshift(entry);
   localStorage.setItem('fa_curriculos', JSON.stringify(list));
 
-  // Tentar sincronizar com GitHub em background (token do admin, mesmo domínio)
-  const token = localStorage.getItem('fa_github_token');
-  if (token && file) {
-    const ghOwner = 'samany-cutrim', ghRepo = 'falaw', ghBranch = 'master';
-    const hdrs = { 'Accept':'application/vnd.github.v3+json','Content-Type':'application/json','Authorization':'token '+token };
-    const fr = new FileReader();
-    fr.onload = function() {
-      const b64 = fr.result.split(',')[1];
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-      const filePath = 'html/Falaw/falaw.com.br/curriculos/'+id+'_'+safeName;
-      // 1) Upload do arquivo
-      fetch('https://api.github.com/repos/'+ghOwner+'/'+ghRepo+'/contents/'+filePath,
-        { method:'PUT', headers:hdrs, body:JSON.stringify({ message:'Site: CV '+safeName, content:b64, branch:ghBranch }) })
-        .then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(d) {
-          if (d) {
-            const cvUrl = 'https://raw.githubusercontent.com/'+ghOwner+'/'+ghRepo+'/'+ghBranch+'/'+filePath;
+  // Sincronizar com Supabase se configurado (sb-config.js)
+  const sbUrlVal = (window.SB_URL || '').trim();
+  const sbKeyVal = (window.SB_KEY || '').trim();
+  if (sbUrlVal && sbKeyVal && typeof supabase !== 'undefined') {
+    (async function() {
+      try {
+        const sb = supabase.createClient(sbUrlVal, sbKeyVal);
+        let cvUrl = null;
+        if (file) {
+          // Upload do CV para o Supabase Storage
+          const fr = new FileReader();
+          const cvData = await new Promise(res => { fr.onload = () => res(fr.result); fr.readAsDataURL(file); });
+          const base64 = cvData.split(',')[1];
+          const byteStr = atob(base64);
+          const arr = new Uint8Array(byteStr.length);
+          for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+          const ext = file.name.split('.').pop().toLowerCase();
+          const ct = ext === 'pdf' ? 'application/pdf' : 'application/octet-stream';
+          const path = id + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const { error: upErr } = await sb.storage.from('curriculos').upload(path, arr, { contentType: ct, upsert: true });
+          if (!upErr) {
+            cvUrl = sb.storage.from('curriculos').getPublicUrl(path).data.publicUrl;
             entry.cvUrl = cvUrl;
             list[0].cvUrl = cvUrl;
             localStorage.setItem('fa_curriculos', JSON.stringify(list));
           }
-          // 2) Atualizar curriculos-data.js
-          const metaPath = 'html/Falaw/falaw.com.br/curriculos-data.js';
-          return fetch('https://api.github.com/repos/'+ghOwner+'/'+ghRepo+'/contents/'+metaPath+'?ref='+ghBranch+'&t='+Date.now(),{headers:hdrs})
-            .then(function(r){ return r.ok ? r.json() : null; })
-            .then(function(meta) {
-              const stripped = list.map(function(c){ var x=Object.assign({},c); delete x.cvData; return x; });
-              var js = '/* curriculos-data.js */\nvar FALAW_CURRICULOS = '+JSON.stringify(stripped,null,2)+';\n';
-              var body = { message:'Site: nova candidatura', content:btoa(unescape(encodeURIComponent(js))), branch:ghBranch };
-              if (meta) body.sha = meta.sha;
-              return fetch('https://api.github.com/repos/'+ghOwner+'/'+ghRepo+'/contents/'+metaPath,
-                { method:'PUT', headers:hdrs, body:JSON.stringify(body) });
-            });
-        }).catch(function(){});
-    };
-    fr.readAsDataURL(file);
-  } else if (token) {
-    // Sem arquivo: só atualiza o metadata
-    (function() {
-      var metaPath = 'html/Falaw/falaw.com.br/curriculos-data.js';
-      var hdrs2 = { 'Accept':'application/vnd.github.v3+json','Content-Type':'application/json','Authorization':'token '+token };
-      var ghOwner2='samany-cutrim', ghRepo2='falaw', ghBranch2='master';
-      fetch('https://api.github.com/repos/'+ghOwner2+'/'+ghRepo2+'/contents/'+metaPath+'?ref='+ghBranch2+'&t='+Date.now(),{headers:hdrs2})
-        .then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(meta) {
-          var stripped = list.map(function(c){ var x=Object.assign({},c); delete x.cvData; return x; });
-          var js = '/* curriculos-data.js */\nvar FALAW_CURRICULOS = '+JSON.stringify(stripped,null,2)+';\n';
-          var body = { message:'Site: nova candidatura', content:btoa(unescape(encodeURIComponent(js))), branch:ghBranch2 };
-          if (meta) body.sha = meta.sha;
-          return fetch('https://api.github.com/repos/'+ghOwner2+'/'+ghRepo2+'/contents/'+metaPath,
-            { method:'PUT', headers:hdrs2, body:JSON.stringify(body) });
-        }).catch(function(){});
+        }
+        // Inserir metadados na tabela
+        const { error: insErr } = await sb.from('curriculos').insert({ id: entry.id, nome: entry.nome, email: entry.email, telefone: entry.telefone, linkedin: entry.linkedin, apresentacao: entry.apresentacao, cv_file_name: entry.cvFileName, cv_url: cvUrl, submitted_at: entry.submittedAt, source: entry.source });
+        if (insErr) console.warn('Supabase curriculo insert:', insErr.message);
+      } catch(e) { console.warn('Supabase curriculo sync:', e.message); }
     })();
   }
   // O form continua o submit normal para o FormSubmit.co (e-mail)

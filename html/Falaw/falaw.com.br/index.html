@@ -44,6 +44,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
   <script src="falaw-main.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="sb-config.js" onerror="void 0"></script>
   <script>
   document.addEventListener('DOMContentLoaded', function() {
     var form = document.querySelector('.newsletter-form');
@@ -60,25 +62,20 @@
         setTimeout(function() { btn.innerHTML = orig; }, 3000);
         return;
       }
-      list.push({ id: Date.now().toString(36), email: emailVal, date: new Date().toISOString().slice(0,10) });
+      var item = { id: Date.now().toString(36), email: emailVal, date: new Date().toISOString().slice(0,10) };
+      list.push(item);
       localStorage.setItem('fa_newsletter_emails', JSON.stringify(list));
 
-      // Sync ao GitHub se token disponível (mesmo domínio)
+      // Sync ao Supabase se configurado (sb-config.js)
       (function() {
-        var token = localStorage.getItem('fa_github_token');
-        if (!token) return;
-        var gh = { owner:'samany-cutrim', repo:'falaw', branch:'master', path:'html/Falaw/falaw.com.br/newsletter-data.js' };
-        var hdrs = { 'Accept':'application/vnd.github.v3+json','Content-Type':'application/json','Authorization':'token '+token };
-        fetch('https://api.github.com/repos/'+gh.owner+'/'+gh.repo+'/contents/'+gh.path+'?ref='+gh.branch+'&t='+Date.now(),{headers:hdrs})
-          .then(function(r){ return r.ok ? r.json() : null; })
-          .then(function(d) {
-            var sha = d ? d.sha : undefined;
-            var js = '/* newsletter-data.js */\nvar FALAW_NEWSLETTER = '+JSON.stringify(list, null, 2)+';\n';
-            var body = { message:'Site: nova inscrição newsletter', content:btoa(unescape(encodeURIComponent(js))), branch:gh.branch };
-            if (sha) body.sha = sha;
-            return fetch('https://api.github.com/repos/'+gh.owner+'/'+gh.repo+'/contents/'+gh.path,
-              { method:'PUT', headers:hdrs, body:JSON.stringify(body) });
-          }).catch(function(){});
+        var url = (window.SB_URL || '').trim();
+        var key = (window.SB_KEY || '').trim();
+        if (!url || !key || typeof supabase === 'undefined') return;
+        try {
+          var sb = supabase.createClient(url, key);
+          sb.from('newsletter').insert({ id: item.id, email: item.email, date: item.date })
+            .then(function(res) { if (res.error) console.warn('Supabase newsletter:', res.error.message); });
+        } catch(e) { console.warn('Supabase push failed:', e.message); }
       })();
 
       var btn = form.querySelector('button[type="submit"]');
