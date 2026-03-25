@@ -1,7 +1,5 @@
--- ══════════════════════════════════════════════════════════════
---  FALAW ADVOGADOS — Supabase Setup
---  Execute no SQL Editor do Supabase: Database → SQL Editor
--- ══════════════════════════════════════════════════════════════
+-- FALAW ADVOGADOS - Supabase Setup
+-- Execute no SQL Editor do Supabase: Database > SQL Editor
 
 -- 1. Newsletter
 CREATE TABLE IF NOT EXISTS newsletter (
@@ -10,7 +8,7 @@ CREATE TABLE IF NOT EXISTS newsletter (
   date       DATE NOT NULL DEFAULT CURRENT_DATE
 );
 
--- 2. Solicitações de Contato
+-- 2. Solicitacoes de Contato
 CREATE TABLE IF NOT EXISTS contato (
   id         TEXT PRIMARY KEY,
   nome       TEXT NOT NULL,
@@ -22,7 +20,7 @@ CREATE TABLE IF NOT EXISTS contato (
   read       BOOLEAN NOT NULL DEFAULT FALSE
 );
 
--- 3. Currículos / Candidaturas
+-- 3. Curriculos / Candidaturas
 CREATE TABLE IF NOT EXISTS curriculos (
   id           TEXT PRIMARY KEY,
   nome         TEXT NOT NULL,
@@ -47,29 +45,24 @@ CREATE TABLE IF NOT EXISTS clients (
   reports    JSONB NOT NULL DEFAULT '[]'::jsonb
 );
 
--- ── Row Level Security (RLS) ──────────────────────────────────
--- Habilita RLS em todas as tabelas
+-- Row Level Security (RLS)
 ALTER TABLE newsletter ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contato    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE curriculos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clients    ENABLE ROW LEVEL SECURITY;
 
 -- Permite acesso total com a anon key
--- (a anon key é mantida em segredo nas configurações do admin)
 CREATE POLICY "anon full access" ON newsletter FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon full access" ON contato    FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon full access" ON curriculos FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon full access" ON clients    FOR ALL TO anon USING (true) WITH CHECK (true);
 
--- ── Storage Buckets ───────────────────────────────────────────
--- Crie manualmente no Supabase: Storage → New bucket
---   • reports   (público: sim)
---   • curriculos (público: sim)
+-- Storage Buckets
+-- Crie manualmente no Supabase: Storage > New bucket
+--   reports   (publico: sim)
+--   curriculos (publico: sim)
 --
--- Depois execute estas políticas:
-
--- Permite upload de arquivos anônimos (admin usa anon key)
--- Substitua 'reports' e 'curriculos' pelo nome exato dos buckets criados.
+-- Depois execute os comandos abaixo (descomente removendo os "--" no inicio):
 
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('reports', 'reports', true) ON CONFLICT DO NOTHING;
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('curriculos', 'curriculos', true) ON CONFLICT DO NOTHING;
