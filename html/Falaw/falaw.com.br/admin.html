@@ -1323,6 +1323,8 @@ function switchTab(name) {
   });
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'blog')        { loadArticlesFromGitHub().then(renderBlog); }
+  if (name === 'equipe')      { loadTeamFromGitHub().then(renderEquipe); }
   if (name === 'clientes')    { loadPortalFromGitHub().then(renderClients); }
   if (name === 'newsletter')  { loadNewsletterFromGitHub().then(renderNewsletter); }
   if (name === 'contato')     { loadContatoFromGitHub().then(renderContato); }
@@ -1405,6 +1407,18 @@ async function pushArticlesToGitHub() {
 
 function generateTeamJS(members) {
   return '/* team-data.js — gerado pelo admin Ferraz Andrade. Não editar manualmente. */\nvar FALAW_TEAM = ' + JSON.stringify(members, null, 2) + ';\n';
+}
+
+async function loadTeamFromGitHub() {
+  const r = await _ghLoad(GITHUB_PATH_TEAM);
+  if (!r) return;
+  GH_TEAM_SHA = r.sha;
+  try {
+    const match = r.text.match(/FALAW_TEAM\s*=\s*(\[[\s\S]*?\]);\s*$/m);
+    if (!match) return;
+    const ghMembers = JSON.parse(match[1]) || [];
+    if (ghMembers.length) save(KEYS.members, ghMembers);
+  } catch { /* formato inválido */ }
 }
 
 async function pushTeamToGitHub() {
