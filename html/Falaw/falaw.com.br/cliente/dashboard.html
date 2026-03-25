@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Portal do Cliente — Falaw Advogados</title>
   <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data: https:; frame-ancestors 'none';" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha256-oesEfJBQyJAR6kL/+7hDGiP9I2GXEQ1VLDRpqjXJFvU=" crossorigin="anonymous"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -507,6 +510,23 @@ function logout() {
   sessionStorage.removeItem('falaw_session');
   window.location.href = 'index.html';
 }
+
+// Timeout de sessão: 30 min de inatividade → logout automático
+(function() {
+  const _TIMEOUT = 30 * 60 * 1000;
+  let _timer;
+  function _reset() {
+    clearTimeout(_timer);
+    _timer = setTimeout(logout, _TIMEOUT);
+  }
+  ['click','keydown','mousemove','touchstart','scroll'].forEach(ev =>
+    document.addEventListener(ev, _reset, { passive: true })
+  );
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) _reset();
+  });
+  _reset();
+})();
 
 /* ─── TAB SWITCHING ─────────────────────────────────── */
 function showTab(name) {

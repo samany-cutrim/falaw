@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin — Falaw Advogados</title>
   <meta name="robots" content="noindex, nofollow" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://api.github.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.github.com https://*.n8n.cloud https://*.n8n.io; img-src 'self' data: https:; frame-ancestors 'none';" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha512-a2gua6VTIrUSSVJD5E9hG2IQCW2mJkqpwCZVtlqhX5FqjpsPADCMlEFerZ8bvLNFyEmoL3ELkKfTOGMCM1pQ==" crossorigin="anonymous"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -647,7 +650,7 @@
     <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png"
          alt="Falaw Advogados" class="login-logo" />
     <p>Área Administrativa</p>
-    <input type="password" id="login-pwd" placeholder="Senha de acesso" />
+    <input type="password" id="login-pwd" placeholder="Senha de acesso" maxlength="128" autocomplete="current-password" />
     <button onclick="doLogin()">Entrar →</button>
     <p class="login-error" id="login-error">Senha incorreta. Tente novamente.</p>
   </div>
@@ -1115,12 +1118,14 @@
    CONSTANTS
 ══════════════════════════════════════ */
 const ADMIN_PASSWORD_DEFAULT = 'falaw2026';
+const _PWD_SALT = 'falaw_adv_2026';
 const GITHUB_OWNER  = 'samany-cutrim';
 const GITHUB_REPO   = 'falaw';
 const GITHUB_BRANCH = 'master';
 const GITHUB_PATH        = 'html/Falaw/falaw.com.br/blog/articles-data.js';
 const GITHUB_PATH_TEAM   = 'html/Falaw/falaw.com.br/team-data.js';
-const KEYS = { adminPwd: 'fa_admin_pwd', githubToken: 'fa_github_token', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions' };
+const KEYS = { adminPwdHash: 'fa_admin_pwd_h', githubToken: 'fa_github_token', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions' };
+const _LOCK_KEY = 'fa_admin_lock';
 
 let ALL_ARTICLES    = [];
 let GH_FILE_SHA     = '';
@@ -1167,17 +1172,59 @@ function seedData() {
 }
 
 /* ══════════════════════════════════════
-   AUTH
+   AUTH — SHA-256 + Brute-force lockout
 ══════════════════════════════════════ */
-function getAdminPassword() {
-  return localStorage.getItem(KEYS.adminPwd) || ADMIN_PASSWORD_DEFAULT;
+const _MAX_ATTEMPTS = 5;
+const _LOCKOUT_MS   = 15 * 60 * 1000; // 15 min
+const _SESSION_MS   = 30 * 60 * 1000; // 30 min inatividade
+
+async function _sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str + _PWD_SALT));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-function doLogin() {
+async function _getStoredHash() {
+  const stored = localStorage.getItem(KEYS.adminPwdHash);
+  if (stored) return stored;
+  // Migração: hash do padrão e armazena (remove plaintext antigo)
+  const h = await _sha256(ADMIN_PASSWORD_DEFAULT);
+  localStorage.setItem(KEYS.adminPwdHash, h);
+  localStorage.removeItem('fa_admin_pwd'); // remove versão plaintext legada
+  return h;
+}
+
+function _getLock() {
+  try { return JSON.parse(sessionStorage.getItem(_LOCK_KEY)) || { attempts: 0, lockedUntil: 0 }; }
+  catch { return { attempts: 0, lockedUntil: 0 }; }
+}
+function _setLock(data) { sessionStorage.setItem(_LOCK_KEY, JSON.stringify(data)); }
+
+function _checkLock() {
+  const lock = _getLock();
+  if (lock.lockedUntil > Date.now()) {
+    const mins = Math.ceil((lock.lockedUntil - Date.now()) / 60000);
+    return `Acesso bloqueado. Tente novamente em ${mins} minuto(s).`;
+  }
+  return null;
+}
+
+async function doLogin() {
+  const errEl = document.getElementById('login-error');
+  const lockMsg = _checkLock();
+  if (lockMsg) { errEl.textContent = lockMsg; errEl.style.display = 'block'; return; }
+
   const pwd = document.getElementById('login-pwd').value;
-  if (pwd === getAdminPassword()) {
+  if (!pwd) return;
+
+  const inputHash  = await _sha256(pwd);
+  const storedHash = await _getStoredHash();
+
+  if (inputHash === storedHash) {
+    _setLock({ attempts: 0, lockedUntil: 0 });
+    sessionStorage.setItem('fa_admin_session', String(Date.now()));
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-shell').style.display = 'block';
+    errEl.style.display = 'none';
     seedData();
     loadArticlesFromGitHub().then(renderBlog);
     renderEquipe();
@@ -1185,7 +1232,18 @@ function doLogin() {
     renderContato();
     loadConfig();
   } else {
-    document.getElementById('login-error').style.display = 'block';
+    const lock = _getLock();
+    lock.attempts++;
+    if (lock.attempts >= _MAX_ATTEMPTS) {
+      lock.lockedUntil = Date.now() + _LOCKOUT_MS;
+      lock.attempts = 0;
+      errEl.textContent = 'Muitas tentativas. Acesso bloqueado por 15 minutos.';
+    } else {
+      errEl.textContent = `Senha incorreta. ${_MAX_ATTEMPTS - lock.attempts} tentativa(s) restante(s).`;
+    }
+    _setLock(lock);
+    errEl.style.display = 'block';
+    document.getElementById('login-pwd').value = '';
   }
 }
 
@@ -1193,10 +1251,24 @@ document.getElementById('login-pwd').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
 });
 
+// Timeout de sessão: 30 min de inatividade
+let _adminTimer;
+function _resetAdminTimer() {
+  clearTimeout(_adminTimer);
+  _adminTimer = setTimeout(() => {
+    if (document.getElementById('admin-shell').style.display !== 'none') doLogout();
+  }, _SESSION_MS);
+}
+['click','keydown','mousemove','touchstart'].forEach(ev =>
+  document.addEventListener(ev, _resetAdminTimer, { passive: true })
+);
+
 function doLogout() {
+  sessionStorage.removeItem('fa_admin_session');
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('admin-shell').style.display = 'none';
   document.getElementById('login-pwd').value = '';
+  document.getElementById('login-error').style.display = 'none';
 }
 
 /* ══════════════════════════════════════
@@ -1251,8 +1323,10 @@ async function loadArticlesFromGitHub() {
     const data = await res.json();
     GH_FILE_SHA = data.sha;
     const code = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
-    const fn = new Function(code.replace(/\b(const|let)\s+FALAW_ARTICLES\b/, 'var FALAW_ARTICLES') + '\nreturn FALAW_ARTICLES;');
-    ALL_ARTICLES = fn() || [];
+    // Extração segura: não usa eval/new Function — extrai o array JSON diretamente
+    const match = code.match(/FALAW_ARTICLES\s*=\s*(\[[\s\S]*?\]);\s*$/m);
+    if (!match) throw new Error('Formato de artigos inválido');
+    ALL_ARTICLES = JSON.parse(match[1]) || [];
   } catch (e) {
     console.warn('GitHub load failed:', e.message);
     ALL_ARTICLES = [];
@@ -1722,13 +1796,15 @@ function saveConfig() {
   showToast('Configurações salvas.');
 }
 
-function changePassword() {
+async function changePassword() {
   const np = document.getElementById('cfg-new-pwd').value;
   const cp = document.getElementById('cfg-confirm-pwd').value;
-  if (!np) { alert('Digite a nova senha.'); return; }
-  if (np !== cp) { alert('As senhas não coincidem.'); return; }
-  if (np.length < 6) { alert('A senha deve ter pelo menos 6 caracteres.'); return; }
-  localStorage.setItem(KEYS.adminPwd, np);
+  if (!np) { showToast('⚠ Digite a nova senha.'); return; }
+  if (np !== cp) { showToast('⚠ As senhas não coincidem.'); return; }
+  if (np.length < 8) { showToast('⚠ A senha deve ter pelo menos 8 caracteres.'); return; }
+  const h = await _sha256(np);
+  localStorage.setItem(KEYS.adminPwdHash, h);
+  localStorage.removeItem('fa_admin_pwd'); // remove plaintext legado se existir
   document.getElementById('cfg-new-pwd').value    = '';
   document.getElementById('cfg-confirm-pwd').value = '';
   showToast('Senha alterada com sucesso.');

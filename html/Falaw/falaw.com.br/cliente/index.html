@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Área do Cliente — Falaw Advogados</title>
   <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; frame-ancestors 'none';" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap');
 
@@ -279,11 +282,11 @@
     <form id="loginForm" onsubmit="handleLogin(event)">
       <div class="form-group">
         <label class="form-label" for="email">E-mail</label>
-        <input id="email" type="email" class="form-input" placeholder="seu@email.com.br" required autocomplete="email" />
+        <input id="email" type="email" class="form-input" placeholder="seu@email.com.br" required autocomplete="email" maxlength="254" />
       </div>
       <div class="form-group">
         <label class="form-label" for="code">Código de Acesso</label>
-        <input id="code" type="password" class="form-input" placeholder="••••••••" required autocomplete="current-password" />
+        <input id="code" type="password" class="form-input" placeholder="••••••••" required autocomplete="current-password" maxlength="128" />
       </div>
       <div class="form-error" id="loginError">E-mail ou código de acesso inválidos.</div>
       <button type="submit" class="btn-login" id="loginBtn">Entrar</button>
@@ -305,18 +308,45 @@
 
 <script>
 const STORAGE_KEY = 'falaw_portal';
+const _CLI_LOCK_KEY = 'falaw_login_lock';
+const _CLI_MAX = 5;
+const _CLI_LOCKOUT_MS = 15 * 60 * 1000;
 
 function getClients() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
   catch { return []; }
 }
 
+function _getCLILock() {
+  try { return JSON.parse(sessionStorage.getItem(_CLI_LOCK_KEY)) || { attempts: 0, lockedUntil: 0 }; }
+  catch { return { attempts: 0, lockedUntil: 0 }; }
+}
+function _setCLILock(d) { sessionStorage.setItem(_CLI_LOCK_KEY, JSON.stringify(d)); }
+
 function handleLogin(e) {
   e.preventDefault();
+  const err = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+
+  // Verificar bloqueio
+  const lock = _getCLILock();
+  if (lock.lockedUntil > Date.now()) {
+    const mins = Math.ceil((lock.lockedUntil - Date.now()) / 60000);
+    err.textContent = `Acesso bloqueado. Tente em ${mins} minuto(s).`;
+    err.classList.add('show');
+    return;
+  }
+
   const email = document.getElementById('email').value.trim().toLowerCase();
   const code  = document.getElementById('code').value.trim();
-  const err   = document.getElementById('loginError');
-  const btn   = document.getElementById('loginBtn');
+
+  // Validação básica
+  if (!email || !code) return;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    err.textContent = 'E-mail inválido.';
+    err.classList.add('show');
+    return;
+  }
 
   err.classList.remove('show');
   btn.disabled = true;
@@ -327,6 +357,7 @@ function handleLogin(e) {
     const client  = clients.find(c => c.email.toLowerCase() === email && c.code === code);
 
     if (client) {
+      _setCLILock({ attempts: 0, lockedUntil: 0 });
       sessionStorage.setItem('falaw_session', JSON.stringify({
         id: client.id,
         name: client.name,
@@ -336,11 +367,21 @@ function handleLogin(e) {
       }));
       window.location.href = 'dashboard.html';
     } else {
+      const l = _getCLILock();
+      l.attempts++;
+      if (l.attempts >= _CLI_MAX) {
+        l.lockedUntil = Date.now() + _CLI_LOCKOUT_MS;
+        l.attempts = 0;
+        err.textContent = 'Muitas tentativas. Acesso bloqueado por 15 minutos.';
+      } else {
+        err.textContent = `E-mail ou código inválidos. ${_CLI_MAX - l.attempts} tentativa(s) restante(s).`;
+      }
+      _setCLILock(l);
       err.classList.add('show');
       btn.disabled = false;
       btn.textContent = 'Entrar';
     }
-  }, 600);
+  }, 800);
 }
 
 // Redirect if already logged in

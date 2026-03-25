@@ -494,13 +494,53 @@
 </a>
 
 <script>
+const _ALLOWED_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+const _ALLOWED_EXT   = /\.(pdf|doc|docx)$/i;
+const _MAX_SIZE_MB   = 10;
+
 function handleFileSelect(input) {
   const file = input.files[0];
-  const el = document.getElementById('uploadFilename');
-  if (file) {
-    el.textContent = '✓ ' + file.name;
+  const el   = document.getElementById('uploadFilename');
+  if (!file) return;
+
+  // Verificar extensão
+  if (!_ALLOWED_EXT.test(file.name)) {
+    el.textContent = '✗ Tipo não permitido. Use PDF, DOC ou DOCX.';
+    el.style.color = '#C0392B';
     el.style.display = 'block';
+    input.value = '';
+    return;
   }
+
+  // Verificar tamanho (10 MB)
+  if (file.size > _MAX_SIZE_MB * 1024 * 1024) {
+    el.textContent = `✗ Arquivo muito grande. Máximo ${_MAX_SIZE_MB} MB.`;
+    el.style.color = '#C0392B';
+    el.style.display = 'block';
+    input.value = '';
+    return;
+  }
+
+  // Verificar assinatura de bytes (magic bytes) para PDF e DOC/DOCX
+  const reader = new FileReader();
+  reader.onloadend = function(e) {
+    const arr = new Uint8Array(e.target.result);
+    const hex = Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('').toUpperCase();
+    const isPDF  = hex.startsWith('25504446');          // %PDF
+    const isDOCX = hex.startsWith('504B0304');          // ZIP (DOCX/XLSX)
+    const isDOC  = hex.startsWith('D0CF11E0');          // OLE2 (DOC)
+    if (!isPDF && !isDOCX && !isDOC) {
+      el.textContent = '✗ Conteúdo do arquivo inválido.';
+      el.style.color = '#C0392B';
+      el.style.display = 'block';
+      input.value = '';
+      return;
+    }
+    el.textContent = '✓ ' + file.name;
+    el.style.color = '';
+    el.style.display = 'block';
+  };
+  reader.readAsArrayBuffer(file.slice(0, 4));
 }
 
 // Drag & drop visual feedback
