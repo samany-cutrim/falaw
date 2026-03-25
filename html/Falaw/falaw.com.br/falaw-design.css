@@ -295,17 +295,9 @@ h3 {
 .hero-title {
   margin-bottom: 24px;
   color: #0A0A0A;
-  text-shadow:
-    0 1px 0 rgba(184,149,42,0.95),
-    0 3px 8px rgba(184,149,42,0.5),
-    0 10px 30px rgba(184,149,42,0.22);
 }
 .ht-accent {
   color: #0A0A0A;
-  text-shadow:
-    0 1px 0 rgba(184,149,42,0.95),
-    0 3px 8px rgba(184,149,42,0.5),
-    0 10px 30px rgba(184,149,42,0.22);
   position: relative;
 }
 .s-hero--home .hero-title,
