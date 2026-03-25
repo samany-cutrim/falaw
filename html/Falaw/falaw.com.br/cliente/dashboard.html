@@ -12,26 +12,26 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #080D16;
-      --bg-card:   #0D1525;
-      --bg-panel:  #0A1020;
-      --bg-hover:  #111A2E;
-      --border:    rgba(255,255,255,0.07);
-      --border-h:  rgba(255,255,255,0.13);
+      --bg:        #F4F2EF;
+      --bg-card:   #FFFFFF;
+      --bg-panel:  #FFFFFF;
+      --bg-hover:  #F0EEF0;
+      --border:    rgba(0,0,0,0.08);
+      --border-h:  rgba(0,0,0,0.14);
       --gold:      #B8952A;
       --gold-l:    #D4AD3A;
-      --gold-dim:  rgba(184,149,42,0.15);
-      --text:      #E8EBF0;
-      --muted:     rgba(232,235,240,0.45);
-      --muted-l:   rgba(232,235,240,0.2);
-      --green:     #2DD4A0;
-      --green-dim: rgba(45,212,160,0.12);
-      --red:       #F87171;
-      --red-dim:   rgba(248,113,113,0.12);
-      --blue:      #60A5FA;
-      --blue-dim:  rgba(96,165,250,0.12);
-      --purple:    #A78BFA;
-      --amber:     #FBBF24;
+      --gold-dim:  rgba(184,149,42,0.12);
+      --text:      #1A0A0D;
+      --muted:     rgba(26,10,13,0.5);
+      --muted-l:   rgba(26,10,13,0.3);
+      --green:     #0F9E76;
+      --green-dim: rgba(15,158,118,0.1);
+      --red:       #C0392B;
+      --red-dim:   rgba(192,57,43,0.1);
+      --blue:      #2563EB;
+      --blue-dim:  rgba(37,99,235,0.1);
+      --purple:    #7C3AED;
+      --amber:     #D97706;
       --sidebar-w: 260px;
     }
 
@@ -58,7 +58,7 @@
     .sidebar-logo img {
       height: 32px;
       width: auto;
-      filter: brightness(0) invert(1);
+      filter: brightness(0);
       display: block;
       margin-bottom: 20px;
     }
@@ -529,11 +529,11 @@ function downloadReport(report) {
 window._allReports = [];
 
 /* ─── ANALYTICS ─────────────────────────────────────── */
-Chart.defaults.color = 'rgba(232,235,240,0.45)';
+Chart.defaults.color = 'rgba(26,10,13,0.5)';
 Chart.defaults.font.family = "'IBM Plex Mono', monospace";
 Chart.defaults.font.size = 10;
-const gridColor = 'rgba(255,255,255,0.05)';
-const tickColor = 'rgba(232,235,240,0.35)';
+const gridColor = 'rgba(0,0,0,0.06)';
+const tickColor = 'rgba(26,10,13,0.45)';
 
 function buildAnalytics(reports) {
   const area = document.getElementById('analyticsArea');
