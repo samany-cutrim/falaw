@@ -62,6 +62,25 @@
       }
       list.push({ id: Date.now().toString(36), email: emailVal, date: new Date().toISOString().slice(0,10) });
       localStorage.setItem('fa_newsletter_emails', JSON.stringify(list));
+
+      // Sync ao GitHub se token disponível (mesmo domínio)
+      (function() {
+        var token = localStorage.getItem('fa_github_token');
+        if (!token) return;
+        var gh = { owner:'samany-cutrim', repo:'falaw', branch:'master', path:'html/Falaw/falaw.com.br/newsletter-data.js' };
+        var hdrs = { 'Accept':'application/vnd.github.v3+json','Content-Type':'application/json','Authorization':'token '+token };
+        fetch('https://api.github.com/repos/'+gh.owner+'/'+gh.repo+'/contents/'+gh.path+'?ref='+gh.branch+'&t='+Date.now(),{headers:hdrs})
+          .then(function(r){ return r.ok ? r.json() : null; })
+          .then(function(d) {
+            var sha = d ? d.sha : undefined;
+            var js = '/* newsletter-data.js */\nvar FALAW_NEWSLETTER = '+JSON.stringify(list, null, 2)+';\n';
+            var body = { message:'Site: nova inscrição newsletter', content:btoa(unescape(encodeURIComponent(js))), branch:gh.branch };
+            if (sha) body.sha = sha;
+            return fetch('https://api.github.com/repos/'+gh.owner+'/'+gh.repo+'/contents/'+gh.path,
+              { method:'PUT', headers:hdrs, body:JSON.stringify(body) });
+          }).catch(function(){});
+      })();
+
       var btn = form.querySelector('button[type="submit"]');
       var orig = btn.innerHTML;
       btn.innerHTML = 'Inscrito ✓';

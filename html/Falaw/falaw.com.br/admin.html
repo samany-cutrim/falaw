@@ -673,6 +673,7 @@
       <div class="admin-tab" onclick="switchTab('newsletter')">Newsletter</div>
       <div class="admin-tab" onclick="switchTab('contato')">Contato</div>
       <div class="admin-tab" onclick="switchTab('clientes')">Clientes</div>
+      <div class="admin-tab" onclick="switchTab('curriculos')">Currículos</div>
       <div class="admin-tab" onclick="switchTab('config')">Configurações</div>
     </div>
     <button class="admin-logout" onclick="doLogout()">Sair</button>
@@ -844,6 +845,40 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-ghost" onclick="closeReportModal()">Cancelar</button>
             <button type="button" class="btn btn-primary" id="repSaveBtn" onclick="saveReport()">Enviar Relatório</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CURRÍCULOS ── -->
+    <section id="tab-curriculos" class="admin-section">
+      <div class="section-header">
+        <h2>Currículos — Trabalhe Conosco</h2>
+        <button type="button" class="btn btn-primary" onclick="openCurriculoModal()">+ Registrar manualmente</button>
+      </div>
+      <div class="stats-bar" id="curriculos-stats"></div>
+      <div class="item-list" id="curriculos-list"></div>
+
+      <!-- Modal: registrar currículo manualmente -->
+      <div class="modal-overlay" id="curriculoModal" onclick="if(event.target===this)closeCurriculoModal()">
+        <div class="modal" style="max-width:520px">
+          <div class="modal-header">
+            <h3>Registrar Candidato</h3>
+            <button type="button" class="modal-close" onclick="closeCurriculoModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-field"><label>Nome *</label><input type="text" id="cv-nome" placeholder="Nome completo" /></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="form-field"><label>E-mail *</label><input type="email" id="cv-email" placeholder="candidato@email.com" /></div>
+              <div class="form-field"><label>Telefone</label><input type="text" id="cv-telefone" placeholder="+55 11 9..." /></div>
+            </div>
+            <div class="form-field"><label>LinkedIn</label><input type="url" id="cv-linkedin" placeholder="https://linkedin.com/in/..." /></div>
+            <div class="form-field"><label>Apresentação</label><textarea id="cv-apresentacao" rows="3" placeholder="Breve apresentação do candidato..."></textarea></div>
+            <div class="form-field"><label>Arquivo do CV (opcional)</label><input type="file" id="cv-file" accept=".pdf,.doc,.docx" style="padding:10px 14px" /></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" onclick="closeCurriculoModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="cvSaveBtn" onclick="saveCurriculo()">Salvar</button>
           </div>
         </div>
       </div>
@@ -1122,16 +1157,22 @@ const _PWD_SALT = 'falaw_adv_2026';
 const GITHUB_OWNER  = 'samany-cutrim';
 const GITHUB_REPO   = 'falaw';
 const GITHUB_BRANCH = 'master';
-const GITHUB_PATH        = 'html/Falaw/falaw.com.br/blog/articles-data.js';
-const GITHUB_PATH_TEAM   = 'html/Falaw/falaw.com.br/team-data.js';
-const GITHUB_PATH_PORTAL = 'html/Falaw/falaw.com.br/cliente/portal-data.js';
-const KEYS = { adminPwdHash: 'fa_admin_pwd_h', githubToken: 'fa_github_token', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions' };
+const GITHUB_PATH            = 'html/Falaw/falaw.com.br/blog/articles-data.js';
+const GITHUB_PATH_TEAM       = 'html/Falaw/falaw.com.br/team-data.js';
+const GITHUB_PATH_PORTAL     = 'html/Falaw/falaw.com.br/cliente/portal-data.js';
+const GITHUB_PATH_NEWSLETTER = 'html/Falaw/falaw.com.br/newsletter-data.js';
+const GITHUB_PATH_CONTATO    = 'html/Falaw/falaw.com.br/contato-data.js';
+const GITHUB_PATH_CURRICULOS = 'html/Falaw/falaw.com.br/curriculos-data.js';
+const KEYS = { adminPwdHash: 'fa_admin_pwd_h', githubToken: 'fa_github_token', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions', curriculos: 'fa_curriculos' };
 const _LOCK_KEY = 'fa_admin_lock';
 
-let ALL_ARTICLES    = [];
-let GH_FILE_SHA     = '';
-let GH_TEAM_SHA     = '';
-let GH_PORTAL_SHA   = '';
+let ALL_ARTICLES       = [];
+let GH_FILE_SHA        = '';
+let GH_TEAM_SHA        = '';
+let GH_PORTAL_SHA      = '';
+let GH_NEWSLETTER_SHA  = '';
+let GH_CONTATO_SHA     = '';
+let GH_CURRICULOS_SHA  = '';
 
 /* ══════════════════════════════════════
    STORAGE HELPERS
@@ -1278,11 +1319,14 @@ function doLogout() {
 ══════════════════════════════════════ */
 function switchTab(name) {
   document.querySelectorAll('.admin-tab').forEach((t, i) => {
-    t.classList.toggle('active', ['blog','equipe','newsletter','contato','clientes','config'][i] === name);
+    t.classList.toggle('active', ['blog','equipe','newsletter','contato','clientes','curriculos','config'][i] === name);
   });
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
-  if (name === 'clientes') { loadPortalFromGitHub().then(renderClients); }
+  if (name === 'clientes')    { loadPortalFromGitHub().then(renderClients); }
+  if (name === 'newsletter')  { loadNewsletterFromGitHub().then(renderNewsletter); }
+  if (name === 'contato')     { loadContatoFromGitHub().then(renderContato); }
+  if (name === 'curriculos')  { loadCurriculosFromGitHub().then(renderCurriculos); }
 }
 
 /* ══════════════════════════════════════
@@ -1386,6 +1430,130 @@ async function pushTeamToGitHub() {
     showToast('Erro GitHub: ' + e.message);
     return false;
   }
+}
+
+/* ══════════════════════════════════════
+   GITHUB — helpers genéricos
+══════════════════════════════════════ */
+async function _ghLoad(path) {
+  if (!ghToken()) return null;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}&t=${Date.now()}`, { headers: ghHeaders() });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const text = data.content
+      ? decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))))
+      : await (await fetch(data.download_url + '?t=' + Date.now())).text();
+    return { sha: data.sha, text };
+  } catch { return null; }
+}
+
+async function _ghPush(path, content, sha, message) {
+  if (!ghToken()) return null;
+  try {
+    if (!sha) {
+      const r = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}&t=${Date.now()}`, { headers: ghHeaders() });
+      if (r.ok) sha = (await r.json()).sha;
+    }
+    const body = { message, content: btoa(unescape(encodeURIComponent(content))), branch: GITHUB_BRANCH };
+    if (sha) body.sha = sha;
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`,
+      { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
+    return (await res.json()).content.sha;
+  } catch (e) { console.warn('GitHub push failed:', e.message); return null; }
+}
+
+/* ══════════════════════════════════════
+   NEWSLETTER — GitHub sync
+══════════════════════════════════════ */
+async function loadNewsletterFromGitHub() {
+  const r = await _ghLoad(GITHUB_PATH_NEWSLETTER);
+  if (!r) return;
+  GH_NEWSLETTER_SHA = r.sha;
+  const match = r.text.match(/FALAW_NEWSLETTER\s*=\s*(\[[\s\S]*?\]);\s*$/m);
+  if (!match) return;
+  const ghList = JSON.parse(match[1]) || [];
+  if (!ghList.length) return;
+  const local = load(KEYS.newsletter) || [];
+  const merged = [...ghList];
+  local.forEach(l => { if (!merged.find(g => g.id === l.id)) merged.unshift(l); });
+  save(KEYS.newsletter, merged);
+}
+
+async function pushNewsletterToGitHub() {
+  const list = load(KEYS.newsletter) || [];
+  const js = '/* newsletter-data.js */\nvar FALAW_NEWSLETTER = ' + JSON.stringify(list, null, 2) + ';\n';
+  const sha = await _ghPush(GITHUB_PATH_NEWSLETTER, js, GH_NEWSLETTER_SHA, 'Admin: update newsletter');
+  if (sha) GH_NEWSLETTER_SHA = sha;
+}
+
+/* ══════════════════════════════════════
+   CONTATO — GitHub sync
+══════════════════════════════════════ */
+async function loadContatoFromGitHub() {
+  const r = await _ghLoad(GITHUB_PATH_CONTATO);
+  if (!r) return;
+  GH_CONTATO_SHA = r.sha;
+  const match = r.text.match(/FALAW_CONTATO\s*=\s*(\[[\s\S]*?\]);\s*$/m);
+  if (!match) return;
+  const ghList = JSON.parse(match[1]) || [];
+  if (!ghList.length) return;
+  const local = load(KEYS.contato) || [];
+  const merged = [...ghList];
+  local.forEach(l => { if (!merged.find(g => g.id === l.id)) merged.unshift(l); });
+  save(KEYS.contato, merged);
+}
+
+async function pushContatoToGitHub() {
+  const list = load(KEYS.contato) || [];
+  const js = '/* contato-data.js */\nvar FALAW_CONTATO = ' + JSON.stringify(list, null, 2) + ';\n';
+  const sha = await _ghPush(GITHUB_PATH_CONTATO, js, GH_CONTATO_SHA, 'Admin: update contato');
+  if (sha) GH_CONTATO_SHA = sha;
+}
+
+/* ══════════════════════════════════════
+   CURRÍCULOS — GitHub sync
+══════════════════════════════════════ */
+async function loadCurriculosFromGitHub() {
+  const r = await _ghLoad(GITHUB_PATH_CURRICULOS);
+  if (!r) return;
+  GH_CURRICULOS_SHA = r.sha;
+  const match = r.text.match(/FALAW_CURRICULOS\s*=\s*(\[[\s\S]*?\]);\s*$/m);
+  if (!match) return;
+  const ghList = JSON.parse(match[1]) || [];
+  if (!ghList.length) return;
+  const local = load(KEYS.curriculos) || [];
+  const merged = [...ghList];
+  local.forEach(l => { if (!merged.find(g => g.id === l.id)) merged.unshift(l); });
+  // Restaura cvData local (cache binário)
+  merged.forEach(g => {
+    const lc = local.find(l => l.id === g.id);
+    if (lc && lc.cvData) g.cvData = lc.cvData;
+  });
+  save(KEYS.curriculos, merged);
+}
+
+async function pushCurriculosToGitHub() {
+  const list = load(KEYS.curriculos) || [];
+  // Remove dados binários (cvData) antes de enviar ao GitHub
+  const stripped = list.map(({ cvData, ...rest }) => rest);
+  const js = '/* curriculos-data.js */\nvar FALAW_CURRICULOS = ' + JSON.stringify(stripped, null, 2) + ';\n';
+  const sha = await _ghPush(GITHUB_PATH_CURRICULOS, js, GH_CURRICULOS_SHA, 'Admin: update curriculos');
+  if (sha) GH_CURRICULOS_SHA = sha;
+}
+
+async function pushCurriculoFileToGitHub(cvId, fileName, cvDataUrl) {
+  if (!ghToken()) return null;
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `html/Falaw/falaw.com.br/curriculos/${cvId}_${safeName}`;
+  const base64 = cvDataUrl.includes(',') ? cvDataUrl.split(',')[1] : cvDataUrl;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`,
+      { method: 'PUT', headers: ghHeaders(), body: JSON.stringify({ message: `Admin: upload CV ${safeName}`, content: base64, branch: GITHUB_BRANCH }) });
+    if (!res.ok) return null;
+    return `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${path}`;
+  } catch { return null; }
 }
 
 /* ══════════════════════════════════════
@@ -1759,6 +1927,7 @@ function renderNewsletter() {
 function deleteNewsletter(id) {
   if (!confirm('Excluir este e-mail?')) return;
   save(KEYS.newsletter, (load(KEYS.newsletter) || []).filter(e => e.id !== id));
+  pushNewsletterToGitHub();
   renderNewsletter();
   showToast('E-mail excluído.');
 }
@@ -1817,6 +1986,7 @@ function markRead(id) {
 function deleteContato(id) {
   if (!confirm('Excluir esta solicitação?')) return;
   save(KEYS.contato, (load(KEYS.contato) || []).filter(c => c.id !== id));
+  pushContatoToGitHub();
   renderContato();
   showToast('Solicitação excluída.');
 }
@@ -2794,6 +2964,122 @@ function renderClients() {
         </div>
       </div>`;
   }).join('');
+}
+
+/* ══════════════════════════════════════════
+   CURRÍCULOS
+══════════════════════════════════════════ */
+function getCurriculos()      { try { return JSON.parse(localStorage.getItem(KEYS.curriculos)) || []; } catch { return []; } }
+function saveCurriculosLocal(list) { localStorage.setItem(KEYS.curriculos, JSON.stringify(list)); }
+
+function openCurriculoModal() {
+  ['cv-nome','cv-email','cv-telefone','cv-linkedin','cv-apresentacao'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('cv-file').value = '';
+  document.getElementById('curriculoModal').classList.add('open');
+}
+function closeCurriculoModal() { document.getElementById('curriculoModal').classList.remove('open'); }
+
+async function saveCurriculo() {
+  const nome  = document.getElementById('cv-nome').value.trim();
+  const email = document.getElementById('cv-email').value.trim();
+  if (!nome || !email) { showToast('⚠ Nome e e-mail são obrigatórios.'); return; }
+
+  const btn = document.getElementById('cvSaveBtn');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+
+  const fileEl = document.getElementById('cv-file');
+  const file   = fileEl.files[0];
+  const id     = 'cv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,6);
+
+  let cvUrl  = null;
+  let cvData = null;
+
+  if (file) {
+    cvData = await new Promise(res => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.readAsDataURL(file);
+    });
+    if (ghToken()) cvUrl = await pushCurriculoFileToGitHub(id, file.name, cvData);
+  }
+
+  const entry = {
+    id, nome, email,
+    telefone:    document.getElementById('cv-telefone').value.trim(),
+    linkedin:    document.getElementById('cv-linkedin').value.trim(),
+    apresentacao:document.getElementById('cv-apresentacao').value.trim(),
+    cvFileName:  file ? file.name : null,
+    cvUrl,
+    cvData,       // cache local
+    submittedAt: new Date().toISOString(),
+    source:      'admin'
+  };
+
+  const list = getCurriculos();
+  list.unshift(entry);
+  saveCurriculosLocal(list);
+  pushCurriculosToGitHub();
+
+  btn.disabled = false; btn.textContent = 'Salvar';
+  closeCurriculoModal();
+  renderCurriculos();
+  showToast('✓ Candidato registrado.');
+}
+
+function deleteCurriculo(id) {
+  if (!confirm('Excluir este currículo?')) return;
+  saveCurriculosLocal(getCurriculos().filter(c => c.id !== id));
+  pushCurriculosToGitHub();
+  renderCurriculos();
+  showToast('Currículo excluído.');
+}
+
+async function downloadCV(cv) {
+  if (cv.cvData) {
+    const a = document.createElement('a'); a.href = cv.cvData;
+    a.download = cv.cvFileName || 'curriculo'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  } else if (cv.cvUrl) {
+    try {
+      const res = await fetch(cv.cvUrl + '?v=' + Date.now());
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a'); a.href = url;
+      a.download = cv.cvFileName || 'curriculo'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch { showToast('Erro ao baixar CV.'); }
+  } else { showToast('Arquivo não disponível.'); }
+}
+
+function renderCurriculos() {
+  const list  = getCurriculos();
+  const stats = document.getElementById('curriculos-stats');
+  const el    = document.getElementById('curriculos-list');
+
+  stats.innerHTML = `
+    <div class="stat-pill"><div class="stat-pill-num">${list.length}</div><div class="stat-pill-label">Candidaturas</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${list.filter(c => c.source !== 'admin').length}</div><div class="stat-pill-label">Do site</div></div>
+  `;
+
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state"><p>Nenhuma candidatura registrada.<br/>Os currículos enviados pelo site aparecem aqui automaticamente.</p></div>';
+    return;
+  }
+
+  el.innerHTML = list.map(c => `
+    <div class="item-card" style="${c.source !== 'admin' ? 'border-left:3px solid var(--c-accent)' : ''}">
+      <div class="item-card-body">
+        <div class="item-card-title">${escHtml(c.nome)} ${c.source !== 'admin' ? '<span class="post-tag">Site</span>' : ''}</div>
+        <div class="item-card-meta">${escHtml(c.email)}${c.telefone ? ' · ' + escHtml(c.telefone) : ''} · ${formatDate(c.submittedAt || '')}</div>
+        ${c.linkedin ? `<div class="item-card-preview"><a href="${escHtml(c.linkedin)}" target="_blank" rel="noopener" style="color:var(--c-accent)">${escHtml(c.linkedin)}</a></div>` : ''}
+        ${c.apresentacao ? `<div class="item-card-preview">${escHtml(c.apresentacao)}</div>` : ''}
+      </div>
+      <div class="item-card-actions">
+        ${(c.cvUrl || c.cvData) ? `<button type="button" class="btn btn-ghost btn-sm" onclick="downloadCV(getCurriculos().find(x=>x.id==='${c.id}'))">⬇ CV</button>` : ''}
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteCurriculo('${c.id}')">Excluir</button>
+      </div>
+    </div>
+  `).join('');
 }
 
 </script>

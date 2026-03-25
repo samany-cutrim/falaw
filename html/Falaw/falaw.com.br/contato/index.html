@@ -66,6 +66,24 @@
       items.unshift(submission);
       localStorage.setItem('fa_contact_submissions', JSON.stringify(items));
 
+      // Sync ao GitHub se token disponível (mesmo domínio)
+      (function() {
+        var token = localStorage.getItem('fa_github_token');
+        if (!token) return;
+        var gh = { owner:'samany-cutrim', repo:'falaw', branch:'master', path:'html/Falaw/falaw.com.br/contato-data.js' };
+        var hdrs = { 'Accept':'application/vnd.github.v3+json','Content-Type':'application/json','Authorization':'token '+token };
+        fetch('https://api.github.com/repos/'+gh.owner+'/'+gh.repo+'/contents/'+gh.path+'?ref='+gh.branch+'&t='+Date.now(),{headers:hdrs})
+          .then(function(r){ return r.ok ? r.json() : null; })
+          .then(function(d) {
+            var sha = d ? d.sha : undefined;
+            var js = '/* contato-data.js */\nvar FALAW_CONTATO = '+JSON.stringify(items, null, 2)+';\n';
+            var body = { message:'Site: nova solicitação de contato', content:btoa(unescape(encodeURIComponent(js))), branch:gh.branch };
+            if (sha) body.sha = sha;
+            return fetch('https://api.github.com/repos/'+gh.owner+'/'+gh.repo+'/contents/'+gh.path,
+              { method:'PUT', headers:hdrs, body:JSON.stringify(body) });
+          }).catch(function(){});
+      })();
+
       // Open mailto to notify ferrazandrade@falaw.com.br
       var body = 'Nome: ' + submission.nome +
         '\nEmpresa: ' + submission.empresa +
