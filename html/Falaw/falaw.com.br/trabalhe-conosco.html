@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trabalhe Conosco — Falaw Advogados</title>
+  <link rel="icon" type="image/png" href="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
+  <link rel="stylesheet" href="falaw-design.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+  <script src="falaw-main.js" defer></script>
+  <style>
+    .careers-hero {
+      padding: 140px 0 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .careers-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(184,149,42,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .careers-kicker {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: var(--c-accent, #B8952A);
+      margin-bottom: 20px;
+      display: block;
+    }
+    .careers-title {
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 800;
+      letter-spacing: -.03em;
+      line-height: 1.05;
+      color: #E8EBF0;
+      margin-bottom: 24px;
+    }
+    .careers-title em { font-style: italic; color: var(--c-accent, #B8952A); }
+    .careers-lead {
+      font-size: clamp(15px, 1.8vw, 17px);
+      color: rgba(232,235,240,0.6);
+      max-width: 560px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* ── FORM SECTION ── */
+    .careers-form-section {
+      max-width: 720px;
+      margin: 0 auto 100px;
+      padding: 0 24px;
+    }
+    .careers-form-card {
+      background: rgba(13,21,37,0.9);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px;
+      padding: 48px 48px;
+      position: relative;
+      overflow: hidden;
+    }
+    .careers-form-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--c-accent, #B8952A), transparent);
+    }
+    .form-section-title {
+      font-family: 'Sora', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #E8EBF0;
+      margin-bottom: 6px;
+    }
+    .form-section-sub {
+      font-size: 13px;
+      color: rgba(232,235,240,0.45);
+      margin-bottom: 36px;
+      line-height: 1.6;
+    }
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 600px) {
+      .form-row-2 { grid-template-columns: 1fr; }
+      .careers-form-card { padding: 32px 24px; }
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(232,235,240,0.55);
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 8px;
+      padding: 13px 16px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: #E8EBF0;
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+      width: 100%;
+    }
+    .form-group input::placeholder,
+    .form-group textarea::placeholder { color: rgba(232,235,240,0.25); }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: rgba(184,149,42,0.45);
+      box-shadow: 0 0 0 3px rgba(184,149,42,0.07);
+    }
+    .form-group select option { background: #0D1525; color: #E8EBF0; }
+    .form-group textarea { resize: vertical; min-height: 120px; }
+
+    /* Upload area */
+    .upload-area {
+      border: 1.5px dashed rgba(184,149,42,0.3);
+      border-radius: 10px;
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    .upload-area:hover, .upload-area.drag-over {
+      border-color: rgba(184,149,42,0.6);
+      background: rgba(184,149,42,0.04);
+    }
+    .upload-area input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .upload-icon {
+      width: 40px; height: 40px;
+      margin: 0 auto 12px;
+      color: rgba(184,149,42,0.6);
+    }
+    .upload-label {
+      font-size: 14px;
+      color: rgba(232,235,240,0.7);
+      margin-bottom: 5px;
+    }
+    .upload-hint {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .1em;
+      color: rgba(232,235,240,0.3);
+    }
+    .upload-filename {
+      margin-top: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--c-accent, #B8952A);
+      display: none;
+    }
+
+    /* Submit */
+    .btn-submit-careers {
+      width: 100%;
+      padding: 16px;
+      margin-top: 8px;
+      background: var(--c-accent, #B8952A);
+      border: none;
+      border-radius: 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: #000;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+    }
+    .btn-submit-careers:hover { opacity: .88; transform: translateY(-1px); }
+    .btn-submit-careers:active { transform: translateY(0); }
+
+    /* Success */
+    .form-success {
+      display: none;
+      text-align: center;
+      padding: 48px 24px;
+    }
+    .form-success-icon {
+      width: 56px; height: 56px;
+      background: rgba(45,212,160,0.12);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      color: #2DD4A0;
+    }
+    .form-success-title {
+      font-family: 'Sora', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: #E8EBF0;
+      margin-bottom: 10px;
+    }
+    .form-success-text {
+      font-size: 14px;
+      color: rgba(232,235,240,0.55);
+      line-height: 1.7;
+    }
+
+    /* Back button */
+    .back-btn-fixed {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 16px;
+      background: rgba(10,16,32,0.85);
+      border: 1px solid rgba(184,149,42,0.3);
+      border-radius: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--c-accent, #B8952A);
+      text-decoration: none;
+      backdrop-filter: blur(10px);
+      transition: border-color .2s, background .2s;
+    }
+    .back-btn-fixed:hover {
+      background: rgba(184,149,42,0.1);
+      border-color: rgba(184,149,42,0.55);
+    }
+
+    /* Values strip */
+    .values-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px;
+      overflow: hidden;
+      max-width: 720px;
+      margin: 0 auto 72px;
+      padding: 0 24px;
+    }
+    .value-item {
+      background: rgba(10,16,32,0.9);
+      padding: 28px 24px;
+      text-align: center;
+    }
+    .value-num {
+      font-family: 'Sora', sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .1em;
+      color: var(--c-accent, #B8952A);
+      margin-bottom: 8px;
+      font-style: normal;
+    }
+    .value-label { font-size: 13px; color: rgba(232,235,240,0.65); line-height: 1.5; }
+    @media (max-width: 600px) {
+      .values-strip { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div id="cursor" aria-hidden="true"></div>
+
+<!-- Botão Voltar ao Site (fixo) -->
+<a href="index.html" class="back-btn-fixed" aria-label="Voltar ao site">
+  ← Voltar ao site
+</a>
+
+<nav class="nav" role="navigation" aria-label="Principal">
+  <div class="nav-progress" aria-hidden="true"></div>
+  <a href="index.html" class="nav-logo" aria-label="Falaw — Início">
+    <img loading="lazy" src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png" alt="Falaw Advogados" />
+  </a>
+  <span class="nav-counter" aria-live="polite">— Vagas</span>
+  <ul class="nav-links" role="list">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="founder.html">Founder</a></li>
+    <li><a href="atuacoes/index.html">Atuações</a></li>
+    <li><a href="equipe.html">Nossa Equipe</a></li>
+    <li><a href="contato/index.html">Contato</a></li>
+    <li><a href="blog.html">Blog</a></li>
+    <li><a href="cliente/index.html">Área do Cliente</a></li>
+  </ul>
+  <button type="button" class="nav-burger" aria-label="Menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<main>
+
+  <!-- HERO -->
+  <section class="careers-hero">
+    <div class="container">
+      <span class="careers-kicker">Falaw Advogados · Carreiras</span>
+      <h1 class="careers-title">Trabalhe<br><em>Conosco</em></h1>
+      <p class="careers-lead">Somos um escritório de advocacia comprometido com excelência, ética e resultados. Se você compartilha desses valores, queremos conhecer você.</p>
+    </div>
+  </section>
+
+  <!-- VALUES STRIP -->
+  <div class="values-strip">
+    <div class="value-item">
+      <div class="value-num">EXCELÊNCIA</div>
+      <div class="value-label">Comprometimento com a qualidade em cada caso</div>
+    </div>
+    <div class="value-item">
+      <div class="value-num">ÉTICA</div>
+      <div class="value-label">Integridade como fundamento de todas as relações</div>
+    </div>
+    <div class="value-item">
+      <div class="value-num">INOVAÇÃO</div>
+      <div class="value-label">Soluções jurídicas modernas e estratégicas</div>
+    </div>
+  </div>
+
+  <!-- FORM -->
+  <div class="careers-form-section">
+    <div class="careers-form-card">
+
+      <div id="formContent">
+        <div class="form-section-title">Envie seu Currículo</div>
+        <p class="form-section-sub">Preencha o formulário abaixo e anexe seu currículo em PDF ou Word. Nossa equipe entrará em contato caso haja uma oportunidade alinhada ao seu perfil.</p>
+
+        <form id="careersForm" action="https://formsubmit.co/ferrazandrade@falaw.com.br" method="POST" enctype="multipart/form-data">
+          <!-- FormSubmit config -->
+          <input type="hidden" name="_subject" value="Trabalhe Conosco — Novo Currículo" />
+          <input type="hidden" name="_captcha" value="false" />
+          <input type="hidden" name="_template" value="table" />
+          <input type="hidden" name="_next" value="" id="successRedirect" />
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="name">Nome completo *</label>
+              <input type="text" id="name" name="Nome" placeholder="Seu nome" required />
+            </div>
+            <div class="form-group">
+              <label for="email">E-mail *</label>
+              <input type="email" id="email" name="Email" placeholder="seu@email.com" required />
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="phone">Telefone / WhatsApp</label>
+              <input type="tel" id="phone" name="Telefone" placeholder="(11) 9 0000-0000" />
+            </div>
+            <div class="form-group">
+              <label for="area">Área de interesse *</label>
+              <select id="area" name="Area de interesse" required>
+                <option value="" disabled selected>Selecione uma área</option>
+                <option>Direito do Trabalho</option>
+                <option>Direito Trabalhista Empresarial</option>
+                <option>Direito Civil</option>
+                <option>Direito Empresarial</option>
+                <option>Consultoria Jurídica</option>
+                <option>Estágio em Direito</option>
+                <option>Administrativo / Secretariado</option>
+                <option>Outra área</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="linkedin">LinkedIn (opcional)</label>
+            <input type="url" id="linkedin" name="LinkedIn" placeholder="https://linkedin.com/in/seu-perfil" />
+          </div>
+
+          <div class="form-group">
+            <label for="message">Apresentação *</label>
+            <textarea id="message" name="Apresentacao" placeholder="Conte um pouco sobre sua trajetória, experiências e por que deseja fazer parte da Falaw Advogados…" required></textarea>
+          </div>
+
+          <!-- Upload -->
+          <div class="form-group">
+            <label>Currículo *</label>
+            <div class="upload-area" id="uploadArea">
+              <input type="file" name="Curriculo" id="fileInput" accept=".pdf,.doc,.docx" required
+                     onchange="handleFileSelect(this)" />
+              <svg class="upload-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
+              <div class="upload-label">Clique ou arraste o arquivo aqui</div>
+              <div class="upload-hint">PDF · DOC · DOCX · máx. 10 MB</div>
+              <div class="upload-filename" id="uploadFilename"></div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit-careers">Enviar candidatura</button>
+        </form>
+      </div>
+
+      <!-- Success message (shown after submission) -->
+      <div class="form-success" id="formSuccess">
+        <div class="form-success-icon">
+          <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <div class="form-success-title">Candidatura enviada!</div>
+        <p class="form-success-text">
+          Recebemos seu currículo e agradecemos o interesse em fazer parte da equipe Falaw.<br/>
+          Entraremos em contato caso haja uma oportunidade alinhada ao seu perfil.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img loading="lazy" src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png"
+           alt="Falaw Advogados" class="footer-logo" />
+      <address class="footer-address">
+        Av. Francisco Matarazzo, 1752 · Salas&nbsp;414&nbsp;e&nbsp;415<br/>
+        Água Branca · São Paulo / SP · CEP&nbsp;05001-200
+      </address>
+    </div>
+    <ul class="footer-links" role="list">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="founder.html">Founder</a></li>
+      <li><a href="atuacoes/index.html">Atuações</a></li>
+      <li><a href="equipe.html">Nossa Equipe</a></li>
+      <li><a href="contato/index.html">Contato</a></li>
+      <li><a href="blog.html">Blog</a></li>
+      <li><a href="cliente/index.html">Área do Cliente</a></li>
+      <li><a href="trabalhe-conosco.html">Trabalhe Conosco</a></li>
+    </ul>
+    <div class="footer-social">
+      <div class="footer-social-icons">
+        <a href="https://www.instagram.com/ferrazandrade_adv" target="_blank" rel="noopener" aria-label="Instagram">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/company/ferraz-andrade-adogados" target="_blank" rel="noopener" aria-label="LinkedIn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        </a>
+      </div>
+      <a href="http://faconsultoriaedu.com/" target="_blank" rel="noopener" aria-label="FA Consultoria" class="footer-social-brand">
+        <img loading="lazy" src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-faconsultoria.png" alt="FA Consultoria" />
+      </a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="footer-copy">© 2026 · Falaw Advogados · Todos os direitos reservados</span>
+    <div class="footer-legal-links">
+      <a href="privacidade.html">Política de Privacidade</a>
+      <span>·</span>
+      <a href="cookies.html">Cookies</a>
+      <span>·</span>
+      <a href="termos.html">Termos de Uso</a>
+    </div>
+  </div>
+</footer>
+
+<a href="https://wa.me/+5511910011551" target="_blank" rel="noopener" class="whatsapp-btn" aria-label="WhatsApp">
+  <img loading="lazy" src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/whatsapp.webp" alt="WhatsApp" />
+</a>
+
+<script>
+function handleFileSelect(input) {
+  const file = input.files[0];
+  const el = document.getElementById('uploadFilename');
+  if (file) {
+    el.textContent = '✓ ' + file.name;
+    el.style.display = 'block';
+  }
+}
+
+// Drag & drop visual feedback
+const area = document.getElementById('uploadArea');
+area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('drag-over'); });
+area.addEventListener('dragleave', () => area.classList.remove('drag-over'));
+area.addEventListener('drop', () => area.classList.remove('drag-over'));
+
+// Show success state if redirected back (FormSubmit redirects to same page with ?success)
+if (window.location.search.includes('success')) {
+  document.getElementById('formContent').style.display = 'none';
+  document.getElementById('formSuccess').style.display = 'block';
+}
+// Set the success redirect to current page with ?success
+document.getElementById('successRedirect').value = window.location.href.split('?')[0] + '?success=1';
+</script>
+
+</body>
+</html>
