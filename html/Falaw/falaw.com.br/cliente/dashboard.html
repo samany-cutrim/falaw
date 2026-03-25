@@ -18,9 +18,9 @@
       --bg-hover:  #F0EEF0;
       --border:    rgba(0,0,0,0.08);
       --border-h:  rgba(0,0,0,0.14);
-      --gold:      #B8952A;
-      --gold-l:    #D4AD3A;
-      --gold-dim:  rgba(184,149,42,0.12);
+      --gold:      #7B1A2E;
+      --gold-l:    #9B2238;
+      --gold-dim:  rgba(123,26,46,0.12);
       --text:      #1A0A0D;
       --muted:     rgba(26,10,13,0.5);
       --muted-l:   rgba(26,10,13,0.3);
@@ -31,7 +31,7 @@
       --blue:      #2563EB;
       --blue-dim:  rgba(37,99,235,0.1);
       --purple:    #7C3AED;
-      --amber:     #D97706;
+      --amber:     #7B1A2E;
       --sidebar-w: 260px;
     }
 
@@ -226,7 +226,7 @@
     .kpi-card.c-red    .kpi-icon { background: var(--red-dim); }
     .kpi-card.c-blue   .kpi-icon { background: var(--blue-dim); }
     .kpi-card.c-purple .kpi-icon { background: rgba(167,139,250,0.12); }
-    .kpi-card.c-amber  .kpi-icon { background: rgba(251,191,36,0.12); }
+    .kpi-card.c-amber  .kpi-icon { background: rgba(123,26,46,0.12); }
     .kpi-value { font-family: 'Sora', sans-serif; font-size: 30px; font-weight: 800; line-height: 1; margin-bottom: 5px; }
     .kpi-card.c-gold   .kpi-value { color: var(--gold-l); }
     .kpi-card.c-green  .kpi-value { color: var(--green); }
@@ -587,12 +587,12 @@ function buildAnalytics(reports) {
 
   /* KPI cards */
   const kpis = [
-    { label:'Processos Ativos', value: ls.processos,     cls:'c-gold',   icon:`<svg width="16" height="16" fill="none" stroke="#D4AD3A" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>` },
+    { label:'Processos Ativos', value: ls.processos,     cls:'c-gold',   icon:`<svg width="16" height="16" fill="none" stroke="#9B2238" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>` },
     { label:'Favoráveis',        value: ls.favoraveis,   cls:'c-green',  icon:`<svg width="16" height="16" fill="none" stroke="#2DD4A0" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>` },
     { label:'Desfavoráveis',     value: ls.desfavoraveis,cls:'c-red',    icon:`<svg width="16" height="16" fill="none" stroke="#F87171" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>` },
     { label:'Novas Ações',       value: ls.novas,        cls:'c-blue',   icon:`<svg width="16" height="16" fill="none" stroke="#60A5FA" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>` },
     { label:'Encerrados',        value: ls.encerrados,   cls:'c-purple', icon:`<svg width="16" height="16" fill="none" stroke="#A78BFA" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>` },
-    { label:'Em Andamento',      value: ls.andamento,    cls:'c-amber',  icon:`<svg width="16" height="16" fill="none" stroke="#FBBF24" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>` },
+    { label:'Em Andamento',      value: ls.andamento,    cls:'c-amber',  icon:`<svg width="16" height="16" fill="none" stroke="#9B2238" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>` },
   ].filter(k => k.value !== null && k.value !== undefined);
 
   html += `<div class="kpi-grid">${kpis.map(k=>`
@@ -681,7 +681,7 @@ function buildAnalytics(reports) {
     });
     new Chart(document.getElementById('chartLine'), {
       type: 'line',
-      data: { labels, datasets: [{ label:'Processos Ativos', data:processos, borderColor:'#B8952A', backgroundColor:'rgba(184,149,42,0.12)', borderWidth:2, pointRadius:4, pointBackgroundColor:'#B8952A', fill:true, tension:0.4 }] },
+      data: { labels, datasets: [{ label:'Processos Ativos', data:processos, borderColor:'#7B1A2E', backgroundColor:'rgba(123,26,46,0.12)', borderWidth:2, pointRadius:4, pointBackgroundColor:'#7B1A2E', fill:true, tension:0.4 }] },
       options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ x:{ grid:{ color:gridColor }, ticks:{ color:tickColor } }, y:{ grid:{ color:gridColor }, ticks:{ color:tickColor }, beginAtZero:true } } }
     });
     new Chart(document.getElementById('chartMovimento'), {
