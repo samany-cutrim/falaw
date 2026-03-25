@@ -317,6 +317,30 @@ function getClients() {
   catch { return []; }
 }
 
+// Carrega clientes do portal-data.js (GitHub) e sincroniza o localStorage
+async function syncClientsFromGitHub() {
+  try {
+    const res = await fetch('../cliente/portal-data.js?v=' + Date.now());
+    if (!res.ok) return;
+    const text = await res.text();
+    const match = text.match(/FALAW_PORTAL\s*=\s*(\[[\s\S]*?\]);\s*$/m);
+    if (!match) return;
+    const ghClients = JSON.parse(match[1]) || [];
+    if (!ghClients.length) return;
+    // Mescla: mantém fileData local se existir
+    const local = getClients();
+    const merged = ghClients.map(ghc => {
+      const lc = local.find(l => l.id === ghc.id);
+      if (!lc) return ghc;
+      return { ...ghc, reports: (ghc.reports || []).map(r => {
+        const lr = (lc.reports || []).find(l => l.id === r.id);
+        return lr && lr.fileData ? { ...r, fileData: lr.fileData } : r;
+      })};
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+  } catch (e) { /* offline ou arquivo ainda não existe */ }
+}
+
 function _getCLILock() {
   try { return JSON.parse(sessionStorage.getItem(_CLI_LOCK_KEY)) || { attempts: 0, lockedUntil: 0 }; }
   catch { return { attempts: 0, lockedUntil: 0 }; }
@@ -352,7 +376,8 @@ function handleLogin(e) {
   btn.disabled = true;
   btn.textContent = 'Verificando…';
 
-  setTimeout(() => {
+  // Sincroniza com GitHub antes de autenticar (dados sempre atualizados)
+  syncClientsFromGitHub().finally(() => {
     const clients = getClients();
     const client  = clients.find(c => c.email.toLowerCase() === email && c.code === code);
 
@@ -381,7 +406,7 @@ function handleLogin(e) {
       btn.disabled = false;
       btn.textContent = 'Entrar';
     }
-  }, 800);
+  });
 }
 
 // Redirect if already logged in

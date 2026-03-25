@@ -537,14 +537,28 @@ function showTab(name) {
 }
 
 /* ─── DOWNLOAD ──────────────────────────────────────── */
-function downloadReport(report) {
-  if (!report.fileData) { alert('Arquivo não disponível.'); return; }
-  const a = document.createElement('a');
-  a.href = report.fileData;
-  a.download = report.fileName || 'relatorio.xlsx';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+async function downloadReport(report) {
+  if (report.fileData) {
+    // Download local (mais rápido, sem rede)
+    const a = document.createElement('a');
+    a.href = report.fileData;
+    a.download = report.fileName || 'relatorio.xlsx';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  } else if (report.fileUrl) {
+    // Download via GitHub (outro dispositivo ou arquivo sem cache local)
+    try {
+      const res = await fetch(report.fileUrl + '?v=' + Date.now());
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = report.fileName || 'relatorio.xlsx';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch { alert('Erro ao baixar o arquivo. Tente novamente.'); }
+  } else {
+    alert('Arquivo não disponível.');
+  }
 }
 window._allReports = [];
 

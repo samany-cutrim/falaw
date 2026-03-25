@@ -1124,12 +1124,14 @@ const GITHUB_REPO   = 'falaw';
 const GITHUB_BRANCH = 'master';
 const GITHUB_PATH        = 'html/Falaw/falaw.com.br/blog/articles-data.js';
 const GITHUB_PATH_TEAM   = 'html/Falaw/falaw.com.br/team-data.js';
+const GITHUB_PATH_PORTAL = 'html/Falaw/falaw.com.br/cliente/portal-data.js';
 const KEYS = { adminPwdHash: 'fa_admin_pwd_h', githubToken: 'fa_github_token', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions' };
 const _LOCK_KEY = 'fa_admin_lock';
 
 let ALL_ARTICLES    = [];
 let GH_FILE_SHA     = '';
 let GH_TEAM_SHA     = '';
+let GH_PORTAL_SHA   = '';
 
 /* ══════════════════════════════════════
    STORAGE HELPERS
@@ -1280,7 +1282,7 @@ function switchTab(name) {
   });
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
-  if (name === 'clientes') renderClients();
+  if (name === 'clientes') { loadPortalFromGitHub().then(renderClients); }
 }
 
 /* ══════════════════════════════════════
@@ -1384,6 +1386,107 @@ async function pushTeamToGitHub() {
     showToast('Erro GitHub: ' + e.message);
     return false;
   }
+}
+
+/* ══════════════════════════════════════
+   PORTAL — GitHub sync
+══════════════════════════════════════ */
+function generatePortalJS(clients) {
+  // Remove fileData (binário grande) antes de enviar ao GitHub
+  // O fileUrl (raw GitHub URL) é mantido para download
+  const stripped = clients.map(c => ({
+    ...c,
+    reports: (c.reports || []).map(({ fileData, ...rest }) => rest)
+  }));
+  return '/* portal-data.js — gerado pelo admin Falaw. Não editar manualmente. */\nvar FALAW_PORTAL = ' + JSON.stringify(stripped, null, 2) + ';\n';
+}
+
+async function loadPortalFromGitHub() {
+  if (!ghToken()) return;
+  try {
+    const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH_PORTAL}?ref=${GITHUB_BRANCH}&t=${Date.now()}`;
+    const res = await fetch(url, { headers: ghHeaders() });
+    if (!res.ok) { if (res.status === 404) return; throw new Error('HTTP ' + res.status); }
+    const data = await res.json();
+    GH_PORTAL_SHA = data.sha;
+    let code;
+    if (data.content) {
+      code = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
+    } else {
+      // Arquivo muito grande: usa download_url
+      const r2 = await fetch(data.download_url + '?t=' + Date.now());
+      code = await r2.text();
+    }
+    const match = code.match(/FALAW_PORTAL\s*=\s*(\[[\s\S]*?\]);\s*$/m);
+    if (!match) return;
+    const ghClients = JSON.parse(match[1]) || [];
+    // Mescla: mantém fileData local nos relatórios que já existem
+    const local = JSON.parse(localStorage.getItem(CLI_KEY) || '[]');
+    const merged = ghClients.map(ghc => {
+      const lc = local.find(l => l.id === ghc.id);
+      if (!lc) return ghc;
+      return {
+        ...ghc,
+        reports: (ghc.reports || []).map(r => {
+          const lr = (lc.reports || []).find(l => l.id === r.id);
+          return lr && lr.fileData ? { ...r, fileData: lr.fileData } : r;
+        })
+      };
+    });
+    localStorage.setItem(CLI_KEY, JSON.stringify(merged));
+  } catch (e) { console.warn('Portal load failed:', e.message); }
+}
+
+async function pushPortalToGitHub() {
+  if (!ghToken()) { showToast('⚠ Token GitHub não configurado — dados salvos localmente.'); return false; }
+  try {
+    // Busca SHA atual se não tiver
+    if (!GH_PORTAL_SHA) {
+      const r = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH_PORTAL}?ref=${GITHUB_BRANCH}&t=${Date.now()}`, { headers: ghHeaders() });
+      if (r.ok) { const d = await r.json(); GH_PORTAL_SHA = d.sha; }
+    }
+    const clients = getClients();
+    const content = btoa(unescape(encodeURIComponent(generatePortalJS(clients))));
+    const body = { message: 'Admin: update client portal', content, branch: GITHUB_BRANCH };
+    if (GH_PORTAL_SHA) body.sha = GH_PORTAL_SHA;
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH_PORTAL}`,
+      { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'HTTP ' + res.status); }
+    const data = await res.json();
+    GH_PORTAL_SHA = data.content.sha;
+    return true;
+  } catch (e) { showToast('Erro GitHub: ' + e.message); return false; }
+}
+
+// Envia o arquivo do relatório para o GitHub e retorna a URL raw pública
+async function pushReportFileToGitHub(reportId, fileName, fileDataUrl) {
+  if (!ghToken()) return null;
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `html/Falaw/falaw.com.br/cliente/reports/${reportId}_${safeName}`;
+  const base64 = fileDataUrl.includes(',') ? fileDataUrl.split(',')[1] : fileDataUrl;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`,
+      { method: 'PUT', headers: ghHeaders(),
+        body: JSON.stringify({ message: `Admin: upload report ${safeName}`, content: base64, branch: GITHUB_BRANCH }) });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'HTTP ' + res.status); }
+    return `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${path}`;
+  } catch (e) { console.warn('Report file push failed:', e.message); return null; }
+}
+
+// Remove o arquivo do relatório do GitHub
+async function deleteReportFileFromGitHub(fileUrl) {
+  if (!ghToken() || !fileUrl) return;
+  const prefix = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/`;
+  if (!fileUrl.startsWith(prefix)) return;
+  const path = fileUrl.slice(prefix.length);
+  try {
+    const r = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`, { headers: ghHeaders() });
+    if (!r.ok) return;
+    const d = await r.json();
+    await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`,
+      { method: 'DELETE', headers: ghHeaders(),
+        body: JSON.stringify({ message: `Admin: delete report ${path}`, sha: d.sha, branch: GITHUB_BRANCH }) });
+  } catch (e) { console.warn('Report file delete failed:', e.message); }
 }
 
 /* ══════════════════════════════════════
@@ -2314,7 +2417,10 @@ function sendEmailViaMailto() {
 const CLI_KEY = 'falaw_portal';
 
 function getClients()       { try { return JSON.parse(localStorage.getItem(CLI_KEY)) || []; } catch { return []; } }
-function saveClients(list)  { localStorage.setItem(CLI_KEY, JSON.stringify(list)); }
+function saveClients(list)  {
+  localStorage.setItem(CLI_KEY, JSON.stringify(list));
+  pushPortalToGitHub(); // sync assíncrono em background
+}
 function cliUID()           { return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
 
 function genCode() {
@@ -2426,19 +2532,28 @@ function saveReport() {
       document.getElementById('rep-progress-bar').style.width = Math.round(e.loaded / e.total * 90) + '%';
     }
   };
-  reader.onload = () => {
+  reader.onload = async () => {
     document.getElementById('rep-progress-bar').style.width = '100%';
     const clients = getClients();
     const idx = clients.findIndex(c => c.id === clientId);
     if (idx < 0) { alert('Cliente não encontrado.'); return; }
 
+    const reportId = cliUID();
+    // Envia arquivo ao GitHub e obtém URL pública
+    let fileUrl = null;
+    if (ghToken()) {
+      btn.textContent = 'Enviando ao GitHub…';
+      fileUrl = await pushReportFileToGitHub(reportId, file.name, reader.result);
+    }
+
     const report = {
-      id: cliUID(),
+      id: reportId,
       title,
       period,
       description: desc,
       fileName: file.name,
-      fileData: reader.result,
+      fileData: reader.result, // mantém local para download offline
+      fileUrl,                 // URL do GitHub para download em outros dispositivos
       fileSize: file.size,
       uploadedAt: new Date().toISOString(),
       stats: window._repExtractedStats || null
@@ -2446,11 +2561,12 @@ function saveReport() {
 
     clients[idx].reports = clients[idx].reports || [];
     clients[idx].reports.push(report);
-    saveClients(clients);
+    saveClients(clients); // também faz push do portal-data.js
 
     setTimeout(() => {
       closeReportModal();
       renderClients();
+      showToast(fileUrl ? '✓ Relatório salvo e sincronizado com GitHub.' : '✓ Relatório salvo localmente.');
     }, 400);
   };
   reader.onerror = () => { alert('Erro ao ler o arquivo.'); btn.disabled = false; btn.textContent = 'Enviar Relatório'; };
@@ -2613,6 +2729,8 @@ function deleteReport(clientId, reportId) {
   const clients = getClients();
   const idx = clients.findIndex(c => c.id === clientId);
   if (idx < 0) return;
+  const report = (clients[idx].reports || []).find(r => r.id === reportId);
+  if (report && report.fileUrl) deleteReportFileFromGitHub(report.fileUrl); // async em background
   clients[idx].reports = (clients[idx].reports || []).filter(r => r.id !== reportId);
   saveClients(clients);
   renderClients();
