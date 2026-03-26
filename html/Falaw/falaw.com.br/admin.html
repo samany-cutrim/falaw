@@ -1365,6 +1365,67 @@ async function testSupabase() {
   box.textContent = error ? '❌ Erro: ' + error.message : '✅ Conectado ao Supabase com sucesso!';
 }
 
+/* ── Articles (Blog) ── */
+async function loadArticlesFromSupabase() {
+  const sb = getSB();
+  if (!sb) return false;
+  try {
+    const { data, error } = await sb.from('articles').select('*').order('date', { ascending: false });
+    if (error) throw error;
+    if (!data || data.length === 0) return false; // empty — fall back to GitHub
+    ALL_ARTICLES = data.map(a => ({
+      id:        a.id,
+      title:     a.title     || '',
+      category:  a.category  || '',
+      excerpt:   a.excerpt   || '',
+      date:      a.date      || '',
+      readTime:  a.readtime  || '',
+      url:       a.url       || '',
+      published: a.published !== false,
+      content:   a.content   || '',
+      photo:     a.photo     || ''
+    }));
+    localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
+    return true;
+  } catch(e) {
+    console.warn('Supabase articles load failed:', e.message);
+    return false;
+  }
+}
+
+async function sbSaveArticle(article) {
+  const sb = getSB();
+  if (!sb || !article) return false;
+  try {
+    const { error } = await sb.from('articles').upsert({
+      id:        article.id,
+      title:     article.title     || '',
+      category:  article.category  || '',
+      excerpt:   article.excerpt   || '',
+      date:      article.date      || '',
+      readtime:  article.readTime  || '',
+      url:       article.url       || '',
+      published: article.published !== false,
+      content:   article.content   || '',
+      photo:     article.photo     || ''
+    });
+    if (error) throw error;
+    return true;
+  } catch(e) {
+    console.warn('Supabase save article failed:', e.message);
+    return false;
+  }
+}
+
+async function sbDeleteArticle(id) {
+  const sb = getSB();
+  if (!sb) return;
+  try {
+    const { error } = await sb.from('articles').delete().eq('id', id);
+    if (error) console.warn('Supabase delete article:', error.message);
+  } catch(e) { console.warn('sbDeleteArticle:', e.message); }
+}
+
 /* ══════════════════════════════════════
    STORAGE HELPERS
 ══════════════════════════════════════ */
@@ -1554,6 +1615,11 @@ function generateArticlesJS(articles) {
 }
 
 async function loadArticlesFromGitHub() {
+  // 1) Tenta Supabase primeiro (armazenamento primário)
+  const sbOk = await loadArticlesFromSupabase();
+  if (sbOk) { document.getElementById('blog-no-token').hidden = true; return; }
+
+  // 2) Supabase vazio/indisponível — tenta GitHub
   document.getElementById('blog-no-token').hidden = !!ghToken();
   try {
     const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}?ref=${GITHUB_BRANCH}&t=${Date.now()}`;
@@ -1566,11 +1632,17 @@ async function loadArticlesFromGitHub() {
     const match = code.match(/FALAW_ARTICLES\s*=\s*(\[[\s\S]*\]);/);
     if (!match) throw new Error('Formato de artigos inválido');
     ALL_ARTICLES = JSON.parse(match[1]) || [];
-    // Guarda cache local para uso offline
     localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
+    // Sincroniza com Supabase (migração automática)
+    const sb = getSB();
+    if (sb && ALL_ARTICLES.length > 0) {
+      Promise.all(ALL_ARTICLES.map(a => sbSaveArticle(a)))
+        .then(() => showToast('Artigos sincronizados com Supabase.'))
+        .catch(() => {});
+    }
   } catch (e) {
     console.warn('GitHub load failed:', e.message);
-    // Fallback: usa cache local se disponível
+    // 3) Fallback: cache local
     const cached = localStorage.getItem('fa_blog_articles_cache');
     ALL_ARTICLES = cached ? (JSON.parse(cached) || []) : [];
     if (ALL_ARTICLES.length) showToast('⚠ GitHub indisponível — exibindo artigos em cache.');
@@ -1964,9 +2036,11 @@ async function savePost() {
   }
 
   closePostModal();
-  showToast('Salvando no GitHub…');
-  const ok = await pushArticlesToGitHub();
-  if (ok) {
+  showToast('Salvando…');
+  const articleData = ALL_ARTICLES.find(a => a.id === id);
+  const sbOk = await sbSaveArticle(articleData);
+  const ghOk = await pushArticlesToGitHub();
+  if (sbOk || ghOk) {
     renderBlog();
     showToast(editingPostId ? 'Artigo atualizado.' : 'Artigo publicado.');
   } else {
@@ -1980,8 +2054,9 @@ async function deletePost(id) {
   const snapshot = ALL_ARTICLES.slice();
   ALL_ARTICLES = ALL_ARTICLES.filter(a => a.id !== id);
   showToast('Excluindo…');
+  await sbDeleteArticle(id);
   const ok = await pushArticlesToGitHub();
-  if (ok) {
+  if (ok || getSB()) {
     renderBlog();
     showToast('Artigo excluído.');
   } else {
@@ -2579,10 +2654,12 @@ async function publishPreviewArticle() {
 
   closeArticlePreview();
   const snapshot = ALL_ARTICLES.slice();
-  ALL_ARTICLES.unshift({ id, title, category, excerpt, content, url, photo: '', date, readTime, published: true });
-  showToast('Publicando no GitHub…');
+  const newArticle = { id, title, category, excerpt, content, url, photo: '', date, readTime, published: true };
+  ALL_ARTICLES.unshift(newArticle);
+  showToast('Publicando…');
+  const sbOk = await sbSaveArticle(newArticle);
   const ok = await pushArticlesToGitHub();
-  if (ok) { renderBlog(); showToast('Artigo publicado com sucesso!'); }
+  if (ok || sbOk) { renderBlog(); showToast('Artigo publicado com sucesso!'); }
   else { ALL_ARTICLES = snapshot; renderBlog(); }
 }
 

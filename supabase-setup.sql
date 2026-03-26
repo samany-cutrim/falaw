@@ -34,7 +34,21 @@ CREATE TABLE IF NOT EXISTS curriculos (
   source       TEXT NOT NULL DEFAULT 'site'
 );
 
--- 4. Portal de Clientes
+-- 4. Artigos do Blog
+CREATE TABLE IF NOT EXISTS articles (
+  id        TEXT PRIMARY KEY,
+  title     TEXT NOT NULL DEFAULT '',
+  category  TEXT NOT NULL DEFAULT '',
+  excerpt   TEXT NOT NULL DEFAULT '',
+  date      TEXT NOT NULL DEFAULT '',
+  readtime  TEXT NOT NULL DEFAULT '',
+  url       TEXT NOT NULL DEFAULT '',
+  published BOOLEAN NOT NULL DEFAULT TRUE,
+  content   TEXT NOT NULL DEFAULT '',
+  photo     TEXT NOT NULL DEFAULT ''
+);
+
+-- 5. Portal de Clientes
 CREATE TABLE IF NOT EXISTS clients (
   id         TEXT PRIMARY KEY,
   name       TEXT,
@@ -49,12 +63,14 @@ CREATE TABLE IF NOT EXISTS clients (
 ALTER TABLE newsletter ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contato    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE curriculos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE articles   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clients    ENABLE ROW LEVEL SECURITY;
 
 -- Permite acesso total com a anon key
 CREATE POLICY "anon full access" ON newsletter FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon full access" ON contato    FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon full access" ON curriculos FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "anon full access" ON articles   FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon full access" ON clients    FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- Storage Buckets
