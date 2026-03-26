@@ -1607,11 +1607,20 @@ function ghHeaders() {
 }
 
 function generateArticlesJS(articles) {
-  const j = v => JSON.stringify(v == null ? '' : v);
-  const lines = articles.map(a =>
-    `  {\n    id: ${j(a.id)},\n    title: ${j(a.title)},\n    category: ${j(a.category)},\n    excerpt: ${j(a.excerpt)},\n    date: ${j(a.date)},\n    readTime: ${j(a.readTime)},\n    url: ${j(a.url)},\n    published: ${a.published !== false},\n    content: ${j(a.content || '')}\n  }`
-  );
-  return 'var FALAW_ARTICLES = [\n' + lines.join(',\n') + '\n];\n';
+  // Gera JSON-válido com chaves entre aspas para que JSON.parse funcione na leitura
+  const lines = articles.map(a => JSON.stringify({
+    id:        a.id        || '',
+    title:     a.title     || '',
+    category:  a.category  || '',
+    excerpt:   a.excerpt   || '',
+    date:      a.date      || '',
+    readTime:  a.readTime  || '',
+    url:       a.url       || '',
+    published: a.published !== false,
+    content:   a.content   || '',
+    photo:     a.photo     || ''
+  }, null, 2).split('\n').map((l, i) => i === 0 ? l : '  ' + l).join('\n'));
+  return 'var FALAW_ARTICLES = [\n  ' + lines.join(',\n  ') + '\n];\n';
 }
 
 async function loadArticlesFromGitHub() {
