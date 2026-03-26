@@ -1272,8 +1272,9 @@ h3 {
   width: auto;
   object-fit: contain;
   object-position: left;
-  filter: brightness(0) invert(1);
-  opacity: 0.6;
+  filter: invert(1) brightness(2);
+  mix-blend-mode: screen;
+  opacity: 0.85;
 }
 .footer-address {
   font-style: normal;
