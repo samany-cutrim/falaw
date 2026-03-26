@@ -1302,31 +1302,35 @@ async function loadPortalFromSupabase() {
   if (error) { console.warn('SB portal:', error.message); return loadPortalFromGitHub(); }
   const local = getClients();
   if (!data || data.length === 0) {
-    // Supabase vazio — envia dados locais para sincronizar
-    if (local.length > 0) {
-      sbSaveClients(local);
-      showToast('Clientes sincronizados com Supabase.');
-    }
+    if (local.length > 0) { sbSaveClients(local); showToast('Clientes sincronizados com Supabase.'); }
     return;
   }
-  // Mescla: Supabase é a fonte principal, localStorage complementa com fileData
+  let needsSync = false;
+  // Mescla: localStorage é a fonte de verdade para relatórios (pode ter mais que o Supabase)
   const clients = data.map(r => {
     const lc = local.find(l => l.id === r.id);
-    return { id: r.id, name: r.name || r.company, company: r.company, email: r.email, code: r.code, createdAt: r.created_at,
-      reports: (r.reports || []).map(rep => {
-        const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
+    const sbReports  = r.reports || [];
+    const locReports = lc ? (lc.reports || []) : [];
+    // Usa relatórios do localStorage se tiver mais que o Supabase
+    let finalReports;
+    if (locReports.length > sbReports.length) {
+      // localStorage tem relatórios novos — mescla e vai sincronizar
+      needsSync = true;
+      finalReports = locReports.map(({ fileData, ...rep }) => rep);
+    } else {
+      // Supabase está atualizado — complementa com fileData do localStorage
+      finalReports = sbReports.map(rep => {
+        const lr = locReports.find(l => l.id === rep.id);
         return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
-      })
-    };
+      });
+    }
+    return { id: r.id, name: r.name || r.company, company: r.company, email: r.email, code: r.code, createdAt: r.created_at, reports: finalReports };
   });
-  // Inclui clientes que existem apenas no localStorage (ainda não sincronizados)
-  local.forEach(lc => {
-    if (!clients.find(c => c.id === lc.id)) clients.push(lc);
-  });
+  // Inclui clientes que existem apenas no localStorage
+  local.forEach(lc => { if (!clients.find(c => c.id === lc.id)) { clients.push(lc); needsSync = true; } });
   localStorage.setItem(CLI_KEY, JSON.stringify(clients));
-  // Sincroniza clientes locais que não estão no Supabase
-  const onlyLocal = local.filter(lc => !data.find(r => r.id === lc.id));
-  if (onlyLocal.length > 0) sbSaveClients(clients);
+  // Sincroniza se houver diferença
+  if (needsSync) { sbSaveClients(clients); showToast('Relatórios sincronizados com Supabase.'); }
 }
 
 function sbSaveClients(list) {
