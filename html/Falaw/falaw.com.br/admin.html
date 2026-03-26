@@ -1562,13 +1562,18 @@ async function loadArticlesFromGitHub() {
     const data = await res.json();
     GH_FILE_SHA = data.sha;
     const code = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
-    // Extração segura: não usa eval/new Function — extrai o array JSON diretamente
-    const match = code.match(/FALAW_ARTICLES\s*=\s*(\[[\s\S]*?\]);\s*$/m);
+    // Regex greedy sem flag m — captura do primeiro [ até o último ] antes de ;
+    const match = code.match(/FALAW_ARTICLES\s*=\s*(\[[\s\S]*\]);/);
     if (!match) throw new Error('Formato de artigos inválido');
     ALL_ARTICLES = JSON.parse(match[1]) || [];
+    // Guarda cache local para uso offline
+    localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
   } catch (e) {
     console.warn('GitHub load failed:', e.message);
-    ALL_ARTICLES = [];
+    // Fallback: usa cache local se disponível
+    const cached = localStorage.getItem('fa_blog_articles_cache');
+    ALL_ARTICLES = cached ? (JSON.parse(cached) || []) : [];
+    if (ALL_ARTICLES.length) showToast('⚠ GitHub indisponível — exibindo artigos em cache.');
   }
 }
 
@@ -1587,8 +1592,7 @@ async function pushArticlesToGitHub() {
     if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'HTTP ' + res.status); }
     const data = await res.json();
     GH_FILE_SHA = data.content.sha;
-    // GitHub é a fonte de verdade — limpa cópias locais antigas
-    localStorage.removeItem('fa_blog_articles');
+    localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
     return true;
   } catch (e) {
     showToast('Erro GitHub: ' + e.message);
