@@ -45,7 +45,7 @@ var FALAW_TEAM = [
     "name": "Letícia Silva",
     "role": "Advogada Controller",
     "status": "active",
-    "bio": "Formada em Direito pela Universidade Paulista (UNIP), pós-graduada em Direito Processual do Trabalho pela Universidade Anhembi Morumbi e pós-graduanda em Legal Operations pela PUC-SP. Atua como Controller Jurídica com especialização em gestão de operações jurídicas e indicadores de performance.",
+    "bio": "Formada em Direito pela Universidade Paulista (UNIP), pós-graduada em Direito Processual do Trabalho pela Universidade Anhembi Morumbi e pós-graduanda em Legal Operations pela PUC-PR. Atua como Controller Jurídica com especialização em gestão de operações jurídicas e indicadores de performance.",
     "email": "letica@falaw.com.br"
   },
   {
