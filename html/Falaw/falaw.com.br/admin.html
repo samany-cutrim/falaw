@@ -951,6 +951,7 @@
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar</button>
             <button type="button" class="btn btn-ghost" onclick="testSupabase()">Testar conexão</button>
+            <button type="button" class="btn btn-ghost" onclick="syncAllToSupabase()">↑ Sincronizar tudo</button>
           </div>
           <div id="sb-test-result" style="margin-top:10px;font-family:var(--f-mono);font-size:11px;line-height:1.6;display:none;"></div>
         </div>
@@ -1299,19 +1300,33 @@ async function loadPortalFromSupabase() {
   if (!sb) { return loadPortalFromGitHub(); }
   const { data, error } = await sb.from('clients').select('*').order('created_at', { ascending: true });
   if (error) { console.warn('SB portal:', error.message); return loadPortalFromGitHub(); }
-  if (data) {
-    const local = getClients();
-    const clients = data.map(r => {
-      const lc = local.find(l => l.id === r.id);
-      return { id: r.id, name: r.name || r.company, company: r.company, email: r.email, code: r.code, createdAt: r.created_at,
-        reports: (r.reports || []).map(rep => {
-          const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
-          return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
-        })
-      };
-    });
-    localStorage.setItem(CLI_KEY, JSON.stringify(clients));
+  const local = getClients();
+  if (!data || data.length === 0) {
+    // Supabase vazio — envia dados locais para sincronizar
+    if (local.length > 0) {
+      sbSaveClients(local);
+      showToast('Clientes sincronizados com Supabase.');
+    }
+    return;
   }
+  // Mescla: Supabase é a fonte principal, localStorage complementa com fileData
+  const clients = data.map(r => {
+    const lc = local.find(l => l.id === r.id);
+    return { id: r.id, name: r.name || r.company, company: r.company, email: r.email, code: r.code, createdAt: r.created_at,
+      reports: (r.reports || []).map(rep => {
+        const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
+        return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
+      })
+    };
+  });
+  // Inclui clientes que existem apenas no localStorage (ainda não sincronizados)
+  local.forEach(lc => {
+    if (!clients.find(c => c.id === lc.id)) clients.push(lc);
+  });
+  localStorage.setItem(CLI_KEY, JSON.stringify(clients));
+  // Sincroniza clientes locais que não estão no Supabase
+  const onlyLocal = local.filter(lc => !data.find(r => r.id === lc.id));
+  if (onlyLocal.length > 0) sbSaveClients(clients);
 }
 
 function sbSaveClients(list) {
@@ -1353,6 +1368,30 @@ async function sbDeleteReport(fileUrl) {
     const { error } = await sb.storage.from('reports').remove([m[1]]);
     if (error) console.warn('SB delete report:', error.message);
   } else { deleteReportFileFromGitHub(fileUrl); }
+}
+
+async function syncAllToSupabase() {
+  const sb = getSB();
+  if (!sb) { showToast('Configure as credenciais do Supabase primeiro.'); return; }
+  showToast('Sincronizando…');
+  const clients = getClients();
+  if (clients.length) sbSaveClients(clients);
+  const newsletter = JSON.parse(localStorage.getItem(KEYS.newsletter) || '[]');
+  if (newsletter.length) {
+    const rows = newsletter.map(e => ({ id: e.id, email: e.email, date: e.date }));
+    await sb.from('newsletter').upsert(rows).then(({error}) => { if(error) console.warn('SB newsletter:', error.message); });
+  }
+  const contato = JSON.parse(localStorage.getItem(KEYS.contato) || '[]');
+  if (contato.length) {
+    const rows = contato.map(e => ({ id: e.id, nome: e.nome, empresa: e.empresa||'', email: e.email, telefone: e.telefone||'', mensagem: e.mensagem||'', date: e.date||new Date().toISOString().slice(0,10), read: e.read||false }));
+    await sb.from('contato').upsert(rows).then(({error}) => { if(error) console.warn('SB contato:', error.message); });
+  }
+  const curriculos = JSON.parse(localStorage.getItem(KEYS.curriculos) || '[]');
+  if (curriculos.length) {
+    const rows = curriculos.map(e => ({ id: e.id, nome: e.nome, email: e.email, telefone: e.telefone||'', linkedin: e.linkedin||'', apresentacao: e.apresentacao||'', cv_file_name: e.cvFileName||'', cv_url: e.cvUrl||'', submitted_at: e.submittedAt||new Date().toISOString(), source: e.source||'site' }));
+    await sb.from('curriculos').upsert(rows).then(({error}) => { if(error) console.warn('SB curriculos:', error.message); });
+  }
+  showToast('✓ Tudo sincronizado com Supabase!');
 }
 
 async function testSupabase() {
