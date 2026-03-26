@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin — Falaw Advogados</title>
   <meta name="robots" content="noindex, nofollow" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.github.com https://*.n8n.cloud https://*.n8n.io https://*.supabase.co; img-src 'self' data: https:; frame-ancestors 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://*.n8n.cloud https://*.n8n.io https://*.supabase.co; img-src 'self' data: https:; frame-ancestors 'none';" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha512-a2gua6VTIrUSSVJD5E9hG2IQCW2mJkqpwCZVtlqhX5FqjpsPADCMlEFerZ8bvLNFyEmoL3ELkKfTOGMCM1pQ==" crossorigin="anonymous"></script>
@@ -1641,11 +1641,30 @@ async function loadArticlesFromGitHub() {
         .catch(() => {});
     }
   } catch (e) {
-    console.warn('GitHub load failed:', e.message);
-    // 3) Fallback: cache local
-    const cached = localStorage.getItem('fa_blog_articles_cache');
-    ALL_ARTICLES = cached ? (JSON.parse(cached) || []) : [];
-    if (ALL_ARTICLES.length) showToast('⚠ GitHub indisponível — exibindo artigos em cache.');
+    console.warn('GitHub API failed:', e.message);
+    // 3) Fallback: URL raw pública (sem token)
+    try {
+      const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_PATH}?t=${Date.now()}`;
+      const rawRes = await fetch(rawUrl);
+      if (!rawRes.ok) throw new Error('HTTP ' + rawRes.status);
+      const code = await rawRes.text();
+      const match = code.match(/FALAW_ARTICLES\s*=\s*(\[[\s\S]*\]);/);
+      if (!match) throw new Error('Formato inválido');
+      ALL_ARTICLES = JSON.parse(match[1]) || [];
+      localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
+      const sb = getSB();
+      if (sb && ALL_ARTICLES.length > 0) {
+        Promise.all(ALL_ARTICLES.map(a => sbSaveArticle(a)))
+          .then(() => showToast('Artigos sincronizados com Supabase.'))
+          .catch(() => {});
+      }
+    } catch (e2) {
+      console.warn('Raw URL failed:', e2.message);
+      // 4) Último recurso: cache local
+      const cached = localStorage.getItem('fa_blog_articles_cache');
+      ALL_ARTICLES = cached ? (JSON.parse(cached) || []) : [];
+      if (ALL_ARTICLES.length) showToast('⚠ GitHub indisponível — exibindo artigos em cache.');
+    }
   }
 }
 
