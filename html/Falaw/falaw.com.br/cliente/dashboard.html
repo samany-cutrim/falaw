@@ -8,7 +8,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co; img-src 'self' data: https:; frame-ancestors 'none';" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha256-oesEfJBQyJAR6kL/+7hDGiP9I2GXEQ1VLDRpqjXJFvU=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="../sb-config.js" onerror="void 0"></script>
   <style>
@@ -564,9 +564,11 @@ async function downloadReport(report) {
 window._allReports = [];
 
 /* ─── ANALYTICS ─────────────────────────────────────── */
-Chart.defaults.color = 'rgba(26,10,13,0.5)';
-Chart.defaults.font.family = "'IBM Plex Mono', monospace";
-Chart.defaults.font.size = 10;
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.color = 'rgba(26,10,13,0.5)';
+  Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+  Chart.defaults.font.size = 10;
+}
 const gridColor = 'rgba(0,0,0,0.06)';
 const tickColor = 'rgba(26,10,13,0.45)';
 
@@ -699,6 +701,7 @@ function buildAnalytics(reports) {
   area.innerHTML = html;
 
   requestAnimationFrame(() => {
+    if (typeof Chart === 'undefined') return;
     if (donutData.length) {
       new Chart(document.getElementById('chartDonut'), {
         type: 'doughnut',
