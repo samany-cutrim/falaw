@@ -29,7 +29,8 @@ jobs:
           mkdir -p deploy
           cp -r html/Falaw/falaw.com.br/. deploy/
           cp -r assets deploy/
-          find deploy -name "*.html" -exec sed -i 's|\.\./\.\./\.\./\.\./assets/|/falaw/assets/|g;s|\.\./\.\./\.\./assets/|/falaw/assets/|g' {} \;
+          echo "falaw.com.br" > deploy/CNAME
+          find deploy -name "*.html" -exec sed -i 's|\.\./\.\./\.\./\.\./assets/|/assets/|g;s|\.\./\.\./\.\./assets/|/assets/|g' {} \;
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
