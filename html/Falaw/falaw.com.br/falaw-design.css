@@ -70,8 +70,7 @@ button { cursor: none; }
   align-items: center;
   justify-content: space-between;
   padding: 0 48px;
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(8px);
+  background: #ffffff;
   border-bottom: 1px solid rgba(26,10,13,0.08);
   overflow: visible;
 }
@@ -1376,8 +1375,8 @@ h3 {
 }
 
 /* Foto suavemente desfocada (Como Atuamos) */
-.img-soft-blur { filter: blur(1.5px); }
-.img-grayscale.img-soft-blur { filter: grayscale(100%) blur(1.5px); }
+.img-soft-blur { filter: none; }
+.img-grayscale.img-soft-blur { filter: grayscale(100%); }
 .s-newsletter .section-inner { justify-content: center; }
 .s-newsletter .container { display: flex; justify-content: center; }
 .newsletter-wrap { max-width: 640px; width: 100%; text-align: center; }
