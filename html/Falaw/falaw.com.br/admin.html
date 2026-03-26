@@ -1337,7 +1337,12 @@ function sbSaveClients(list) {
   const sb = getSB();
   if (!sb) { pushPortalToGitHub(); return; }
   const stripped = list.map(c => ({ id: c.id, name: c.name, company: c.company, email: c.email, code: c.code, created_at: c.createdAt || new Date().toISOString(), reports: (c.reports || []).map(({ fileData, ...rest }) => rest) }));
-  sb.from('clients').upsert(stripped).then(({ error }) => { if (error) console.warn('SB clients upsert:', error.message); });
+  sb.from('clients').upsert(stripped).then(({ error }) => {
+    if (error) {
+      console.warn('SB clients upsert:', error.message);
+      showToast('⚠️ Erro Supabase: ' + error.message);
+    }
+  });
 }
 
 async function sbDeleteClientRecord(id) {

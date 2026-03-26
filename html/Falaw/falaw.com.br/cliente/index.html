@@ -331,11 +331,21 @@ async function syncClientsFromGitHub() {
         const local = getClients();
         const clients = data.map(r => {
           const lc = local.find(l => l.id === r.id);
-          return { id: r.id, name: r.name || r.company, company: r.company, email: r.email, code: r.code, createdAt: r.created_at,
-            reports: (r.reports || []).map(rep => {
-              const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
-              return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
-            })
+          const sbReports  = r.reports || [];
+          const locReports = lc ? (lc.reports || []) : [];
+          // Preserva relatórios locais se tiver mais que o Supabase
+          const finalReports = locReports.length > sbReports.length ? locReports : sbReports.map(rep => {
+            const lr = locReports.find(l => l.id === rep.id);
+            return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
+          });
+          return {
+            id: r.id,
+            name: (r.name || '').trim() || (r.company || '').trim(),
+            company: (r.company || '').trim(),
+            email: r.email,
+            code: r.code,
+            createdAt: r.created_at,
+            reports: finalReports
           };
         });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));

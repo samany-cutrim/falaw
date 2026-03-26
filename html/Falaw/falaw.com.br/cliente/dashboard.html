@@ -835,11 +835,21 @@ async function init() {
       if (data) {
         const local = (function(){ try { return JSON.parse(localStorage.getItem('falaw_portal'))||[]; } catch { return []; } })();
         const lc = local.find(l => l.id === data.id);
-        const updated = { id: data.id, name: data.name || data.company, company: data.company, email: data.email, code: data.code, createdAt: data.created_at,
-          reports: (data.reports || []).map(rep => {
-            const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
-            return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
-          })
+        const sbReports  = data.reports || [];
+        const locReports = lc ? (lc.reports || []) : [];
+        // Preserva relatórios locais se tiver mais que o Supabase
+        const finalReports = locReports.length > sbReports.length ? locReports : sbReports.map(rep => {
+          const lr = locReports.find(l => l.id === rep.id);
+          return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
+        });
+        const updated = {
+          id: data.id,
+          name: (data.name || '').trim() || (data.company || '').trim() || session.name || '',
+          company: (data.company || '').trim() || session.company || '',
+          email: (data.email || '').trim() || session.email || '',
+          code: data.code,
+          createdAt: data.created_at,
+          reports: finalReports
         };
         const all = local.map(c => c.id === updated.id ? updated : c);
         if (!all.find(c => c.id === updated.id)) all.push(updated);
@@ -849,8 +859,17 @@ async function init() {
   }
 
   const clients = (function(){ try { return JSON.parse(localStorage.getItem('falaw_portal'))||[]; } catch { return []; } })();
-  const client  = clients.find(c => c.id === session.id);
-  if (!client) { logout(); return; }
+  let client  = clients.find(c => c.id === session.id);
+
+  // Se não encontrou no localStorage (outro dispositivo), cria um objeto temporário a partir da sessão
+  if (!client) {
+    client = { id: session.id, name: session.name || '', company: session.company || '', email: session.email || '', reports: [] };
+  }
+
+  // Usa session como fallback para campos em branco
+  const displayCompany = (client.company || '').trim() || (session.company || '').trim() || (client.name || '').trim() || (session.name || '').trim() || '—';
+  const displayEmail   = (client.email  || '').trim() || (session.email  || '').trim() || '—';
+  const displayName    = (client.name   || '').trim() || (session.name   || '').trim() || displayCompany;
 
   /* Sort reports newest-first before injecting stats */
   let reports = [...(client.reports || [])].sort((a,b) => new Date(b.uploadedAt)-new Date(a.uploadedAt));
@@ -859,13 +878,13 @@ async function init() {
   reports = await loadPythonStats(reports);
 
   /* Sidebar */
-  document.getElementById('sidebarName').textContent  = client.company || client.name || '—';
-  document.getElementById('sidebarEmail').textContent = client.email || '—';
-  document.getElementById('topbarCompany').textContent= client.company || client.name || 'Portal';
+  document.getElementById('sidebarName').textContent  = displayCompany;
+  document.getElementById('sidebarEmail').textContent = displayEmail;
+  document.getElementById('topbarCompany').textContent= displayCompany;
 
   /* Page title */
-  document.getElementById('pageTitle').textContent     = 'Olá, ' + (client.name||client.company||'').split(' ')[0];
-  document.getElementById('pageSubtitle').textContent  = 'Visão geral dos processos de ' + (client.company || 'sua empresa') + '.';
+  document.getElementById('pageTitle').textContent     = 'Olá, ' + displayName.split(' ')[0];
+  document.getElementById('pageSubtitle').textContent  = 'Visão geral dos processos de ' + (displayCompany !== '—' ? displayCompany : 'sua empresa') + '.';
 
   /* Login time + topbar date */
   document.getElementById('statLogin').textContent   = formatTime(session.loginAt);
