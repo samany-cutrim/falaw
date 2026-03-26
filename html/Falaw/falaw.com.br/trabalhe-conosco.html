@@ -115,53 +115,52 @@
       .form-row-2 { grid-template-columns: 1fr; }
       .careers-form-card { padding: 32px 24px; }
     }
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
+    #careersForm .form-group {
+      position: relative;
       margin-bottom: 20px;
     }
-    .form-group label {
-      position: static;
-      transform: none;
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 10px;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      color: rgba(232,235,240,0.55);
-      pointer-events: auto;
-    }
-    .form-group input:focus ~ label,
-    .form-group input:not(:placeholder-shown) ~ label,
-    .form-group textarea:focus ~ label,
-    .form-group textarea:not(:placeholder-shown) ~ label {
-      transform: none;
-      color: rgba(232,235,240,0.55);
-    }
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
+    #careersForm .form-group input,
+    #careersForm .form-group textarea {
       background: rgba(255,255,255,0.04);
       border: 1px solid rgba(255,255,255,0.09);
       border-radius: 8px;
-      padding: 13px 16px;
+      padding: 22px 16px 8px;
       font-family: 'Inter', sans-serif;
       font-size: 14px;
       color: #E8EBF0;
       transition: border-color .2s, box-shadow .2s;
       outline: none;
       width: 100%;
+      border-bottom: 1px solid rgba(255,255,255,0.09);
     }
-    .form-group input::placeholder,
-    .form-group textarea::placeholder { color: rgba(232,235,240,0.25); }
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
+    #careersForm .form-group input::placeholder,
+    #careersForm .form-group textarea::placeholder { color: transparent; }
+    #careersForm .form-group input:focus,
+    #careersForm .form-group textarea:focus {
       border-color: rgba(184,149,42,0.45);
       box-shadow: 0 0 0 3px rgba(184,149,42,0.07);
     }
-    .form-group select option { background: #0D1525; color: #E8EBF0; }
-    .form-group textarea { resize: vertical; min-height: 120px; }
+    #careersForm .form-group textarea { resize: vertical; min-height: 120px; }
+    #careersForm .form-group label {
+      position: absolute;
+      top: 15px;
+      left: 16px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(232,235,240,0.45);
+      pointer-events: none;
+      transition: transform .18s ease, color .18s ease, font-size .18s ease;
+      transform-origin: left top;
+    }
+    #careersForm .form-group input:focus ~ label,
+    #careersForm .form-group input:not(:placeholder-shown) ~ label,
+    #careersForm .form-group textarea:focus ~ label,
+    #careersForm .form-group textarea:not(:placeholder-shown) ~ label {
+      transform: translateY(-10px) scale(.8);
+      color: rgba(184,149,42,0.8);
+    }
 
     /* Upload area */
     .upload-area {
@@ -388,28 +387,28 @@
 
           <div class="form-row-2">
             <div class="form-group">
+              <input type="text" id="name" name="Nome" placeholder=" " required />
               <label for="name">Nome completo *</label>
-              <input type="text" id="name" name="Nome" placeholder="Seu nome" required />
             </div>
             <div class="form-group">
+              <input type="email" id="email" name="Email" placeholder=" " required />
               <label for="email">E-mail *</label>
-              <input type="email" id="email" name="Email" placeholder="seu@email.com" required />
             </div>
           </div>
 
           <div class="form-group">
+            <input type="tel" id="phone" name="Telefone" placeholder=" " />
             <label for="phone">Telefone / WhatsApp</label>
-            <input type="tel" id="phone" name="Telefone" placeholder="(11) 9 0000-0000" />
           </div>
 
           <div class="form-group">
+            <input type="url" id="linkedin" name="LinkedIn" placeholder=" " />
             <label for="linkedin">LinkedIn (opcional)</label>
-            <input type="url" id="linkedin" name="LinkedIn" placeholder="https://linkedin.com/in/seu-perfil" />
           </div>
 
           <div class="form-group">
+            <textarea id="message" name="Apresentacao" placeholder=" "></textarea>
             <label for="message">Apresentação (opcional)</label>
-            <textarea id="message" name="Apresentacao" placeholder="Conte um pouco sobre sua trajetória, experiências e por que deseja fazer parte da Falaw Advogados…"></textarea>
           </div>
 
           <!-- Upload -->
