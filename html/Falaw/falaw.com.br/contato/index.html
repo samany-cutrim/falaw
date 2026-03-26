@@ -80,20 +80,19 @@
         } catch(e) { console.warn('Supabase push failed:', e.message); }
       })();
 
-      // Open mailto to notify ferrazandrade@falaw.com.br
-      var body = 'Nome: ' + submission.nome +
-        '\nEmpresa: ' + submission.empresa +
-        '\nE-mail: ' + submission.email +
-        '\nTelefone: ' + submission.telefone +
-        '\n\nMensagem:\n' + submission.mensagem;
-      window.open('mailto:ferrazandrade@falaw.com.br?subject=Nova solicitação de contato – ' + encodeURIComponent(submission.nome) + '&body=' + encodeURIComponent(body));
-
-      var btn = form.querySelector('button[type="submit"]');
-      var orig = btn.innerHTML;
-      btn.innerHTML = 'Mensagem enviada ✓';
-      btn.disabled = true;
       form.reset();
-      setTimeout(function() { btn.innerHTML = orig; btn.disabled = false; }, 4000);
+      var formContent = document.getElementById('formContent');
+      var formSuccess = document.getElementById('formSuccess');
+      if (formContent && formSuccess) {
+        formContent.style.display = 'none';
+        formSuccess.style.display = '';
+      } else {
+        var btn = form.querySelector('button[type="submit"]');
+        var orig = btn.innerHTML;
+        btn.innerHTML = 'Mensagem enviada ✓';
+        btn.disabled = true;
+        setTimeout(function() { btn.innerHTML = orig; btn.disabled = false; }, 4000);
+      }
     });
   });
   </script>
@@ -188,7 +187,8 @@
           </div>
 
           <div class="contato-form contato-form-ice">
-            <form action="#" method="post" novalidate>
+            <div id="formContent">
+            <form id="contatoForm" action="#" method="post" novalidate>
               <div class="form-group">
                 <input type="text" id="nome" name="nome" required placeholder=" " autocomplete="name" />
                 <label for="nome">Nome completo</label>
@@ -213,6 +213,11 @@
                 Enviar mensagem <span class="arr">→</span>
               </button>
             </form>
+            </div>
+            <div id="formSuccess" style="display:none; padding: 2rem 0; text-align: center;">
+              <p style="font-size:1.2rem; font-weight:600; margin-bottom:0.5rem;">Mensagem enviada com sucesso!</p>
+              <p style="opacity:0.7;">Entraremos em contato em breve.</p>
+            </div>
           </div>
 
         </div>
