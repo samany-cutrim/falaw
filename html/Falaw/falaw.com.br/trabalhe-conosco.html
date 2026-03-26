@@ -374,12 +374,7 @@
         <div class="form-section-title">Envie seu Currículo</div>
         <p class="form-section-sub">Preencha o formulário abaixo e anexe seu currículo em PDF ou Word. Nossa equipe entrará em contato caso haja uma oportunidade alinhada ao seu perfil.</p>
 
-        <form id="careersForm" action="https://formsubmit.co/ferrazandrade@falaw.com.br" method="POST" enctype="multipart/form-data">
-          <!-- FormSubmit config -->
-          <input type="hidden" name="_subject" value="Trabalhe Conosco — Novo Currículo" />
-          <input type="hidden" name="_captcha" value="false" />
-          <input type="hidden" name="_template" value="table" />
-          <input type="hidden" name="_next" value="" id="successRedirect" />
+        <form id="careersForm" novalidate>
 
           <div class="form-row-2">
             <div class="form-group">
@@ -551,72 +546,74 @@ area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add(
 area.addEventListener('dragleave', () => area.classList.remove('drag-over'));
 area.addEventListener('drop', () => area.classList.remove('drag-over'));
 
-// Show success state if redirected back (FormSubmit redirects to same page with ?success)
-if (window.location.search.includes('success')) {
-  document.getElementById('formContent').style.display = 'none';
-  document.getElementById('formSuccess').style.display = 'block';
-}
-// Set the success redirect to current page with ?success
-document.getElementById('successRedirect').value = window.location.href.split('?')[0] + '?success=1';
+document.getElementById('careersForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
 
-// Interceptar o submit: salva no localStorage + GitHub ANTES de enviar ao FormSubmit
-document.getElementById('careersForm').addEventListener('submit', function(e) {
-  const nome         = (document.querySelector('[name="Nome"]') || document.querySelector('[name="nome"]') || {}).value || '';
-  const email        = (document.querySelector('[name="Email"]') || document.querySelector('[name="email"]') || {}).value || '';
-  const telefone     = (document.querySelector('[name="Telefone"]') || document.querySelector('[name="telefone"]') || {}).value || '';
-  const linkedin     = (document.querySelector('[name="LinkedIn"]') || document.querySelector('[name="linkedin"]') || {}).value || '';
-  const apresentacao = (document.querySelector('[name="Apresentacao"]') || document.querySelector('[name="apresentacao"]') || {}).value || '';
+  const nome         = document.getElementById('name').value.trim();
+  const email        = document.getElementById('email').value.trim();
+  const telefone     = document.getElementById('phone').value.trim();
+  const linkedin     = document.getElementById('linkedin').value.trim();
+  const apresentacao = document.getElementById('message').value.trim();
   const fileInput    = document.getElementById('fileInput');
   const file         = fileInput && fileInput.files[0];
 
+  if (!nome || !email) { alert('Por favor, preencha nome e e-mail.'); return; }
+  if (!file) { alert('Por favor, anexe seu currículo.'); return; }
+
+  const btn = this.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+
   const id = 'cv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,6);
+  let cvUrl = null;
+  let cvData = null;
+
+  // Lê o arquivo
+  cvData = await new Promise(res => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result);
+    fr.readAsDataURL(file);
+  });
+
+  // Tenta Supabase Storage
+  const sbUrlVal = (window.SB_URL || '').trim();
+  const sbKeyVal = (window.SB_KEY || '').trim();
+  if (sbUrlVal && sbKeyVal && typeof supabase !== 'undefined') {
+    try {
+      const sb = supabase.createClient(sbUrlVal, sbKeyVal);
+      const base64 = cvData.split(',')[1];
+      const byteStr = atob(base64);
+      const arr = new Uint8Array(byteStr.length);
+      for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+      const ext = file.name.split('.').pop().toLowerCase();
+      const ct = ext === 'pdf' ? 'application/pdf' : 'application/octet-stream';
+      const path = id + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const { error: upErr } = await sb.storage.from('curriculos').upload(path, arr, { contentType: ct, upsert: true });
+      if (!upErr) cvUrl = sb.storage.from('curriculos').getPublicUrl(path).data.publicUrl;
+
+      const { error: insErr } = await sb.from('curriculos').insert({
+        id, nome, email, telefone, linkedin, apresentacao,
+        cv_file_name: file.name, cv_url: cvUrl,
+        submitted_at: new Date().toISOString(), source: 'site'
+      });
+      if (insErr) console.warn('Supabase curriculo insert:', insErr.message);
+    } catch(err) { console.warn('Supabase sync:', err.message); }
+  }
+
+  // Salva no localStorage (sempre, como cache)
   const entry = {
     id, nome, email, telefone, linkedin, apresentacao,
-    cvFileName: file ? file.name : null,
-    cvUrl: null,
-    submittedAt: new Date().toISOString(),
-    source: 'site'
+    cvFileName: file.name, cvUrl, cvData,
+    submittedAt: new Date().toISOString(), source: 'site'
   };
-
-  // Salvar no localStorage
   const list = JSON.parse(localStorage.getItem('fa_curriculos') || '[]');
   list.unshift(entry);
   localStorage.setItem('fa_curriculos', JSON.stringify(list));
 
-  // Sincronizar com Supabase se configurado (sb-config.js)
-  const sbUrlVal = (window.SB_URL || '').trim();
-  const sbKeyVal = (window.SB_KEY || '').trim();
-  if (sbUrlVal && sbKeyVal && typeof supabase !== 'undefined') {
-    (async function() {
-      try {
-        const sb = supabase.createClient(sbUrlVal, sbKeyVal);
-        let cvUrl = null;
-        if (file) {
-          // Upload do CV para o Supabase Storage
-          const fr = new FileReader();
-          const cvData = await new Promise(res => { fr.onload = () => res(fr.result); fr.readAsDataURL(file); });
-          const base64 = cvData.split(',')[1];
-          const byteStr = atob(base64);
-          const arr = new Uint8Array(byteStr.length);
-          for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
-          const ext = file.name.split('.').pop().toLowerCase();
-          const ct = ext === 'pdf' ? 'application/pdf' : 'application/octet-stream';
-          const path = id + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-          const { error: upErr } = await sb.storage.from('curriculos').upload(path, arr, { contentType: ct, upsert: true });
-          if (!upErr) {
-            cvUrl = sb.storage.from('curriculos').getPublicUrl(path).data.publicUrl;
-            entry.cvUrl = cvUrl;
-            list[0].cvUrl = cvUrl;
-            localStorage.setItem('fa_curriculos', JSON.stringify(list));
-          }
-        }
-        // Inserir metadados na tabela
-        const { error: insErr } = await sb.from('curriculos').insert({ id: entry.id, nome: entry.nome, email: entry.email, telefone: entry.telefone, linkedin: entry.linkedin, apresentacao: entry.apresentacao, cv_file_name: entry.cvFileName, cv_url: cvUrl, submitted_at: entry.submittedAt, source: entry.source });
-        if (insErr) console.warn('Supabase curriculo insert:', insErr.message);
-      } catch(e) { console.warn('Supabase curriculo sync:', e.message); }
-    })();
-  }
-  // O form continua o submit normal para o FormSubmit.co (e-mail)
+  // Mostra mensagem de sucesso na própria página
+  document.getElementById('formContent').style.display = 'none';
+  document.getElementById('formSuccess').style.display = 'block';
+  window.scrollTo({ top: document.getElementById('formSuccess').getBoundingClientRect().top + window.scrollY - 100, behavior: 'smooth' });
 });
 </script>
 
