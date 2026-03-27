@@ -828,43 +828,46 @@ async function init() {
 
   const session = JSON.parse(raw);
 
-  // Tenta carregar dados atualizados do Supabase antes de renderizar
+  // Carrega dados SEMPRE do Supabase (fonte de verdade)
+  let client = null;
   const sbUrl = (window.SB_URL || '').trim();
   const sbKey = (window.SB_KEY || '').trim();
   if (sbUrl && sbKey && typeof supabase !== 'undefined') {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
-      const { data } = await sb.from('clients').select('*').eq('id', session.id).single();
-      if (data) {
+      const { data, error } = await sb.from('clients').select('*').eq('id', session.id).single();
+      if (!error && data) {
         const local = (function(){ try { return JSON.parse(localStorage.getItem('falaw_portal'))||[]; } catch { return []; } })();
         const lc = local.find(l => l.id === data.id);
-        const sbReports  = data.reports || [];
-        const locReports = lc ? (lc.reports || []) : [];
-        // Preserva relatórios locais se tiver mais que o Supabase
-        const finalReports = locReports.length > sbReports.length ? locReports : sbReports.map(rep => {
-          const lr = locReports.find(l => l.id === rep.id);
-          return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
-        });
-        const updated = {
+        const sbReports = data.reports || [];
+        // Supabase é a fonte de verdade — preserva só fileData local (binários offline)
+        client = {
           id: data.id,
           name: (data.name || '').trim() || (data.company || '').trim() || session.name || '',
           company: (data.company || '').trim() || session.company || '',
           email: (data.email || '').trim() || session.email || '',
           code: data.code,
           createdAt: data.created_at,
-          reports: finalReports
+          reports: sbReports.map(rep => {
+            const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
+            return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
+          })
         };
-        const all = local.map(c => c.id === updated.id ? updated : c);
-        if (!all.find(c => c.id === updated.id)) all.push(updated);
+        // Atualiza cache local
+        const all = local.map(c => c.id === client.id ? client : c);
+        if (!all.find(c => c.id === client.id)) all.push(client);
         localStorage.setItem('falaw_portal', JSON.stringify(all));
       }
-    } catch(e) { /* usa dados do localStorage */ }
+    } catch(e) { console.warn('SB dashboard:', e.message); }
   }
 
-  const clients = (function(){ try { return JSON.parse(localStorage.getItem('falaw_portal'))||[]; } catch { return []; } })();
-  let client  = clients.find(c => c.id === session.id);
+  // Fallback: cache local (caso Supabase indisponível)
+  if (!client) {
+    const local = (function(){ try { return JSON.parse(localStorage.getItem('falaw_portal'))||[]; } catch { return []; } })();
+    client = local.find(c => c.id === session.id);
+  }
 
-  // Se não encontrou no localStorage (outro dispositivo), cria um objeto temporário a partir da sessão
+  // Último recurso: cria objeto a partir da sessão (sem relatórios)
   if (!client) {
     client = { id: session.id, name: session.name || '', company: session.company || '', email: session.email || '', reports: [] };
   }

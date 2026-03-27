@@ -1297,59 +1297,60 @@ async function sbUploadCV(cvId, fileName, dataUrl) {
 /* ── Portal / Clients ── */
 async function loadPortalFromSupabase() {
   const sb = getSB();
-  if (!sb) { return loadPortalFromGitHub(); }
+  if (!sb) { showToast('⚠️ Configure o Supabase nas Configurações para gerenciar clientes.'); return; }
   const { data, error } = await sb.from('clients').select('*').order('created_at', { ascending: true });
-  if (error) { console.warn('SB portal:', error.message); return loadPortalFromGitHub(); }
-  const local = getClients();
+  if (error) { showToast('⚠️ Erro ao carregar clientes do Supabase: ' + error.message); console.warn('SB portal:', error.message); return; }
+
   if (!data || data.length === 0) {
-    if (local.length > 0) { sbSaveClients(local); showToast('Clientes sincronizados com Supabase.'); }
+    // Supabase vazio — migra localStorage para Supabase (primeira vez)
+    const local = getClients();
+    if (local.length > 0) {
+      const ok = await sbSaveClients(local);
+      if (ok) showToast('✓ Clientes migrados para o Supabase.');
+    }
     return;
   }
-  let needsSync = false;
-  // Mescla: localStorage é a fonte de verdade para relatórios (pode ter mais que o Supabase)
+
+  // Supabase é a fonte de verdade — só preserva fileData do localStorage (binários para download offline)
+  const local = getClients();
   const clients = data.map(r => {
     const lc = local.find(l => l.id === r.id);
-    const sbReports  = r.reports || [];
-    const locReports = lc ? (lc.reports || []) : [];
-    // Usa relatórios do localStorage se tiver mais que o Supabase
-    let finalReports;
-    if (locReports.length > sbReports.length) {
-      // localStorage tem relatórios novos — mescla e vai sincronizar
-      needsSync = true;
-      finalReports = locReports.map(({ fileData, ...rep }) => rep);
-    } else {
-      // Supabase está atualizado — complementa com fileData do localStorage
-      finalReports = sbReports.map(rep => {
-        const lr = locReports.find(l => l.id === rep.id);
+    const sbReports = r.reports || [];
+    return {
+      id: r.id,
+      name: (r.name || '').trim() || (r.company || '').trim(),
+      company: (r.company || '').trim(),
+      email: r.email,
+      code: r.code,
+      createdAt: r.created_at,
+      reports: sbReports.map(rep => {
+        const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
         return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
-      });
-    }
-    return { id: r.id, name: r.name || r.company, company: r.company, email: r.email, code: r.code, createdAt: r.created_at, reports: finalReports };
+      })
+    };
   });
-  // Inclui clientes que existem apenas no localStorage
-  local.forEach(lc => { if (!clients.find(c => c.id === lc.id)) { clients.push(lc); needsSync = true; } });
   localStorage.setItem(CLI_KEY, JSON.stringify(clients));
-  // Sincroniza se houver diferença
-  if (needsSync) { sbSaveClients(clients); showToast('Relatórios sincronizados com Supabase.'); }
 }
 
-function sbSaveClients(list) {
+async function sbSaveClients(list) {
   const sb = getSB();
-  if (!sb) { pushPortalToGitHub(); return; }
+  if (!sb) { showToast('⚠️ Supabase não configurado. Configure nas Configurações.'); return false; }
   const stripped = list.map(c => ({ id: c.id, name: c.name, company: c.company, email: c.email, code: c.code, created_at: c.createdAt || new Date().toISOString(), reports: (c.reports || []).map(({ fileData, ...rest }) => rest) }));
-  sb.from('clients').upsert(stripped).then(({ error }) => {
-    if (error) {
-      console.warn('SB clients upsert:', error.message);
-      showToast('⚠️ Erro Supabase: ' + error.message);
-    }
-  });
+  const { error } = await sb.from('clients').upsert(stripped);
+  if (error) {
+    console.warn('SB clients upsert:', error.message);
+    showToast('⚠️ Erro ao salvar no Supabase: ' + error.message);
+    return false;
+  }
+  return true;
 }
 
 async function sbDeleteClientRecord(id) {
   const sb = getSB();
-  if (!sb) return;
+  if (!sb) return { error: { message: 'Supabase não configurado.' } };
   const { error } = await sb.from('clients').delete().eq('id', id);
   if (error) console.warn('SB delete client:', error.message);
+  return { error };
 }
 
 async function sbUploadReport(reportId, fileName, dataUrl) {
@@ -1381,26 +1382,39 @@ async function sbDeleteReport(fileUrl) {
 
 async function syncAllToSupabase() {
   const sb = getSB();
-  if (!sb) { showToast('Configure as credenciais do Supabase primeiro.'); return; }
+  if (!sb) { showToast('⚠️ Configure as credenciais do Supabase primeiro.'); return; }
   showToast('Sincronizando…');
+  const errors = [];
+
   const clients = getClients();
-  if (clients.length) sbSaveClients(clients);
+  if (clients.length) {
+    const ok = await sbSaveClients(clients);
+    if (!ok) errors.push('clientes');
+  }
+
   const newsletter = JSON.parse(localStorage.getItem(KEYS.newsletter) || '[]');
   if (newsletter.length) {
     const rows = newsletter.map(e => ({ id: e.id, email: e.email, date: e.date }));
-    await sb.from('newsletter').upsert(rows).then(({error}) => { if(error) console.warn('SB newsletter:', error.message); });
+    const { error } = await sb.from('newsletter').upsert(rows);
+    if (error) { console.warn('SB newsletter:', error.message); errors.push('newsletter'); }
   }
+
   const contato = JSON.parse(localStorage.getItem(KEYS.contato) || '[]');
   if (contato.length) {
     const rows = contato.map(e => ({ id: e.id, nome: e.nome, empresa: e.empresa||'', email: e.email, telefone: e.telefone||'', mensagem: e.mensagem||'', date: e.date||new Date().toISOString().slice(0,10), read: e.read||false }));
-    await sb.from('contato').upsert(rows).then(({error}) => { if(error) console.warn('SB contato:', error.message); });
+    const { error } = await sb.from('contato').upsert(rows);
+    if (error) { console.warn('SB contato:', error.message); errors.push('contato'); }
   }
+
   const curriculos = JSON.parse(localStorage.getItem(KEYS.curriculos) || '[]');
   if (curriculos.length) {
     const rows = curriculos.map(e => ({ id: e.id, nome: e.nome, email: e.email, telefone: e.telefone||'', linkedin: e.linkedin||'', apresentacao: e.apresentacao||'', cv_file_name: e.cvFileName||'', cv_url: e.cvUrl||'', submitted_at: e.submittedAt||new Date().toISOString(), source: e.source||'site' }));
-    await sb.from('curriculos').upsert(rows).then(({error}) => { if(error) console.warn('SB curriculos:', error.message); });
+    const { error } = await sb.from('curriculos').upsert(rows);
+    if (error) { console.warn('SB curriculos:', error.message); errors.push('currículo'); }
   }
-  showToast('✓ Tudo sincronizado com Supabase!');
+
+  if (errors.length) showToast('⚠️ Erro ao sincronizar: ' + errors.join(', '));
+  else showToast('✓ Tudo sincronizado com Supabase!');
 }
 
 async function testSupabase() {
@@ -2962,10 +2976,10 @@ function sendEmailViaMailto() {
 ══════════════════════════════════════════ */
 const CLI_KEY = 'falaw_portal';
 
-function getClients()       { try { return JSON.parse(localStorage.getItem(CLI_KEY)) || []; } catch { return []; } }
-function saveClients(list)  {
-  localStorage.setItem(CLI_KEY, JSON.stringify(list));
-  sbSaveClients(list); // sync ao Supabase (ou GitHub como fallback)
+function getClients()           { try { return JSON.parse(localStorage.getItem(CLI_KEY)) || []; } catch { return []; } }
+async function saveClients(list) {
+  localStorage.setItem(CLI_KEY, JSON.stringify(list)); // cache local imediato
+  return sbSaveClients(list);                          // salva no Supabase (aguarda)
 }
 function cliUID()           { return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
 
@@ -2998,7 +3012,7 @@ function openClientModal(clientId) {
 
 function closeClientModal() { document.getElementById('clientModal').classList.remove('open'); }
 
-function saveClient() {
+async function saveClient() {
   const company = document.getElementById('cli-company').value.trim();
   const email   = document.getElementById('cli-email').value.trim().toLowerCase();
   const code    = document.getElementById('cli-code').value.trim();
@@ -3010,25 +3024,27 @@ function saveClient() {
 
   if (id) {
     const idx = clients.findIndex(c => c.id === id);
-    if (idx >= 0) {
-      clients[idx] = { ...clients[idx], name: company, company, email, code };
-    }
+    if (idx >= 0) clients[idx] = { ...clients[idx], name: company, company, email, code };
   } else {
     clients.push({ id: cliUID(), name: company, company, email, code, createdAt: new Date().toISOString(), reports: [] });
   }
 
-  saveClients(clients);
-  closeClientModal();
-  renderClients();
+  const ok = await saveClients(clients);
+  if (ok) {
+    closeClientModal();
+    renderClients();
+    showToast('✓ Cliente salvo no Supabase.');
+  }
 }
 
-function deleteClient(id) {
+async function deleteClient(id) {
   if (!confirm('Excluir este cliente e todos os seus relatórios?')) return;
+  const { error } = await sbDeleteClientRecord(id);
+  if (error) { showToast('⚠️ Erro ao excluir: ' + error.message); return; }
   const clients = getClients().filter(c => c.id !== id);
   localStorage.setItem(CLI_KEY, JSON.stringify(clients));
-  const sb = getSB();
-  if (sb) { sbDeleteClientRecord(id); } else { pushPortalToGitHub(); }
   renderClients();
+  showToast('✓ Cliente excluído.');
 }
 
 function toggleClientBody(id) {
@@ -3109,13 +3125,17 @@ function saveReport() {
 
     clients[idx].reports = clients[idx].reports || [];
     clients[idx].reports.push(report);
-    saveClients(clients); // também faz push do portal-data.js
+
+    btn.textContent = 'Salvando no Supabase…';
+    const ok = await saveClients(clients);
 
     setTimeout(() => {
       closeReportModal();
       renderClients();
-      showToast(fileUrl ? '✓ Relatório salvo e sincronizado.' : '✓ Relatório salvo localmente.');
-    }, 400);
+      if (ok && fileUrl) showToast('✓ Relatório salvo e sincronizado no Supabase.');
+      else if (ok)       showToast('✓ Relatório salvo no Supabase (sem arquivo na nuvem).');
+      else               showToast('⚠️ Erro ao salvar no Supabase. Verifique as configurações.');
+    }, 200);
   };
   reader.onerror = () => { alert('Erro ao ler o arquivo.'); btn.disabled = false; btn.textContent = 'Enviar Relatório'; };
   reader.readAsDataURL(file);

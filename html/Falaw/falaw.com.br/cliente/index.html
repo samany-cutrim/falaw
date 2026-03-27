@@ -319,60 +319,37 @@ function getClients() {
   catch { return []; }
 }
 
-// Carrega clientes do Supabase (ou portal-data.js como fallback) e sincroniza o localStorage
+// Carrega clientes do Supabase e sincroniza o localStorage (Supabase é a fonte de verdade)
 async function syncClientsFromGitHub() {
   const url = (window.SB_URL || '').trim();
   const key = (window.SB_KEY || '').trim();
-  if (url && key && typeof supabase !== 'undefined') {
-    try {
-      const sb = supabase.createClient(url, key);
-      const { data, error } = await sb.from('clients').select('*');
-      if (!error && data && data.length) {
-        const local = getClients();
-        const clients = data.map(r => {
-          const lc = local.find(l => l.id === r.id);
-          const sbReports  = r.reports || [];
-          const locReports = lc ? (lc.reports || []) : [];
-          // Preserva relatórios locais se tiver mais que o Supabase
-          const finalReports = locReports.length > sbReports.length ? locReports : sbReports.map(rep => {
-            const lr = locReports.find(l => l.id === rep.id);
-            return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
-          });
-          return {
-            id: r.id,
-            name: (r.name || '').trim() || (r.company || '').trim(),
-            company: (r.company || '').trim(),
-            email: r.email,
-            code: r.code,
-            createdAt: r.created_at,
-            reports: finalReports
-          };
-        });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
-        return;
-      }
-    } catch(e) { /* fallback para GitHub */ }
-  }
-  // Fallback: portal-data.js no GitHub Pages
+  if (!url || !key || typeof supabase === 'undefined') return false;
   try {
-    const res = await fetch('portal-data.js?v=' + Date.now());
-    if (!res.ok) return;
-    const text = await res.text();
-    const match = text.match(/FALAW_PORTAL\s*=\s*(\[[\s\S]*?\]);\s*$/m);
-    if (!match) return;
-    const ghClients = JSON.parse(match[1]) || [];
-    if (!ghClients.length) return;
+    const sb = supabase.createClient(url, key);
+    const { data, error } = await sb.from('clients').select('*');
+    if (error) { console.warn('SB login sync:', error.message); return false; }
+    if (!data || !data.length) return false;
+    // Supabase é a fonte de verdade — preserva apenas fileData local (binários para download)
     const local = getClients();
-    const merged = ghClients.map(ghc => {
-      const lc = local.find(l => l.id === ghc.id);
-      if (!lc) return ghc;
-      return { ...ghc, reports: (ghc.reports || []).map(r => {
-        const lr = (lc.reports || []).find(l => l.id === r.id);
-        return lr && lr.fileData ? { ...r, fileData: lr.fileData } : r;
-      })};
+    const clients = data.map(r => {
+      const lc = local.find(l => l.id === r.id);
+      const sbReports = r.reports || [];
+      return {
+        id: r.id,
+        name: (r.name || '').trim() || (r.company || '').trim(),
+        company: (r.company || '').trim(),
+        email: r.email,
+        code: r.code,
+        createdAt: r.created_at,
+        reports: sbReports.map(rep => {
+          const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
+          return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
+        })
+      };
     });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-  } catch (e) { /* offline */ }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+    return true;
+  } catch(e) { console.warn('SB login sync error:', e.message); return false; }
 }
 
 function _getCLILock() {
@@ -381,7 +358,7 @@ function _getCLILock() {
 }
 function _setCLILock(d) { sessionStorage.setItem(_CLI_LOCK_KEY, JSON.stringify(d)); }
 
-function handleLogin(e) {
+async function handleLogin(e) {
   e.preventDefault();
   const err = document.getElementById('loginError');
   const btn = document.getElementById('loginBtn');
@@ -410,37 +387,48 @@ function handleLogin(e) {
   btn.disabled = true;
   btn.textContent = 'Verificando…';
 
-  // Sincroniza com GitHub antes de autenticar (dados sempre atualizados)
-  syncClientsFromGitHub().finally(() => {
-    const clients = getClients();
-    const client  = clients.find(c => c.email.toLowerCase() === email && c.code === code);
-
-    if (client) {
-      _setCLILock({ attempts: 0, lockedUntil: 0 });
-      sessionStorage.setItem('falaw_session', JSON.stringify({
-        id: client.id,
-        name: client.name,
-        company: client.company,
-        email: client.email,
-        loginAt: new Date().toISOString()
-      }));
-      window.location.href = 'dashboard.html';
-    } else {
-      const l = _getCLILock();
-      l.attempts++;
-      if (l.attempts >= _CLI_MAX) {
-        l.lockedUntil = Date.now() + _CLI_LOCKOUT_MS;
-        l.attempts = 0;
-        err.textContent = 'Muitas tentativas. Acesso bloqueado por 15 minutos.';
-      } else {
-        err.textContent = `E-mail ou código inválidos. ${_CLI_MAX - l.attempts} tentativa(s) restante(s).`;
-      }
-      _setCLILock(l);
+  // Busca clientes diretamente do Supabase antes de autenticar
+  const synced = await syncClientsFromGitHub();
+  if (!synced) {
+    // Supabase indisponível — tenta localStorage como cache
+    const cached = getClients();
+    if (!cached.length) {
+      err.textContent = 'Não foi possível conectar ao servidor. Tente novamente.';
       err.classList.add('show');
       btn.disabled = false;
       btn.textContent = 'Entrar';
+      return;
     }
-  });
+  }
+
+  const clients = getClients();
+  const client  = clients.find(c => c.email.toLowerCase() === email && c.code === code);
+
+  if (client) {
+    _setCLILock({ attempts: 0, lockedUntil: 0 });
+    sessionStorage.setItem('falaw_session', JSON.stringify({
+      id: client.id,
+      name: client.name,
+      company: client.company,
+      email: client.email,
+      loginAt: new Date().toISOString()
+    }));
+    window.location.href = 'dashboard.html';
+  } else {
+    const l = _getCLILock();
+    l.attempts++;
+    if (l.attempts >= _CLI_MAX) {
+      l.lockedUntil = Date.now() + _CLI_LOCKOUT_MS;
+      l.attempts = 0;
+      err.textContent = 'Muitas tentativas. Acesso bloqueado por 15 minutos.';
+    } else {
+      err.textContent = `E-mail ou código inválidos. ${_CLI_MAX - l.attempts} tentativa(s) restante(s).`;
+    }
+    _setCLILock(l);
+    err.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
 }
 
 // Redirect if already logged in
