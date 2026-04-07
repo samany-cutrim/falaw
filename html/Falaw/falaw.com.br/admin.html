@@ -3836,7 +3836,7 @@ function renderIfoodPeriods() {
     <div class="item-card">
       <div class="item-card-body">
         <div class="item-card-title">${escHtml(p.label)} ${p.is_active ? '<span class="post-tag" style="background:var(--c-accent)">Ativo</span>' : ''}</div>
-        <div class="item-card-meta">${escHtml(p.month_year)} · criado em ${formatDate(p.created_at)}</div>
+        <div class="item-card-meta">${escHtml(p.month_year)} · criado em ${formatDateAdmin(p.created_at)}</div>
       </div>
       <div class="item-card-actions">
         ${!p.is_active ? `<button type="button" class="btn btn-ghost btn-sm" onclick="ifoodActivatePeriod('${p.id}')">Ativar</button>` : ''}

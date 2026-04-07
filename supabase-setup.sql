@@ -67,6 +67,12 @@ ALTER TABLE articles   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clients    ENABLE ROW LEVEL SECURITY;
 
 -- Permite acesso total com a anon key
+DROP POLICY IF EXISTS "anon full access" ON newsletter;
+DROP POLICY IF EXISTS "anon full access" ON contato;
+DROP POLICY IF EXISTS "anon full access" ON curriculos;
+DROP POLICY IF EXISTS "anon full access" ON articles;
+DROP POLICY IF EXISTS "anon full access" ON clients;
+
 CREATE POLICY "anon full access" ON newsletter FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon full access" ON contato    FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon full access" ON curriculos FOR ALL TO anon USING (true) WITH CHECK (true);

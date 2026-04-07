@@ -68,6 +68,12 @@ ALTER TABLE ifood_highlights ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ifood_raw_data   ENABLE ROW LEVEL SECURITY;
 
 -- Acesso total com a anon key (mesmo padrão do setup principal)
+DROP POLICY IF EXISTS "anon full access" ON ifood_periods;
+DROP POLICY IF EXISTS "anon full access" ON ifood_kpis;
+DROP POLICY IF EXISTS "anon full access" ON ifood_content;
+DROP POLICY IF EXISTS "anon full access" ON ifood_highlights;
+DROP POLICY IF EXISTS "anon full access" ON ifood_raw_data;
+
 CREATE POLICY "anon full access" ON ifood_periods    FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon full access" ON ifood_kpis       FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon full access" ON ifood_content    FOR ALL TO anon USING (true) WITH CHECK (true);
