@@ -640,6 +640,24 @@
       border-radius: 2px;
     }
 
+    /* ── IFOOD SUB-TABS ── */
+    .ifood-sub-tab {
+      font-family: var(--f-mono);
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--c-muted);
+      background: #fff;
+      border: 1px solid var(--c-divider);
+      border-radius: 4px;
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+      user-select: none;
+    }
+    .ifood-sub-tab:hover { background: #f0eee9; color: var(--c-dark); border-color: rgba(0,0,0,0.18); }
+    .ifood-sub-tab.active { background: var(--c-accent); color: #fff; border-color: var(--c-accent); }
+
     /* ── MOBILE ── */
     @media (max-width: 768px) {
       /* Login */
@@ -923,12 +941,12 @@
       </div>
 
       <!-- Sub-nav dentro da aba iFood -->
-      <div style="display:flex;gap:0;border-bottom:1px solid var(--c-divider);margin-bottom:28px;" id="ifoodSubNav">
-        <div class="admin-tab active" style="height:44px;font-size:9px;" onclick="ifoodSubTab('periods')">Períodos</div>
-        <div class="admin-tab"        style="height:44px;font-size:9px;" onclick="ifoodSubTab('kpis')">KPIs / Gráficos</div>
-        <div class="admin-tab"        style="height:44px;font-size:9px;" onclick="ifoodSubTab('content')">Textos das Abas</div>
-        <div class="admin-tab"        style="height:44px;font-size:9px;" onclick="ifoodSubTab('highlights')">Destaques do Mês</div>
-        <div class="admin-tab"        style="height:44px;font-size:9px;" onclick="ifoodSubTab('excel')">Upload Excel</div>
+      <div style="display:flex;gap:4px;margin-bottom:28px;flex-wrap:wrap;" id="ifoodSubNav">
+        <div class="ifood-sub-tab active" onclick="ifoodSubTab('periods')">📅 Períodos</div>
+        <div class="ifood-sub-tab"        onclick="ifoodSubTab('kpis')">📊 KPIs / Gráficos</div>
+        <div class="ifood-sub-tab"        onclick="ifoodSubTab('content')">✍️ Textos das Abas</div>
+        <div class="ifood-sub-tab"        onclick="ifoodSubTab('highlights')">⭐ Destaques do Mês</div>
+        <div class="ifood-sub-tab"        onclick="ifoodSubTab('excel')">📁 Upload Excel</div>
       </div>
 
       <!-- SUB: PERÍODOS -->
@@ -3807,7 +3825,7 @@ async function loadIfoodAdmin() {
 const IFOOD_SUBS = ['periods','kpis','content','highlights','excel'];
 function ifoodSubTab(name) {
   const nav = document.getElementById('ifoodSubNav');
-  nav.querySelectorAll('.admin-tab').forEach((t, i) => {
+  nav.querySelectorAll('.ifood-sub-tab').forEach((t, i) => {
     t.classList.toggle('active', IFOOD_SUBS[i] === name);
   });
   IFOOD_SUBS.forEach(s => {
