@@ -17,7 +17,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <!-- PptxGenJS (export PPT) -->
-  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/libs/pptxgen.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
   <!-- Supabase config -->
   <script src="../sb-config.js" onerror="void 0"></script>
 
@@ -894,76 +894,191 @@ document.getElementById('tabBar').addEventListener('click', e => {
 });
 
 /* ═══════════════════════════════════════════════════════════
-   EXPORT — PDF
+   EXPORT — HELPER: captura painel (incluindo painéis ocultos)
+═══════════════════════════════════════════════════════════ */
+async function capturarPainel(tabKey, scale) {
+  const panel = document.getElementById('panel-' + tabKey);
+  if (!panel) return null;
+  const isHidden = !panel.classList.contains('active');
+
+  if (isHidden) {
+    // Torna visível fora da tela para html2canvas capturar corretamente
+    panel.style.display = 'block';
+    panel.style.position = 'fixed';
+    panel.style.left = '-9999px';
+    panel.style.top = '0';
+    panel.style.width = (document.getElementById('mainContent')?.offsetWidth || 1100) + 'px';
+    panel.style.zIndex = '-1';
+    await new Promise(r => setTimeout(r, 350));
+  }
+
+  let canvas = null;
+  try {
+    canvas = await html2canvas(panel, {
+      scale: scale || 1.5,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#F4F2EF',
+      scrollX: 0,
+      scrollY: 0,
+      x: 0,
+      y: 0,
+      width: panel.scrollWidth,
+      height: panel.scrollHeight,
+      windowWidth: Math.max(1200, panel.scrollWidth),
+      windowHeight: panel.scrollHeight,
+      logging: false
+    });
+  } catch(e) { console.warn('html2canvas erro em', tabKey, e); }
+
+  if (isHidden) {
+    panel.style.display = '';
+    panel.style.position = '';
+    panel.style.left = '';
+    panel.style.top = '';
+    panel.style.width = '';
+    panel.style.zIndex = '';
+  }
+
+  return canvas;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EXPORT — PDF (todas as abas)
 ═══════════════════════════════════════════════════════════ */
 async function exportarPDF() {
-  const activePanel = document.querySelector('.tab-panel.active');
-  const activeTabBtn = document.querySelector('.tab-btn.active');
-  if (!activePanel) return;
-  showExportOverlay('Gerando PDF…');
+  showExportOverlay('Gerando PDF… (1/' + TAB_KEYS.length + ')');
   try {
-    const canvas = await html2canvas(activePanel, { scale: 2, useCORS: true, backgroundColor: '#F4F2EF' });
-    const imgData = canvas.toDataURL('image/jpeg', 0.92);
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const pW = pdf.internal.pageSize.getWidth();
-    const pH = pdf.internal.pageSize.getHeight();
-    const cW = canvas.width, cH = canvas.height;
-    const ratio = Math.min(pW / cW, pH / cH);
-    const imgW = cW * ratio, imgH = cH * ratio;
-    const x = (pW - imgW) / 2, y = (pH - imgH) / 2;
-    pdf.addImage(imgData, 'JPEG', x, y, imgW, imgH);
-    const tabName = (activeTabBtn ? activeTabBtn.textContent.trim() : 'dashboard').replace(/\s+/g, '-').toLowerCase();
-    const period = currentPeriod ? currentPeriod.label.replace(/\s+/g,'-') : 'periodo';
-    pdf.save(`falaw-ifood-${period}-${tabName}.pdf`);
-  } catch(e) { console.error(e); showToast('Erro ao gerar PDF.'); }
+    const period = currentPeriod ? currentPeriod.label.replace(/\s+/g, '-') : 'periodo';
+    // Usa dimensões do primeiro canvas para definir o formato da página
+    const firstCanvas = await capturarPainel(TAB_KEYS[0], 2);
+    if (!firstCanvas) { showToast('Erro ao capturar conteúdo.'); hideExportOverlay(); return; }
+
+    const pgRatio = firstCanvas.width / firstCanvas.height;
+    const pgW = 297; // mm
+    const pgH = Math.max(100, Math.round(pgW / pgRatio));
+    const orient = pgH < pgW ? 'landscape' : 'portrait';
+    const pdf = new jsPDF({ orientation: orient, unit: 'mm', format: [pgW, pgH] });
+
+    // Página de capa
+    pdf.setFillColor(13, 43, 94);
+    pdf.rect(0, 0, pgW, pgH, 'F');
+    pdf.setFillColor(123, 26, 46);
+    pdf.rect(0, pgH * 0.48, pgW, 1.5, 'F');
+    pdf.setFontSize(24); pdf.setTextColor(255, 255, 255);
+    pdf.text('Falaw Advogados × iFood', pgW / 2, pgH * 0.30, { align: 'center' });
+    pdf.setFontSize(14); pdf.setTextColor(170, 187, 204);
+    pdf.text('Gestão Jurídica Trabalhista', pgW / 2, pgH * 0.38, { align: 'center' });
+    pdf.setFontSize(16); pdf.setTextColor(255, 255, 255);
+    pdf.text('Dashboard — ' + (currentPeriod ? currentPeriod.label : ''), pgW / 2, pgH * 0.54, { align: 'center' });
+    pdf.setFontSize(9); pdf.setTextColor(120, 140, 160);
+    pdf.text('Gerado em ' + new Date().toLocaleDateString('pt-BR'), pgW / 2, pgH * 0.65, { align: 'center' });
+
+    const tabLabels = { 'visao-geral':'Visão Geral','nuvem':'Nuvem','op-logistico':'Op. Logístico','ex-foodlover':'Ex-Foodlover','terceirizacao':'Terceirização','marketplace':'Marketplace','destaques':'Destaques do Mês','metas':'Metas' };
+    const hH = 8; // mm header
+
+    for (let i = 0; i < TAB_KEYS.length; i++) {
+      const tabKey = TAB_KEYS[i];
+      showExportOverlay(`Gerando PDF… (${i + 1}/${TAB_KEYS.length}) — ${tabLabels[tabKey] || tabKey}`);
+      const c = i === 0 ? firstCanvas : await capturarPainel(tabKey, 2);
+      if (!c) continue;
+
+      pdf.addPage([pgW, pgH], orient);
+
+      // Cabeçalho
+      pdf.setFillColor(13, 43, 94);
+      pdf.rect(0, 0, pgW, hH, 'F');
+      pdf.setFontSize(6.5); pdf.setTextColor(255, 255, 255);
+      pdf.text('Falaw Advogados × iFood  ·  ' + (currentPeriod ? currentPeriod.label : ''), 5, 5.5);
+      pdf.setTextColor(200, 130, 150);
+      pdf.text(tabLabels[tabKey] || tabKey, pgW - 5, 5.5, { align: 'right' });
+
+      // Imagem proporcional
+      const r = c.width / c.height;
+      const availH = pgH - hH;
+      let iW = pgW, iH = pgW / r;
+      if (iH > availH) { iH = availH; iW = iH * r; }
+      const ox = (pgW - iW) / 2;
+      pdf.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', ox, hH, iW, iH);
+    }
+
+    pdf.save(`falaw-ifood-${period}.pdf`);
+    showToast('PDF gerado com sucesso!');
+  } catch(e) {
+    console.error('PDF error:', e);
+    showToast('Erro ao gerar PDF: ' + (e.message || e));
+  }
   hideExportOverlay();
 }
 
 /* ═══════════════════════════════════════════════════════════
-   EXPORT — PPT (full report, all tabs)
+   EXPORT — PPT (todas as abas)
 ═══════════════════════════════════════════════════════════ */
 async function exportarPPT() {
-  showExportOverlay('Gerando apresentação PPT…');
+  showExportOverlay('Gerando PPT… (1/' + TAB_KEYS.length + ')');
   try {
+    if (typeof PptxGenJS === 'undefined') {
+      showToast('PptxGenJS não carregado. Verifique sua conexão.');
+      hideExportOverlay(); return;
+    }
     const pptx = new PptxGenJS();
-    pptx.layout = 'LAYOUT_WIDE';
+    pptx.layout = 'LAYOUT_WIDE'; // 13.33 × 7.5 polegadas
+    pptx.title = 'Falaw Advogados × iFood — ' + (currentPeriod ? currentPeriod.label : '');
+    pptx.author = 'Falaw Advogados';
+
+    const sW = 13.33, sH = 7.5;
 
     // Slide de capa
     const capa = pptx.addSlide();
     capa.background = { color: '0D2B5E' };
-    capa.addText('Falaw Advogados', { x: 0.5, y: 1.2, w: 12, h: 0.7, fontSize: 32, bold: true, color: 'FFFFFF', fontFace: 'Arial' });
-    capa.addText('Dashboard iFood — ' + (currentPeriod ? currentPeriod.label : ''), { x: 0.5, y: 2.1, w: 12, h: 0.5, fontSize: 18, color: 'AABBCC', fontFace: 'Arial' });
-    capa.addText('Relatório gerado em ' + new Date().toLocaleDateString('pt-BR'), { x: 0.5, y: 6.5, w: 12, h: 0.3, fontSize: 11, color: '7B8EA0', fontFace: 'Arial' });
-    capa.addShape(pptx.ShapeType.rect, { x: 0, y: 6.95, w: 13.33, h: 0.05, fill: { color: '7B1A2E' } });
+    capa.addShape(pptx.ShapeType.rect, { x: 0, y: sH * 0.48, w: sW, h: 0.06, fill: { color: '7B1A2E' }, line: { color: '7B1A2E', pt: 0 } });
+    capa.addText('Falaw Advogados', { x: 0.5, y: 1.2, w: sW - 1, h: 0.8, fontSize: 36, bold: true, color: 'FFFFFF', fontFace: 'Arial', align: 'center' });
+    capa.addText('× iFood', { x: 0.5, y: 2.05, w: sW - 1, h: 0.6, fontSize: 24, color: '7B1A2E', bold: true, fontFace: 'Arial', align: 'center' });
+    capa.addText('Gestão Jurídica Trabalhista', { x: 0.5, y: 2.75, w: sW - 1, h: 0.4, fontSize: 14, color: 'AABBCC', fontFace: 'Arial', align: 'center' });
+    capa.addText('Dashboard — ' + (currentPeriod ? currentPeriod.label : ''), { x: 0.5, y: sH * 0.52, w: sW - 1, h: 0.5, fontSize: 18, color: 'FFFFFF', bold: true, fontFace: 'Arial', align: 'center' });
+    capa.addText('Gerado em ' + new Date().toLocaleDateString('pt-BR'), { x: 0.5, y: sH - 0.5, w: sW - 1, h: 0.3, fontSize: 10, color: '7B8EA0', fontFace: 'Arial', align: 'center' });
 
-    // Slides por aba
     const tabLabels = { 'visao-geral':'Visão Geral','nuvem':'Nuvem','op-logistico':'Op. Logístico','ex-foodlover':'Ex-Foodlover','terceirizacao':'Terceirização','marketplace':'Marketplace','destaques':'Destaques do Mês','metas':'Metas' };
-    for (const tabKey of TAB_KEYS) {
-      const panel = document.getElementById('panel-' + tabKey);
-      if (!panel) continue;
-      // Capture panel as image
-      const canvas = await html2canvas(panel, { scale: 1.5, useCORS: true, backgroundColor: '#F4F2EF' });
-      const imgData = canvas.toDataURL('image/jpeg', 0.88);
+    const hH = 0.55; // header height inches
+
+    for (let i = 0; i < TAB_KEYS.length; i++) {
+      const tabKey = TAB_KEYS[i];
+      showExportOverlay(`Gerando PPT… (${i + 1}/${TAB_KEYS.length}) — ${tabLabels[tabKey] || tabKey}`);
+
+      const c = await capturarPainel(tabKey, 1.5);
+      if (!c) continue;
+
       const slide = pptx.addSlide();
       slide.background = { color: 'F4F2EF' };
-      // Header bar
-      slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.55, fill: { color: '0D2B5E' } });
-      slide.addText((tabLabels[tabKey] || tabKey).toUpperCase(), { x: 0.3, y: 0.05, w: 9, h: 0.45, fontSize: 11, bold: true, color: 'FFFFFF', fontFace: 'Arial', valign: 'middle' });
+
+      // Cabeçalho
+      slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: sW, h: hH, fill: { color: '0D2B5E' }, line: { color: '0D2B5E', pt: 0 } });
+      slide.addText((tabLabels[tabKey] || tabKey).toUpperCase(), { x: 0.3, y: 0, w: sW * 0.65, h: hH, fontSize: 11, bold: true, color: 'FFFFFF', fontFace: 'Arial', valign: 'middle' });
       if (currentPeriod) {
-        slide.addText(currentPeriod.label, { x: 9, y: 0.05, w: 4, h: 0.45, fontSize: 10, color: 'AABBCC', fontFace: 'Arial', align: 'right', valign: 'middle' });
+        slide.addText(currentPeriod.label, { x: sW * 0.65, y: 0, w: sW * 0.33, h: hH, fontSize: 10, color: 'AABBCC', fontFace: 'Arial', align: 'right', valign: 'middle' });
       }
-      // Content image
-      const cW = canvas.width, cH = canvas.height;
-      const maxW = 13.0, maxH = 6.7;
-      const ratio = Math.min(maxW / (cW / 72), maxH / (cH / 72));
-      const iW = (cW / 72) * ratio, iH = (cH / 72) * ratio;
-      slide.addImage({ data: imgData, x: 0.15, y: 0.65, w: Math.min(iW, maxW), h: Math.min(iH, maxH) });
+
+      // Imagem — escala direta pelo tamanho do canvas vs slide disponível
+      const availW = sW - 0.3;
+      const availH = sH - hH - 0.15;
+      const scaleX = availW / c.width;
+      const scaleY = availH / c.height;
+      const s = Math.min(scaleX, scaleY);
+      const iW = c.width * s;
+      const iH = c.height * s;
+      const offsetX = (sW - iW) / 2;
+
+      slide.addImage({ data: c.toDataURL('image/jpeg', 0.88), x: offsetX, y: hH, w: iW, h: iH });
     }
 
-    const period = currentPeriod ? currentPeriod.label.replace(/\s+/g,'-') : 'periodo';
+    const period = currentPeriod ? currentPeriod.label.replace(/\s+/g, '-') : 'periodo';
     await pptx.writeFile({ fileName: `falaw-ifood-${period}.pptx` });
-  } catch(e) { console.error(e); showToast('Erro ao gerar PPT.'); }
+    showToast('PPT gerado com sucesso!');
+  } catch(e) {
+    console.error('PPT error:', e);
+    showToast('Erro ao gerar PPT: ' + (e.message || e));
+  }
   hideExportOverlay();
 }
 
