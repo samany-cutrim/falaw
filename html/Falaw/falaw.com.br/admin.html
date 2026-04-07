@@ -4133,32 +4133,219 @@ async function ifoodPreviewExcel(input) {
   const file = input.files && input.files[0];
   if (!file) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS não carregado.'); return; }
-  document.getElementById('ifood-xl-status').style.display = 'block';
-  document.getElementById('ifood-xl-status').textContent = 'Lendo arquivo…';
+  const st = document.getElementById('ifood-xl-status');
+  st.style.display = 'block'; st.textContent = 'Lendo arquivo…';
   try {
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type: 'array' });
-    const sheets = {};
-    wb.SheetNames.forEach(name => {
-      const ws = wb.Sheets[name];
-      sheets[name] = XLSX.utils.sheet_to_json(ws, { defval: '' });
-    });
-    _ifoodExcelData = { filename: file.name, sheets };
-    // Preview first sheet
-    const firstName = wb.SheetNames[0];
-    const rows = sheets[firstName] || [];
-    const cols = rows.length ? Object.keys(rows[0]) : [];
-    const preview = rows.slice(0, 20);
-    let html = '<thead><tr style="background:var(--c-accent);color:#fff">' + cols.map(c => `<th style="padding:6px 10px;text-align:left;white-space:nowrap">${escHtml(c)}</th>`).join('') + '</tr></thead><tbody>';
-    html += preview.map((r, i) => `<tr style="background:${i%2?'#f8f8f6':'#fff'}">` + cols.map(c => `<td style="padding:5px 10px;border-bottom:1px solid #eee;white-space:nowrap">${escHtml(String(r[c] ?? ''))}</td>`).join('') + '</tr>').join('');
+    // Store workbook for processing; preview uses first sheet header-based rows
+    const firstWs = wb.Sheets[wb.SheetNames[0]];
+    const previewRows = XLSX.utils.sheet_to_json(firstWs, { defval: '', header: 1 });
+    const cols = previewRows[0] || [];
+    const preview = previewRows.slice(1, 21);
+    let html = '<thead><tr style="background:var(--c-accent);color:#fff">' + cols.map(c => `<th style="padding:6px 10px;text-align:left;white-space:nowrap">${escHtml(String(c))}</th>`).join('') + '</tr></thead><tbody>';
+    html += preview.map((r, i) => `<tr style="background:${i%2?'#f8f8f6':'#fff'}">` + cols.map((_, ci) => `<td style="padding:5px 10px;border-bottom:1px solid #eee;white-space:nowrap">${escHtml(String(r[ci] ?? ''))}</td>`).join('') + '</tr>').join('');
     html += '</tbody>';
     document.getElementById('ifood-xl-table').innerHTML = html;
     document.getElementById('ifood-xl-preview').style.display = 'block';
-    document.getElementById('ifood-xl-status').textContent = `✓ ${wb.SheetNames.length} aba(s) encontrada(s): ${wb.SheetNames.join(', ')}. ${rows.length} linhas na primeira aba.`;
+    _ifoodExcelData = { filename: file.name, wb };
+    st.textContent = `✓ ${wb.SheetNames.length} aba(s): ${wb.SheetNames.join(', ')}. ${previewRows.length - 1} linhas na primeira aba. Selecione o período e clique em "Salvar dados no Supabase".`;
   } catch(e) {
-    document.getElementById('ifood-xl-status').textContent = 'Erro ao ler arquivo: ' + e.message;
+    st.textContent = 'Erro ao ler arquivo: ' + e.message;
     console.error(e);
   }
+}
+
+// ── EXCEL PROCESSING HELPERS ─────────
+const _XL_CR_TABS = [
+  { cr: 'ENTREGADOR NUVEM',         tabKey: 'nuvem',         label: 'Nuvem' },
+  { cr: 'ENTREGADOR OL',            tabKey: 'op-logistico',  label: 'Op. Logístico' },
+  { cr: 'EX-FOODLOVER',             tabKey: 'ex-foodlover',  label: 'Ex-Foodlover' },
+  { cr: 'TERCEIRIZAÇÃO',            tabKey: 'terceirizacao', label: 'Terceirização' },
+  { cr: 'ENTREGADOR - MARKETPLACE', tabKey: 'marketplace',   label: 'Marketplace' },
+  { cr: 'RESTAURANTES - CONTRATO',  tabKey: 'restaurantes',  label: 'Restaurantes' },
+];
+const _XL_DEC_CR_MAP = { nuvem:'ENTREGADOR NUVEM', ol:'ENTREGADOR OL', 'ex-foodlover':'EX-FOODLOVER', terceirizado:'TERCEIRIZAÇÃO', 'terceirização':'TERCEIRIZAÇÃO', marketplace:'ENTREGADOR - MARKETPLACE', restaurantes:'RESTAURANTES - CONTRATO' };
+const _XL_UF_TRT = { MG:'TRT-3',RJ:'TRT-1',RS:'TRT-4',BA:'TRT-5',PE:'TRT-6',CE:'TRT-7',PA:'TRT-8',AP:'TRT-8',PR:'TRT-9',DF:'TRT-10',TO:'TRT-10',AM:'TRT-11',RR:'TRT-11',SC:'TRT-12',PB:'TRT-13',RO:'TRT-14',AC:'TRT-14',MA:'TRT-16',ES:'TRT-17',GO:'TRT-18',AL:'TRT-19',SE:'TRT-20',RN:'TRT-21',PI:'TRT-22',MT:'TRT-23',MS:'TRT-24' };
+const _XL_DEC_FAV  = new Set(['Acórdão Favorável','Sentença Improcedente']);
+const _XL_DEC_DESF = new Set(['Acórdão Desfavorável','Sentença Desfavorável','Acórdão Anula Sentença']);
+
+function _xlGetTRT(uf, vara) {
+  uf = (uf||'').toUpperCase(); vara = (vara||'').toLowerCase();
+  if (uf === 'SP') {
+    const kws = ['campinas','sorocaba','jundiai','jundiaí','ribeirão','ribeirao','são josé dos campos','sao jose','bauru','piracicaba','santos','guarulhos','osasco','santo andré','santo andre','mogi','taubaté','taubate','araçatuba','aracatuba'];
+    if (kws.some(k => vara.includes(k))) return 'TRT-15';
+    return 'TRT-2';
+  }
+  return _XL_UF_TRT[uf] || ('TRT-' + uf);
+}
+
+function _xlParseIfood(rawRows) {
+  const c = (r, i) => String(r[i] ?? '').trim();
+  return rawRows.filter(r => r && r[0] && String(r[0]).trim() && String(r[0]).trim().toLowerCase() !== 'causa raiz').map(r => ({
+    causa_raiz: c(r,0), num_processo: c(r,1), status: c(r,2),
+    assunto: c(r,4), vara: c(r,5), cidade: c(r,8), uf: c(r,9),
+    adv1: c(r,17), adv2: c(r,18), adv3: c(r,19),
+    fase: c(r,60), arquivado: c(r,95),
+    julgador: c(r,125), resultado_recente: c(r,148),
+    trt: _xlGetTRT(c(r,9), c(r,5)),
+  }));
+}
+
+function _xlParseDecisoes(rawRows) {
+  const c = (r, i) => String(r[i] ?? '').trim();
+  return rawRows.filter(r => r && r[0] && String(r[0]).trim()).map(r => {
+    const crRaw = c(r,1).toLowerCase().trim();
+    return { num_processo: c(r,0), causa_raiz: _XL_DEC_CR_MAP[crRaw] || c(r,1).toUpperCase().trim(), resultado: c(r,2) };
+  });
+}
+
+function _xlParseNovos(rawRows) {
+  return rawRows.filter(r => { const v = String(r[0]??'').trim(); return v && v.toLowerCase() !== 'número do processo' && v !== 'nan'; }).map(r => String(r[0]).trim());
+}
+
+function _xlClassifyDec(res) {
+  if (_XL_DEC_FAV.has(res))  return 'F';
+  if (_XL_DEC_DESF.has(res)) return 'D';
+  return 'O';
+}
+
+function _xlCounter(arr) { const m={}; arr.forEach(v=>{ if(v) m[v]=(m[v]||0)+1; }); return m; }
+function _xlTopN(c, n) { return Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,n); }
+function _xlFmtBr(n) { return Number(n).toLocaleString('pt-BR'); }
+function _xlFmtPct(num, den) { return den ? (100*num/den).toFixed(1).replace('.',',')+' %' : '—'; }
+function _xlChartBar(labels, data, datasetLabel, color) {
+  return { type:'bar', data:{ labels, datasets:[{ label:datasetLabel||'Processos', data, backgroundColor:color||'#D4A72C', borderRadius:4 }] } };
+}
+function _xlChartDoughnut(labels, data) {
+  const PAL=['#D4A72C','#2C3E50','#E74C3C','#3498DB','#27AE60','#9B59B6','#F39C12','#1ABC9C','#E67E22','#16A085'];
+  return { type:'doughnut', data:{ labels, datasets:[{ data, backgroundColor:PAL.slice(0,data.length) }] } };
+}
+
+function _xlParsePedidos(assunto) {
+  if (!assunto) return {};
+  let s = String(assunto);
+  ['\xbb','\u00bb','\u00b7','»',' – ',' - '].forEach(sep=>{ s=s.split(sep).join('|'); });
+  const skip = new Set(['De','Do','Da','Dos','Das','E','Em','A','O','']);
+  const m = {};
+  s.split('|').forEach(p => {
+    p = p.replace(/\s+/g,' ').trim();
+    p = p.replace(/\w\S*/g, t => t.charAt(0).toUpperCase()+t.slice(1).toLowerCase());
+    if (p.length > 3 && !skip.has(p)) m[p] = (m[p]||0)+1;
+  });
+  return m;
+}
+
+function _xlBuildKpiRows(periodId, records, decisoes, novos) {
+  const rows = []; let so = 0;
+  const push = (tabKey, kpiKey, label, value, unit, chartData, chartTitle) => {
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:tabKey, kpi_key:kpiKey, label, value:String(value), unit:unit||'', chart_data:chartData||null, chart_title:chartTitle||'', sort_order:so++, trend_pct:null });
+  };
+
+  // ── VISÃO GERAL ──────────────────────────────────────────────────────────────
+  const total  = records.length;
+  const ativos = records.filter(r=>r.status.toLowerCase()==='ativo').length;
+  const encerr = records.filter(r=>r.status.toLowerCase()==='encerrado').length;
+  const decF   = decisoes.filter(d=>_xlClassifyDec(d.resultado)==='F').length;
+  const decD   = decisoes.filter(d=>_xlClassifyDec(d.resultado)==='D').length;
+  const decTot = decisoes.length;
+
+  push('visao-geral','total_processos','Total de Processos',_xlFmtBr(total),'processos');
+  push('visao-geral','ativos','Processos Ativos',_xlFmtBr(ativos),'ativos');
+  push('visao-geral','encerrados','Processos Encerrados',_xlFmtBr(encerr),'encerrados');
+  push('visao-geral','novos_casos','Novos Casos no Mês',_xlFmtBr(novos.length),'novos');
+  push('visao-geral','decisoes_total','Decisões no Período',_xlFmtBr(decTot),'decisões');
+  push('visao-geral','decisoes_fav','Decisões Favoráveis',_xlFmtBr(decF),`(${_xlFmtPct(decF,decTot)})`);
+  push('visao-geral','decisoes_desf','Decisões Desfavoráveis',_xlFmtBr(decD),`(${_xlFmtPct(decD,decTot)})`);
+
+  // Causa raiz doughnut
+  const crC = _xlCounter(records.filter(r=>r.status.toLowerCase()==='ativo').map(r=>r.causa_raiz));
+  const crTop = _xlTopN(crC, 10);
+  push('visao-geral','chart_cr_dist','Distribuição por Causa Raiz',_xlFmtBr(ativos),'ativos',
+    _xlChartDoughnut(crTop.map(([l])=>l), crTop.map(([,v])=>v)), 'Processos Ativos por Causa Raiz');
+
+  // Decisões por CR grouped bar
+  const dByCrF={}, dByCrD={};
+  decisoes.forEach(d=>{ const cr=d.causa_raiz||'Outros'; const cl=_xlClassifyDec(d.resultado); if(cl==='F') dByCrF[cr]=(dByCrF[cr]||0)+1; if(cl==='D') dByCrD[cr]=(dByCrD[cr]||0)+1; });
+  const allCRs=[...new Set([...Object.keys(dByCrF),...Object.keys(dByCrD)])].sort();
+  push('visao-geral','chart_dec_cr','Decisões por Causa Raiz','','',
+    { type:'bar', data:{ labels:allCRs, datasets:[
+      { label:'Favorável', data:allCRs.map(c=>dByCrF[c]||0), backgroundColor:'#27AE60', borderRadius:4 },
+      { label:'Desfavorável', data:allCRs.map(c=>dByCrD[c]||0), backgroundColor:'#E74C3C', borderRadius:4 }
+    ]}}, 'Decisões do Período por Causa Raiz');
+
+  // Fase processual
+  const faseC = _xlCounter(records.filter(r=>r.status.toLowerCase()==='ativo'&&r.fase).map(r=>r.fase));
+  const faseTop = _xlTopN(faseC,12);
+  push('visao-geral','chart_fase','Fase Processual','','',
+    _xlChartBar(faseTop.map(([l])=>l),faseTop.map(([,v])=>v),'Processos'), 'Distribuição por Fase Processual');
+
+  // TRT ranking
+  const trtC = _xlCounter(records.filter(r=>r.status.toLowerCase()==='ativo'&&r.trt).map(r=>r.trt));
+  const trtTop = _xlTopN(trtC,10);
+  push('visao-geral','chart_trt','Ranking por TRT','','',
+    _xlChartBar(trtTop.map(([l])=>l),trtTop.map(([,v])=>v),'Processos Ativos'), 'Processos Ativos por TRT');
+
+  // Julgadores
+  const julgC = _xlCounter(records.filter(r=>r.julgador&&!['nan','none',''].includes(r.julgador.toLowerCase())).map(r=>r.julgador));
+  const julgTop = _xlTopN(julgC,15);
+  push('visao-geral','chart_julgadores','Top 15 Julgadores','','',
+    _xlChartBar(julgTop.map(([l])=>l),julgTop.map(([,v])=>v),'Processos'), 'Top 15 Julgadores');
+
+  // Advogados adversários
+  const advC = {};
+  records.forEach(r=>{ [r.adv1,r.adv2,r.adv3].forEach(a=>{ if(a&&!['nan','none',''].includes(a.toLowerCase())) advC[a]=(advC[a]||0)+1; }); });
+  const advTop = _xlTopN(advC,10);
+  push('visao-geral','chart_advogados','Top 10 Advogados Adversários','','',
+    _xlChartBar(advTop.map(([l])=>l),advTop.map(([,v])=>v),'Processos'), 'Top 10 Advogados Adversários');
+
+  // ── PER CAUSA RAIZ TABS ──────────────────────────────────────────────────────
+  for (const { cr, tabKey, label } of _XL_CR_TABS) {
+    const recs = records.filter(r=>r.causa_raiz===cr);
+    if (!recs.length) continue;
+    const decs = decisoes.filter(d=>d.causa_raiz===cr);
+    const ta = recs.filter(r=>r.status.toLowerCase()==='ativo').length;
+    const te = recs.filter(r=>r.status.toLowerCase()==='encerrado').length;
+    const tf = decs.filter(d=>_xlClassifyDec(d.resultado)==='F').length;
+    const td = decs.filter(d=>_xlClassifyDec(d.resultado)==='D').length;
+
+    push(tabKey,'total','Total de Processos',_xlFmtBr(recs.length),'processos');
+    push(tabKey,'ativos','Processos Ativos',_xlFmtBr(ta),'ativos');
+    push(tabKey,'encerrados','Processos Encerrados',_xlFmtBr(te),'encerrados');
+    push(tabKey,'decisoes_fav','Decisões Favoráveis',_xlFmtBr(tf),`(${_xlFmtPct(tf,decs.length)})`);
+    push(tabKey,'decisoes_desf','Decisões Desfavoráveis',_xlFmtBr(td),`(${_xlFmtPct(td,decs.length)})`);
+
+    const tFaseC = _xlCounter(recs.filter(r=>r.fase).map(r=>r.fase));
+    const tFaseTop = _xlTopN(tFaseC,12);
+    push(tabKey,'chart_fase','Fase Processual','','',
+      _xlChartBar(tFaseTop.map(([l])=>l),tFaseTop.map(([,v])=>v)), `Fase Processual — ${label}`);
+
+    const tUfC = _xlCounter(recs.filter(r=>r.uf).map(r=>r.uf));
+    const tUfTop = _xlTopN(tUfC,10);
+    push(tabKey,'chart_uf','Estados com mais Processos','','',
+      _xlChartBar(tUfTop.map(([l])=>l),tUfTop.map(([,v])=>v)), `Top 10 Estados — ${label}`);
+
+    const tAdvC = {};
+    recs.forEach(r=>{ [r.adv1,r.adv2,r.adv3].forEach(a=>{ if(a&&!['nan','none',''].includes(a.toLowerCase())) tAdvC[a]=(tAdvC[a]||0)+1; }); });
+    const tAdvTop = _xlTopN(tAdvC,10);
+    push(tabKey,'chart_advogados','Top 10 Advogados','','',
+      _xlChartBar(tAdvTop.map(([l])=>l),tAdvTop.map(([,v])=>v)), `Top 10 Advogados — ${label}`);
+
+    push(tabKey,'chart_decisoes','Decisões do Período',_xlFmtBr(decs.length),'decisões',
+      _xlChartDoughnut(['Favorável','Desfavorável','Outro'],[tf,td,decs.length-tf-td]), `Decisões — ${label}`);
+
+    // Pedidos ranking (Ex-Foodlover only)
+    if (cr === 'EX-FOODLOVER') {
+      const pedC = {};
+      recs.forEach(r=>{ Object.entries(_xlParsePedidos(r.assunto)).forEach(([k,v])=>{ pedC[k]=(pedC[k]||0)+v; }); });
+      const pedTop = _xlTopN(pedC,15);
+      if (pedTop.length) {
+        push(tabKey,'chart_pedidos','Pedidos mais Frequentes','','',
+          _xlChartBar(pedTop.map(([l])=>l),pedTop.map(([,v])=>v),'Ocorrências','#D4A72C'), 'Ranking de Pedidos — Ex-Foodlover');
+      }
+    }
+  }
+  return rows;
 }
 
 async function ifoodSaveExcel() {
@@ -4166,16 +4353,75 @@ async function ifoodSaveExcel() {
   if (!_ifoodExcelData) { showToast('Selecione um arquivo primeiro.'); return; }
   const periodId = document.getElementById('ifood-xl-period').value;
   if (!periodId) { showToast('Selecione um período.'); return; }
-  document.getElementById('ifood-xl-status').style.display = 'block';
-  document.getElementById('ifood-xl-status').textContent = 'Salvando no Supabase…';
-  const row = { id: ifoodId(), period_id: periodId, filename: _ifoodExcelData.filename, raw_json: _ifoodExcelData.sheets, uploaded_at: new Date().toISOString() };
-  const { error } = await sb.from('ifood_raw_data').insert(row);
-  if (error) {
-    document.getElementById('ifood-xl-status').textContent = 'Erro: ' + error.message;
-    showToast('Erro ao salvar dados.'); return;
+  const st = document.getElementById('ifood-xl-status');
+  const setStatus = msg => { st.style.display='block'; st.textContent=msg; };
+
+  try {
+    const { wb, filename } = _ifoodExcelData;
+    const findSh = (...names) => { for (const n of names) { const f=wb.SheetNames.find(s=>s.toLowerCase().includes(n.toLowerCase())); if(f) return wb.Sheets[f]; } return null; };
+
+    setStatus('Lendo aba IFOOD…');
+    const ifoodSh = findSh('IFOOD') || wb.Sheets[wb.SheetNames[0]];
+    const ifoodRaw = XLSX.utils.sheet_to_json(ifoodSh, { header:1, defval:'' });
+    const records = _xlParseIfood(ifoodRaw.slice(1));
+
+    setStatus(`Lendo Decisões… (${records.length} processos)`);
+    const decSh = findSh('Decisões','Decisoes','Decisão','Decisao');
+    const decisoes = decSh ? _xlParseDecisoes(XLSX.utils.sheet_to_json(decSh,{header:1,defval:''}).slice(1)) : [];
+
+    const novosSh = findSh('Novos Casos');
+    const novos = novosSh ? _xlParseNovos(XLSX.utils.sheet_to_json(novosSh,{header:1,defval:''}).slice(1)) : [];
+
+    setStatus(`Computando KPIs… (${decisoes.length} decisões, ${novos.length} novos casos)`);
+    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos);
+
+    setStatus('Removendo KPIs anteriores do período…');
+    const { error: delErr } = await sb.from('ifood_kpis').delete().eq('period_id', periodId);
+    if (delErr) throw new Error('Erro ao limpar KPIs: ' + delErr.message);
+
+    const BATCH = 40;
+    for (let i = 0; i < kpiRows.length; i += BATCH) {
+      setStatus(`Salvando KPIs… (${Math.min(i+BATCH,kpiRows.length)}/${kpiRows.length})`);
+      const { error } = await sb.from('ifood_kpis').insert(kpiRows.slice(i, i+BATCH));
+      if (error) throw new Error('KPI insert: ' + error.message);
+    }
+
+    // Content HTML per tab
+    setStatus('Salvando textos de análise…');
+    const tabMap = { 'visao-geral':'Visão Geral', nuvem:'Nuvem', 'op-logistico':'Op. Logístico', 'ex-foodlover':'Ex-Foodlover', terceirizacao:'Terceirização', marketplace:'Marketplace', restaurantes:'Restaurantes', metas:'Metas' };
+    for (const [tabKey, tabLabel] of Object.entries(tabMap)) {
+      const t = _XL_CR_TABS.find(t=>t.tabKey===tabKey);
+      const recs = t ? records.filter(r=>r.causa_raiz===t.cr) : records;
+      const decs = t ? decisoes.filter(d=>d.causa_raiz===t.cr) : decisoes;
+      const ta = recs.filter(r=>r.status.toLowerCase()==='ativo').length;
+      const tf = decs.filter(d=>_xlClassifyDec(d.resultado)==='F').length;
+      const td = decs.filter(d=>_xlClassifyDec(d.resultado)==='D').length;
+      const html = `<p>Total de <strong>${_xlFmtBr(recs.length)}</strong> processos, sendo <strong>${_xlFmtBr(ta)}</strong> ativos. No período foram registradas <strong>${_xlFmtBr(decs.length)}</strong> decisões, com índice de favorabilidade de <strong>${_xlFmtPct(tf,decs.length)}</strong> (${_xlFmtBr(tf)} favoráveis / ${_xlFmtBr(td)} desfavoráveis).</p>`;
+      await sb.from('ifood_content').upsert({ id:ifoodId(), period_id:periodId, tab_key:tabKey, content_html:html, updated_at:new Date().toISOString() }, { onConflict:'period_id,tab_key', ignoreDuplicates:false });
+    }
+
+    // Highlights
+    setStatus('Salvando destaques…');
+    await sb.from('ifood_highlights').delete().eq('period_id', periodId);
+    const total  = records.length;
+    const ativos = records.filter(r=>r.status.toLowerCase()==='ativo').length;
+    const decF   = decisoes.filter(d=>_xlClassifyDec(d.resultado)==='F').length;
+    const decTot = decisoes.length;
+    const { error: hlErr } = await sb.from('ifood_highlights').insert([
+      { id:ifoodId(), period_id:periodId, icon:'⚖️', title:'Total de Processos', body:`${_xlFmtBr(total)} processos no portfólio, dos quais ${_xlFmtBr(ativos)} ativos.`, sort_order:0 },
+      { id:ifoodId(), period_id:periodId, icon:'✅', title:'Índice de Favorabilidade', body:`${_xlFmtPct(decF,decTot)} das decisões no período foram favoráveis para o iFood (${_xlFmtBr(decF)} de ${_xlFmtBr(decTot)}).`, sort_order:1 },
+      { id:ifoodId(), period_id:periodId, icon:'📋', title:'Novos Casos no Período', body:`${_xlFmtBr(novos.length)} novos casos recebidos no mês.`, sort_order:2 },
+      { id:ifoodId(), period_id:periodId, icon:'📊', title:'Decisões do Período', body:`${_xlFmtBr(decTot)} decisões registradas — ${_xlFmtBr(decF)} favoráveis e ${_xlFmtBr(decisoes.filter(d=>_xlClassifyDec(d.resultado)==='D').length)} desfavoráveis.`, sort_order:3 },
+    ]);
+    if (hlErr) console.warn('highlights:', hlErr.message);
+
+    setStatus(`✓ Concluído! ${kpiRows.length} KPIs computados e salvos no Supabase a partir de "${filename}". Recarregue o dashboard do cliente para visualizar os dados.`);
+    showToast('Excel processado com sucesso!');
+  } catch(e) {
+    setStatus('Erro: ' + e.message);
+    console.error(e);
+    showToast('Erro ao processar Excel.');
   }
-  document.getElementById('ifood-xl-status').textContent = '✓ Dados salvos com sucesso! Acesse a aba "KPIs / Gráficos" para inserir os indicadores manualmente, ou peça ao desenvolvedor para criar um mapeamento automático.';
-  showToast('Excel salvo com sucesso.');
 }
 
 </script>
