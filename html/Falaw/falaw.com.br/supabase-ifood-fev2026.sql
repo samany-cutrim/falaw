@@ -19,7 +19,7 @@ INSERT INTO ifood_kpis (id, period_id, tab_key, kpi_key, label, value, unit, tre
 
 ('fev2026-vg-1', 'fev-2026', 'visao-geral', 'processos_ativos',
  'Processos Ativos', '1.383', 'processos', NULL, 1,
- '{"type":"doughnut","data":{"labels":["Nuvem","Op. Logístico","Ex-Foodlover","Terceirização","Marketplace"],"datasets":[{"data":[605,530,197,41,9],"backgroundColor":["#7B1A2E","#0D2B5E","#0F9E76","#E67E22","#8E44AD"],"borderWidth":0}]},"options":{"plugins":{"legend":{"position":"bottom"}}}}',
+ '{"type":"doughnut","data":{"labels":["Nuvem","Op. Logístico","Ex-Foodlover","Terceirização","Marketplace"],"datasets":[{"data":[605,530,197,42,9],"backgroundColor":["#7B1A2E","#0D2B5E","#0F9E76","#E67E22","#8E44AD"],"borderWidth":0}]},"options":{"plugins":{"legend":{"position":"bottom"}}}}',
  'Distribuição por Vertical'),
 
 ('fev2026-vg-2', 'fev-2026', 'visao-geral', 'processos_encerrados',
