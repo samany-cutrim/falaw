@@ -271,6 +271,42 @@ def parse_suspensos(df):
 
 # ─── ANALYTICS ─────────────────────────────────────────────────────────────────
 
+def parse_pedidos(assunto_str, top_n=20):
+    """Extract and rank individual claims (pedidos) from the Assunto field."""
+    import re
+    if not assunto_str or str(assunto_str).strip() in ("", "nan", "None"):
+        return Counter()
+    s = str(assunto_str)
+    # Split on » separator (various encodings) or bullet-like chars
+    for sep in ['\xbb', '\u00bb', '\u00b7', '»', ' – ', ' - ']:
+        s = s.replace(sep, '|')
+    parts = [p.strip().title() for p in s.split('|') if p.strip()]
+    # If no separator found, try double-space or known keyword patterns
+    if len(parts) <= 1:
+        parts = [p.strip().title() for p in re.split(r'\s{2,}', s) if p.strip()]
+    counter = Counter()
+    skip = {'De', 'Do', 'Da', 'Dos', 'Das', 'E', 'Em', 'A', 'O', 'Nan', 'None', ''}
+    for p in parts:
+        p = re.sub(r'\s+', ' ', p).strip()
+        if p and len(p) > 3 and p not in skip:
+            counter[p] += 1
+    return counter
+
+def compute_pedidos_ranking(records, causa_raiz, top_n=15):
+    """Return top N pedidos (claims) for a given causa raiz."""
+    total_counter = Counter()
+    for rec in records:
+        if rec.get("causa_raiz", "") != causa_raiz:
+            continue
+        total_counter.update(parse_pedidos(rec.get("assunto", "")))
+    # Deduplicate near-identical entries (e.g. 'Horas Extras' vs 'Horas Extras Horas Extras ...')
+    cleaned = Counter()
+    for pedido, count in total_counter.items():
+        # Truncate very long strings
+        p = pedido[:70] if len(pedido) > 70 else pedido
+        cleaned[p] += count
+    return cleaned.most_common(top_n)
+
 def is_arquivado(rec):
     arq = rec.get("arquivado", "")
     fase = rec.get("fase", "")
@@ -364,6 +400,11 @@ def compute_causa_raiz_kpis(records, decisoes, causa_raiz, suspensos_1389, suspe
     susp_list_1389 = [s for s in suspensos_1389 if match_susp(s)]
     susp_list_1291 = [s for s in suspensos_1291 if match_susp(s)]
 
+    # Pedidos ranking (only for EX-FOODLOVER)
+    pedidos_ranking = []
+    if causa_raiz == "EX-FOODLOVER":
+        pedidos_ranking = compute_pedidos_ranking(records, causa_raiz, top_n=15)
+
     return {
         "total": len(recs),
         "ativos": ativos,
@@ -387,6 +428,7 @@ def compute_causa_raiz_kpis(records, decisoes, causa_raiz, suspensos_1389, suspe
         "susp_list_1389": susp_list_1389,
         "susp_list_1291": susp_list_1291,
         "decisoes": decs,
+        "pedidos_ranking": pedidos_ranking,
     }
 
 def compute_global_charts(records, decisoes):
@@ -584,7 +626,6 @@ def build_causa_raiz_tab(tab_id, label, data):
     kpis_row1 = build_kpi_cards([
         ("Processos Ativos",   fmt_br(data["ativos"]),    "processos", "", ""),
         ("Encerrados",         fmt_br(data["encerrados"]), "processos", "", ""),
-        ("Arquivados",         fmt_br(data["arquivados"]), "processos", "", ""),
         ("Suspensos",          fmt_br(data["suspensos"]),  "processos", "", ""),
     ])
 
@@ -620,6 +661,25 @@ def build_causa_raiz_tab(tab_id, label, data):
     fase_id   = f"chart_{tab_id}_fase"
     uf_id     = f"chart_{tab_id}_uf"
     dec_id    = f"chart_{tab_id}_dec"
+    pedidos_id = f"chart_{tab_id}_pedidos"
+
+    # Pedidos section — only for EX-FOODLOVER
+    pedidos_html = ""
+    if data.get("pedidos_ranking"):
+        ped_rows = [[rank+1, p, fmt_br(n)] for rank, (p, n) in enumerate(data["pedidos_ranking"])]
+        ped_table = build_table(["#", "Pedido / Assunto", "Ocorrências"], ped_rows)
+        pedidos_html = f"""
+    <h3 class="section-title" style="margin:28px 0 16px">Ranking de Pedidos dos Reclamantes (Top 15)</h3>
+    <div class="charts-grid">
+      <div class="chart-card" style="grid-column:span 2">
+        <div class="chart-card-title">Pedidos Mais Frequentes — Ex-Foodlover</div>
+        <div class="chart-wrap" style="height:340px"><canvas id="{pedidos_id}"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Tabela — Ranking de Pedidos</div>
+        {ped_table}
+      </div>
+    </div>"""
 
     return f"""
   <div id="tab-{tab_id}" class="tab-panel">
@@ -658,6 +718,7 @@ def build_causa_raiz_tab(tab_id, label, data):
       </div>
     </div>
 
+    {pedidos_html}
     {susp_html}
   </div>"""
 
@@ -669,6 +730,28 @@ def build_causa_raiz_js(tab_id, data):
     uf_data     = json.dumps(data["uf_data"])
     dec_labels  = json.dumps(["Favorável", "Desfavorável", "Neutro"], ensure_ascii=False)
     dec_data    = json.dumps([data["res_fav"], data["res_desf"], data["res_neutro"]])
+
+    pedidos_js = ""
+    if data.get("pedidos_ranking"):
+        ped_labels = json.dumps([p for p, _ in data["pedidos_ranking"]], ensure_ascii=False)
+        ped_data   = json.dumps([n for _, n in data["pedidos_ranking"]])
+        pedidos_js = f"""
+    new Chart(document.getElementById('chart_{tab_id}_pedidos'), {{
+      type: 'bar',
+      data: {{ labels: {ped_labels}, datasets: [{{ label:'Ocorrências', data: {ped_data},
+        backgroundColor: ['#7B1A2E','#0D2B5E','#0F9E76','#E67E22','#8E44AD',
+                          '#C0392B','#2563EB','#059669','#D97706','#7C3AED',
+                          '#B91C1C','#1D4ED8','#065F46','#92400E','#5B21B6'],
+        borderRadius: 5 }}] }},
+      options: {{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{{ legend:{{ display:false }},
+          tooltip:{{ callbacks:{{ label: ctx => ' ' + ctx.parsed.x + ' processos' }} }} }},
+        scales:{{
+          x:{{ grid:{{ color:'rgba(0,0,0,0.05)' }}, ticks:{{ font:{{ family:'IBM Plex Mono', size:10 }} }} }},
+          y:{{ grid:{{ display:false }}, ticks:{{ font:{{ family:'IBM Plex Mono', size:10 }}, color:'#3D2B2E' }} }}
+        }}
+      }}
+    }});"""
 
     return f"""
     // — {tab_id} charts —
@@ -692,7 +775,7 @@ def build_causa_raiz_js(tab_id, data):
         backgroundColor: '#7B1A2E', borderRadius: 4 }}] }},
       options: {{ responsive:true, plugins:{{ legend:{{ display:false }} }},
         scales:{{ x:{{ grid:{{ display:false }} }}, y:{{ grid:{{ color:'rgba(0,0,0,0.05)' }} }} }} }}
-    }});"""
+    }});{pedidos_js}"""
 
 
 def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1291,
@@ -702,7 +785,6 @@ def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1
     kpi_row1 = build_kpi_cards([
         ("Total Ativos",     fmt_br(kpis["ativos"]),     "processos", "", ""),
         ("Total Encerrados", fmt_br(kpis["encerrados"]), "processos", "", ""),
-        ("Total Arquivados", fmt_br(kpis["arquivados"]), "processos", "flat", ""),
         ("Novas Ações",      fmt_br(kpis["novos"]),      "novos casos", "up", "+Período"),
         ("Suspensos",        fmt_br(kpis["suspensos"]),  "total suspensos", "flat", ""),
     ])
