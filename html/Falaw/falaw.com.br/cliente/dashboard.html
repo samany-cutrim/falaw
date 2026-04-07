@@ -110,6 +110,7 @@
     }
     .nav-item.active, .nav-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
     .nav-item.active { color: var(--gold-l); }
+    .nav-item.hidden { display: none; }
     .nav-icon { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
 
     .sidebar-bottom { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.1); }
@@ -369,13 +370,73 @@
     .empty-title { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 700; color: rgba(232,235,240,0.5); margin-bottom: 8px; }
     .empty-text { font-size: 13px; line-height: 1.6; }
 
+    /* ── HAMBURGER ── */
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 40px; height: 40px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+    .hamburger span {
+      display: block;
+      width: 22px; height: 2px;
+      background: rgba(255,255,255,0.85);
+      border-radius: 2px;
+      transition: transform .25s, opacity .25s;
+    }
+
+    /* ── SIDEBAR OVERLAY ── */
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 99;
+    }
+    .sidebar-overlay.open { display: block; }
+
     /* ── MOBILE ── */
     @media (max-width: 768px) {
-      .sidebar { display: none; }
+      .hamburger { display: flex; }
+      .topbar { padding: 0 16px; }
+      .topbar-title { font-size: 10px; }
+
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform .28s cubic-bezier(.4,0,.2,1);
+        z-index: 200;
+      }
+      .sidebar.open { transform: translateX(0); }
+
       .main { margin-left: 0; }
+      .content { padding: 20px 16px; }
+
+      .stats-row { grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+      .stat-value { font-size: 22px; }
+
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .kpi-value { font-size: 22px; }
+
+      .charts-grid { grid-template-columns: 1fr; }
+
+      .reports-grid { grid-template-columns: 1fr; }
+
+      .page-header { margin-bottom: 20px; }
+
+      .nav-item { min-height: 44px; }
+      .btn-logout, .btn-back-site { min-height: 44px; }
+    }
+
+    @media (max-width: 400px) {
       .stats-row { grid-template-columns: 1fr; }
-      .content { padding: 24px 16px; }
-      .topbar { padding: 0 20px; }
+      .kpi-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -383,8 +444,11 @@
 
 <div class="layout">
 
+  <!-- SIDEBAR OVERLAY (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
   <!-- SIDEBAR -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-top">
       <div class="sidebar-logo">
         <img loading="lazy" src="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-branco.png" alt="Falaw Advogados" />
@@ -395,14 +459,18 @@
     </div>
 
     <nav class="sidebar-nav">
-      <div class="nav-item active" id="nav-dashboard" onclick="showTab('dashboard')">
+      <div class="nav-item active" id="nav-dashboard" onclick="showTab('dashboard');closeSidebar()">
         <span class="nav-icon">📊</span>
         Dashboard
       </div>
-      <div class="nav-item" id="nav-relatorios" onclick="showTab('relatorios')">
+      <div class="nav-item" id="nav-relatorios" onclick="showTab('relatorios');closeSidebar()">
         <span class="nav-icon">📁</span>
         Relatórios
       </div>
+      <a href="ifood.html" class="nav-item hidden" id="nav-ifood">
+        <span class="nav-icon">📈</span>
+        Dashboard iFood
+      </a>
     </nav>
 
     <div class="sidebar-bottom">
@@ -420,6 +488,9 @@
 
     <!-- TOPBAR -->
     <div class="topbar">
+      <button type="button" class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
       <span class="topbar-title">Falaw Advogados · <span id="topbarCompany">Portal</span></span>
       <div class="topbar-right">
         <span><span class="status-dot"></span>Sessão ativa</span>
@@ -510,6 +581,14 @@ function fmt(n) {
 function logout() {
   sessionStorage.removeItem('falaw_session');
   window.location.href = 'index.html';
+}
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
 }
 
 // Timeout de sessão: 30 min de inatividade → logout automático
@@ -887,6 +966,11 @@ async function init() {
   document.getElementById('sidebarName').textContent  = displayCompany;
   document.getElementById('sidebarEmail').textContent = displayEmail;
   document.getElementById('topbarCompany').textContent= displayCompany;
+
+  /* Mostrar link iFood apenas para o cliente iFood */
+  if ((client.company || session.company || '').toLowerCase().includes('ifood')) {
+    document.getElementById('nav-ifood').classList.remove('hidden');
+  }
 
   /* Page title */
   document.getElementById('pageTitle').textContent     = 'Olá, ' + displayName.split(' ')[0];

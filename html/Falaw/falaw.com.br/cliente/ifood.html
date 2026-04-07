@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard iFood — Falaw Advogados</title>
+  <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co; img-src 'self' data: blob: https:; frame-ancestors 'none';" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <!-- html2canvas + jsPDF (export) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- PptxGenJS (export PPT) -->
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/libs/pptxgen.bundle.js"></script>
+  <!-- Supabase config -->
+  <script src="../sb-config.js" onerror="void 0"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #F4F2EF;
+      --bg-card:   #FFFFFF;
+      --border:    rgba(0,0,0,0.08);
+      --border-h:  rgba(0,0,0,0.14);
+      --gold:      #7B1A2E;
+      --gold-l:    #9B2238;
+      --gold-dim:  rgba(123,26,46,0.12);
+      --text:      #1A0A0D;
+      --muted:     rgba(26,10,13,0.5);
+      --muted-l:   rgba(26,10,13,0.3);
+      --green:     #0F9E76;
+      --green-dim: rgba(15,158,118,0.1);
+      --red:       #C0392B;
+      --red-dim:   rgba(192,57,43,0.1);
+      --blue:      #2563EB;
+      --blue-dim:  rgba(37,99,235,0.1);
+      --sidebar-w: 260px;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
+
+    /* ── LAYOUT ── */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: linear-gradient(175deg, #0D2B5E 0%, #3D0F1D 100%);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+    }
+    .sidebar-top {
+      padding: 28px 24px 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .sidebar-logo img { height: 32px; width: auto; display: block; margin-bottom: 20px; }
+    .sidebar-client-badge {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--gold-l);
+      background: rgba(184,149,42,0.18);
+      border: 1px solid rgba(184,149,42,0.3);
+      padding: 3px 8px; border-radius: 2px;
+      display: inline-block; margin-bottom: 14px;
+    }
+    .sidebar-client-name { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: #fff; line-height: 1.3; margin-bottom: 3px; }
+    .sidebar-client-email { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; font-family: 'IBM Plex Mono', monospace; }
+
+    .sidebar-nav { flex: 1; padding: 20px 12px; }
+    .nav-section-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 8px; letter-spacing: .2em; text-transform: uppercase;
+      color: rgba(255,255,255,0.25);
+      padding: 0 12px; margin: 16px 0 8px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 6px;
+      font-size: 13px; color: rgba(255,255,255,0.55);
+      cursor: pointer; transition: background .15s, color .15s;
+      margin-bottom: 2px; user-select: none; text-decoration: none;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .nav-item.active { background: rgba(255,255,255,0.1); color: var(--gold-l); }
+    .nav-icon { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+
+    .sidebar-bottom { padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.1); }
+    .btn-back-site {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 10px 12px; background: none;
+      border: 1px solid rgba(255,255,255,0.2); border-radius: 6px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.7); text-decoration: none; margin-bottom: 8px;
+      transition: border-color .2s, background .2s;
+    }
+    .btn-back-site:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.4); color: #fff; }
+    .btn-logout {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 10px 12px; background: none;
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 6px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.45); cursor: pointer;
+      transition: border-color .2s, color .2s;
+    }
+    .btn-logout:hover { border-color: rgba(255,120,120,0.5); color: #ff9999; }
+
+    /* ── MAIN ── */
+    .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: linear-gradient(90deg, #0D2B5E 0%, #3D0F1D 100%);
+      padding: 0 32px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 16px; }
+    .topbar-badge {
+      font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+      letter-spacing: .18em; text-transform: uppercase;
+      color: #fff; background: var(--gold); padding: 3px 10px; border-radius: 2px;
+    }
+    .topbar-title { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,0.5); }
+    .topbar-title span { color: #fff; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .period-select {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .08em;
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      color: #fff; padding: 6px 12px; border-radius: 4px; cursor: pointer;
+      outline: none;
+    }
+    .period-select option { background: #1a1a2e; color: #fff; }
+    .btn-export {
+      display: flex; align-items: center; gap: 6px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .1em;
+      text-transform: uppercase; cursor: pointer; border-radius: 4px;
+      padding: 7px 14px; border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8);
+      transition: background .2s, border-color .2s;
+    }
+    .btn-export:hover { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.5); color: #fff; }
+
+    /* ── TAB BAR ── */
+    .tab-bar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      display: flex; padding: 0 32px; overflow-x: auto;
+      position: sticky; top: 60px; z-index: 40;
+    }
+    .tab-bar::-webkit-scrollbar { height: 2px; }
+    .tab-bar::-webkit-scrollbar-thumb { background: var(--gold); }
+    .tab-btn {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--muted);
+      padding: 0 20px; height: 48px;
+      display: flex; align-items: center; white-space: nowrap;
+      cursor: pointer; border-bottom: 2px solid transparent;
+      transition: color .2s, border-color .2s; flex-shrink: 0;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+    /* ── CONTENT ── */
+    .content { flex: 1; padding: 36px 32px 80px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── PAGE HEADER ── */
+    .page-header { margin-bottom: 32px; }
+    .page-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+    .page-title { font-family: 'Sora', sans-serif; font-size: clamp(20px, 2.5vw, 28px); font-weight: 800; color: var(--text); letter-spacing: -.02em; line-height: 1.1; margin-bottom: 6px; }
+    .page-subtitle { font-size: 13px; color: var(--muted); }
+
+    /* ── KPI GRID ── */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 32px; }
+    .kpi-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 18px 20px;
+      position: relative; overflow: hidden;
+    }
+    .kpi-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--gold), transparent);
+    }
+    .kpi-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    .kpi-value { font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 700; color: var(--text); line-height: 1; }
+    .kpi-unit { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 4px; }
+    .kpi-trend {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .04em;
+      margin-top: 8px; padding: 2px 6px; border-radius: 3px;
+    }
+    .kpi-trend.up   { background: var(--green-dim); color: var(--green); }
+    .kpi-trend.down { background: var(--red-dim);   color: var(--red); }
+    .kpi-trend.flat { background: rgba(0,0,0,0.04);  color: var(--muted); }
+    .kpi-empty-state {
+      grid-column: 1 / -1; text-align: center; padding: 40px 24px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--muted-l);
+    }
+
+    /* ── CHARTS GRID ── */
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px; margin-bottom: 32px; }
+    .chart-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 24px;
+    }
+    .chart-card-title {
+      font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700;
+      color: var(--text); margin-bottom: 20px;
+    }
+    .chart-wrap { position: relative; }
+    .chart-wrap canvas { max-height: 280px; }
+
+    /* ── ANALYSIS BLOCK ── */
+    .analysis-block {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 28px 32px; margin-bottom: 24px;
+    }
+    .analysis-block-header {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
+      padding-bottom: 14px; border-bottom: 1px solid var(--border);
+    }
+    .analysis-label {
+      font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .18em;
+      text-transform: uppercase; color: var(--gold);
+    }
+    .analysis-content { font-size: 14px; color: var(--text); line-height: 1.8; }
+    .analysis-content p { margin-bottom: 12px; }
+    .analysis-content p:last-child { margin-bottom: 0; }
+    .analysis-content strong { font-weight: 600; color: var(--text); }
+    .analysis-empty {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+      letter-spacing: .1em; text-transform: uppercase; color: var(--muted-l);
+      text-align: center; padding: 24px 0;
+    }
+
+    /* ── HIGHLIGHTS (Destaques) ── */
+    .highlights-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .highlight-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 24px;
+      border-left: 3px solid var(--gold);
+    }
+    .highlight-icon { font-size: 24px; margin-bottom: 12px; display: block; }
+    .highlight-title { font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .highlight-body { font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+    /* ── METAS (Goals) ── */
+    .meta-list { display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px; }
+    .meta-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; }
+    .meta-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+    .meta-label { font-weight: 600; font-size: 14px; color: var(--text); }
+    .meta-values { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--muted); }
+    .meta-bar-bg { background: rgba(0,0,0,0.06); border-radius: 4px; height: 8px; overflow: hidden; }
+    .meta-bar-fill { height: 100%; border-radius: 4px; transition: width .6s ease; background: linear-gradient(90deg, #0D2B5E, var(--gold)); }
+    .meta-note { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* ── PERIOD BANNER ── */
+    .period-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(90deg, rgba(13,43,94,0.06), rgba(123,26,46,0.06));
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px 20px; margin-bottom: 28px;
+    }
+    .period-banner-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .period-banner-value { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
+
+    /* ── NO DATA ── */
+    .no-data {
+      text-align: center; padding: 80px 32px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+      letter-spacing: .1em; text-transform: uppercase; color: var(--muted-l);
+    }
+    .no-data .no-data-icon { font-size: 40px; display: block; margin-bottom: 16px; opacity: .3; }
+
+    /* ── LOADING ── */
+    .loading-overlay {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px; z-index: 500;
+    }
+    .loading-spinner {
+      width: 36px; height: 36px; border: 3px solid var(--border);
+      border-top-color: var(--gold); border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: var(--text); color: #F4F2EF;
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+      padding: 14px 20px; border-radius: 4px; border-left: 3px solid var(--gold);
+      transform: translateY(20px); opacity: 0;
+      transition: opacity .3s, transform .3s; pointer-events: none; z-index: 9999;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ── EXPORT OVERLAY ── */
+    #export-overlay {
+      position: fixed; inset: 0; background: rgba(6,14,26,.7);
+      display: none; align-items: center; justify-content: center;
+      flex-direction: column; gap: 14px; z-index: 600;
+    }
+    #export-overlay.open { display: flex; }
+    #export-overlay .exp-text { font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: #fff; }
+
+    /* ── PRINT / CAPTURE HIDE ── */
+    @media print { .sidebar, .topbar, .tab-bar, .btn-export, .period-select { display: none !important; } .main { margin-left: 0 !important; } }
+
+    /* ── HAMBURGER ── */
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 40px; height: 40px;
+      background: none; border: none;
+      cursor: pointer; padding: 8px;
+      margin-right: 8px; flex-shrink: 0;
+    }
+    .hamburger span {
+      display: block; width: 22px; height: 2px;
+      background: rgba(255,255,255,0.85); border-radius: 2px;
+    }
+
+    /* ── SIDEBAR OVERLAY ── */
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55); z-index: 99;
+    }
+    .sidebar-overlay.open { display: block; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 768px) {
+      .hamburger { display: flex; }
+
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform .28s cubic-bezier(.4,0,.2,1);
+        z-index: 200;
+      }
+      .sidebar.open { transform: translateX(0); }
+
+      .main { margin-left: 0; }
+
+      .topbar { padding: 0 12px; gap: 8px; }
+      .topbar-left { gap: 8px; flex: 1; min-width: 0; overflow: hidden; }
+      .topbar-title { display: none; }
+      .topbar-right { gap: 6px; }
+      .btn-export { padding: 6px 10px; font-size: 8px; }
+      .period-select { padding: 5px 8px; font-size: 9px; max-width: 110px; }
+
+      .tab-bar { padding: 0 12px; }
+
+      .content { padding: 20px 14px 60px; }
+
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .kpi-value { font-size: 20px; }
+
+      .charts-grid { grid-template-columns: 1fr; gap: 14px; }
+
+      .highlights-grid { grid-template-columns: 1fr; }
+
+      .analysis-block { padding: 20px 18px; }
+
+      .period-banner { flex-direction: column; gap: 4px; align-items: flex-start; }
+
+      .page-header { margin-bottom: 20px; }
+
+      .nav-item { min-height: 44px; }
+      .btn-logout, .btn-back-site { min-height: 44px; }
+    }
+
+    @media (max-width: 400px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Carregando dashboard…</div>
+</div>
+
+<!-- Export overlay -->
+<div id="export-overlay">
+  <div class="loading-spinner" style="border-top-color:#fff"></div>
+  <div class="exp-text" id="export-msg">Gerando arquivo…</div>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR OVERLAY (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-logo">
+        <img src="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/Logo FALAW.png" alt="Falaw" onerror="this.style.display='none'" />
+      </div>
+      <div class="sidebar-client-badge">Cliente</div>
+      <div class="sidebar-client-name" id="sidebarName">—</div>
+      <div class="sidebar-client-email" id="sidebarEmail">—</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Portal</div>
+      <a href="dashboard.html" class="nav-item" onclick="closeSidebar()">
+        <span class="nav-icon">📋</span> Visão Geral
+      </a>
+      <a href="ifood.html" class="nav-item active" onclick="closeSidebar()">
+        <span class="nav-icon">📊</span> Dashboard iFood
+      </a>
+
+      <div class="nav-section-label" style="margin-top:24px">Conta</div>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <a href="../index.html" class="btn-back-site">
+        <span>←</span> Voltar ao site
+      </a>
+      <button type="button" class="btn-logout" onclick="logout()">
+        <span>⏻</span> Sair
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <!-- Topbar -->
+    <header class="topbar">
+      <button type="button" class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="topbar-left">
+        <span class="topbar-badge">iFood</span>
+        <span class="topbar-title">Dashboard de <span id="topbarCompany">—</span></span>
+      </div>
+      <div class="topbar-right">
+        <select class="period-select" id="periodSelect" onchange="onPeriodChange(this.value)">
+          <option value="">Carregando períodos…</option>
+        </select>
+        <button class="btn-export" onclick="exportarPDF()">⬇ PDF</button>
+        <button class="btn-export" onclick="exportarPPT()">⬇ PPT</button>
+      </div>
+    </header>
+
+    <!-- Tab bar -->
+    <nav class="tab-bar" id="tabBar">
+      <div class="tab-btn active" data-tab="visao-geral">Visão Geral</div>
+      <div class="tab-btn" data-tab="nuvem">Nuvem</div>
+      <div class="tab-btn" data-tab="op-logistico">Op. Logístico</div>
+      <div class="tab-btn" data-tab="ex-foodlover">Ex-Foodlover</div>
+      <div class="tab-btn" data-tab="terceirizacao">Terceirização</div>
+      <div class="tab-btn" data-tab="marketplace">Marketplace</div>
+      <div class="tab-btn" data-tab="destaques">Destaques do Mês</div>
+      <div class="tab-btn" data-tab="metas">Metas</div>
+    </nav>
+
+    <!-- Content -->
+    <div class="content" id="mainContent">
+
+      <!-- ── VISÃO GERAL ── -->
+      <div class="tab-panel active" id="panel-visao-geral">
+        <div class="period-banner" id="bannerVisaoGeral">
+          <div><div class="period-banner-label">Período de referência</div><div class="period-banner-value" id="periodLabelVisao">—</div></div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">Falaw Advogados · Gestão iFood</div>
+        </div>
+        <div class="page-header">
+          <div class="page-label">Visão Geral</div>
+          <div class="page-title">Panorama Geral dos Processos</div>
+          <div class="page-subtitle">Resumo consolidado de todos os processos iFood gerenciados pela Falaw.</div>
+        </div>
+        <div class="kpi-grid" id="kpis-visao-geral"></div>
+        <div class="charts-grid" id="charts-visao-geral"></div>
+        <div class="analysis-block" id="analysis-visao-geral">
+          <div class="analysis-block-header">
+            <span class="analysis-label">Análise — Visão Geral</span>
+          </div>
+          <div class="analysis-content" id="content-visao-geral">
+            <div class="analysis-empty">Nenhuma análise disponível para este período.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── NUVEM ── -->
+      <div class="tab-panel" id="panel-nuvem">
+        <div class="page-header">
+          <div class="page-label">Nuvem</div>
+          <div class="page-title">Processos — Nuvem</div>
+          <div class="page-subtitle">Dados consolidados da categoria Nuvem.</div>
+        </div>
+        <div class="kpi-grid" id="kpis-nuvem"></div>
+        <div class="charts-grid" id="charts-nuvem"></div>
+        <div class="analysis-block" id="analysis-nuvem">
+          <div class="analysis-block-header"><span class="analysis-label">Análise — Nuvem</span></div>
+          <div class="analysis-content" id="content-nuvem"><div class="analysis-empty">Nenhuma análise disponível para este período.</div></div>
+        </div>
+      </div>
+
+      <!-- ── OPERADOR LOGÍSTICO ── -->
+      <div class="tab-panel" id="panel-op-logistico">
+        <div class="page-header">
+          <div class="page-label">Operador Logístico</div>
+          <div class="page-title">Processos — Operador Logístico</div>
+          <div class="page-subtitle">Dados consolidados de processos envolvendo operadores logísticos.</div>
+        </div>
+        <div class="kpi-grid" id="kpis-op-logistico"></div>
+        <div class="charts-grid" id="charts-op-logistico"></div>
+        <div class="analysis-block">
+          <div class="analysis-block-header"><span class="analysis-label">Análise — Operador Logístico</span></div>
+          <div class="analysis-content" id="content-op-logistico"><div class="analysis-empty">Nenhuma análise disponível para este período.</div></div>
+        </div>
+      </div>
+
+      <!-- ── EX-FOODLOVER ── -->
+      <div class="tab-panel" id="panel-ex-foodlover">
+        <div class="page-header">
+          <div class="page-label">Ex-Foodlover</div>
+          <div class="page-title">Processos — Ex-Foodlover</div>
+          <div class="page-subtitle">Dados consolidados de processos movidos por ex-entregadores.</div>
+        </div>
+        <div class="kpi-grid" id="kpis-ex-foodlover"></div>
+        <div class="charts-grid" id="charts-ex-foodlover"></div>
+        <div class="analysis-block">
+          <div class="analysis-block-header"><span class="analysis-label">Análise — Ex-Foodlover</span></div>
+          <div class="analysis-content" id="content-ex-foodlover"><div class="analysis-empty">Nenhuma análise disponível para este período.</div></div>
+        </div>
+      </div>
+
+      <!-- ── TERCEIRIZAÇÃO ── -->
+      <div class="tab-panel" id="panel-terceirizacao">
+        <div class="page-header">
+          <div class="page-label">Terceirização</div>
+          <div class="page-title">Processos — Terceirização</div>
+          <div class="page-subtitle">Dados consolidados de processos relacionados à terceirização.</div>
+        </div>
+        <div class="kpi-grid" id="kpis-terceirizacao"></div>
+        <div class="charts-grid" id="charts-terceirizacao"></div>
+        <div class="analysis-block">
+          <div class="analysis-block-header"><span class="analysis-label">Análise — Terceirização</span></div>
+          <div class="analysis-content" id="content-terceirizacao"><div class="analysis-empty">Nenhuma análise disponível para este período.</div></div>
+        </div>
+      </div>
+
+      <!-- ── MARKETPLACE ── -->
+      <div class="tab-panel" id="panel-marketplace">
+        <div class="page-header">
+          <div class="page-label">Marketplace</div>
+          <div class="page-title">Processos — Marketplace</div>
+          <div class="page-subtitle">Dados consolidados de processos da categoria Marketplace.</div>
+        </div>
+        <div class="kpi-grid" id="kpis-marketplace"></div>
+        <div class="charts-grid" id="charts-marketplace"></div>
+        <div class="analysis-block">
+          <div class="analysis-block-header"><span class="analysis-label">Análise — Marketplace</span></div>
+          <div class="analysis-content" id="content-marketplace"><div class="analysis-empty">Nenhuma análise disponível para este período.</div></div>
+        </div>
+      </div>
+
+      <!-- ── DESTAQUES DO MÊS ── -->
+      <div class="tab-panel" id="panel-destaques">
+        <div class="page-header">
+          <div class="page-label">Destaques do Mês</div>
+          <div class="page-title" id="destaquesTitle">Destaques — <span id="destaquesMonth">—</span></div>
+          <div class="page-subtitle">Principais fatos e conquistas do período.</div>
+        </div>
+        <div class="highlights-grid" id="highlights-grid"></div>
+        <div class="analysis-block">
+          <div class="analysis-block-header"><span class="analysis-label">Comentários do período</span></div>
+          <div class="analysis-content" id="content-destaques"><div class="analysis-empty">Nenhum comentário para este período.</div></div>
+        </div>
+      </div>
+
+      <!-- ── METAS ── -->
+      <div class="tab-panel" id="panel-metas">
+        <div class="page-header">
+          <div class="page-label">Metas</div>
+          <div class="page-title">Metas e Objetivos</div>
+          <div class="page-subtitle">Acompanhamento das metas estabelecidas para o período.</div>
+        </div>
+        <div class="kpi-grid" id="kpis-metas"></div>
+        <div class="meta-list" id="meta-list"></div>
+        <div class="analysis-block">
+          <div class="analysis-block-header"><span class="analysis-label">Análise — Metas</span></div>
+          <div class="analysis-content" id="content-metas"><div class="analysis-empty">Nenhuma análise de metas para este período.</div></div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   CONSTANTS & GLOBALS
+═══════════════════════════════════════════════════════════ */
+const TAB_KEYS = ['visao-geral','nuvem','op-logistico','ex-foodlover','terceirizacao','marketplace','destaques','metas'];
+let sb = null;
+let currentPeriod = null;
+let allPeriods = [];
+let allKpis = [];
+let allContent = [];
+let allHighlights = [];
+const chartInstances = {};
+
+/* ═══════════════════════════════════════════════════════════
+   AUTH
+═══════════════════════════════════════════════════════════ */
+const _TIMEOUT = 30 * 60 * 1000;
+let _timer;
+function resetTimer() { clearTimeout(_timer); _timer = setTimeout(logout, _TIMEOUT); }
+['click','keydown','mousemove','touchstart'].forEach(ev => document.addEventListener(ev, resetTimer, { passive: true }));
+
+function logout() {
+  sessionStorage.removeItem('falaw_session');
+  window.location.href = 'index.html';
+}
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SUPABASE INIT
+═══════════════════════════════════════════════════════════ */
+function initSB() {
+  const url = (window.SB_URL || '').trim();
+  const key = (window.SB_KEY || '').trim();
+  if (url && key && typeof supabase !== 'undefined') {
+    sb = supabase.createClient(url, key);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DATA LOADING
+═══════════════════════════════════════════════════════════ */
+async function loadPeriods() {
+  if (!sb) return [];
+  const { data, error } = await sb.from('ifood_periods').select('*').order('month_year', { ascending: false });
+  if (error) { console.warn('ifood_periods:', error.message); return []; }
+  return data || [];
+}
+
+async function loadKpis(periodId) {
+  if (!sb || !periodId) return [];
+  const { data, error } = await sb.from('ifood_kpis').select('*').eq('period_id', periodId).order('sort_order');
+  if (error) { console.warn('ifood_kpis:', error.message); return []; }
+  return data || [];
+}
+
+async function loadContent(periodId) {
+  if (!sb || !periodId) return [];
+  const { data, error } = await sb.from('ifood_content').select('*').eq('period_id', periodId);
+  if (error) { console.warn('ifood_content:', error.message); return []; }
+  return data || [];
+}
+
+async function loadHighlights(periodId) {
+  if (!sb || !periodId) return [];
+  const { data, error } = await sb.from('ifood_highlights').select('*').eq('period_id', periodId).order('sort_order');
+  if (error) { console.warn('ifood_highlights:', error.message); return []; }
+  return data || [];
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER HELPERS
+═══════════════════════════════════════════════════════════ */
+function trendHtml(pct) {
+  if (pct == null) return '';
+  const n = parseFloat(pct);
+  if (isNaN(n)) return '';
+  const cls = n > 0 ? 'up' : n < 0 ? 'down' : 'flat';
+  const arrow = n > 0 ? '↑' : n < 0 ? '↓' : '—';
+  return `<div class="kpi-trend ${cls}">${arrow} ${Math.abs(n).toFixed(1)}%</div>`;
+}
+
+function renderKpis(tabKey, kpis) {
+  const el = document.getElementById('kpis-' + tabKey);
+  if (!el) return;
+  const filtered = kpis.filter(k => k.tab_key === tabKey);
+  if (!filtered.length) {
+    el.innerHTML = '<div class="kpi-empty-state">Nenhum indicador disponível para este período.</div>';
+    return;
+  }
+  el.innerHTML = filtered.map(k => `
+    <div class="kpi-card">
+      <div class="kpi-label">${escHtml(k.label)}</div>
+      <div class="kpi-value">${escHtml(k.value)}</div>
+      ${k.unit ? `<div class="kpi-unit">${escHtml(k.unit)}</div>` : ''}
+      ${trendHtml(k.trend_pct)}
+    </div>`).join('');
+}
+
+function renderCharts(tabKey, kpis) {
+  const el = document.getElementById('charts-' + tabKey);
+  if (!el) return;
+  const withCharts = kpis.filter(k => k.tab_key === tabKey && k.chart_data);
+  if (!withCharts.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = withCharts.map((k, i) => `
+    <div class="chart-card">
+      <div class="chart-card-title">${escHtml(k.chart_title || k.label)}</div>
+      <div class="chart-wrap"><canvas id="chart-${tabKey}-${i}"></canvas></div>
+    </div>`).join('');
+
+  withCharts.forEach((k, i) => {
+    const canvasId = `chart-${tabKey}-${i}`;
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+    // Destroy previous instance if exists
+    if (chartInstances[canvasId]) { chartInstances[canvasId].destroy(); }
+    try {
+      const cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data;
+      applyFalawTheme(cfg);
+      chartInstances[canvasId] = new Chart(ctx, cfg);
+    } catch(e) { console.warn('Chart error:', e); }
+  });
+}
+
+function applyFalawTheme(cfg) {
+  const palette = ['#7B1A2E','#0D2B5E','#0F9E76','#E67E22','#8E44AD','#2563EB','#C0392B','#1ABC9C'];
+  if (!cfg || !cfg.data) return;
+  if (cfg.data.datasets) {
+    cfg.data.datasets.forEach((ds, i) => {
+      if (!ds.backgroundColor || (Array.isArray(ds.backgroundColor) && ds.backgroundColor.length === 0)) {
+        ds.backgroundColor = cfg.type === 'line' ? palette[i % palette.length] + '22' : palette[i % palette.length];
+      }
+      if (cfg.type === 'line' && !ds.borderColor) {
+        ds.borderColor = palette[i % palette.length];
+        ds.pointBackgroundColor = palette[i % palette.length];
+        ds.tension = ds.tension ?? 0.3;
+      }
+    });
+  }
+  cfg.options = cfg.options || {};
+  cfg.options.responsive = true;
+  cfg.options.plugins = cfg.options.plugins || {};
+  cfg.options.plugins.legend = cfg.options.plugins.legend || { labels: { font: { family: 'IBM Plex Mono', size: 10 }, color: 'rgba(26,10,13,0.6)' } };
+  cfg.options.plugins.tooltip = cfg.options.plugins.tooltip || { titleFont: { family: 'IBM Plex Mono' }, bodyFont: { family: 'Inter' } };
+}
+
+function renderContent(tabKey, contentArr) {
+  const el = document.getElementById('content-' + tabKey);
+  if (!el) return;
+  const row = contentArr.find(c => c.tab_key === tabKey);
+  if (!row || !row.content_html || !row.content_html.trim()) {
+    el.innerHTML = '<div class="analysis-empty">Nenhuma análise disponível para este período.</div>';
+    return;
+  }
+  // Render raw HTML (written by trusted admin staff only)
+  el.innerHTML = row.content_html;
+}
+
+function renderHighlights(highlights) {
+  const el = document.getElementById('highlights-grid');
+  if (!el) return;
+  if (!highlights.length) {
+    el.innerHTML = '<div class="no-data"><span class="no-data-icon">✦</span>Nenhum destaque para este período.</div>';
+    return;
+  }
+  el.innerHTML = highlights.map(h => `
+    <div class="highlight-card">
+      <span class="highlight-icon">${escHtml(h.icon || '★')}</span>
+      <div class="highlight-title">${escHtml(h.title)}</div>
+      <div class="highlight-body">${escHtml(h.body)}</div>
+    </div>`).join('');
+}
+
+function renderMetas(kpis) {
+  const metaEl = document.getElementById('meta-list');
+  if (!metaEl) return;
+  const metas = kpis.filter(k => k.tab_key === 'metas' && k.chart_data);
+  if (!metas.length) { metaEl.innerHTML = ''; return; }
+  metaEl.innerHTML = metas.map(k => {
+    let pct = 0, current = '', target = '';
+    try {
+      const d = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data;
+      pct = Math.min(100, Math.max(0, parseFloat(d.pct || 0)));
+      current = d.current || k.value || '';
+      target = d.target || '';
+    } catch(e) { pct = 0; }
+    return `
+      <div class="meta-card">
+        <div class="meta-header">
+          <div class="meta-label">${escHtml(k.label)}</div>
+          <div class="meta-values">${escHtml(current)}${target ? ' / ' + escHtml(target) : ''}</div>
+        </div>
+        <div class="meta-bar-bg"><div class="meta-bar-fill" style="width:${pct}%"></div></div>
+        ${k.unit ? `<div class="meta-note">${escHtml(k.unit)}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function escHtml(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PERIOD MANAGEMENT
+═══════════════════════════════════════════════════════════ */
+function populatePeriodSelect(periods) {
+  const sel = document.getElementById('periodSelect');
+  if (!periods.length) {
+    sel.innerHTML = '<option value="">Nenhum período disponível</option>';
+    return;
+  }
+  sel.innerHTML = periods.map(p =>
+    `<option value="${escHtml(p.id)}"${p.is_active ? ' selected' : ''}>${escHtml(p.label)}</option>`
+  ).join('');
+  // Select active or first
+  const active = periods.find(p => p.is_active) || periods[0];
+  sel.value = active.id;
+}
+
+async function onPeriodChange(periodId) {
+  if (!periodId) return;
+  currentPeriod = allPeriods.find(p => p.id === periodId);
+  await loadAndRenderPeriod(periodId);
+}
+
+async function loadAndRenderPeriod(periodId) {
+  showToast('Carregando dados do período…');
+  [allKpis, allContent, allHighlights] = await Promise.all([
+    loadKpis(periodId),
+    loadContent(periodId),
+    loadHighlights(periodId)
+  ]);
+  renderAllTabs();
+  updatePeriodLabels();
+}
+
+function renderAllTabs() {
+  TAB_KEYS.forEach(tab => {
+    if (tab === 'destaques') return;
+    if (tab === 'metas') {
+      renderKpis('metas', allKpis);
+      renderMetas(allKpis);
+      renderContent('metas', allContent);
+      return;
+    }
+    renderKpis(tab, allKpis);
+    renderCharts(tab, allKpis);
+    renderContent(tab, allContent);
+  });
+  renderHighlights(allHighlights);
+  renderContent('destaques', allContent);
+}
+
+function updatePeriodLabels() {
+  const label = currentPeriod ? currentPeriod.label : '—';
+  const el = document.getElementById('periodLabelVisao');
+  if (el) el.textContent = label;
+  const dm = document.getElementById('destaquesMonth');
+  if (dm) dm.textContent = label;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TAB SWITCHING
+═══════════════════════════════════════════════════════════ */
+document.getElementById('tabBar').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + btn.dataset.tab)?.classList.add('active');
+});
+
+/* ═══════════════════════════════════════════════════════════
+   EXPORT — PDF
+═══════════════════════════════════════════════════════════ */
+async function exportarPDF() {
+  const activePanel = document.querySelector('.tab-panel.active');
+  const activeTabBtn = document.querySelector('.tab-btn.active');
+  if (!activePanel) return;
+  showExportOverlay('Gerando PDF…');
+  try {
+    const canvas = await html2canvas(activePanel, { scale: 2, useCORS: true, backgroundColor: '#F4F2EF' });
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pW = pdf.internal.pageSize.getWidth();
+    const pH = pdf.internal.pageSize.getHeight();
+    const cW = canvas.width, cH = canvas.height;
+    const ratio = Math.min(pW / cW, pH / cH);
+    const imgW = cW * ratio, imgH = cH * ratio;
+    const x = (pW - imgW) / 2, y = (pH - imgH) / 2;
+    pdf.addImage(imgData, 'JPEG', x, y, imgW, imgH);
+    const tabName = (activeTabBtn ? activeTabBtn.textContent.trim() : 'dashboard').replace(/\s+/g, '-').toLowerCase();
+    const period = currentPeriod ? currentPeriod.label.replace(/\s+/g,'-') : 'periodo';
+    pdf.save(`falaw-ifood-${period}-${tabName}.pdf`);
+  } catch(e) { console.error(e); showToast('Erro ao gerar PDF.'); }
+  hideExportOverlay();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EXPORT — PPT (full report, all tabs)
+═══════════════════════════════════════════════════════════ */
+async function exportarPPT() {
+  showExportOverlay('Gerando apresentação PPT…');
+  try {
+    const pptx = new PptxGenJS();
+    pptx.layout = 'LAYOUT_WIDE';
+
+    // Slide de capa
+    const capa = pptx.addSlide();
+    capa.background = { color: '0D2B5E' };
+    capa.addText('Falaw Advogados', { x: 0.5, y: 1.2, w: 12, h: 0.7, fontSize: 32, bold: true, color: 'FFFFFF', fontFace: 'Arial' });
+    capa.addText('Dashboard iFood — ' + (currentPeriod ? currentPeriod.label : ''), { x: 0.5, y: 2.1, w: 12, h: 0.5, fontSize: 18, color: 'AABBCC', fontFace: 'Arial' });
+    capa.addText('Relatório gerado em ' + new Date().toLocaleDateString('pt-BR'), { x: 0.5, y: 6.5, w: 12, h: 0.3, fontSize: 11, color: '7B8EA0', fontFace: 'Arial' });
+    capa.addShape(pptx.ShapeType.rect, { x: 0, y: 6.95, w: 13.33, h: 0.05, fill: { color: '7B1A2E' } });
+
+    // Slides por aba
+    const tabLabels = { 'visao-geral':'Visão Geral','nuvem':'Nuvem','op-logistico':'Op. Logístico','ex-foodlover':'Ex-Foodlover','terceirizacao':'Terceirização','marketplace':'Marketplace','destaques':'Destaques do Mês','metas':'Metas' };
+    for (const tabKey of TAB_KEYS) {
+      const panel = document.getElementById('panel-' + tabKey);
+      if (!panel) continue;
+      // Capture panel as image
+      const canvas = await html2canvas(panel, { scale: 1.5, useCORS: true, backgroundColor: '#F4F2EF' });
+      const imgData = canvas.toDataURL('image/jpeg', 0.88);
+      const slide = pptx.addSlide();
+      slide.background = { color: 'F4F2EF' };
+      // Header bar
+      slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.55, fill: { color: '0D2B5E' } });
+      slide.addText((tabLabels[tabKey] || tabKey).toUpperCase(), { x: 0.3, y: 0.05, w: 9, h: 0.45, fontSize: 11, bold: true, color: 'FFFFFF', fontFace: 'Arial', valign: 'middle' });
+      if (currentPeriod) {
+        slide.addText(currentPeriod.label, { x: 9, y: 0.05, w: 4, h: 0.45, fontSize: 10, color: 'AABBCC', fontFace: 'Arial', align: 'right', valign: 'middle' });
+      }
+      // Content image
+      const cW = canvas.width, cH = canvas.height;
+      const maxW = 13.0, maxH = 6.7;
+      const ratio = Math.min(maxW / (cW / 72), maxH / (cH / 72));
+      const iW = (cW / 72) * ratio, iH = (cH / 72) * ratio;
+      slide.addImage({ data: imgData, x: 0.15, y: 0.65, w: Math.min(iW, maxW), h: Math.min(iH, maxH) });
+    }
+
+    const period = currentPeriod ? currentPeriod.label.replace(/\s+/g,'-') : 'periodo';
+    await pptx.writeFile({ fileName: `falaw-ifood-${period}.pptx` });
+  } catch(e) { console.error(e); showToast('Erro ao gerar PPT.'); }
+  hideExportOverlay();
+}
+
+function showExportOverlay(msg) {
+  document.getElementById('export-msg').textContent = msg;
+  document.getElementById('export-overlay').classList.add('open');
+}
+function hideExportOverlay() {
+  document.getElementById('export-overlay').classList.remove('open');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════════ */
+let _toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════ */
+async function init() {
+  const raw = sessionStorage.getItem('falaw_session');
+  if (!raw) { window.location.href = 'index.html'; return; }
+  const session = JSON.parse(raw);
+
+  // Guard: apenas clientes iFood têm acesso a esta página
+  const isIfood = (session.company || '').toLowerCase().includes('ifood');
+  if (!isIfood) { window.location.href = 'dashboard.html'; return; }
+  resetTimer();
+
+  // Sidebar labels
+  const displayCompany = (session.company || session.name || '—').trim();
+  const displayEmail   = (session.email || '—').trim();
+  document.getElementById('sidebarName').textContent  = displayCompany;
+  document.getElementById('sidebarEmail').textContent = displayEmail;
+  document.getElementById('topbarCompany').textContent = displayCompany;
+
+  initSB();
+
+  if (!sb) {
+    document.getElementById('loadingOverlay').style.display = 'none';
+    showToast('Supabase não configurado. Configure em Configurações no admin.');
+    return;
+  }
+
+  // Load periods
+  allPeriods = await loadPeriods();
+  populatePeriodSelect(allPeriods);
+
+  const activePeriod = allPeriods.find(p => p.is_active) || allPeriods[0];
+  if (activePeriod) {
+    currentPeriod = activePeriod;
+    document.getElementById('periodSelect').value = activePeriod.id;
+    await loadAndRenderPeriod(activePeriod.id);
+  } else {
+    renderAllTabs(); // renders empty states
+  }
+
+  document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>

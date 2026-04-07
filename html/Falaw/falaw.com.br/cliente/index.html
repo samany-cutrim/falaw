@@ -259,6 +259,20 @@
       color: var(--text);
       border-color: rgba(255,255,255,0.25);
     }
+
+    /* ── MOBILE ── */
+    @media (max-width: 480px) {
+      body { overflow: auto; align-items: flex-start; padding-top: 64px; padding-bottom: 32px; }
+      .login-wrap { padding: 12px; }
+      .login-card { padding: 32px 24px 28px; }
+      .login-logo img { height: 52px; }
+      .login-logo { margin-bottom: 24px; }
+      .login-title { font-size: 19px; }
+      .login-subtitle { margin-bottom: 24px; }
+      .form-input { padding: 13px 14px; min-height: 48px; font-size: 16px; /* prevents iOS zoom */ }
+      .btn-login { padding: 15px; min-height: 48px; }
+      .btn-back { top: 12px; left: 12px; }
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="../sb-config.js" onerror="void 0"></script>
@@ -413,7 +427,9 @@ async function handleLogin(e) {
       email: client.email,
       loginAt: new Date().toISOString()
     }));
-    window.location.href = 'dashboard.html';
+    // iFood client vai direto para o dashboard iFood
+    const isIfood = (client.company || '').toLowerCase().includes('ifood');
+    window.location.href = isIfood ? 'ifood.html' : 'dashboard.html';
   } else {
     const l = _getCLILock();
     l.attempts++;
@@ -433,8 +449,13 @@ async function handleLogin(e) {
 
 // Redirect if already logged in
 (function() {
-  const s = sessionStorage.getItem('falaw_session');
-  if (s) window.location.href = 'dashboard.html';
+  const raw = sessionStorage.getItem('falaw_session');
+  if (!raw) return;
+  try {
+    const s = JSON.parse(raw);
+    const isIfood = (s.company || '').toLowerCase().includes('ifood');
+    window.location.href = isIfood ? 'ifood.html' : 'dashboard.html';
+  } catch { window.location.href = 'dashboard.html'; }
 })();
 </script>
 

@@ -639,6 +639,35 @@
       padding: 2px 8px;
       border-radius: 2px;
     }
+
+    /* ── MOBILE ── */
+    @media (max-width: 768px) {
+      /* Login */
+      .login-box { padding: 32px 20px 28px; }
+      .login-box input { font-size: 16px; min-height: 48px; } /* prevent iOS zoom */
+      .login-box button { min-height: 48px; }
+
+      /* Nav */
+      .admin-nav { padding: 0 12px; height: auto; min-height: 56px; flex-wrap: wrap; }
+      .admin-nav-brand { margin-right: 12px; font-size: 12px; }
+      .admin-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 2px; width: 100%; }
+      .admin-tab { padding: 0 12px; flex-shrink: 0; font-size: 9px; height: 44px; }
+      .admin-logout { margin-left: auto; }
+
+      /* Body */
+      .admin-body { padding: 20px 16px 60px; }
+
+      /* Section header */
+      .section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+
+      /* Item cards */
+      .item-card { flex-direction: column; gap: 12px; }
+      .item-card-actions { align-self: flex-start; }
+
+      /* Modals */
+      .modal-overlay { padding: 12px; align-items: flex-end; }
+      .modal { max-height: 95vh; border-radius: 4px 4px 0 0; }
+    }
   </style>
 </head>
 <body>
@@ -675,6 +704,7 @@
       <div class="admin-tab" onclick="switchTab('contato')">Contato</div>
       <div class="admin-tab" onclick="switchTab('clientes')">Clientes</div>
       <div class="admin-tab" onclick="switchTab('curriculos')">Currículos</div>
+      <div class="admin-tab" onclick="switchTab('ifood')">iFood</div>
       <div class="admin-tab" onclick="switchTab('config')">Configurações</div>
     </div>
     <button class="admin-logout" onclick="doLogout()">Sair</button>
@@ -885,6 +915,269 @@
       </div>
     </section>
 
+    <!-- ── IFOOD ── -->
+    <section id="tab-ifood" class="admin-section">
+      <div class="section-header">
+        <h2>iFood — Gestão do Dashboard</h2>
+        <button type="button" class="btn btn-primary" onclick="ifoodOpenPeriodModal()">+ Novo Período</button>
+      </div>
+
+      <!-- Sub-nav dentro da aba iFood -->
+      <div style="display:flex;gap:0;border-bottom:1px solid var(--c-divider);margin-bottom:28px;" id="ifoodSubNav">
+        <div class="admin-tab active" style="height:44px;font-size:9px;" onclick="ifoodSubTab('periods')">Períodos</div>
+        <div class="admin-tab"        style="height:44px;font-size:9px;" onclick="ifoodSubTab('kpis')">KPIs / Gráficos</div>
+        <div class="admin-tab"        style="height:44px;font-size:9px;" onclick="ifoodSubTab('content')">Textos das Abas</div>
+        <div class="admin-tab"        style="height:44px;font-size:9px;" onclick="ifoodSubTab('highlights')">Destaques do Mês</div>
+        <div class="admin-tab"        style="height:44px;font-size:9px;" onclick="ifoodSubTab('excel')">Upload Excel</div>
+      </div>
+
+      <!-- SUB: PERÍODOS -->
+      <div id="ifood-sub-periods">
+        <p style="font-size:13px;color:var(--c-muted);margin-bottom:20px;">Cada período corresponde a um mês de relatório. O período marcado como <strong>ativo</strong> é o que aparece por padrão no dashboard do cliente.</p>
+        <div id="ifood-periods-list"><div class="empty-state"><p>Carregando períodos…</p></div></div>
+      </div>
+
+      <!-- SUB: KPIs -->
+      <div id="ifood-sub-kpis" style="display:none">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
+          <div class="form-field" style="margin:0;flex:1;min-width:200px">
+            <label>Período</label>
+            <select id="ifood-kpi-period" onchange="ifoodLoadKpis()" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;">
+              <option value="">— Selecione —</option>
+            </select>
+          </div>
+          <div class="form-field" style="margin:0;flex:1;min-width:180px">
+            <label>Aba</label>
+            <select id="ifood-kpi-tab" onchange="ifoodLoadKpis()" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;">
+              <option value="visao-geral">Visão Geral</option>
+              <option value="nuvem">Nuvem</option>
+              <option value="op-logistico">Op. Logístico</option>
+              <option value="ex-foodlover">Ex-Foodlover</option>
+              <option value="terceirizacao">Terceirização</option>
+              <option value="marketplace">Marketplace</option>
+              <option value="metas">Metas</option>
+            </select>
+          </div>
+          <div style="align-self:flex-end;padding-bottom:0">
+            <button type="button" class="btn btn-primary" onclick="ifoodOpenKpiModal()">+ Adicionar KPI</button>
+          </div>
+        </div>
+        <div id="ifood-kpis-list"></div>
+      </div>
+
+      <!-- SUB: TEXTOS -->
+      <div id="ifood-sub-content" style="display:none">
+        <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;">
+          <div class="form-field" style="margin:0;flex:1;min-width:200px">
+            <label>Período</label>
+            <select id="ifood-cnt-period" onchange="ifoodLoadContent()" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;">
+              <option value="">— Selecione —</option>
+            </select>
+          </div>
+          <div class="form-field" style="margin:0;flex:1;min-width:180px">
+            <label>Aba</label>
+            <select id="ifood-cnt-tab" onchange="ifoodLoadContent()" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;">
+              <option value="visao-geral">Visão Geral</option>
+              <option value="nuvem">Nuvem</option>
+              <option value="op-logistico">Op. Logístico</option>
+              <option value="ex-foodlover">Ex-Foodlover</option>
+              <option value="terceirizacao">Terceirização</option>
+              <option value="marketplace">Marketplace</option>
+              <option value="destaques">Destaques do Mês</option>
+              <option value="metas">Metas</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Texto / Análise (HTML aceito: &lt;p&gt;, &lt;strong&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;br&gt;)</label>
+          <textarea id="ifood-cnt-editor" rows="12" placeholder="Digite aqui a análise escrita para esta aba. Você pode usar HTML básico: &lt;p&gt;Parágrafo&lt;/p&gt;, &lt;strong&gt;negrito&lt;/strong&gt;, &lt;ul&gt;&lt;li&gt;item&lt;/li&gt;&lt;/ul&gt;"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button type="button" class="btn btn-primary" onclick="ifoodSaveContent()">Salvar Texto</button>
+          <button type="button" class="btn btn-ghost" onclick="ifoodPreviewContent()">Pré-visualizar</button>
+        </div>
+        <div id="ifood-cnt-preview" style="display:none;margin-top:20px;background:#fff;border:1px solid var(--c-divider);border-radius:4px;padding:24px;font-size:14px;line-height:1.8;"></div>
+      </div>
+
+      <!-- SUB: DESTAQUES -->
+      <div id="ifood-sub-highlights" style="display:none">
+        <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;">
+          <div class="form-field" style="margin:0;flex:1;min-width:200px">
+            <label>Período</label>
+            <select id="ifood-hl-period" onchange="ifoodLoadHighlights()" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;">
+              <option value="">— Selecione —</option>
+            </select>
+          </div>
+          <div style="align-self:flex-end">
+            <button type="button" class="btn btn-primary" onclick="ifoodOpenHighlightModal()">+ Adicionar Destaque</button>
+          </div>
+        </div>
+        <div id="ifood-hl-list"></div>
+      </div>
+
+      <!-- SUB: EXCEL -->
+      <div id="ifood-sub-excel" style="display:none">
+        <p style="font-size:13px;color:var(--c-muted);margin-bottom:20px;">Faça upload da planilha Excel do iFood. Os dados serão extraídos e armazenados. O arquivo <strong>não ficará acessível</strong> para o cliente — apenas os dados processados aparecem no dashboard.</p>
+        <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;">
+          <div class="form-field" style="margin:0;flex:1;min-width:200px">
+            <label>Período *</label>
+            <select id="ifood-xl-period" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;">
+              <option value="">— Selecione um período —</option>
+            </select>
+          </div>
+          <div class="form-field" style="margin:0;flex:1;min-width:200px">
+            <label>Arquivo Excel (.xlsx / .xls) *</label>
+            <input type="file" id="ifood-xl-file" accept=".xlsx,.xls" onchange="ifoodPreviewExcel(this)" style="padding:10px 14px;border:1px solid var(--c-divider);border-radius:2px;width:100%;background:#fafaf8;" />
+          </div>
+        </div>
+        <div id="ifood-xl-preview" style="display:none;margin-bottom:16px">
+          <label style="display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:10px">Pré-visualização (primeiras linhas)</label>
+          <div style="overflow:auto;max-height:320px;border:1px solid var(--c-divider);border-radius:4px;background:#fff">
+            <table id="ifood-xl-table" style="width:100%;border-collapse:collapse;font-size:12px;font-family:var(--f-mono)">
+            </table>
+          </div>
+          <p style="font-size:11px;color:var(--c-muted);margin-top:8px">Exibindo as primeiras 20 linhas. O arquivo completo será processado ao salvar.</p>
+        </div>
+        <div id="ifood-xl-status" style="display:none;font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-bottom:12px;"></div>
+        <button type="button" class="btn btn-primary" onclick="ifoodSaveExcel()">Salvar dados no Supabase</button>
+      </div>
+
+      <!-- MODAL: Período -->
+      <div class="modal-overlay" id="ifoodPeriodModal" onclick="if(event.target===this)ifoodClosePeriodModal()">
+        <div class="modal" style="max-width:480px">
+          <div class="modal-header">
+            <h3 id="ifoodPeriodModalTitle">Novo Período</h3>
+            <button class="modal-close" onclick="ifoodClosePeriodModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="ifp-id" />
+            <div class="form-field">
+              <label>Rótulo *</label>
+              <input id="ifp-label" type="text" placeholder="Ex: Fevereiro 2026" />
+            </div>
+            <div class="form-field">
+              <label>Mês/Ano (YYYY-MM) *</label>
+              <input id="ifp-month" type="month" />
+            </div>
+            <div class="form-field" style="display:flex;align-items:center;gap:10px">
+              <input id="ifp-active" type="checkbox" style="width:18px;height:18px;cursor:pointer" />
+              <label style="text-transform:none;letter-spacing:0;font-family:var(--f-body);font-size:14px;color:var(--c-dark);cursor:pointer" for="ifp-active">Definir como período ativo (aparece por padrão no dashboard)</label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="ifoodClosePeriodModal()">Cancelar</button>
+            <button class="btn btn-primary" onclick="ifoodSavePeriod()">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: KPI -->
+      <div class="modal-overlay" id="ifoodKpiModal" onclick="if(event.target===this)ifoodCloseKpiModal()">
+        <div class="modal" style="max-width:560px">
+          <div class="modal-header">
+            <h3 id="ifoodKpiModalTitle">Novo KPI</h3>
+            <button class="modal-close" onclick="ifoodCloseKpiModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="ifk-id" />
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="form-field">
+                <label>Período *</label>
+                <select id="ifk-period" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;"></select>
+              </div>
+              <div class="form-field">
+                <label>Aba *</label>
+                <select id="ifk-tab" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;">
+                  <option value="visao-geral">Visão Geral</option>
+                  <option value="nuvem">Nuvem</option>
+                  <option value="op-logistico">Op. Logístico</option>
+                  <option value="ex-foodlover">Ex-Foodlover</option>
+                  <option value="terceirizacao">Terceirização</option>
+                  <option value="marketplace">Marketplace</option>
+                  <option value="metas">Metas</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Chave única (sem espaços, ex: total_processos) *</label>
+              <input id="ifk-key" type="text" placeholder="total_processos" />
+            </div>
+            <div class="form-field">
+              <label>Rótulo (exibido no card) *</label>
+              <input id="ifk-label" type="text" placeholder="Total de Processos" />
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+              <div class="form-field">
+                <label>Valor *</label>
+                <input id="ifk-value" type="text" placeholder="1.234" />
+              </div>
+              <div class="form-field">
+                <label>Unidade</label>
+                <input id="ifk-unit" type="text" placeholder="processos" />
+              </div>
+              <div class="form-field">
+                <label>Variação % (ex: 5.2 ou -3.1)</label>
+                <input id="ifk-trend" type="number" step="0.1" placeholder="0.0" />
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Ordem de exibição</label>
+              <input id="ifk-order" type="number" value="0" min="0" />
+            </div>
+            <div class="form-field">
+              <label>Título do gráfico (opcional — preencher ativa o gráfico)</label>
+              <input id="ifk-chart-title" type="text" placeholder="Processos por TRT" />
+            </div>
+            <div class="form-field">
+              <label>Dados do gráfico (JSON Chart.js — opcional)</label>
+              <textarea id="ifk-chart-data" rows="6" placeholder='{"type":"bar","data":{"labels":["TRT2","TRT15"],"datasets":[{"label":"Processos","data":[120,80]}]}}'></textarea>
+              <small style="color:var(--c-muted)">Formato: JSON compatível com Chart.js 4. Deixe em branco para não exibir gráfico.</small>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="ifoodCloseKpiModal()">Cancelar</button>
+            <button class="btn btn-primary" onclick="ifoodSaveKpi()">Salvar KPI</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Destaque -->
+      <div class="modal-overlay" id="ifoodHlModal" onclick="if(event.target===this)ifoodCloseHlModal()">
+        <div class="modal" style="max-width:500px">
+          <div class="modal-header">
+            <h3 id="ifoodHlModalTitle">Novo Destaque</h3>
+            <button class="modal-close" onclick="ifoodCloseHlModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="ifh-id" />
+            <input type="hidden" id="ifh-period" />
+            <div style="display:grid;grid-template-columns:80px 1fr;gap:16px">
+              <div class="form-field">
+                <label>Ícone (emoji)</label>
+                <input id="ifh-icon" type="text" placeholder="🏆" maxlength="4" style="font-size:20px;text-align:center" />
+              </div>
+              <div class="form-field">
+                <label>Título *</label>
+                <input id="ifh-title" type="text" placeholder="Vitória relevante em TRT" />
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Descrição</label>
+              <textarea id="ifh-body" rows="4" placeholder="Descreva o destaque em detalhes…"></textarea>
+            </div>
+            <div class="form-field">
+              <label>Ordem de exibição</label>
+              <input id="ifh-order" type="number" value="0" min="0" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="ifoodCloseHlModal()">Cancelar</button>
+            <button class="btn btn-primary" onclick="ifoodSaveHighlight()">Salvar</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ── CONFIG ── -->
     <section id="tab-config" class="admin-section">
       <div class="section-header">
@@ -915,7 +1208,7 @@
           </div>
           <div class="form-field">
             <label>Instagram (handle)</label>
-            <input type="text" id="cfg-instagram" placeholder="@ferrazandrade_adv" />
+            <input type="text" id="cfg-instagram" placeholder="@falaw_adv" />
           </div>
           <div class="form-field">
             <label>LinkedIn (URL)</label>
@@ -1522,7 +1815,7 @@ function seedData() {
       wa: '+55 11 91001-1551',
       email: 'ferrazandrade@falaw.com.br',
       address: 'Av. Francisco Matarazzo, 1752 — Salas 414 e 415, Água Branca, São Paulo/SP',
-      instagram: '@ferrazandrade_adv',
+      instagram: '@falaw_adv',
       linkedin: 'https://www.linkedin.com/company/ferraz-andrade-adogados',
     });
   }
@@ -1633,7 +1926,7 @@ function doLogout() {
 ══════════════════════════════════════ */
 function switchTab(name) {
   document.querySelectorAll('.admin-tab').forEach((t, i) => {
-    t.classList.toggle('active', ['blog','equipe','newsletter','contato','clientes','curriculos','config'][i] === name);
+    t.classList.toggle('active', ['blog','equipe','newsletter','contato','clientes','curriculos','ifood','config'][i] === name);
   });
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
@@ -1643,6 +1936,7 @@ function switchTab(name) {
   if (name === 'newsletter')  { loadNewsletterFromSupabase().then(renderNewsletter); }
   if (name === 'contato')     { loadContatoFromSupabase().then(renderContato); }
   if (name === 'curriculos')  { loadCurriculosFromSupabase().then(renderCurriculos); }
+  if (name === 'ifood')       { loadIfoodAdmin(); }
 }
 
 /* ══════════════════════════════════════
@@ -3316,7 +3610,7 @@ function formatSizeAdmin(b) {
 }
 
 function renderClients() {
-  const clients = getClients();
+  const clients = getClients().slice().sort((a, b) => (a.company || a.name || '').localeCompare(b.company || b.name || '', 'pt-BR', { sensitivity: 'base' }));
   const totalReports = clients.reduce((s, c) => s + (c.reports || []).length, 0);
   document.getElementById('cli-stat-total').textContent   = clients.length;
   document.getElementById('cli-stat-reports').textContent = totalReports;
@@ -3478,6 +3772,392 @@ function renderCurriculos() {
       </div>
     </div>
   `).join('');
+}
+
+/* ══════════════════════════════════════
+   IFOOD ADMIN
+══════════════════════════════════════ */
+
+// ── helpers ──────────────────────────
+function ifoodSB() {
+  const url = (sbUrl() || window.SB_URL || '').trim();
+  const key = (sbKey() || window.SB_KEY || '').trim();
+  if (!url || !key || typeof supabase === 'undefined') return null;
+  return supabase.createClient(url, key);
+}
+
+function ifoodId() {
+  return 'if_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+let _ifoodPeriods = [];
+
+// ── main loader ──────────────────────
+async function loadIfoodAdmin() {
+  const sb = ifoodSB();
+  if (!sb) { showToast('Configure o Supabase em Configurações.'); return; }
+  const { data, error } = await sb.from('ifood_periods').select('*').order('month_year', { ascending: false });
+  _ifoodPeriods = (error ? [] : data) || [];
+  renderIfoodPeriods();
+  populateIfoodPeriodSelects();
+  ifoodSubTab('periods');
+}
+
+// ── sub-tab switch ────────────────────
+const IFOOD_SUBS = ['periods','kpis','content','highlights','excel'];
+function ifoodSubTab(name) {
+  const nav = document.getElementById('ifoodSubNav');
+  nav.querySelectorAll('.admin-tab').forEach((t, i) => {
+    t.classList.toggle('active', IFOOD_SUBS[i] === name);
+  });
+  IFOOD_SUBS.forEach(s => {
+    const el = document.getElementById('ifood-sub-' + s);
+    if (el) el.style.display = s === name ? 'block' : 'none';
+  });
+}
+
+// ── populate selects ──────────────────
+function populateIfoodPeriodSelects() {
+  const opts = _ifoodPeriods.map(p => `<option value="${escHtml(p.id)}">${escHtml(p.label)}</option>`).join('');
+  ['ifood-kpi-period','ifood-cnt-period','ifood-hl-period','ifood-xl-period','ifk-period'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">— Selecione —</option>' + opts;
+  });
+}
+
+// ── PERIODS ──────────────────────────
+function renderIfoodPeriods() {
+  const el = document.getElementById('ifood-periods-list');
+  if (!_ifoodPeriods.length) {
+    el.innerHTML = '<div class="empty-state"><p>Nenhum período criado ainda. Clique em "+ Novo Período" para começar.</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="item-list">' + _ifoodPeriods.map(p => `
+    <div class="item-card">
+      <div class="item-card-body">
+        <div class="item-card-title">${escHtml(p.label)} ${p.is_active ? '<span class="post-tag" style="background:var(--c-accent)">Ativo</span>' : ''}</div>
+        <div class="item-card-meta">${escHtml(p.month_year)} · criado em ${formatDate(p.created_at)}</div>
+      </div>
+      <div class="item-card-actions">
+        ${!p.is_active ? `<button type="button" class="btn btn-ghost btn-sm" onclick="ifoodActivatePeriod('${p.id}')">Ativar</button>` : ''}
+        <button type="button" class="btn btn-ghost btn-sm" onclick="ifoodOpenPeriodModal('${p.id}')">Editar</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="ifoodDeletePeriod('${p.id}')">Excluir</button>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
+function ifoodOpenPeriodModal(id) {
+  const p = id ? _ifoodPeriods.find(x => x.id === id) : null;
+  document.getElementById('ifoodPeriodModalTitle').textContent = p ? 'Editar Período' : 'Novo Período';
+  document.getElementById('ifp-id').value        = p ? p.id : '';
+  document.getElementById('ifp-label').value     = p ? p.label : '';
+  document.getElementById('ifp-month').value     = p ? p.month_year : '';
+  document.getElementById('ifp-active').checked  = p ? p.is_active : false;
+  document.getElementById('ifoodPeriodModal').classList.add('open');
+}
+function ifoodClosePeriodModal() { document.getElementById('ifoodPeriodModal').classList.remove('open'); }
+
+async function ifoodSavePeriod() {
+  const sb = ifoodSB(); if (!sb) return;
+  const id     = document.getElementById('ifp-id').value.trim();
+  const label  = document.getElementById('ifp-label').value.trim();
+  const month  = document.getElementById('ifp-month').value.trim();
+  const active = document.getElementById('ifp-active').checked;
+  if (!label || !month) { showToast('Preencha rótulo e mês/ano.'); return; }
+
+  // Se ativando, desativa os demais
+  if (active) {
+    await sb.from('ifood_periods').update({ is_active: false }).neq('id', id || 'none');
+  }
+
+  const row = { label, month_year: month, is_active: active };
+  let error;
+  if (id) {
+    ({ error } = await sb.from('ifood_periods').update(row).eq('id', id));
+  } else {
+    ({ error } = await sb.from('ifood_periods').insert({ ...row, id: ifoodId() }));
+  }
+  if (error) { showToast('Erro: ' + error.message); return; }
+  ifoodClosePeriodModal();
+  showToast('Período salvo.');
+  await loadIfoodAdmin();
+}
+
+async function ifoodDeletePeriod(id) {
+  if (!confirm('Excluir este período e todos os dados relacionados (KPIs, textos, destaques)?')) return;
+  const sb = ifoodSB(); if (!sb) return;
+  const { error } = await sb.from('ifood_periods').delete().eq('id', id);
+  if (error) { showToast('Erro: ' + error.message); return; }
+  showToast('Período excluído.');
+  await loadIfoodAdmin();
+}
+
+async function ifoodActivatePeriod(id) {
+  const sb = ifoodSB(); if (!sb) return;
+  await sb.from('ifood_periods').update({ is_active: false }).neq('id', id);
+  const { error } = await sb.from('ifood_periods').update({ is_active: true }).eq('id', id);
+  if (error) { showToast('Erro: ' + error.message); return; }
+  showToast('Período ativado.');
+  await loadIfoodAdmin();
+}
+
+// ── KPIs ─────────────────────────────
+let _ifoodKpis = [];
+
+async function ifoodLoadKpis() {
+  const sb = ifoodSB(); if (!sb) return;
+  const periodId = document.getElementById('ifood-kpi-period').value;
+  const tabKey   = document.getElementById('ifood-kpi-tab').value;
+  if (!periodId || !tabKey) { document.getElementById('ifood-kpis-list').innerHTML = ''; return; }
+  const { data, error } = await sb.from('ifood_kpis').select('*').eq('period_id', periodId).eq('tab_key', tabKey).order('sort_order');
+  _ifoodKpis = (error ? [] : data) || [];
+  renderIfoodKpis();
+}
+
+function renderIfoodKpis() {
+  const el = document.getElementById('ifood-kpis-list');
+  if (!_ifoodKpis.length) {
+    el.innerHTML = '<div class="empty-state"><p>Nenhum KPI nesta aba para este período.</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="item-list">' + _ifoodKpis.map(k => `
+    <div class="item-card">
+      <div class="item-card-body">
+        <div class="item-card-title">${escHtml(k.label)} <span style="font-family:var(--f-mono);font-size:20px;font-weight:400">${escHtml(k.value)}${k.unit ? ' <small style="font-size:11px">' + escHtml(k.unit) + '</small>' : ''}</span></div>
+        <div class="item-card-meta">chave: ${escHtml(k.kpi_key)} · ordem ${k.sort_order}${k.trend_pct != null ? ' · tendência: ' + k.trend_pct + '%' : ''}${k.chart_title ? ' · gráfico: ' + escHtml(k.chart_title) : ''}</div>
+      </div>
+      <div class="item-card-actions">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="ifoodOpenKpiModal('${k.id}')">Editar</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="ifoodDeleteKpi('${k.id}')">Excluir</button>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
+function ifoodOpenKpiModal(id) {
+  const k = id ? _ifoodKpis.find(x => x.id === id) : null;
+  document.getElementById('ifoodKpiModalTitle').textContent = k ? 'Editar KPI' : 'Novo KPI';
+  document.getElementById('ifk-id').value          = k ? k.id : '';
+  document.getElementById('ifk-period').value      = k ? k.period_id : (document.getElementById('ifood-kpi-period').value || '');
+  document.getElementById('ifk-tab').value         = k ? k.tab_key   : (document.getElementById('ifood-kpi-tab').value   || 'visao-geral');
+  document.getElementById('ifk-key').value         = k ? k.kpi_key   : '';
+  document.getElementById('ifk-label').value       = k ? k.label     : '';
+  document.getElementById('ifk-value').value       = k ? k.value     : '';
+  document.getElementById('ifk-unit').value        = k ? (k.unit || '') : '';
+  document.getElementById('ifk-trend').value       = k ? (k.trend_pct ?? '') : '';
+  document.getElementById('ifk-order').value       = k ? k.sort_order : 0;
+  document.getElementById('ifk-chart-title').value = k ? (k.chart_title || '') : '';
+  document.getElementById('ifk-chart-data').value  = k && k.chart_data ? JSON.stringify(k.chart_data, null, 2) : '';
+  document.getElementById('ifoodKpiModal').classList.add('open');
+}
+function ifoodCloseKpiModal() { document.getElementById('ifoodKpiModal').classList.remove('open'); }
+
+async function ifoodSaveKpi() {
+  const sb = ifoodSB(); if (!sb) return;
+  const id         = document.getElementById('ifk-id').value.trim();
+  const periodId   = document.getElementById('ifk-period').value.trim();
+  const tabKey     = document.getElementById('ifk-tab').value.trim();
+  const kpiKey     = document.getElementById('ifk-key').value.trim();
+  const label      = document.getElementById('ifk-label').value.trim();
+  const value      = document.getElementById('ifk-value').value.trim();
+  const unit       = document.getElementById('ifk-unit').value.trim();
+  const trendRaw   = document.getElementById('ifk-trend').value.trim();
+  const order      = parseInt(document.getElementById('ifk-order').value, 10) || 0;
+  const chartTitle = document.getElementById('ifk-chart-title').value.trim();
+  const chartRaw   = document.getElementById('ifk-chart-data').value.trim();
+
+  if (!periodId || !tabKey || !kpiKey || !label || !value) { showToast('Preencha os campos obrigatórios.'); return; }
+
+  let chartData = null;
+  if (chartRaw) {
+    try { chartData = JSON.parse(chartRaw); } catch(e) { showToast('JSON do gráfico inválido.'); return; }
+  }
+
+  const row = {
+    period_id: periodId, tab_key: tabKey, kpi_key: kpiKey, label, value, unit,
+    trend_pct: trendRaw !== '' ? parseFloat(trendRaw) : null,
+    sort_order: order, chart_title: chartTitle, chart_data: chartData
+  };
+
+  let error;
+  if (id) {
+    ({ error } = await sb.from('ifood_kpis').update(row).eq('id', id));
+  } else {
+    ({ error } = await sb.from('ifood_kpis').insert({ ...row, id: ifoodId() }));
+  }
+  if (error) { showToast('Erro: ' + error.message); return; }
+  ifoodCloseKpiModal();
+  showToast('KPI salvo.');
+  await ifoodLoadKpis();
+}
+
+async function ifoodDeleteKpi(id) {
+  if (!confirm('Excluir este KPI?')) return;
+  const sb = ifoodSB(); if (!sb) return;
+  const { error } = await sb.from('ifood_kpis').delete().eq('id', id);
+  if (error) { showToast('Erro: ' + error.message); return; }
+  showToast('KPI excluído.');
+  await ifoodLoadKpis();
+}
+
+// ── CONTENT ──────────────────────────
+async function ifoodLoadContent() {
+  const sb = ifoodSB(); if (!sb) return;
+  const periodId = document.getElementById('ifood-cnt-period').value;
+  const tabKey   = document.getElementById('ifood-cnt-tab').value;
+  if (!periodId || !tabKey) return;
+  const { data, error } = await sb.from('ifood_content').select('*').eq('period_id', periodId).eq('tab_key', tabKey).single();
+  document.getElementById('ifood-cnt-editor').value = (!error && data) ? (data.content_html || '') : '';
+  document.getElementById('ifood-cnt-preview').style.display = 'none';
+}
+
+async function ifoodSaveContent() {
+  const sb = ifoodSB(); if (!sb) return;
+  const periodId = document.getElementById('ifood-cnt-period').value;
+  const tabKey   = document.getElementById('ifood-cnt-tab').value;
+  const html     = document.getElementById('ifood-cnt-editor').value;
+  if (!periodId || !tabKey) { showToast('Selecione período e aba.'); return; }
+  const row = { period_id: periodId, tab_key: tabKey, content_html: html, updated_at: new Date().toISOString() };
+  // Upsert
+  const { error } = await sb.from('ifood_content').upsert({ ...row, id: ifoodId() }, { onConflict: 'period_id,tab_key', ignoreDuplicates: false });
+  if (error) { showToast('Erro: ' + error.message); return; }
+  showToast('Texto salvo.');
+}
+
+function ifoodPreviewContent() {
+  const raw = document.getElementById('ifood-cnt-editor').value;
+  const prev = document.getElementById('ifood-cnt-preview');
+  prev.innerHTML = raw || '<em>Nenhum conteúdo.</em>';
+  prev.style.display = 'block';
+}
+
+// ── HIGHLIGHTS ───────────────────────
+let _ifoodHighlights = [];
+
+async function ifoodLoadHighlights() {
+  const sb = ifoodSB(); if (!sb) return;
+  const periodId = document.getElementById('ifood-hl-period').value;
+  if (!periodId) { document.getElementById('ifood-hl-list').innerHTML = ''; return; }
+  const { data, error } = await sb.from('ifood_highlights').select('*').eq('period_id', periodId).order('sort_order');
+  _ifoodHighlights = (error ? [] : data) || [];
+  renderIfoodHighlights(periodId);
+}
+
+function renderIfoodHighlights(periodId) {
+  const el = document.getElementById('ifood-hl-list');
+  if (!_ifoodHighlights.length) {
+    el.innerHTML = '<div class="empty-state"><p>Nenhum destaque para este período.</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="item-list">' + _ifoodHighlights.map(h => `
+    <div class="item-card">
+      <div style="font-size:28px;flex-shrink:0">${escHtml(h.icon || '★')}</div>
+      <div class="item-card-body">
+        <div class="item-card-title">${escHtml(h.title)}</div>
+        <div class="item-card-preview">${escHtml(h.body)}</div>
+        <div class="item-card-meta">ordem ${h.sort_order}</div>
+      </div>
+      <div class="item-card-actions">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="ifoodOpenHighlightModal('${h.id}')">Editar</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="ifoodDeleteHighlight('${h.id}')">Excluir</button>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
+function ifoodOpenHighlightModal(id) {
+  const h = id ? _ifoodHighlights.find(x => x.id === id) : null;
+  const periodId = document.getElementById('ifood-hl-period').value;
+  document.getElementById('ifoodHlModalTitle').textContent = h ? 'Editar Destaque' : 'Novo Destaque';
+  document.getElementById('ifh-id').value     = h ? h.id : '';
+  document.getElementById('ifh-period').value = h ? h.period_id : periodId;
+  document.getElementById('ifh-icon').value   = h ? (h.icon || '★') : '★';
+  document.getElementById('ifh-title').value  = h ? h.title : '';
+  document.getElementById('ifh-body').value   = h ? (h.body || '') : '';
+  document.getElementById('ifh-order').value  = h ? h.sort_order : _ifoodHighlights.length;
+  document.getElementById('ifoodHlModal').classList.add('open');
+}
+function ifoodCloseHlModal() { document.getElementById('ifoodHlModal').classList.remove('open'); }
+
+async function ifoodSaveHighlight() {
+  const sb = ifoodSB(); if (!sb) return;
+  const id       = document.getElementById('ifh-id').value.trim();
+  const periodId = document.getElementById('ifh-period').value.trim();
+  const icon     = document.getElementById('ifh-icon').value.trim() || '★';
+  const title    = document.getElementById('ifh-title').value.trim();
+  const body     = document.getElementById('ifh-body').value.trim();
+  const order    = parseInt(document.getElementById('ifh-order').value, 10) || 0;
+  if (!periodId || !title) { showToast('Selecione um período e preencha o título.'); return; }
+  const row = { period_id: periodId, icon, title, body, sort_order: order };
+  let error;
+  if (id) {
+    ({ error } = await sb.from('ifood_highlights').update(row).eq('id', id));
+  } else {
+    ({ error } = await sb.from('ifood_highlights').insert({ ...row, id: ifoodId() }));
+  }
+  if (error) { showToast('Erro: ' + error.message); return; }
+  ifoodCloseHlModal();
+  showToast('Destaque salvo.');
+  await ifoodLoadHighlights();
+}
+
+async function ifoodDeleteHighlight(id) {
+  if (!confirm('Excluir este destaque?')) return;
+  const sb = ifoodSB(); if (!sb) return;
+  const { error } = await sb.from('ifood_highlights').delete().eq('id', id);
+  if (error) { showToast('Erro: ' + error.message); return; }
+  showToast('Destaque excluído.');
+  await ifoodLoadHighlights();
+}
+
+// ── EXCEL UPLOAD ─────────────────────
+let _ifoodExcelData = null;
+
+async function ifoodPreviewExcel(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { showToast('SheetJS não carregado.'); return; }
+  document.getElementById('ifood-xl-status').style.display = 'block';
+  document.getElementById('ifood-xl-status').textContent = 'Lendo arquivo…';
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const sheets = {};
+    wb.SheetNames.forEach(name => {
+      const ws = wb.Sheets[name];
+      sheets[name] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    });
+    _ifoodExcelData = { filename: file.name, sheets };
+    // Preview first sheet
+    const firstName = wb.SheetNames[0];
+    const rows = sheets[firstName] || [];
+    const cols = rows.length ? Object.keys(rows[0]) : [];
+    const preview = rows.slice(0, 20);
+    let html = '<thead><tr style="background:var(--c-accent);color:#fff">' + cols.map(c => `<th style="padding:6px 10px;text-align:left;white-space:nowrap">${escHtml(c)}</th>`).join('') + '</tr></thead><tbody>';
+    html += preview.map((r, i) => `<tr style="background:${i%2?'#f8f8f6':'#fff'}">` + cols.map(c => `<td style="padding:5px 10px;border-bottom:1px solid #eee;white-space:nowrap">${escHtml(String(r[c] ?? ''))}</td>`).join('') + '</tr>').join('');
+    html += '</tbody>';
+    document.getElementById('ifood-xl-table').innerHTML = html;
+    document.getElementById('ifood-xl-preview').style.display = 'block';
+    document.getElementById('ifood-xl-status').textContent = `✓ ${wb.SheetNames.length} aba(s) encontrada(s): ${wb.SheetNames.join(', ')}. ${rows.length} linhas na primeira aba.`;
+  } catch(e) {
+    document.getElementById('ifood-xl-status').textContent = 'Erro ao ler arquivo: ' + e.message;
+    console.error(e);
+  }
+}
+
+async function ifoodSaveExcel() {
+  const sb = ifoodSB(); if (!sb) return;
+  if (!_ifoodExcelData) { showToast('Selecione um arquivo primeiro.'); return; }
+  const periodId = document.getElementById('ifood-xl-period').value;
+  if (!periodId) { showToast('Selecione um período.'); return; }
+  document.getElementById('ifood-xl-status').style.display = 'block';
+  document.getElementById('ifood-xl-status').textContent = 'Salvando no Supabase…';
+  const row = { id: ifoodId(), period_id: periodId, filename: _ifoodExcelData.filename, raw_json: _ifoodExcelData.sheets, uploaded_at: new Date().toISOString() };
+  const { error } = await sb.from('ifood_raw_data').insert(row);
+  if (error) {
+    document.getElementById('ifood-xl-status').textContent = 'Erro: ' + error.message;
+    showToast('Erro ao salvar dados.'); return;
+  }
+  document.getElementById('ifood-xl-status').textContent = '✓ Dados salvos com sucesso! Acesse a aba "KPIs / Gráficos" para inserir os indicadores manualmente, ou peça ao desenvolvedor para criar um mapeamento automático.';
+  showToast('Excel salvo com sucesso.');
 }
 
 </script>

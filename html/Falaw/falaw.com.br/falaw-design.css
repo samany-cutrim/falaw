@@ -1620,6 +1620,13 @@ h3 {
   .contato-form-ice { padding: 20px 16px; }
   .contato-grid { gap: 24px; }
 
+  /* Prevent iOS zoom on inputs (font-size must be >= 16px) */
+  input, textarea, select { font-size: 16px !important; }
+
+  /* Touch targets */
+  .form-submit { width: 100%; justify-content: center; min-height: 52px; }
+  .btn, .nav-item, .nav-links a { min-height: 44px; }
+
   /* Blog */
   .article-header,
   .article-cover,
