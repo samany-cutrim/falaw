@@ -4568,6 +4568,16 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
                  y:{ stacked:true, grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true } } }
     }, 'Processos Ativos por TRT e Causa Raiz');
 
+  // Mapa UF — processos ativos por estado
+  const ufGeoC = {};
+  records.filter(r=>r.status==='ativo'&&r.uf&&_XL_VALID_UF.has(r.uf)).forEach(r=>{
+    ufGeoC[r.uf]=(ufGeoC[r.uf]||0)+1;
+  });
+  if(Object.keys(ufGeoC).length){
+    push('visao-geral','chart_uf_map','Processos por Estado (UF)','','',
+      { type:'geo_br', data: ufGeoC }, 'Distribuição Geográfica de Processos Ativos por Estado');
+  }
+
   // Julgadores
   const _isValidJulg = j => j && !['nan','none','','0'].includes(j.toLowerCase());
   const julgC = _xlCounter(records.filter(r=>_isValidJulg(r.julgador)).map(r=>r.julgador));
