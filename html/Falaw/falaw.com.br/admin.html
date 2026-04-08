@@ -4558,8 +4558,6 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     _xlChartBar(advTop.map(([l])=>l),advTop.map(([,v])=>v),'Processos','#7B1A2E'), 'Top 10 Advogados Adversários');
 
   // ── PER CAUSA RAIZ TABS ──────────────────────────────────────────────────────
-  const _FAV_VALS  = new Set(['Improcedente','Extinto sem Resolução']);
-  const _DESF_VALS = new Set(['Procedente','Parc. Procedente']);
   for (const { cr, tabKey, label } of _XL_CR_TABS) {
     const recs = records.filter(r=>r.causa_raiz===cr);
     if (!recs.length) continue;
@@ -4607,12 +4605,15 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     if(decs.length>0) push(tabKey,'chart_decisoes','Decisões do Período',_xlFmtBr(decs.length),'decisões',
       _xlChartDoughnut(['Favorável','Desfavorável','Outro'],[tf,td,Math.max(0,decs.length-tf-td)]), `Decisões — ${label}`);
 
-    // Julgadores favoráveis e desfavoráveis
+    // Julgadores favoráveis e desfavoráveis — cruzados com aba Decisões por num_processo
+    const decByProc = {};
+    decs.forEach(d=>{ if(d.num_processo) decByProc[d.num_processo]=_xlClassifyDec(d.resultado); });
     const julgFavC={}, julgDesfC={};
     recs.forEach(r=>{
       const j=r.julgador; if(!_isValidJulg(j)) return;
-      if(_FAV_VALS.has(r.resultado_recente)) julgFavC[j]=(julgFavC[j]||0)+1;
-      if(_DESF_VALS.has(r.resultado_recente)) julgDesfC[j]=(julgDesfC[j]||0)+1;
+      const cls=decByProc[r.num_processo];
+      if(cls==='F') julgFavC[j]=(julgFavC[j]||0)+1;
+      if(cls==='D') julgDesfC[j]=(julgDesfC[j]||0)+1;
     });
     const jFavTop=_xlTopN(julgFavC,10), jDesfTop=_xlTopN(julgDesfC,10);
     if(jFavTop.length) push(tabKey,'chart_julg_fav','Julgadores Favoráveis','','',

@@ -423,29 +423,26 @@ def compute_causa_raiz_kpis(records, decisoes, causa_raiz, suspensos_1389, suspe
                 adv_counter[a] += 1
     top_advs = adv_counter.most_common(10)
 
-    # Julgadores — total, favoráveis e desfavoráveis
+    # Julgadores — cruzados com aba Decisões por num_processo
+    # Mapa: num_processo → resultado da decisão
+    dec_by_proc = {d["num_processo"]: classify_decisao(d["resultado"]) for d in decs if d["num_processo"]}
+
     julg_counter      = Counter()
     julg_fav_counter  = Counter()
     julg_desf_counter = Counter()
     for r in recs:
         j = r["julgador"]
-        if j and j.lower() not in ("nan", "none", "", "0"):
-            julg_counter[j] += 1
-            cls = classify_result(r["resultado_recente"])
-            if cls == "Favorável":
-                julg_fav_counter[j] += 1
-            elif cls == "Desfavorável":
-                julg_desf_counter[j] += 1
+        if not j or j.lower() in ("nan", "none", "", "0"):
+            continue
+        julg_counter[j] += 1
+        cls_dec = dec_by_proc.get(r["num_processo"])
+        if cls_dec == "Favorável":
+            julg_fav_counter[j] += 1
+        elif cls_dec == "Desfavorável":
+            julg_desf_counter[j] += 1
     top_julgs      = julg_counter.most_common(10)
     top_julgs_fav  = julg_fav_counter.most_common(10)
     top_julgs_desf = julg_desf_counter.most_common(10)
-
-    # Results
-    res_counter = Counter()
-    for r in recs:
-        c = classify_result(r["resultado_recente"])
-        if c:
-            res_counter[c] += 1
 
     # Suspensos list for this causa raiz
     susp_list_1389 = [s for s in suspensos_1389 if match_susp(s)]
@@ -475,9 +472,6 @@ def compute_causa_raiz_kpis(records, decisoes, causa_raiz, suspensos_1389, suspe
         "julg_fav_data":    [v for _, v in top_julgs_fav],
         "julg_desf_labels": [k for k, _ in top_julgs_desf],
         "julg_desf_data":   [v for _, v in top_julgs_desf],
-        "res_fav":  res_counter.get("Favorável", 0),
-        "res_desf": res_counter.get("Desfavorável", 0),
-        "res_neutro": res_counter.get("Neutro", 0),
         "susp_list_1389": susp_list_1389,
         "susp_list_1291": susp_list_1291,
         "decisoes": decs,
@@ -814,8 +808,10 @@ def build_causa_raiz_js(tab_id, data):
     fase_data   = json.dumps(fase_data_f)
     uf_labels   = json.dumps(uf_labels_f, ensure_ascii=False)
     uf_data     = json.dumps(uf_data_f)
-    dec_labels  = json.dumps(["Favorável", "Desfavorável", "Neutro"], ensure_ascii=False)
-    dec_data    = json.dumps([data["res_fav"], data["res_desf"], data["res_neutro"]])
+    # Decisões vêm exclusivamente da aba Decisões (não do campo resultado_recente)
+    dec_outros  = max(0, data["dec_total"] - data["dec_fav"] - data["dec_desf"])
+    dec_labels  = json.dumps(["Favorável", "Desfavorável", "Outro"], ensure_ascii=False)
+    dec_data    = json.dumps([data["dec_fav"], data["dec_desf"], dec_outros])
 
     pedidos_js = ""
     if tab_id == "ex-foodlover" and data.get("pedidos_ranking"):
