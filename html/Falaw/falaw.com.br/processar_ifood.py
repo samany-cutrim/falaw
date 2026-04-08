@@ -220,7 +220,8 @@ def parse_ifood_sheet(df):
 
 def parse_decisoes_sheet(df):
     """Parse Decisões sheet.
-    Actual columns: 0=N°Processo, 1=TRT, 2=CAUSA RAIZ, 3=RESULTADO DA DECISÃO
+    Columns: 0=N°Processo, 1=TRT, 2=CAUSA RAIZ, 3=RESULTADO DA DECISÃO,
+             4=JUIZ/RELATOR, 5=VARATURMA
     """
     if df.empty:
         return []
@@ -234,13 +235,16 @@ def parse_decisoes_sheet(df):
                 return str(v).strip()
             except Exception:
                 return ""
-        causa_raiz = c(2).strip()  # col 2 is directly CAUSA RAIZ
-        resultado  = c(3).strip()  # col 3 is RESULTADO DA DECISÃO
+        causa_raiz = c(2).strip()
+        resultado  = c(3).strip()
         if causa_raiz:
             rows.append({
-                "num_processo": c(0),
-                "causa_raiz": causa_raiz,
-                "resultado": resultado,
+                "num_processo":  c(0),
+                "trt":           c(1),
+                "causa_raiz":    causa_raiz,
+                "resultado":     resultado,
+                "juiz_relator":  c(4),
+                "varaturma":     c(5),
             })
     return rows
 
@@ -445,6 +449,26 @@ def compute_causa_raiz_kpis(records, decisoes, causa_raiz, suspensos_1389, suspe
     top_julgs_fav  = julg_fav_counter.most_common(10)
     top_julgs_desf = julg_desf_counter.most_common(10)
 
+    # Turma/VT e Julgador/Relator — da aba Decisões
+    vt_fav_c   = Counter()
+    vt_desf_c  = Counter()
+    jr_fav_c   = Counter()
+    jr_desf_c  = Counter()
+    for d in decs:
+        cls = classify_decisao(d["resultado"])
+        vt = d.get("varaturma", "")
+        jr = d.get("juiz_relator", "")
+        if vt:
+            if cls == "Favorável":    vt_fav_c[vt]  += 1
+            elif cls == "Desfavorável": vt_desf_c[vt] += 1
+        if jr:
+            if cls == "Favorável":    jr_fav_c[jr]  += 1
+            elif cls == "Desfavorável": jr_desf_c[jr] += 1
+
+    all_vts = sorted(set(list(vt_fav_c) + list(vt_desf_c)))
+    all_jrs = sorted(set(list(jr_fav_c) + list(jr_desf_c)),
+                     key=lambda j: -(jr_fav_c[j] + jr_desf_c[j]))[:15]
+
     # Suspensos list for this causa raiz
     susp_list_1389 = [s for s in suspensos_1389 if match_susp(s)]
     susp_list_1291 = [s for s in suspensos_1291 if match_susp(s)]
@@ -477,6 +501,13 @@ def compute_causa_raiz_kpis(records, decisoes, causa_raiz, suspensos_1389, suspe
         "susp_list_1291": susp_list_1291,
         "decisoes": decs,
         "pedidos_ranking": pedidos_ranking,
+        # Turma/VT e Julgador — da aba Decisões
+        "vt_fav_c":   dict(vt_fav_c),
+        "vt_desf_c":  dict(vt_desf_c),
+        "all_vts":    all_vts,
+        "jr_fav_c":   dict(jr_fav_c),
+        "jr_desf_c":  dict(jr_desf_c),
+        "all_jrs":    all_jrs,
     }
 
 def compute_global_charts(records, decisoes):
@@ -563,9 +594,18 @@ def compute_global_charts(records, decisoes):
             "pct_fav_num": pct,
         })
 
+    # TRT × Causa Raiz stacked (ativos)
+    trt_cr_map = defaultdict(lambda: defaultdict(int))
+    for r in records:
+        if r["status"].lower() == "ativo" and r["trt"] and r["causa_raiz"]:
+            trt_cr_map[r["trt"]][r["causa_raiz"]] += 1
+    # top 12 TRTs by total
+    trt_cr_sorted = sorted(trt_cr_map.items(), key=lambda x: -sum(x[1].values()))[:12]
+
     return {
         "cr_labels": cr_labels,
         "cr_data": cr_data,
+        "trt_cr_sorted": trt_cr_sorted,
         "fase_labels": fase_labels,
         "fase_data": fase_data,
         "julg_labels": julg_labels,
@@ -705,6 +745,22 @@ def build_causa_raiz_tab(tab_id, label, data):
         dec_cards.append(("Total Decisões", fmt_br(data["dec_total"]), "no período", "flat", ""))
     kpis_row2 = build_kpi_cards(dec_cards) if dec_cards else ""
 
+    # Turma/VT e Julgador/Relator — da aba Decisões
+    dec_vt_html = ""
+    if data.get("all_vts") or data.get("all_jrs"):
+        dec_vt_html = '<h3 class="section-title" style="margin:28px 0 16px">Decisões do Período — Turma/VT e Julgador/Relator</h3>'
+        dec_vt_html += f"""
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">Decisões por Turma/VT</div>
+        <div class="chart-wrap" style="height:280px"><canvas id="{dec_vt_id}"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Decisões por Julgador/Relator</div>
+        <div class="chart-wrap" style="height:280px"><canvas id="{dec_jr_id}"></canvas></div>
+      </div>
+    </div>"""
+
     # Suspensos tables
     susp_html = ""
     if data["susp_list_1389"]:
@@ -727,6 +783,8 @@ def build_causa_raiz_tab(tab_id, label, data):
     julg_id      = f"chart_{tab_id}_julg"
     julg_fav_id  = f"chart_{tab_id}_julgfav"
     julg_desf_id = f"chart_{tab_id}_julgdesf"
+    dec_vt_id    = f"chart_{tab_id}_decvt"
+    dec_jr_id    = f"chart_{tab_id}_decjr"
 
     # Pedidos ranking — somente aba Ex-Foodlover
     pedidos_html = ""
@@ -796,6 +854,7 @@ def build_causa_raiz_tab(tab_id, label, data):
     </div>
 
     {pedidos_html}
+    {dec_vt_html}
     {susp_html}
   </div>"""
 
@@ -902,6 +961,49 @@ def build_causa_raiz_js(tab_id, data):
       }}
     }});"""
 
+    # Turma/VT e Julgador/Relator da aba Decisões
+    dec_vt_js = ""
+    all_vts = data.get("all_vts", [])
+    if all_vts:
+        vt_fav_c  = data.get("vt_fav_c",  {})
+        vt_desf_c = data.get("vt_desf_c", {})
+        vt_labels = json.dumps(all_vts, ensure_ascii=False)
+        vt_fav    = json.dumps([vt_fav_c.get(v, 0)  for v in all_vts])
+        vt_desf   = json.dumps([vt_desf_c.get(v, 0) for v in all_vts])
+        dec_vt_js = f"""
+    new Chart(document.getElementById('chart_{tab_id}_decvt'), {{
+      type: 'bar',
+      data: {{ labels: {vt_labels}, datasets: [
+        {{ label:'Favorável',    data:{vt_fav},  backgroundColor:'#0F9E76', borderRadius:4 }},
+        {{ label:'Desfavorável', data:{vt_desf}, backgroundColor:'#7B1A2E', borderRadius:4 }}
+      ]}},
+      options: {{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{{ legend:{{ position:'top', labels:{{ font:{{ family:'IBM Plex Mono', size:10 }} }} }} }},
+        scales:{{ x:{{ grid:{{ color:'rgba(0,0,0,0.05)' }}, beginAtZero:true }},
+                  y:{{ grid:{{ display:false }}, ticks:{{ font:{{ size:9 }} }} }} }} }}
+    }});"""
+
+    dec_jr_js = ""
+    all_jrs = data.get("all_jrs", [])
+    if all_jrs:
+        jr_fav_c  = data.get("jr_fav_c",  {})
+        jr_desf_c = data.get("jr_desf_c", {})
+        jr_labels = json.dumps(all_jrs, ensure_ascii=False)
+        jr_fav    = json.dumps([jr_fav_c.get(j, 0)  for j in all_jrs])
+        jr_desf   = json.dumps([jr_desf_c.get(j, 0) for j in all_jrs])
+        dec_jr_js = f"""
+    new Chart(document.getElementById('chart_{tab_id}_decjr'), {{
+      type: 'bar',
+      data: {{ labels: {jr_labels}, datasets: [
+        {{ label:'Favorável',    data:{jr_fav},  backgroundColor:'#0F9E76', borderRadius:4 }},
+        {{ label:'Desfavorável', data:{jr_desf}, backgroundColor:'#7B1A2E', borderRadius:4 }}
+      ]}},
+      options: {{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{{ legend:{{ position:'top', labels:{{ font:{{ family:'IBM Plex Mono', size:10 }} }} }} }},
+        scales:{{ x:{{ grid:{{ color:'rgba(0,0,0,0.05)' }}, beginAtZero:true }},
+                  y:{{ grid:{{ display:false }}, ticks:{{ font:{{ size:9 }} }} }} }} }}
+    }});"""
+
     return f"""
     // — {tab_id} charts —
     new Chart(document.getElementById('chart_{tab_id}_dec'), {{
@@ -924,7 +1026,7 @@ def build_causa_raiz_js(tab_id, data):
         backgroundColor: '#7B1A2E', borderRadius: 4 }}] }},
       options: {{ responsive:true, plugins:{{ legend:{{ display:false }} }},
         scales:{{ x:{{ grid:{{ display:false }} }}, y:{{ grid:{{ color:'rgba(0,0,0,0.05)' }} }} }} }}
-    }});{adv_js}{julg_js}{julg_fav_js}{julg_desf_js}{pedidos_js}"""
+    }});{adv_js}{julg_js}{julg_fav_js}{julg_desf_js}{pedidos_js}{dec_vt_js}{dec_jr_js}"""
 
 
 def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1291,
@@ -1001,6 +1103,26 @@ def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1
             "res_fav":0,"res_desf":0,"res_neutro":0,"pedidos_ranking":[],
         })
         cr_js += build_causa_raiz_js(tab_id, data)
+
+    # ── TRT × CAUSA RAIZ JSON ──
+    _TRT_CR_PAL = ['#0D2B5E','#7B1A2E','#0F9E76','#f59e0b','#6366f1','#ec4899']
+    trt_cr_data = global_charts["trt_cr_sorted"]
+    trt_cr_trts = [t for t, _ in trt_cr_data]
+    all_causas  = [c for c, _ in CAUSA_RAIZ_TABS]
+    all_labels  = [l for _, l in CAUSA_RAIZ_TABS]
+    trt_cr_datasets = []
+    for i, (causa, label) in enumerate(CAUSA_RAIZ_TABS):
+        dataset_data = [trt_cr_data[j][1].get(causa, 0) for j in range(len(trt_cr_data))]
+        if any(v > 0 for v in dataset_data):
+            trt_cr_datasets.append({
+                "label": label,
+                "data": dataset_data,
+                "backgroundColor": _TRT_CR_PAL[i % len(_TRT_CR_PAL)],
+                "borderRadius": 3,
+                "stack": "s",
+            })
+    trt_cr_labels_js   = json.dumps(trt_cr_trts, ensure_ascii=False)
+    trt_cr_datasets_js = json.dumps(json_safe(trt_cr_datasets), ensure_ascii=False)
 
     # ── UF → count + causa raiz JSON for SVG map ──
     uf_json    = json.dumps(global_charts["uf_counter"], ensure_ascii=False)
@@ -1388,6 +1510,12 @@ def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1
             <div class="chart-wrap" style="max-height:300px"><canvas id="chart-trt-fav"></canvas></div>
           </div>
         </div>
+        <div class="charts-grid">
+          <div class="chart-card full-width">
+            <div class="chart-card-title">Processos Ativos por TRT e Causa Raiz</div>
+            <div class="chart-wrap" style="height:340px"><canvas id="chart-trt-cr"></canvas></div>
+          </div>
+        </div>
         <div class="chart-card" style="margin-bottom:28px">
           <div class="chart-card-title">Tabela — Ranking TRT</div>
           {trt_table}
@@ -1716,6 +1844,20 @@ new Chart(document.getElementById('chart-trt-fav'), {{
       x:{{ grid:{{ display:false }}, ticks:{{ font:{{ family:'IBM Plex Mono', size:10 }} }} }},
       y:{{ max:100, grid:{{ color:'rgba(0,0,0,0.05)' }}, beginAtZero:true,
         ticks:{{ callback: v => v + '%' }} }}
+    }}
+  }}
+}});
+
+// ── TRT × CAUSA RAIZ ─────────────────────────────────────────────────────────
+new Chart(document.getElementById('chart-trt-cr'), {{
+  type: 'bar',
+  data: {{ labels: {trt_cr_labels_js}, datasets: {trt_cr_datasets_js} }},
+  options: {{
+    responsive: true, maintainAspectRatio: false,
+    plugins: {{ legend:{{ position:'bottom', labels:{{ font:{{ family:'IBM Plex Mono', size:10 }}, padding:12 }} }} }},
+    scales: {{
+      x:{{ stacked:true, grid:{{ display:false }}, ticks:{{ font:{{ family:'IBM Plex Mono', size:10 }} }} }},
+      y:{{ stacked:true, grid:{{ color:'rgba(0,0,0,0.05)' }}, beginAtZero:true }}
     }}
   }}
 }});

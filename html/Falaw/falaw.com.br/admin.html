@@ -4395,12 +4395,15 @@ function _xlParseIfood(rawRows) {
 }
 
 function _xlParseDecisoes(rawRows) {
-  // Sheet: 0=N°Processo, 1=TRT, 2=CAUSA RAIZ, 3=RESULTADO DA DECISÃO
+  // Sheet: 0=N°Processo, 1=TRT, 2=CAUSA RAIZ, 3=RESULTADO DA DECISÃO, 4=JUIZ/RELATOR, 5=VARATURMA
   const c = (r, i) => String(r[i] ?? '').trim();
   return rawRows.filter(r => r && r[0] && String(r[0]).trim() && c(r,2)).map(r => ({
     num_processo: c(r,0),
-    causa_raiz: c(r,2),    // col 2 = CAUSA RAIZ (direct)
-    resultado: c(r,3),     // col 3 = RESULTADO DA DECISÃO
+    trt:          c(r,1),
+    causa_raiz:   c(r,2),
+    resultado:    c(r,3),
+    juiz_relator: c(r,4),
+    varaturma:    c(r,5),
   }));
 }
 
@@ -4536,11 +4539,34 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   push('visao-geral','chart_fase','Fase Processual','','',
     _xlChartBar(faseTop.map(([l])=>l),faseTop.map(([,v])=>v),'Processos','#0D2B5E'), 'Distribuição por Fase Processual');
 
-  // TRT ranking
+  // TRT ranking — volume total
   const trtC = _xlCounter(records.filter(r=>r.status==='ativo'&&r.trt).map(r=>r.trt));
   const trtTop = _xlTopN(trtC,15);
   push('visao-geral','chart_trt','Ranking por TRT','','',
     _xlChartBarVertical(trtTop.map(([l])=>l),trtTop.map(([,v])=>v),'Processos Ativos','#0D2B5E'), 'Volume de Processos por TRT');
+
+  // TRT × Causa Raiz — stacked bar (ativos)
+  const _TRT_CR_PAL = ['#0D2B5E','#7B1A2E','#0F9E76','#f59e0b','#6366f1','#ec4899'];
+  const trtCrMap = {}; // trt → { cr: count }
+  records.filter(r=>r.status==='ativo'&&r.trt&&r.causa_raiz).forEach(r=>{
+    if(!trtCrMap[r.trt]) trtCrMap[r.trt]={};
+    trtCrMap[r.trt][r.causa_raiz]=(trtCrMap[r.trt][r.causa_raiz]||0)+1;
+  });
+  const trtCrTrts = Object.entries(trtCrMap).sort((a,b)=>Object.values(b[1]).reduce((s,v)=>s+v,0)-Object.values(a[1]).reduce((s,v)=>s+v,0)).slice(0,12).map(([t])=>t);
+  const allCRs = _XL_CR_TABS.map(t=>t.cr);
+  push('visao-geral','chart_trt_cr','Processos Ativos por TRT e Causa Raiz','','',
+    { type:'bar',
+      data:{ labels: trtCrTrts, datasets: allCRs.map((cr,i)=>({
+        label: _XL_CR_TABS[i].label,
+        data: trtCrTrts.map(t=>(trtCrMap[t]||{})[cr]||0),
+        backgroundColor: _TRT_CR_PAL[i % _TRT_CR_PAL.length],
+        borderRadius: 3, stack:'s'
+      }))},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:'bottom', labels:{ font:{ family:'IBM Plex Mono', size:10 }, padding:12 } } },
+        scales:{ x:{ stacked:true, grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } },
+                 y:{ stacked:true, grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true } } }
+    }, 'Processos Ativos por TRT e Causa Raiz');
 
   // Julgadores
   const _isValidJulg = j => j && !['nan','none','','0'].includes(j.toLowerCase());
@@ -4620,6 +4646,49 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
       _xlChartBar(jFavTop.map(([l])=>l),jFavTop.map(([,v])=>v),'Favoráveis','#0F9E76'), `Julgadores Favoráveis — ${label}`);
     if(jDesfTop.length) push(tabKey,'chart_julg_desf','Julgadores Desfavoráveis','','',
       _xlChartBar(jDesfTop.map(([l])=>l),jDesfTop.map(([,v])=>v),'Desfavoráveis','#7B1A2E'), `Julgadores Desfavoráveis — ${label}`);
+
+    // Turma/VT e Julgador/Relator — exclusivamente da aba Decisões (março)
+    if (decs.length > 0) {
+      // Turma/VT: fav vs desf por varaturma
+      const vtFavC={}, vtDesfC={};
+      decs.forEach(d=>{
+        const vt = d.varaturma; if(!vt) return;
+        const cls = _xlClassifyDec(d.resultado);
+        if(cls==='F') vtFavC[vt]=(vtFavC[vt]||0)+1;
+        if(cls==='D') vtDesfC[vt]=(vtDesfC[vt]||0)+1;
+      });
+      const allVTs = [...new Set([...Object.keys(vtFavC),...Object.keys(vtDesfC)])].sort();
+      if(allVTs.length) push(tabKey,'chart_dec_vt','Decisões por Turma/VT','','',
+        { type:'bar', data:{ labels:allVTs, datasets:[
+            { label:'Favorável',    data:allVTs.map(v=>vtFavC[v]||0),  backgroundColor:'#0F9E76', borderRadius:4 },
+            { label:'Desfavorável', data:allVTs.map(v=>vtDesfC[v]||0), backgroundColor:'#7B1A2E', borderRadius:4 }
+          ]},
+          options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
+            scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true },
+                     y:{ grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } } } }
+        }, `Decisões por Turma/VT — ${label}`);
+
+      // Julgador/Relator: fav vs desf por juiz_relator
+      const jrFavC={}, jrDesfC={};
+      decs.forEach(d=>{
+        const jr = d.juiz_relator; if(!jr) return;
+        const cls = _xlClassifyDec(d.resultado);
+        if(cls==='F') jrFavC[jr]=(jrFavC[jr]||0)+1;
+        if(cls==='D') jrDesfC[jr]=(jrDesfC[jr]||0)+1;
+      });
+      const allJRs = [...new Set([...Object.keys(jrFavC),...Object.keys(jrDesfC)])].sort((a,b)=>((jrFavC[b]||0)+(jrDesfC[b]||0))-((jrFavC[a]||0)+(jrDesfC[a]||0))).slice(0,15);
+      if(allJRs.length) push(tabKey,'chart_dec_julgador','Decisões por Julgador/Relator','','',
+        { type:'bar', data:{ labels:allJRs, datasets:[
+            { label:'Favorável',    data:allJRs.map(j=>jrFavC[j]||0),  backgroundColor:'#0F9E76', borderRadius:4 },
+            { label:'Desfavorável', data:allJRs.map(j=>jrDesfC[j]||0), backgroundColor:'#7B1A2E', borderRadius:4 }
+          ]},
+          options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+            plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
+            scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true },
+                     y:{ grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono', size:9 } } } } }
+        }, `Decisões por Julgador/Relator — ${label}`);
+    }
 
     // Pedidos ranking — somente Ex-Foodlover
     if (tabKey === 'ex-foodlover') {
