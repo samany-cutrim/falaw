@@ -423,35 +423,22 @@ def compute_causa_raiz_kpis(records, decisoes, causa_raiz, suspensos_1389, suspe
                 adv_counter[a] += 1
     top_advs = adv_counter.most_common(10)
 
-    # Julgadores fav/desf — exclusivamente da aba Decisões, com nome do juiz
-    # vindo da aba todos cruzado por num_processo.
-    # Sentença* → juiz_sentenca (col 16); Acórdão*/Decisão TST → julgador_2inst (col 58)
-    rec_by_proc = {r["num_processo"]: r for r in recs if r["num_processo"]}
-
+    # Julgadores — da aba todos, sem relação com aba Decisões.
+    # Para cada processo classifica pelo resultado_recente (col 63).
+    # Nome do juiz: usa julgador_2inst (col 58) se preenchido, senão juiz_sentenca (col 16).
     julg_counter      = Counter()
     julg_fav_counter  = Counter()
     julg_desf_counter = Counter()
 
-    for d in decs:
-        proc = d["num_processo"]
-        res  = d["resultado"]
-        cls  = classify_decisao(res)
-        if cls not in ("Favorável", "Desfavorável"):
-            continue
-        r = rec_by_proc.get(proc)
-        if not r:
-            continue
-        # Escolhe o juiz correto pelo tipo de decisão
-        if res.lower().startswith("sentença"):
-            j = r.get("juiz_sentenca", "")
-        else:
-            j = r.get("julgador", "") or r.get("juiz_sentenca", "")
+    for r in recs:
+        j = r.get("julgador", "") or r.get("juiz_sentenca", "")
         if not j or j.lower() in ("nan", "none", "", "0"):
             continue
         julg_counter[j] += 1
+        cls = classify_result(r["resultado_recente"])
         if cls == "Favorável":
             julg_fav_counter[j] += 1
-        else:
+        elif cls == "Desfavorável":
             julg_desf_counter[j] += 1
 
     top_julgs      = julg_counter.most_common(10)

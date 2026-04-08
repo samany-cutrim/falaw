@@ -4605,20 +4605,15 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     if(decs.length>0) push(tabKey,'chart_decisoes','Decisões do Período',_xlFmtBr(decs.length),'decisões',
       _xlChartDoughnut(['Favorável','Desfavorável','Outro'],[tf,td,Math.max(0,decs.length-tf-td)]), `Decisões — ${label}`);
 
-    // Julgadores fav/desf — exclusivamente da aba Decisões, nome do juiz via todos.
-    // Sentença* → juiz_sentenca; Acórdão*/Decisão TST → julgador (col 58).
-    const recByProc = {};
-    recs.forEach(r=>{ if(r.num_processo) recByProc[r.num_processo]=r; });
+    // Julgadores — da aba todos, independente da aba Decisões.
+    // Classifica por resultado_recente (col 63). Nome: julgador (col 58) ou juiz_sentenca (col 16).
+    const _REC_FAV  = new Set(['Improcedente','Extinto sem Resolução']);
+    const _REC_DESF = new Set(['Procedente','Parc. Procedente']);
     const julgFavC={}, julgDesfC={};
-    decs.forEach(d=>{
-      const cls=_xlClassifyDec(d.resultado); if(cls==='O') return;
-      const r=recByProc[d.num_processo]; if(!r) return;
-      const j = d.resultado.toLowerCase().startsWith('sentença')
-        ? (r.juiz_sentenca||r.julgador||'')
-        : (r.julgador||r.juiz_sentenca||'');
-      if(!_isValidJulg(j)) return;
-      if(cls==='F') julgFavC[j]=(julgFavC[j]||0)+1;
-      if(cls==='D') julgDesfC[j]=(julgDesfC[j]||0)+1;
+    recs.forEach(r=>{
+      const j = r.julgador || r.juiz_sentenca; if(!_isValidJulg(j)) return;
+      if(_REC_FAV.has(r.resultado_recente))  julgFavC[j]=(julgFavC[j]||0)+1;
+      if(_REC_DESF.has(r.resultado_recente)) julgDesfC[j]=(julgDesfC[j]||0)+1;
     });
     const jFavTop=_xlTopN(julgFavC,10), jDesfTop=_xlTopN(julgDesfC,10);
     if(jFavTop.length) push(tabKey,'chart_julg_fav','Julgadores Favoráveis','','',
