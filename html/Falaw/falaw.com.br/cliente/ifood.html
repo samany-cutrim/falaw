@@ -223,8 +223,8 @@
       font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700;
       color: var(--text); margin-bottom: 20px;
     }
-    .chart-wrap { position: relative; }
-    .chart-wrap canvas { max-height: 280px; }
+    .chart-wrap { position: relative; height: 280px; }
+    .chart-wrap canvas { max-height: 100%; }
 
     /* ── ANALYSIS BLOCK ── */
     .analysis-block {
@@ -764,46 +764,82 @@ function renderCharts(tabKey, kpis) {
   const withCharts = kpis.filter(k => k.tab_key === tabKey && k.chart_data);
   if (!withCharts.length) { el.innerHTML = ''; return; }
 
-  el.innerHTML = withCharts.map((k, i) => `
-    <div class="chart-card">
+  // Doughnut charts are smaller; horizontal bar charts need more height
+  el.innerHTML = withCharts.map((k, i) => {
+    let cfg; try { cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; } catch(e) { cfg = {}; }
+    const isDonut = cfg.type === 'doughnut' || cfg.type === 'pie';
+    const isHoriz = cfg.options && cfg.options.indexAxis === 'y';
+    const h = isDonut ? '240px' : isHoriz ? '320px' : '280px';
+    return `<div class="chart-card">
       <div class="chart-card-title">${escHtml(k.chart_title || k.label)}</div>
-      <div class="chart-wrap"><canvas id="chart-${tabKey}-${i}"></canvas></div>
-    </div>`).join('');
+      <div class="chart-wrap" style="height:${h}"><canvas id="chart-${tabKey}-${i}"></canvas></div>
+    </div>`;
+  }).join('');
 
   withCharts.forEach((k, i) => {
     const canvasId = `chart-${tabKey}-${i}`;
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
-    // Destroy previous instance if exists
     if (chartInstances[canvasId]) { chartInstances[canvasId].destroy(); }
     try {
       const cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data;
       applyFalawTheme(cfg);
       chartInstances[canvasId] = new Chart(ctx, cfg);
-    } catch(e) { console.warn('Chart error:', e); }
+    } catch(e) { console.warn('Chart error for', canvasId, e); }
   });
 }
 
 function applyFalawTheme(cfg) {
-  const palette = ['#7B1A2E','#0D2B5E','#0F9E76','#E67E22','#8E44AD','#2563EB','#C0392B','#1ABC9C'];
+  // Colors: crimson-first palette for Falaw brand
+  const palette = ['#7B1A2E','#0D2B5E','#0F9E76','#1A4080','#9B2238','#6366f1','#059669','#D97706'];
   if (!cfg || !cfg.data) return;
+
   if (cfg.data.datasets) {
     cfg.data.datasets.forEach((ds, i) => {
-      if (!ds.backgroundColor || (Array.isArray(ds.backgroundColor) && ds.backgroundColor.length === 0)) {
-        ds.backgroundColor = cfg.type === 'line' ? palette[i % palette.length] + '22' : palette[i % palette.length];
+      // Only fill color if completely missing
+      if (!ds.backgroundColor || (Array.isArray(ds.backgroundColor) && !ds.backgroundColor.length)) {
+        ds.backgroundColor = cfg.type === 'line'
+          ? palette[i % palette.length] + '22'
+          : (cfg.type === 'doughnut' || cfg.type === 'pie')
+            ? palette.slice(0, ds.data ? ds.data.length : 8)
+            : palette[i % palette.length];
       }
-      if (cfg.type === 'line' && !ds.borderColor) {
+      if ((cfg.type === 'line') && !ds.borderColor) {
         ds.borderColor = palette[i % palette.length];
         ds.pointBackgroundColor = palette[i % palette.length];
         ds.tension = ds.tension ?? 0.3;
       }
+      if (!ds.borderRadius && cfg.type === 'bar') ds.borderRadius = 4;
     });
   }
+
+  // Merge options without overwriting explicit values already set
   cfg.options = cfg.options || {};
   cfg.options.responsive = true;
+  cfg.options.maintainAspectRatio = false;
+
   cfg.options.plugins = cfg.options.plugins || {};
-  cfg.options.plugins.legend = cfg.options.plugins.legend || { labels: { font: { family: 'IBM Plex Mono', size: 10 }, color: 'rgba(26,10,13,0.6)' } };
-  cfg.options.plugins.tooltip = cfg.options.plugins.tooltip || { titleFont: { family: 'IBM Plex Mono' }, bodyFont: { family: 'Inter' } };
+  if (!cfg.options.plugins.legend) {
+    cfg.options.plugins.legend = {
+      labels: { font: { family: 'IBM Plex Mono', size: 10 }, color: 'rgba(26,10,13,0.6)', padding: 14 }
+    };
+  }
+  cfg.options.plugins.tooltip = cfg.options.plugins.tooltip || {
+    titleFont: { family: 'IBM Plex Mono', size: 11 },
+    bodyFont:  { family: 'Inter', size: 12 }
+  };
+
+  // Scales defaults only if not already set
+  if (cfg.type === 'bar') {
+    cfg.options.scales = cfg.options.scales || {};
+    cfg.options.scales.x = cfg.options.scales.x || { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { family: 'IBM Plex Mono', size: 10 }, color: 'rgba(26,10,13,0.6)' } };
+    cfg.options.scales.y = cfg.options.scales.y || { grid: { display: false }, ticks: { font: { family: 'IBM Plex Mono', size: 10 }, color: 'rgba(26,10,13,0.6)' } };
+    // horizontal bar: swap grid
+    if (cfg.options.indexAxis === 'y') {
+      if (!cfg.options.scales.x.grid) cfg.options.scales.x.grid = { color: 'rgba(0,0,0,0.05)' };
+      cfg.options.scales.y.grid = { display: false };
+    }
+  }
 }
 
 function renderContent(tabKey, contentArr) {
