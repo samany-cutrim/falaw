@@ -4549,10 +4549,10 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     trtCrMap[r.trt][r.causa_raiz]=(trtCrMap[r.trt][r.causa_raiz]||0)+1;
   });
   const trtCrTrts = Object.entries(trtCrMap).sort((a,b)=>Object.values(b[1]).reduce((s,v)=>s+v,0)-Object.values(a[1]).reduce((s,v)=>s+v,0)).slice(0,12).map(([t])=>t);
-  const allCRs = _XL_CR_TABS.map(t=>t.cr);
+  const trtCrAllCRs = _XL_CR_TABS.map(t=>t.cr);
   push('visao-geral','chart_trt_cr','Processos Ativos por TRT e Causa Raiz','','',
     { type:'bar',
-      data:{ labels: trtCrTrts, datasets: allCRs.map((cr,i)=>({
+      data:{ labels: trtCrTrts, datasets: trtCrAllCRs.map((cr,i)=>({
         label: _XL_CR_TABS[i].label,
         data: trtCrTrts.map(t=>(trtCrMap[t]||{})[cr]||0),
         backgroundColor: _TRT_CR_PAL[i % _TRT_CR_PAL.length],
