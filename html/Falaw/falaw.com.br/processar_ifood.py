@@ -393,9 +393,22 @@ def compute_causa_raiz_kpis(records, decisoes, causa_raiz, suspensos_1389, suspe
                 adv_counter[a] += 1
     top_advs = adv_counter.most_common(10)
 
-    # Julgadores
-    julg_counter = Counter(r["julgador"] for r in recs if r["julgador"] and r["julgador"].lower() not in ("nan", "none", "", "0"))
-    top_julgs = julg_counter.most_common(10)
+    # Julgadores — total, favoráveis e desfavoráveis
+    julg_counter      = Counter()
+    julg_fav_counter  = Counter()
+    julg_desf_counter = Counter()
+    for r in recs:
+        j = r["julgador"]
+        if j and j.lower() not in ("nan", "none", "", "0"):
+            julg_counter[j] += 1
+            cls = classify_result(r["resultado_recente"])
+            if cls == "Favorável":
+                julg_fav_counter[j] += 1
+            elif cls == "Desfavorável":
+                julg_desf_counter[j] += 1
+    top_julgs      = julg_counter.most_common(10)
+    top_julgs_fav  = julg_fav_counter.most_common(10)
+    top_julgs_desf = julg_desf_counter.most_common(10)
 
     # Results
     res_counter = Counter()
@@ -408,10 +421,8 @@ def compute_causa_raiz_kpis(records, decisoes, causa_raiz, suspensos_1389, suspe
     susp_list_1389 = [s for s in suspensos_1389 if match_susp(s)]
     susp_list_1291 = [s for s in suspensos_1291 if match_susp(s)]
 
-    # Pedidos ranking (only for EX-FOODLOVER)
-    pedidos_ranking = []
-    if causa_raiz == "EX-FOODLOVER":
-        pedidos_ranking = compute_pedidos_ranking(records, causa_raiz, top_n=15)
+    # Pedidos ranking — todas as causas raiz
+    pedidos_ranking = compute_pedidos_ranking(records, causa_raiz, top_n=15)
 
     return {
         "total": len(recs),
@@ -428,8 +439,12 @@ def compute_causa_raiz_kpis(records, decisoes, causa_raiz, suspensos_1389, suspe
         "uf_data":   [v for _, v in top_ufs],
         "adv_labels": [k for k, _ in top_advs],
         "adv_data":   [v for _, v in top_advs],
-        "julg_labels": [k for k, _ in top_julgs],
-        "julg_data":   [v for _, v in top_julgs],
+        "julg_labels":      [k for k, _ in top_julgs],
+        "julg_data":        [v for _, v in top_julgs],
+        "julg_fav_labels":  [k for k, _ in top_julgs_fav],
+        "julg_fav_data":    [v for _, v in top_julgs_fav],
+        "julg_desf_labels": [k for k, _ in top_julgs_desf],
+        "julg_desf_data":   [v for _, v in top_julgs_desf],
         "res_fav":  res_counter.get("Favorável", 0),
         "res_desf": res_counter.get("Desfavorável", 0),
         "res_neutro": res_counter.get("Neutro", 0),
@@ -491,10 +506,19 @@ def compute_global_charts(records, decisoes):
     dec_cr_fav   = [dec_by_cr_fav.get(c, 0) for c in all_crs]
     dec_cr_desf  = [dec_by_cr_desf.get(c, 0) for c in all_crs]
 
-    # UF → count
+    # UF → count and top causa raiz per UF
     uf_counter = Counter(r["uf"] for r in records if r["uf"] and r["status"].lower() == "ativo")
 
-    # TRT ranking
+    uf_cr_map = defaultdict(Counter)
+    for r in records:
+        if r["uf"] and r["status"].lower() == "ativo" and r["causa_raiz"]:
+            uf_cr_map[r["uf"]][r["causa_raiz"]] += 1
+    uf_causa_raiz_top = {
+        uf: counter.most_common(1)[0][0]
+        for uf, counter in uf_cr_map.items() if counter
+    }
+
+    # TRT ranking with chart data
     trt_recs = defaultdict(list)
     for r in records:
         if r["status"].lower() == "ativo":
@@ -504,10 +528,13 @@ def compute_global_charts(records, decisoes):
     for trt, recs in sorted(trt_recs.items(), key=lambda x: -len(x[1])):
         total = len(recs)
         fav = sum(1 for r in recs if r["resultado_recente"] in FAVORAVEL_VALUES)
+        pct = round(100 * fav / total, 1) if total > 0 else 0.0
         trt_ranking.append({
             "trt": trt,
             "total": total,
-            "pct_fav": f"{100*fav/total:.1f}%" if total > 0 else "N/A",
+            "fav": fav,
+            "pct_fav": f"{pct}%" if total > 0 else "N/A",
+            "pct_fav_num": pct,
         })
 
     return {
@@ -525,6 +552,7 @@ def compute_global_charts(records, decisoes):
         "dec_cr_fav": dec_cr_fav,
         "dec_cr_desf": dec_cr_desf,
         "uf_counter": dict(uf_counter),
+        "uf_causa_raiz_top": uf_causa_raiz_top,
         "trt_ranking": trt_ranking,
     }
 
@@ -665,15 +693,16 @@ def build_causa_raiz_tab(tab_id, label, data):
         susp_html += f'<h3 class="section-title" style="margin:24px 0 12px">Processos Suspensos — Tema 1291</h3>'
         susp_html += build_table(cols_1291, rows_1291)
 
-    fase_id    = f"chart_{tab_id}_fase"
-    uf_id      = f"chart_{tab_id}_uf"
-    dec_id     = f"chart_{tab_id}_dec"
-    pedidos_id = f"chart_{tab_id}_pedidos"
-    # Change 5: new canvas IDs for adv and julg charts
-    adv_id  = f"chart_{tab_id}_adv"
-    julg_id = f"chart_{tab_id}_julg"
+    fase_id      = f"chart_{tab_id}_fase"
+    uf_id        = f"chart_{tab_id}_uf"
+    dec_id       = f"chart_{tab_id}_dec"
+    pedidos_id   = f"chart_{tab_id}_pedidos"
+    adv_id       = f"chart_{tab_id}_adv"
+    julg_id      = f"chart_{tab_id}_julg"
+    julg_fav_id  = f"chart_{tab_id}_julgfav"
+    julg_desf_id = f"chart_{tab_id}_julgdesf"
 
-    # Pedidos section — only for EX-FOODLOVER
+    # Pedidos ranking — todas as abas
     pedidos_html = ""
     if data.get("pedidos_ranking"):
         ped_rows = [[rank+1, p, fmt_br(n)] for rank, (p, n) in enumerate(data["pedidos_ranking"])]
@@ -682,7 +711,7 @@ def build_causa_raiz_tab(tab_id, label, data):
     <h3 class="section-title" style="margin:28px 0 16px">Ranking de Pedidos dos Reclamantes (Top 15)</h3>
     <div class="charts-grid">
       <div class="chart-card" style="grid-column:span 2">
-        <div class="chart-card-title">Pedidos Mais Frequentes — Ex-Foodlover</div>
+        <div class="chart-card-title">Pedidos Mais Frequentes — {label}</div>
         <div class="chart-wrap" style="height:340px"><canvas id="{pedidos_id}"></canvas></div>
       </div>
       <div class="chart-card">
@@ -690,19 +719,6 @@ def build_causa_raiz_tab(tab_id, label, data):
         {ped_table}
       </div>
     </div>"""
-
-    # Change 5: ranking section with charts for adv and julg
-    ranking_section = f"""
-<div class="charts-grid">
-  <div class="chart-card">
-    <div class="chart-card-title">Top 10 Advogados Adversários</div>
-    <div class="chart-wrap" style="height:260px"><canvas id="{adv_id}"></canvas></div>
-  </div>
-  <div class="chart-card">
-    <div class="chart-card-title">Top 15 Julgadores</div>
-    <div class="chart-wrap" style="height:260px"><canvas id="{julg_id}"></canvas></div>
-  </div>
-</div>"""
 
     return f"""
   <div id="tab-{tab_id}" class="tab-panel">
@@ -730,7 +746,28 @@ def build_causa_raiz_tab(tab_id, label, data):
       </div>
     </div>
 
-    {ranking_section}
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">Top 10 Advogados Adversários</div>
+        <div class="chart-wrap" style="height:260px"><canvas id="{adv_id}"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Top 10 Julgadores (geral)</div>
+        <div class="chart-wrap" style="height:260px"><canvas id="{julg_id}"></canvas></div>
+      </div>
+    </div>
+
+    <h3 class="section-title" style="margin:8px 0 16px">Julgadores por Resultado</h3>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-title" style="color:var(--green)">✓ Julgadores — Decisões Favoráveis</div>
+        <div class="chart-wrap" style="height:260px"><canvas id="{julg_fav_id}"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title" style="color:var(--red)">✕ Julgadores — Decisões Desfavoráveis</div>
+        <div class="chart-wrap" style="height:260px"><canvas id="{julg_desf_id}"></canvas></div>
+      </div>
+    </div>
 
     {pedidos_html}
     {susp_html}
@@ -773,7 +810,10 @@ def build_causa_raiz_js(tab_id, data):
       }}
     }});"""
 
-    # Change 6: adv and julg chart JS
+    # Julgadores fav/desf
+    julg_fav_labels_f, julg_fav_data_f   = filter_nonzero(data.get("julg_fav_labels", []),  data.get("julg_fav_data", []))
+    julg_desf_labels_f, julg_desf_data_f = filter_nonzero(data.get("julg_desf_labels", []), data.get("julg_desf_data", []))
+
     adv_js = ""
     if adv_labels_f:
         adv_labels_s = json.dumps(adv_labels_f, ensure_ascii=False)
@@ -796,8 +836,38 @@ def build_causa_raiz_js(tab_id, data):
         julg_js = f"""
     new Chart(document.getElementById('chart_{tab_id}_julg'), {{
       type: 'bar',
-      data: {{ labels: {julg_labels_s}, datasets: [{{ label:'Decisões', data: {julg_data_s},
+      data: {{ labels: {julg_labels_s}, datasets: [{{ label:'Processos', data: {julg_data_s},
         backgroundColor: '#6366f1', borderRadius: 4 }}] }},
+      options: {{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{{ legend:{{ display:false }} }},
+        scales:{{ x:{{ grid:{{ color:'rgba(0,0,0,0.05)' }} }}, y:{{ grid:{{ display:false }}, ticks:{{ font:{{ size:9 }} }} }} }}
+      }}
+    }});"""
+
+    julg_fav_js = ""
+    if julg_fav_labels_f:
+        s_lbl = json.dumps(julg_fav_labels_f, ensure_ascii=False)
+        s_dat = json.dumps(julg_fav_data_f)
+        julg_fav_js = f"""
+    new Chart(document.getElementById('chart_{tab_id}_julgfav'), {{
+      type: 'bar',
+      data: {{ labels: {s_lbl}, datasets: [{{ label:'Favoráveis', data: {s_dat},
+        backgroundColor: '#0F9E76', borderRadius: 4 }}] }},
+      options: {{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{{ legend:{{ display:false }} }},
+        scales:{{ x:{{ grid:{{ color:'rgba(0,0,0,0.05)' }} }}, y:{{ grid:{{ display:false }}, ticks:{{ font:{{ size:9 }} }} }} }}
+      }}
+    }});"""
+
+    julg_desf_js = ""
+    if julg_desf_labels_f:
+        s_lbl = json.dumps(julg_desf_labels_f, ensure_ascii=False)
+        s_dat = json.dumps(julg_desf_data_f)
+        julg_desf_js = f"""
+    new Chart(document.getElementById('chart_{tab_id}_julgdesf'), {{
+      type: 'bar',
+      data: {{ labels: {s_lbl}, datasets: [{{ label:'Desfavoráveis', data: {s_dat},
+        backgroundColor: '#C0392B', borderRadius: 4 }}] }},
       options: {{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
         plugins:{{ legend:{{ display:false }} }},
         scales:{{ x:{{ grid:{{ color:'rgba(0,0,0,0.05)' }} }}, y:{{ grid:{{ display:false }}, ticks:{{ font:{{ size:9 }} }} }} }}
@@ -826,7 +896,7 @@ def build_causa_raiz_js(tab_id, data):
         backgroundColor: '#7B1A2E', borderRadius: 4 }}] }},
       options: {{ responsive:true, plugins:{{ legend:{{ display:false }} }},
         scales:{{ x:{{ grid:{{ display:false }} }}, y:{{ grid:{{ color:'rgba(0,0,0,0.05)' }} }} }} }}
-    }});{adv_js}{julg_js}{pedidos_js}"""
+    }});{adv_js}{julg_js}{julg_fav_js}{julg_desf_js}{pedidos_js}"""
 
 
 def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1291,
@@ -848,10 +918,14 @@ def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1
         ("Suspensos",              fmt_br(kpis["suspensos"]), "processos",     "flat", ""),
     ])
 
-    # ── TRT RANKING TABLE ──
+    # ── TRT RANKING TABLE + CHART DATA ──
     trt_rows = [[r["trt"], fmt_br(r["total"]), r["pct_fav"]]
                 for r in global_charts["trt_ranking"]]
     trt_table = build_table(["TRT", "Processos", "% Favorável"], trt_rows)
+
+    trt_chart_labels = json.dumps([r["trt"] for r in global_charts["trt_ranking"]], ensure_ascii=False)
+    trt_chart_vol    = json.dumps([r["total"] for r in global_charts["trt_ranking"]])
+    trt_chart_fav    = json.dumps([r["pct_fav_num"] for r in global_charts["trt_ranking"]])
 
     # ── DECISÕES TABLE ──
     dec_rows = [[d["num_processo"], d["causa_raiz"], d["resultado"], d["tipo"]]
@@ -881,8 +955,9 @@ def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1
             "dec_fav":0,"dec_desf":0,"dec_total":0,
             "fase_labels":[],"fase_data":[],"uf_labels":[],"uf_data":[],
             "adv_labels":[],"adv_data":[],"julg_labels":[],"julg_data":[],
+            "julg_fav_labels":[],"julg_fav_data":[],"julg_desf_labels":[],"julg_desf_data":[],
             "res_fav":0,"res_desf":0,"res_neutro":0,
-            "susp_list_1389":[],"susp_list_1291":[],"decisoes":[]
+            "susp_list_1389":[],"susp_list_1291":[],"decisoes":[],"pedidos_ranking":[]
         })
         cr_tabs_html += build_causa_raiz_tab(tab_id, label, data)
         cr_tabs_buttons += f'<button class="tab-btn" data-tab="{tab_id}">{label}</button>\n'
@@ -894,13 +969,15 @@ def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1
         data = causa_raiz_data.get(causa, {
             "fase_labels":[],"fase_data":[],"uf_labels":[],"uf_data":[],
             "adv_labels":[],"adv_data":[],"julg_labels":[],"julg_data":[],
-            "res_fav":0,"res_desf":0,"res_neutro":0,
+            "julg_fav_labels":[],"julg_fav_data":[],"julg_desf_labels":[],"julg_desf_data":[],
+            "res_fav":0,"res_desf":0,"res_neutro":0,"pedidos_ranking":[],
         })
         cr_js += build_causa_raiz_js(tab_id, data)
 
-    # ── UF → count JSON for SVG map ──
-    uf_json = json.dumps(global_charts["uf_counter"], ensure_ascii=False)
-    max_uf  = max(global_charts["uf_counter"].values()) if global_charts["uf_counter"] else 1
+    # ── UF → count + causa raiz JSON for SVG map ──
+    uf_json    = json.dumps(global_charts["uf_counter"], ensure_ascii=False)
+    uf_cr_json = json.dumps(global_charts["uf_causa_raiz_top"], ensure_ascii=False)
+    max_uf     = max(global_charts["uf_counter"].values()) if global_charts["uf_counter"] else 1
 
     # ── GLOBAL CHART DATA — Change 7: apply filter_nonzero ──
     cr_labels_f, cr_data_f = filter_nonzero(global_charts["cr_labels"], global_charts["cr_data"])
@@ -1269,8 +1346,27 @@ def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1
           </div>
         </div>
 
+        <!-- TRT CHARTS -->
+        <h3 class="section-title" style="margin:0 0 16px">Volumetria por Tribunal Regional do Trabalho</h3>
+        <div class="charts-grid">
+          <div class="chart-card full-width">
+            <div class="chart-card-title">Volume de Processos por TRT (Ativos)</div>
+            <div class="chart-wrap" style="max-height:300px"><canvas id="chart-trt-vol"></canvas></div>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card full-width">
+            <div class="chart-card-title">Taxa de Decisões Favoráveis por TRT (%)</div>
+            <div class="chart-wrap" style="max-height:300px"><canvas id="chart-trt-fav"></canvas></div>
+          </div>
+        </div>
+        <div class="chart-card" style="margin-bottom:28px">
+          <div class="chart-card-title">Tabela — Ranking TRT</div>
+          {trt_table}
+        </div>
+
         <!-- BRAZIL MAP -->
-        <div class="map-card">
+        <div class="map-card" style="position:relative">
           <div class="map-card-title">Distribuição Geográfica por UF (Processos Ativos)</div>
           {BRAZIL_SVG}
           <div class="map-legend">
@@ -1279,12 +1375,9 @@ def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1
             <span id="map-max-label">{max_uf}+</span>
             <span style="margin-left:8px;font-size:10px">processos por estado</span>
           </div>
-        </div>
-
-        <!-- TRT RANKING -->
-        <div class="chart-card">
-          <div class="chart-card-title">Ranking TRT — Distribuição por Tribunal</div>
-          {trt_table}
+          <div id="map-tooltip" style="display:none;position:absolute;background:#0D2B5E;color:#fff;
+            padding:6px 10px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;
+            pointer-events:none;white-space:nowrap;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.25)"></div>
         </div>
       </div>
       <!-- /VISÃO GERAL -->
@@ -1359,8 +1452,9 @@ def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1
 
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────────────
-const UF_DATA = {uf_json};
-const MAX_UF  = {max_uf};
+const UF_DATA    = {uf_json};
+const UF_CR_DATA = {uf_cr_json};
+const MAX_UF     = {max_uf};
 
 // ── TAB SWITCHING ────────────────────────────────────────────────────────────
 function switchTab(tabId) {{
@@ -1429,20 +1523,32 @@ function interpolateColor(t) {{
   return `rgb(${{r}},${{g}},${{b}})`;
 }}
 
+const mapTooltip = document.getElementById('map-tooltip');
 document.querySelectorAll('#states path').forEach(path => {{
   const uf = path.id;
   const count = UF_DATA[uf] || 0;
+  const cr    = UF_CR_DATA[uf] || '—';
   const t = MAX_UF > 0 ? count / MAX_UF : 0;
   path.style.fill = interpolateColor(t);
-  path.setAttribute('title', uf + ': ' + count + ' processos');
   path.style.cursor = 'pointer';
   path.addEventListener('mouseenter', (e) => {{
-    path.style.opacity = '0.8';
+    path.style.opacity = '0.75';
     path.style.strokeWidth = '2';
+    if (mapTooltip) {{
+      mapTooltip.textContent = uf + ' · ' + count + ' processos · ' + cr;
+      mapTooltip.style.display = 'block';
+    }}
+  }});
+  path.addEventListener('mousemove', (e) => {{
+    if (!mapTooltip) return;
+    const rect = mapTooltip.parentElement.getBoundingClientRect();
+    mapTooltip.style.left = (e.clientX - rect.left + 12) + 'px';
+    mapTooltip.style.top  = (e.clientY - rect.top  - 28) + 'px';
   }});
   path.addEventListener('mouseleave', () => {{
     path.style.opacity = '1';
     path.style.strokeWidth = '1';
+    if (mapTooltip) mapTooltip.style.display = 'none';
   }});
 }});
 
@@ -1546,6 +1652,46 @@ new Chart(document.getElementById('chart-julgadores'), {{
   }}
 }});
 
+// ── TRT CHARTS ───────────────────────────────────────────────────────────────
+new Chart(document.getElementById('chart-trt-vol'), {{
+  type: 'bar',
+  data: {{
+    labels: {trt_chart_labels},
+    datasets: [{{ label:'Processos', data: {trt_chart_vol},
+      backgroundColor: PALETTE_CR.map((_, i) => i % 2 === 0 ? '#0D2B5E' : '#7B1A2E'),
+      borderRadius: 4 }}]
+  }},
+  options: {{
+    responsive: true,
+    plugins: {{ legend:{{ display:false }},
+      tooltip:{{ callbacks:{{ label: ctx => ' ' + ctx.parsed.y + ' processos' }} }} }},
+    scales: {{
+      x:{{ grid:{{ display:false }}, ticks:{{ font:{{ family:'IBM Plex Mono', size:10 }} }} }},
+      y:{{ grid:{{ color:'rgba(0,0,0,0.05)' }}, beginAtZero:true }}
+    }}
+  }}
+}});
+
+new Chart(document.getElementById('chart-trt-fav'), {{
+  type: 'bar',
+  data: {{
+    labels: {trt_chart_labels},
+    datasets: [{{ label:'% Favorável', data: {trt_chart_fav},
+      backgroundColor: {trt_chart_fav}.map(v => v >= 30 ? '#0F9E76' : v >= 15 ? '#f59e0b' : '#C0392B'),
+      borderRadius: 4 }}]
+  }},
+  options: {{
+    responsive: true,
+    plugins: {{ legend:{{ display:false }},
+      tooltip:{{ callbacks:{{ label: ctx => ' ' + ctx.parsed.y.toFixed(1) + '% favorável' }} }} }},
+    scales: {{
+      x:{{ grid:{{ display:false }}, ticks:{{ font:{{ family:'IBM Plex Mono', size:10 }} }} }},
+      y:{{ max:100, grid:{{ color:'rgba(0,0,0,0.05)' }}, beginAtZero:true,
+        ticks:{{ callback: v => v + '%' }} }}
+    }}
+  }}
+}});
+
 // ── CAUSA RAIZ CHARTS ────────────────────────────────────────────────────────
 {cr_js}
 
@@ -1581,18 +1727,23 @@ def main():
     # Load
     dfs = load_excel(excel_path)
 
-    # Identify sheets (case-insensitive)
-    def find_sheet(partial):
-        for k in dfs:
-            if partial.lower() in k.lower():
-                return dfs[k]
+    # Identify sheets (case-insensitive, multiple keyword fallbacks)
+    def find_sheet(*keywords):
+        """Return first sheet whose name contains any of the given keywords (case-insensitive)."""
+        for kw in keywords:
+            for k in dfs:
+                if kw.lower() in k.lower():
+                    print(f"[INFO] Aba identificada: '{k}' (keyword: {kw!r})")
+                    return dfs[k]
+        available = list(dfs.keys())
+        print(f"[WARN] Nenhuma aba encontrada para keywords {keywords}. Abas disponíveis: {available}")
         return pd.DataFrame()
 
-    df_ifood    = find_sheet("ifood")
-    df_decisoes = find_sheet("decis")
-    df_novos    = find_sheet("novos")
-    df_susp1389 = find_sheet("1389")
-    df_susp1291 = find_sheet("1291")
+    df_ifood    = find_sheet("ifood", "processos", "base", "relatório")
+    df_decisoes = find_sheet("decis", "decisão", "decisao", "julgamento", "acórdão", "acordao")
+    df_novos    = find_sheet("novos", "novo caso", "entrada", "novos casos", "ajuizamento")
+    df_susp1389 = find_sheet("1389", "susp 1389", "suspensos 1389", "tema 1389")
+    df_susp1291 = find_sheet("1291", "susp 1291", "suspensos 1291", "tema 1291")
 
     print("[INFO] Processando aba IFOOD...")
     records = parse_ifood_sheet(df_ifood)

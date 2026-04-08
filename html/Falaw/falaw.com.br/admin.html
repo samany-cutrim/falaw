@@ -3932,7 +3932,8 @@ function renderIfoodPeriods() {
       <div class="item-card-actions">
         ${!p.is_active ? `<button type="button" class="btn btn-ghost btn-sm" onclick="ifoodActivatePeriod('${p.id}')">Ativar</button>` : ''}
         <button type="button" class="btn btn-ghost btn-sm" onclick="ifoodOpenPeriodModal('${p.id}')">Editar</button>
-        <button type="button" class="btn btn-danger btn-sm" onclick="ifoodDeletePeriod('${p.id}')">Excluir</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="ifoodClearPeriodContent('${p.id}')">Limpar Textos</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="ifoodDeletePeriod('${p.id}')">Excluir Tudo</button>
       </div>
     </div>`).join('') + '</div>';
 }
@@ -3974,12 +3975,28 @@ async function ifoodSavePeriod() {
   await loadIfoodAdmin();
 }
 
-async function ifoodDeletePeriod(id) {
-  if (!confirm('Excluir este período e todos os dados relacionados (KPIs, textos, destaques)?')) return;
+async function ifoodClearPeriodContent(id) {
+  if (!confirm('Limpar apenas os TEXTOS e DESTAQUES deste período?\n\nOs KPIs e gráficos (dados do Excel) serão mantidos.')) return;
   const sb = ifoodSB(); if (!sb) return;
+  const [r1, r2] = await Promise.all([
+    sb.from('ifood_content').delete().eq('period_id', id),
+    sb.from('ifood_highlights').delete().eq('period_id', id),
+  ]);
+  if (r1.error) { showToast('Erro ao limpar textos: ' + r1.error.message); return; }
+  showToast('Textos e destaques removidos. KPIs mantidos.');
+  await loadIfoodAdmin();
+}
+
+async function ifoodDeletePeriod(id) {
+  if (!confirm('EXCLUIR TUDO?\n\nIsso apagará o período e TODOS os dados: KPIs, textos, destaques e gráficos.\n\nPara remover apenas os textos, use "Limpar Textos".')) return;
+  const sb = ifoodSB(); if (!sb) return;
+  // Explicitly delete child tables before the period (prevent any FK cascade surprises)
+  await sb.from('ifood_content').delete().eq('period_id', id);
+  await sb.from('ifood_highlights').delete().eq('period_id', id);
+  await sb.from('ifood_kpis').delete().eq('period_id', id);
   const { error } = await sb.from('ifood_periods').delete().eq('id', id);
   if (error) { showToast('Erro: ' + error.message); return; }
-  showToast('Período excluído.');
+  showToast('Período e todos os dados excluídos.');
   await loadIfoodAdmin();
 }
 
