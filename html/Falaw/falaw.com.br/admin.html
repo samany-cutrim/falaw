@@ -4653,15 +4653,16 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     if(jDesfTop.length) push(tabKey,'chart_julg_desf','Julgadores Desfavoráveis','','',
       _xlChartBar(jDesfTop.map(([l])=>l),jDesfTop.map(([,v])=>v),'Desfavoráveis','#7B1A2E'), `Julgadores Desfavoráveis — ${label}`);
 
-    // Turma/VT e Julgador/Relator — exclusivamente da aba Decisões (março)
+    // Turma/VT e Julgador/Relator — exclusivamente da aba Decisões
     if (decs.length > 0) {
-      // Turma/VT: fav vs desf por varaturma
+      // Turma/VT: fav vs desf — label inclui TRT para contexto regional
       const vtFavC={}, vtDesfC={};
       decs.forEach(d=>{
         const vt = d.varaturma; if(!vt) return;
+        const key = d.trt ? `${d.trt} · ${vt}` : vt;
         const cls = _xlClassifyDec(d.resultado);
-        if(cls==='F') vtFavC[vt]=(vtFavC[vt]||0)+1;
-        if(cls==='D') vtDesfC[vt]=(vtDesfC[vt]||0)+1;
+        if(cls==='F') vtFavC[key]=(vtFavC[key]||0)+1;
+        if(cls==='D') vtDesfC[key]=(vtDesfC[key]||0)+1;
       });
       const allVTs = [...new Set([...Object.keys(vtFavC),...Object.keys(vtDesfC)])].sort();
       if(allVTs.length) push(tabKey,'chart_dec_vt','Decisões por Turma/VT','','',
@@ -4675,13 +4676,14 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
                      y:{ grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } } } }
         }, `Decisões por Turma/VT — ${label}`);
 
-      // Julgador/Relator: fav vs desf por juiz_relator
+      // Julgador/Relator: fav vs desf — label inclui TRT para contexto regional
       const jrFavC={}, jrDesfC={};
       decs.forEach(d=>{
         const jr = d.juiz_relator; if(!jr) return;
+        const key = d.trt ? `${jr} (${d.trt})` : jr;
         const cls = _xlClassifyDec(d.resultado);
-        if(cls==='F') jrFavC[jr]=(jrFavC[jr]||0)+1;
-        if(cls==='D') jrDesfC[jr]=(jrDesfC[jr]||0)+1;
+        if(cls==='F') jrFavC[key]=(jrFavC[key]||0)+1;
+        if(cls==='D') jrDesfC[key]=(jrDesfC[key]||0)+1;
       });
       const allJRs = [...new Set([...Object.keys(jrFavC),...Object.keys(jrDesfC)])].sort((a,b)=>((jrFavC[b]||0)+(jrDesfC[b]||0))-((jrFavC[a]||0)+(jrDesfC[a]||0))).slice(0,15);
       if(allJRs.length) push(tabKey,'chart_dec_julgador','Decisões por Julgador/Relator','','',
@@ -4741,7 +4743,14 @@ async function ifoodSaveExcel() {
     setStatus(`Computando KPIs… (${decisoes.length} decisões, ${novos.total} novos casos)`);
     const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291);
 
-    setStatus('Removendo KPIs anteriores do período…');
+    // Preservar KPIs adicionados manualmente: busca os existentes cujo kpi_key
+    // não será sobrescrito pela geração automática, e os reinserimos após.
+    setStatus('Verificando KPIs manuais existentes…');
+    const { data: existingKpis } = await sb.from('ifood_kpis').select('*').eq('period_id', periodId);
+    const autoKeySet = new Set(kpiRows.map(r => r.tab_key + '||' + r.kpi_key));
+    const manualKpis = (existingKpis || []).filter(k => !autoKeySet.has(k.tab_key + '||' + k.kpi_key));
+
+    setStatus('Removendo KPIs gerados automaticamente…');
     const { error: delErr } = await sb.from('ifood_kpis').delete().eq('period_id', periodId);
     if (delErr) throw new Error('Erro ao limpar KPIs: ' + delErr.message);
 
@@ -4750,6 +4759,17 @@ async function ifoodSaveExcel() {
       setStatus(`Salvando KPIs… (${Math.min(i+BATCH,kpiRows.length)}/${kpiRows.length})`);
       const { error } = await sb.from('ifood_kpis').insert(kpiRows.slice(i, i+BATCH));
       if (error) throw new Error('KPI insert: ' + error.message);
+    }
+
+    // Reinserir KPIs manuais preservados (ajusta sort_order para vir após os automáticos)
+    if (manualKpis.length) {
+      setStatus(`Restaurando ${manualKpis.length} KPI(s) adicionado(s) manualmente…`);
+      const maxSo = kpiRows.reduce((m, r) => Math.max(m, r.sort_order), 0);
+      manualKpis.forEach((k, i) => { k.sort_order = maxSo + i + 1; delete k.created_at; });
+      for (let i = 0; i < manualKpis.length; i += BATCH) {
+        const { error } = await sb.from('ifood_kpis').insert(manualKpis.slice(i, i+BATCH));
+        if (error) console.warn('KPI manual reinsert:', error.message);
+      }
     }
 
     // Content HTML per tab — só insere se ainda não existir texto escrito manualmente
