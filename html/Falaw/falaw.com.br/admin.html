@@ -4426,10 +4426,6 @@ function _xlParseNovos(rawRows) {
   return { total, byCR };
 }
 
-function _xlParseNovos(rawRows) {
-  return rawRows.filter(r => { const v = String(r[0]??'').trim(); return v && v.toLowerCase() !== 'número do processo' && v !== 'nan'; }).map(r => String(r[0]).trim());
-}
-
 function _xlClassifyDec(res) {
   if (_XL_DEC_FAV.has(res))  return 'F';
   if (_XL_DEC_DESF.has(res)) return 'D';
