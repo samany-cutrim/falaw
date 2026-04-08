@@ -55,8 +55,9 @@ FAVORAVEL_VALUES   = {"Improcedente", "Extinto sem Resolução"}
 DESFAVORAVEL_VALUES = {"Procedente", "Parc. Procedente"}
 NEUTRO_VALUES       = {"Acordo", "Sem Sentença Expressa"}
 
-DECISAO_FAVORAVEL_VALUES   = {"Acórdão Favorável", "Sentença Improcedente"}
-DECISAO_DESFAVORAVEL_VALUES = {"Acórdão Desfavorável", "Sentença Desfavorável", "Acórdão Anula Sentença"}
+DECISAO_FAVORAVEL_VALUES   = {"Acórdão Favorável", "Sentença Improcedente", "Decisão Favorável TST"}
+DECISAO_DESFAVORAVEL_VALUES = {"Acórdão Desfavorável", "Sentença Desfavorável", "Acórdão Anula Sentença",
+                               "Decisão Desfavorável TST", "Acórdão Desfavorável TST"}
 
 
 # ─── HELPERS ───────────────────────────────────────────────────────────────────
@@ -160,22 +161,23 @@ def parse_ifood_sheet(df):
 
         causa_raiz        = c(0)
         num_processo      = c(1)
-        trt_raw           = c(2)   # already "TRT 2", "TRT 15", etc.
+        trt_raw           = c(2)   # "TRT 2", "TRT 15", etc.
         status_raw        = c(3)
         cargo             = c(4)
         assunto           = c(5)
         vara              = c(6)
         cidade            = c(7)
         uf                = c(8)
-        adv1              = c(16)
-        juiz_sentenca     = c(17)
-        fase              = c(23)
-        arquivado         = c(36)
-        autor_recurso     = c(44)
-        resultado_final   = c(52)
-        julgador_2inst    = c(59)
-        resultado_recente = c(64)
-        primeiro_resultado = c(67)
+        # col 14: Requerente 1, col 15: Escritorio CNA Requerente (law firm name)
+        adv1              = c(15)  # Escritorio CNA Requerente
+        juiz_sentenca     = c(16)  # Juiz sentença
+        fase              = c(22)  # Fase Processual
+        arquivado         = c(35)  # Se está arquivado
+        autor_recurso     = c(43)  # Autor do Recurso
+        resultado_final   = c(51)  # Resultado Final
+        julgador_2inst    = c(58)  # Julgador 2a Instancia
+        resultado_recente = c(63)  # Resultado Julgamento mais recente
+        primeiro_resultado = c(66) # 1o resultado do processo
 
         # Normalize TRT: "TRT 2" → "TRT-2", "TRT 15" → "TRT-15"
         trt = re.sub(r'TRT\s+', 'TRT-', trt_raw, flags=re.IGNORECASE).strip()
@@ -217,6 +219,9 @@ def parse_ifood_sheet(df):
 
 
 def parse_decisoes_sheet(df):
+    """Parse Decisões sheet.
+    Actual columns: 0=N°Processo, 1=TRT, 2=CAUSA RAIZ, 3=RESULTADO DA DECISÃO
+    """
     if df.empty:
         return []
     rows = []
@@ -229,39 +234,54 @@ def parse_decisoes_sheet(df):
                 return str(v).strip()
             except Exception:
                 return ""
-        # Normalize causa_raiz from Decisões sheet to match IFOOD sheet names
-        _dec_cr_map = {
-            "nuvem": "ENTREGADOR NUVEM",
-            "ol": "ENTREGADOR OL",
-            "ex-foodlover": "EX-FOODLOVER",
-            "terceirizado": "TERCEIRIZAÇÃO",
-            "terceirização": "TERCEIRIZAÇÃO",
-            "marketplace": "ENTREGADOR - MARKETPLACE",
-            "restaurantes": "RESTAURANTES - CONTRATO",
-        }
-        cr_raw = c(1).lower().strip()
-        cr_normalized = _dec_cr_map.get(cr_raw, c(1).upper().strip())
-        rows.append({
-            "num_processo": c(0),
-            "causa_raiz": cr_normalized,
-            "resultado": c(2),
-            "tipo": c(3),
-        })
+        causa_raiz = c(2).strip()  # col 2 is directly CAUSA RAIZ
+        resultado  = c(3).strip()  # col 3 is RESULTADO DA DECISÃO
+        if causa_raiz:
+            rows.append({
+                "num_processo": c(0),
+                "causa_raiz": causa_raiz,
+                "resultado": resultado,
+            })
     return rows
 
 
 def parse_novos_casos(df):
+    """Parse Novos Casos Recebidos sheet.
+    Sheet has a summary table: row with 'Causa Raiz' header, then CR + count rows.
+    Returns dict: { 'total': int, 'por_causa_raiz': { CR: count } }
+    """
     if df.empty:
-        return []
-    rows = []
+        return {"total": 0, "por_causa_raiz": {}}
+    total = 0
+    por_causa_raiz = {}
+    in_table = False
     for _, row in df.iterrows():
         try:
-            num = str(row.iloc[0]).strip() if not pd.isna(row.iloc[0]) else ""
-            if num and num.lower() not in ("número do processo", "nan", ""):
-                rows.append(num)
+            v0 = str(row.iloc[0]).strip() if not pd.isna(row.iloc[0]) else ""
+            # Detect total line
+            if v0.lower().startswith("total:") and "novos" in v0.lower():
+                try:
+                    total = int(re.search(r'\d+', v0).group())
+                except Exception:
+                    pass
+            # Detect table header
+            if v0.lower() == "causa raiz":
+                in_table = True
+                continue
+            # Parse table rows
+            if in_table and v0 and v0.lower() != "total":
+                try:
+                    count_raw = row.iloc[1]
+                    count = int(float(count_raw)) if not pd.isna(count_raw) else 0
+                    if count > 0:
+                        por_causa_raiz[v0.upper().strip()] = count
+                except Exception:
+                    pass
         except Exception:
             pass
-    return rows
+    if not total:
+        total = sum(por_causa_raiz.values())
+    return {"total": total, "por_causa_raiz": por_causa_raiz}
 
 
 def parse_suspensos(df):
@@ -342,13 +362,19 @@ def classify_decisao(res):
         return "Desfavorável"
     return "Outro"
 
+FASE_EXCLUIR = {"arquivamento", "arquivado"}
+
+def _fase_valida(fase_str):
+    """Return True if this fase should be included (exclude arquivamento)."""
+    return "arquiv" not in fase_str.lower()
+
 def compute_kpis(records, suspensos_1389, suspensos_1291, novos_casos, decisoes):
     total = len(records)
     ativos = sum(1 for r in records if r["status"].lower() == "ativo")
     encerrados = sum(1 for r in records if r["status"].lower() == "encerrado")
     arquivados = sum(1 for r in records if is_arquivado(r))
     suspensos = len(suspensos_1389) + len(suspensos_1291)
-    novos = len(novos_casos)
+    novos = novos_casos.get("total", 0) if isinstance(novos_casos, dict) else len(novos_casos)
 
     dec_fav = sum(1 for d in decisoes if classify_decisao(d["resultado"]) == "Favorável")
     dec_desf = sum(1 for d in decisoes if classify_decisao(d["resultado"]) == "Desfavorável")
@@ -382,17 +408,17 @@ def compute_causa_raiz_kpis(records, decisoes, causa_raiz, suspensos_1389, suspe
     dec_fav  = sum(1 for d in decs if classify_decisao(d["resultado"]) == "Favorável")
     dec_desf = sum(1 for d in decs if classify_decisao(d["resultado"]) == "Desfavorável")
 
-    # Fase
-    fase_counter = Counter(r["fase"] for r in recs if r["fase"])
+    # Fase — exclude arquivamento
+    fase_counter = Counter(r["fase"] for r in recs if r["fase"] and _fase_valida(r["fase"]))
 
     # UF distribution (top 10)
     uf_counter = Counter(r["uf"] for r in recs if r["uf"])
     top_ufs = uf_counter.most_common(10)
 
-    # Advogados
+    # Escritórios CNA adversários (col 15)
     adv_counter = Counter()
     for r in recs:
-        for a in [r["adv1"], r["adv2"], r["adv3"]]:
+        for a in [r["adv1"]]:
             if a and a.lower() not in ("nan", "none", "", "0"):
                 adv_counter[a] += 1
     top_advs = adv_counter.most_common(10)
@@ -464,8 +490,8 @@ def compute_global_charts(records, decisoes):
     cr_labels = list(cr_counter.keys())
     cr_data   = list(cr_counter.values())
 
-    # Fase processual
-    fase_counter = Counter(r["fase"] for r in records if r["fase"] and r["status"].lower() == "ativo")
+    # Fase processual — exclude arquivamento
+    fase_counter = Counter(r["fase"] for r in records if r["fase"] and r["status"].lower() == "ativo" and _fase_valida(r["fase"]))
     fase_labels = [k for k, _ in fase_counter.most_common()]
     fase_data   = [v for _, v in fase_counter.most_common()]
 
@@ -475,12 +501,11 @@ def compute_global_charts(records, decisoes):
     julg_labels = [k for k, _ in top15_julg]
     julg_data   = [v for _, v in top15_julg]
 
-    # Top 10 advogados adversários
+    # Top 10 escritórios CNA adversários
     adv_counter = Counter()
     for r in records:
-        for a in [r["adv1"], r["adv2"], r["adv3"]]:
-            if a and a.lower() not in ("nan", "none", "", "0"):
-                adv_counter[a] += 1
+        if r["adv1"] and r["adv1"].lower() not in ("nan", "none", "", "0"):
+            adv_counter[r["adv1"]] += 1
     top10_adv = adv_counter.most_common(10)
     adv_labels = [k for k, _ in top10_adv]
     adv_data   = [v for _, v in top10_adv]
@@ -706,9 +731,9 @@ def build_causa_raiz_tab(tab_id, label, data):
     julg_fav_id  = f"chart_{tab_id}_julgfav"
     julg_desf_id = f"chart_{tab_id}_julgdesf"
 
-    # Pedidos ranking — todas as abas
+    # Pedidos ranking — somente aba Ex-Foodlover
     pedidos_html = ""
-    if data.get("pedidos_ranking"):
+    if tab_id == "ex-foodlover" and data.get("pedidos_ranking"):
         ped_rows = [[rank+1, p, fmt_br(n)] for rank, (p, n) in enumerate(data["pedidos_ranking"])]
         ped_table = build_table(["#", "Pedido / Assunto", "Ocorrências"], ped_rows)
         pedidos_html = f"""
@@ -793,7 +818,7 @@ def build_causa_raiz_js(tab_id, data):
     dec_data    = json.dumps([data["res_fav"], data["res_desf"], data["res_neutro"]])
 
     pedidos_js = ""
-    if data.get("pedidos_ranking"):
+    if tab_id == "ex-foodlover" and data.get("pedidos_ranking"):
         ped_labels = json.dumps([p for p, _ in data["pedidos_ranking"]], ensure_ascii=False)
         ped_data   = json.dumps([n for _, n in data["pedidos_ranking"]])
         pedidos_js = f"""
@@ -1745,7 +1770,7 @@ def main():
 
     df_ifood    = find_sheet("todos", "ifood", "processos", "base", "relatório")
     df_decisoes = find_sheet("decis", "decisão", "decisao", "julgamento", "acórdão", "acordao")
-    df_novos    = find_sheet("novos", "novo caso", "entrada", "novos casos", "ajuizamento")
+    df_novos    = find_sheet("novos casos recebidos", "novos", "novo caso", "entrada", "ajuizamento")
     df_susp1389 = find_sheet("1389", "susp 1389", "suspensos 1389", "tema 1389")
     df_susp1291 = find_sheet("1291", "susp 1291", "suspensos 1291", "tema 1291")
 

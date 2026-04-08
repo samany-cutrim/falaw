@@ -4344,8 +4344,8 @@ const _XL_CR_TABS = [
 ];
 const _XL_DEC_CR_MAP = { nuvem:'ENTREGADOR NUVEM', ol:'ENTREGADOR OL', 'ex-foodlover':'EX-FOODLOVER', terceirizado:'TERCEIRIZAÇÃO', 'terceirização':'TERCEIRIZAÇÃO', marketplace:'ENTREGADOR - MARKETPLACE', restaurantes:'RESTAURANTES - CONTRATO' };
 const _XL_UF_TRT = { MG:'TRT-3',RJ:'TRT-1',RS:'TRT-4',BA:'TRT-5',PE:'TRT-6',CE:'TRT-7',PA:'TRT-8',AP:'TRT-8',PR:'TRT-9',DF:'TRT-10',TO:'TRT-10',AM:'TRT-11',RR:'TRT-11',SC:'TRT-12',PB:'TRT-13',RO:'TRT-14',AC:'TRT-14',MA:'TRT-16',ES:'TRT-17',GO:'TRT-18',AL:'TRT-19',SE:'TRT-20',RN:'TRT-21',PI:'TRT-22',MT:'TRT-23',MS:'TRT-24' };
-const _XL_DEC_FAV  = new Set(['Acórdão Favorável','Sentença Improcedente']);
-const _XL_DEC_DESF = new Set(['Acórdão Desfavorável','Sentença Desfavorável','Acórdão Anula Sentença']);
+const _XL_DEC_FAV  = new Set(['Acórdão Favorável','Sentença Improcedente','Decisão Favorável TST']);
+const _XL_DEC_DESF = new Set(['Acórdão Desfavorável','Sentença Desfavorável','Acórdão Anula Sentença','Decisão Desfavorável TST','Acórdão Desfavorável TST']);
 
 function _xlGetTRT(uf, vara) {
   uf = (uf||'').toUpperCase(); vara = (vara||'').toLowerCase();
@@ -4359,12 +4359,12 @@ function _xlGetTRT(uf, vara) {
 
 const _XL_VALID_UF = new Set(['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']);
 function _xlParseIfood(rawRows) {
-  // Actual Excel structure (sheet 'todos', 68 cols):
-  //  0=causa_raiz, 1=num_processo, 2=TRT ('TRT 2'), 3=status ('Ativo'/'Encerrado'),
-  //  4=cargo, 5=assunto, 6=vara, 7=cidade, 8=UF,
-  //  16=adv1, 17=juiz_sentenca, 23=fase, 36=arquivado,
-  //  44=autor_recurso, 52=resultado_final, 59=julgador_2inst,
-  //  64=resultado_recente, 67=primeiro_resultado
+  // Actual Excel structure (sheet 'todos', 67 cols, 0-indexed):
+  //  0=causa_raiz, 1=num_processo, 2=TRT, 3=status, 4=cargo, 5=assunto,
+  //  6=vara, 7=cidade, 8=UF, 14=Requerente1, 15=Escritorio CNA Requerente,
+  //  16=Juiz sentença, 22=Fase Processual, 35=Se está arquivado,
+  //  43=Autor do Recurso, 51=Resultado Final, 58=Julgador 2a Instancia,
+  //  63=Resultado Julgamento mais recente, 66=1o resultado do processo
   const c = (r, i) => String(r[i] ?? '').trim();
   const normalizeStatus = s => { const l=s.toLowerCase(); if(l==='ativo'||l==='active'||l==='1') return 'ativo'; if(l==='encerrado'||l==='closed'||l==='0'||l==='encerrada') return 'encerrado'; return l; };
   const normalizeUF = s => { const u=s.toUpperCase().replace(/[^A-Z]/g,''); return _XL_VALID_UF.has(u) ? u : ''; };
@@ -4380,25 +4380,47 @@ function _xlParseIfood(rawRows) {
       status: normalizeStatus(c(r,3)),
       cargo: c(r,4), assunto: c(r,5), vara,
       cidade: c(r,7), uf,
-      adv1: c(r,16), adv2: '', adv3: '',
-      juiz_sentenca: c(r,17),
-      fase: c(r,23),
-      arquivado: c(r,36),
-      autor_recurso: c(r,44),
-      resultado_final: c(r,52),
-      julgador: c(r,59),
-      resultado_recente: c(r,64),
-      primeiro_resultado: c(r,67),
+      adv1: c(r,15),  // Escritorio CNA Requerente
+      adv2: '', adv3: '',
+      juiz_sentenca: c(r,16),
+      fase: c(r,22),
+      arquivado: c(r,35),
+      autor_recurso: c(r,43),
+      resultado_final: c(r,51),
+      julgador: c(r,58),
+      resultado_recente: c(r,63),
+      primeiro_resultado: c(r,66),
     };
   });
 }
 
 function _xlParseDecisoes(rawRows) {
+  // Sheet: 0=N°Processo, 1=TRT, 2=CAUSA RAIZ, 3=RESULTADO DA DECISÃO
   const c = (r, i) => String(r[i] ?? '').trim();
-  return rawRows.filter(r => r && r[0] && String(r[0]).trim()).map(r => {
-    const crRaw = c(r,1).toLowerCase().trim();
-    return { num_processo: c(r,0), causa_raiz: _XL_DEC_CR_MAP[crRaw] || c(r,1).toUpperCase().trim(), resultado: c(r,2) };
-  });
+  return rawRows.filter(r => r && r[0] && String(r[0]).trim() && c(r,2)).map(r => ({
+    num_processo: c(r,0),
+    causa_raiz: c(r,2),    // col 2 = CAUSA RAIZ (direct)
+    resultado: c(r,3),     // col 3 = RESULTADO DA DECISÃO
+  }));
+}
+
+function _xlParseNovos(rawRows) {
+  // Sheet has summary table: look for 'Causa Raiz' header row, then CR + count
+  let total = 0, byCR = {}, inTable = false;
+  for (const r of rawRows) {
+    const v0 = String(r[0] ?? '').trim();
+    if (/total:\s*\d+/i.test(v0)) {
+      const m = v0.match(/\d+/);
+      if (m) total = parseInt(m[0]);
+    }
+    if (v0.toLowerCase() === 'causa raiz') { inTable = true; continue; }
+    if (inTable && v0 && v0.toLowerCase() !== 'total') {
+      const cnt = parseInt(r[1] ?? 0);
+      if (!isNaN(cnt) && cnt > 0) byCR[v0.toUpperCase().trim()] = cnt;
+    }
+  }
+  if (!total) total = Object.values(byCR).reduce((a,b)=>a+b,0);
+  return { total, byCR };
 }
 
 function _xlParseNovos(rawRows) {
@@ -4457,11 +4479,15 @@ function _xlParsePedidos(assunto) {
   return m;
 }
 
-function _xlBuildKpiRows(periodId, records, decisoes, novos) {
+function _xlFaseValida(fase) { return fase && !fase.toLowerCase().includes('arquiv'); }
+
+function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391) {
   const rows = []; let so = 0;
   const push = (tabKey, kpiKey, label, value, unit, chartData, chartTitle) => {
     rows.push({ id:ifoodId(), period_id:periodId, tab_key:tabKey, kpi_key:kpiKey, label, value:String(value), unit:unit||'', chart_data:chartData||null, chart_title:chartTitle||'', sort_order:so++, trend_pct:null });
   };
+  const susp1389 = suspensos1389 || [];
+  const susp1291 = suspensos1391 || [];
 
   // ── VISÃO GERAL ──────────────────────────────────────────────────────────────
   const total  = records.length;
@@ -4470,14 +4496,23 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos) {
   const decF   = decisoes.filter(d=>_xlClassifyDec(d.resultado)==='F').length;
   const decD   = decisoes.filter(d=>_xlClassifyDec(d.resultado)==='D').length;
   const decTot = decisoes.length;
+  const novosTotal = (novos && typeof novos === 'object' && 'total' in novos) ? novos.total : (Array.isArray(novos) ? novos.length : 0);
+  const novosByCR = (novos && novos.byCR) ? novos.byCR : {};
 
   push('visao-geral','total_processos','Total de Processos',_xlFmtBr(total),'processos');
   push('visao-geral','ativos','Processos Ativos',_xlFmtBr(ativos),'ativos');
   push('visao-geral','encerrados','Processos Encerrados',_xlFmtBr(encerr),'encerrados');
-  push('visao-geral','novos_casos','Novos Casos no Mês',_xlFmtBr(novos.length),'novos');
+  push('visao-geral','novos_casos','Novos Casos no Mês',_xlFmtBr(novosTotal),'novos');
   push('visao-geral','decisoes_total','Decisões no Período',_xlFmtBr(decTot),'decisões');
   push('visao-geral','decisoes_fav','Decisões Favoráveis',_xlFmtBr(decF),`(${_xlFmtPct(decF,decTot)})`);
   push('visao-geral','decisoes_desf','Decisões Desfavoráveis',_xlFmtBr(decD),`(${_xlFmtPct(decD,decTot)})`);
+
+  // Novos casos por causa raiz
+  for (const [cr, cnt] of Object.entries(novosByCR)) {
+    const crTab = _XL_CR_TABS.find(t=>t.cr===cr);
+    const crLabel = crTab ? crTab.label : cr;
+    push('visao-geral', `novos_cr_${crTab?.tabKey||cr.toLowerCase().replace(/\s/g,'_')}`, `Novos — ${crLabel}`, _xlFmtBr(cnt), 'novos');
+  }
 
   // Causa raiz doughnut
   const crC = _xlCounter(records.filter(r=>r.status==='ativo').map(r=>r.causa_raiz));
@@ -4495,8 +4530,8 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos) {
       { label:'Desfavorável', data:allCRs.map(c=>dByCrD[c]||0), backgroundColor:'#7B1A2E', borderRadius:4 }
     ]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } }, scales:{ x:{ grid:{ display:false } }, y:{ grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true } } }}, 'Decisões do Período por Causa Raiz');
 
-  // Fase processual
-  const faseC = _xlCounter(records.filter(r=>r.status==='ativo'&&r.fase).map(r=>r.fase));
+  // Fase processual — sem arquivamento
+  const faseC = _xlCounter(records.filter(r=>r.status==='ativo'&&_xlFaseValida(r.fase)).map(r=>r.fase));
   const faseTop = _xlTopN(faseC,12);
   push('visao-geral','chart_fase','Fase Processual','','',
     _xlChartBar(faseTop.map(([l])=>l),faseTop.map(([,v])=>v),'Processos','#0D2B5E'), 'Distribuição por Fase Processual');
@@ -4534,34 +4569,43 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos) {
     const tf = decs.filter(d=>_xlClassifyDec(d.resultado)==='F').length;
     const td = decs.filter(d=>_xlClassifyDec(d.resultado)==='D').length;
 
+    // Suspensos para esta causa raiz
+    const tSusp1389 = susp1389.filter(s=>String(s[2]||'').toUpperCase().trim()===cr.toUpperCase().trim());
+    const tSusp1291 = susp1291.filter(s=>String(s[2]||'').toUpperCase().trim()===cr.toUpperCase().trim());
+    const tSusp = tSusp1389.length + tSusp1291.length;
+
     push(tabKey,'total','Total de Processos',_xlFmtBr(recs.length),'processos');
     push(tabKey,'ativos','Processos Ativos',_xlFmtBr(ta),'ativos');
     push(tabKey,'encerrados','Processos Encerrados',_xlFmtBr(te),'encerrados');
-    push(tabKey,'decisoes_fav','Decisões Favoráveis',_xlFmtBr(tf),`(${_xlFmtPct(tf,decs.length)})`);
-    push(tabKey,'decisoes_desf','Decisões Desfavoráveis',_xlFmtBr(td),`(${_xlFmtPct(td,decs.length)})`);
+    if(tSusp>0) push(tabKey,'suspensos','Processos Suspensos',_xlFmtBr(tSusp),'suspensos');
+    if(decs.length>0) {
+      push(tabKey,'decisoes_fav','Decisões Favoráveis',_xlFmtBr(tf),`(${_xlFmtPct(tf,decs.length)})`);
+      push(tabKey,'decisoes_desf','Decisões Desfavoráveis',_xlFmtBr(td),`(${_xlFmtPct(td,decs.length)})`);
+      push(tabKey,'decisoes_total','Total Decisões',_xlFmtBr(decs.length),'no período');
+    }
 
-    // Fase processual
-    const tFaseC = _xlCounter(recs.filter(r=>r.fase).map(r=>r.fase));
+    // Fase processual — sem arquivamento
+    const tFaseC = _xlCounter(recs.filter(r=>_xlFaseValida(r.fase)).map(r=>r.fase));
     const tFaseTop = _xlTopN(tFaseC,12);
-    push(tabKey,'chart_fase','Fase Processual','','',
+    if(tFaseTop.length) push(tabKey,'chart_fase','Fase Processual','','',
       _xlChartBar(tFaseTop.map(([l])=>l),tFaseTop.map(([,v])=>v),'Processos','#0D2B5E'), `Fase Processual — ${label}`);
 
     // UF — only valid 2-letter codes
     const tUfC = _xlCounter(recs.filter(r=>r.uf&&_XL_VALID_UF.has(r.uf)).map(r=>r.uf));
     const tUfTop = _xlTopN(tUfC,10);
-    push(tabKey,'chart_uf','Estados com mais Processos','','',
+    if(tUfTop.length) push(tabKey,'chart_uf','Estados com mais Processos','','',
       _xlChartBarVertical(tUfTop.map(([l])=>l),tUfTop.map(([,v])=>v),'Processos','#7B1A2E'), `Top 10 Estados — ${label}`);
 
-    // Advogados
+    // Escritórios CNA Requerente (col 15)
     const tAdvC = {};
-    recs.forEach(r=>{ [r.adv1,r.adv2,r.adv3].forEach(a=>{ if(_isValidAdv(a)) tAdvC[a]=(tAdvC[a]||0)+1; }); });
+    recs.forEach(r=>{ if(_isValidAdv(r.adv1)) tAdvC[r.adv1]=(tAdvC[r.adv1]||0)+1; });
     const tAdvTop = _xlTopN(tAdvC,10);
-    push(tabKey,'chart_advogados','Top 10 Advogados','','',
-      _xlChartBar(tAdvTop.map(([l])=>l),tAdvTop.map(([,v])=>v),'Processos','#7B1A2E'), `Top 10 Advogados — ${label}`);
+    if(tAdvTop.length) push(tabKey,'chart_advogados','Top 10 Escritórios CNA','','',
+      _xlChartBar(tAdvTop.map(([l])=>l),tAdvTop.map(([,v])=>v),'Processos','#7B1A2E'), `Top 10 Escritórios CNA — ${label}`);
 
-    // Decisões doughnut
-    push(tabKey,'chart_decisoes','Decisões do Período',_xlFmtBr(decs.length),'decisões',
-      _xlChartDoughnut(['Favorável','Desfavorável','Outro'],[tf,td,decs.length-tf-td]), `Decisões — ${label}`);
+    // Decisões doughnut — só se houver decisões
+    if(decs.length>0) push(tabKey,'chart_decisoes','Decisões do Período',_xlFmtBr(decs.length),'decisões',
+      _xlChartDoughnut(['Favorável','Desfavorável','Outro'],[tf,td,Math.max(0,decs.length-tf-td)]), `Decisões — ${label}`);
 
     // Julgadores favoráveis e desfavoráveis
     const julgFavC={}, julgDesfC={};
@@ -4576,12 +4620,12 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos) {
     if(jDesfTop.length) push(tabKey,'chart_julg_desf','Julgadores Desfavoráveis','','',
       _xlChartBar(jDesfTop.map(([l])=>l),jDesfTop.map(([,v])=>v),'Desfavoráveis','#7B1A2E'), `Julgadores Desfavoráveis — ${label}`);
 
-    // Pedidos ranking — todas as abas
-    const pedC = {};
-    recs.forEach(r=>{ Object.entries(_xlParsePedidos(r.assunto)).forEach(([k,v])=>{ pedC[k]=(pedC[k]||0)+v; }); });
-    const pedTop = _xlTopN(pedC,15);
-    if (pedTop.length) {
-      push(tabKey,'chart_pedidos','Pedidos mais Frequentes','','',
+    // Pedidos ranking — somente Ex-Foodlover
+    if (tabKey === 'ex-foodlover') {
+      const pedC = {};
+      recs.forEach(r=>{ Object.entries(_xlParsePedidos(r.assunto)).forEach(([k,v])=>{ pedC[k]=(pedC[k]||0)+v; }); });
+      const pedTop = _xlTopN(pedC,15);
+      if (pedTop.length) push(tabKey,'chart_pedidos','Pedidos mais Frequentes','','',
         _xlChartBar(pedTop.map(([l])=>l),pedTop.map(([,v])=>v),'Ocorrências','#0D2B5E'), `Ranking de Pedidos — ${label}`);
     }
   }
@@ -4609,11 +4653,17 @@ async function ifoodSaveExcel() {
     const decSh = findSh('Decisões','Decisoes','Decisão','Decisao');
     const decisoes = decSh ? _xlParseDecisoes(XLSX.utils.sheet_to_json(decSh,{header:1,defval:''}).slice(1)) : [];
 
-    const novosSh = findSh('Novos Casos');
-    const novos = novosSh ? _xlParseNovos(XLSX.utils.sheet_to_json(novosSh,{header:1,defval:''}).slice(1)) : [];
+    const novosSh = findSh('Novos Casos Recebidos','Novos Casos','novos');
+    const novos = novosSh ? _xlParseNovos(XLSX.utils.sheet_to_json(novosSh,{header:1,defval:''})) : { total:0, byCR:{} };
 
-    setStatus(`Computando KPIs… (${decisoes.length} decisões, ${novos.length} novos casos)`);
-    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos);
+    const susp1389Sh = findSh('Suspensos Tema 1389','1389','susp 1389');
+    const susp1389 = susp1389Sh ? XLSX.utils.sheet_to_json(susp1389Sh,{header:1,defval:''}).slice(1) : [];
+
+    const susp1291Sh = findSh('Suspensos Tema 1291','1291','susp 1291');
+    const susp1291 = susp1291Sh ? XLSX.utils.sheet_to_json(susp1291Sh,{header:1,defval:''}).slice(1) : [];
+
+    setStatus(`Computando KPIs… (${decisoes.length} decisões, ${novos.total} novos casos)`);
+    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291);
 
     setStatus('Removendo KPIs anteriores do período…');
     const { error: delErr } = await sb.from('ifood_kpis').delete().eq('period_id', periodId);
@@ -4653,7 +4703,7 @@ async function ifoodSaveExcel() {
     const { error: hlErr } = await sb.from('ifood_highlights').insert([
       { id:ifoodId(), period_id:periodId, icon:'⚖️', title:'Total de Processos', body:`${_xlFmtBr(total)} processos no portfólio, dos quais ${_xlFmtBr(ativos)} ativos.`, sort_order:0 },
       { id:ifoodId(), period_id:periodId, icon:'✅', title:'Índice de Favorabilidade', body:`${_xlFmtPct(decF,decTot)} das decisões no período foram favoráveis para o iFood (${_xlFmtBr(decF)} de ${_xlFmtBr(decTot)}).`, sort_order:1 },
-      { id:ifoodId(), period_id:periodId, icon:'📋', title:'Novos Casos no Período', body:`${_xlFmtBr(novos.length)} novos casos recebidos no mês.`, sort_order:2 },
+      { id:ifoodId(), period_id:periodId, icon:'📋', title:'Novos Casos no Período', body:`${_xlFmtBr(novos.total||0)} novos casos recebidos no mês.`, sort_order:2 },
       { id:ifoodId(), period_id:periodId, icon:'📊', title:'Decisões do Período', body:`${_xlFmtBr(decTot)} decisões registradas — ${_xlFmtBr(decF)} favoráveis e ${_xlFmtBr(decisoes.filter(d=>_xlClassifyDec(d.resultado)==='D').length)} desfavoráveis.`, sort_order:3 },
     ]);
     if (hlErr) console.warn('highlights:', hlErr.message);
