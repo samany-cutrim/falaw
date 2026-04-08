@@ -947,14 +947,13 @@ def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1
     ])
 
     # ── TRT RANKING TABLE + CHART DATA ──
-    trt_rows = [[r["trt"], fmt_br(r["total"]), fmt_br(r["fav"]), fmt_br(r["desf"]), r["pct_fav"]]
+    trt_rows = [[r["trt"], fmt_br(r["total"]), r["pct_fav"]]
                 for r in global_charts["trt_ranking"]]
-    trt_table = build_table(["TRT", "Total", "Favoráveis", "Desfavoráveis", "% Favorável"], trt_rows)
+    trt_table = build_table(["TRT", "Processos", "% Favorável"], trt_rows)
 
     trt_chart_labels = json.dumps([r["trt"] for r in global_charts["trt_ranking"]], ensure_ascii=False)
-    trt_chart_vol    = json.dumps([r["total"] for r in global_charts["trt_ranking"]])
-    trt_chart_fav    = json.dumps([r["fav"]   for r in global_charts["trt_ranking"]])
-    trt_chart_desf   = json.dumps([r["desf"]  for r in global_charts["trt_ranking"]])
+    trt_chart_vol    = json.dumps([r["total"]       for r in global_charts["trt_ranking"]])
+    trt_chart_fav    = json.dumps([r["pct_fav_num"] for r in global_charts["trt_ranking"]])
 
     # ── DECISÕES TABLE ──
     dec_rows = [[d["num_processo"], d["causa_raiz"], d["resultado"], d["tipo"]]
@@ -1379,8 +1378,14 @@ def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1
         <h3 class="section-title" style="margin:0 0 16px">Volumetria por Tribunal Regional do Trabalho</h3>
         <div class="charts-grid">
           <div class="chart-card full-width">
-            <div class="chart-card-title">Total de Ações por TRT — Ativos, Favoráveis e Desfavoráveis</div>
-            <div class="chart-wrap" style="height:360px"><canvas id="chart-trt-grouped"></canvas></div>
+            <div class="chart-card-title">Volume de Processos por TRT (Ativos)</div>
+            <div class="chart-wrap" style="max-height:300px"><canvas id="chart-trt-vol"></canvas></div>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card full-width">
+            <div class="chart-card-title">Taxa de Decisões Favoráveis por TRT (%)</div>
+            <div class="chart-wrap" style="max-height:300px"><canvas id="chart-trt-fav"></canvas></div>
           </div>
         </div>
         <div class="chart-card" style="margin-bottom:28px">
@@ -1676,26 +1681,41 @@ new Chart(document.getElementById('chart-julgadores'), {{
 }});
 
 // ── TRT CHARTS ───────────────────────────────────────────────────────────────
-new Chart(document.getElementById('chart-trt-grouped'), {{
+new Chart(document.getElementById('chart-trt-vol'), {{
   type: 'bar',
   data: {{
     labels: {trt_chart_labels},
-    datasets: [
-      {{ label:'Total Ativos', data: {trt_chart_vol}, backgroundColor:'#0D2B5E', borderRadius:4 }},
-      {{ label:'Favoráveis',   data: {trt_chart_fav},  backgroundColor:'#0F9E76', borderRadius:4 }},
-      {{ label:'Desfavoráveis',data: {trt_chart_desf}, backgroundColor:'#7B1A2E', borderRadius:4 }}
-    ]
+    datasets: [{{ label:'Processos', data: {trt_chart_vol},
+      backgroundColor: PALETTE_CR.map((_, i) => i % 2 === 0 ? '#0D2B5E' : '#7B1A2E'),
+      borderRadius: 4 }}]
   }},
   options: {{
-    responsive: true, maintainAspectRatio: false,
-    plugins: {{
-      legend:{{ position:'top', labels:{{ font:{{ family:'IBM Plex Mono', size:10 }}, padding:16 }} }},
-      tooltip:{{ callbacks:{{ label: ctx => ' ' + ctx.dataset.label + ': ' + ctx.parsed.y }} }}
-    }},
+    responsive: true,
+    plugins: {{ legend:{{ display:false }},
+      tooltip:{{ callbacks:{{ label: ctx => ' ' + ctx.parsed.y + ' processos' }} }} }},
     scales: {{
       x:{{ grid:{{ display:false }}, ticks:{{ font:{{ family:'IBM Plex Mono', size:10 }} }} }},
-      y:{{ grid:{{ color:'rgba(0,0,0,0.05)' }}, beginAtZero:true,
-           ticks:{{ font:{{ family:'IBM Plex Mono', size:10 }} }} }}
+      y:{{ grid:{{ color:'rgba(0,0,0,0.05)' }}, beginAtZero:true }}
+    }}
+  }}
+}});
+
+new Chart(document.getElementById('chart-trt-fav'), {{
+  type: 'bar',
+  data: {{
+    labels: {trt_chart_labels},
+    datasets: [{{ label:'% Favorável', data: {trt_chart_fav},
+      backgroundColor: {trt_chart_fav}.map(v => v >= 30 ? '#0F9E76' : v >= 15 ? '#f59e0b' : '#C0392B'),
+      borderRadius: 4 }}]
+  }},
+  options: {{
+    responsive: true,
+    plugins: {{ legend:{{ display:false }},
+      tooltip:{{ callbacks:{{ label: ctx => ' ' + ctx.parsed.y.toFixed(1) + '% favorável' }} }} }},
+    scales: {{
+      x:{{ grid:{{ display:false }}, ticks:{{ font:{{ family:'IBM Plex Mono', size:10 }} }} }},
+      y:{{ max:100, grid:{{ color:'rgba(0,0,0,0.05)' }}, beginAtZero:true,
+        ticks:{{ callback: v => v + '%' }} }}
     }}
   }}
 }});
