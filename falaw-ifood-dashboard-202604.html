@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Dashboard iFood — Falaw Advogados — 04/2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #FAF8F5;
+      --bg-card:  #FFFFFF;
+      --border:   rgba(0,0,0,0.08);
+      --navy:     #0D2B5E;
+      --crimson:  #7B1A2E;
+      --crimson-l:#9B2238;
+      --text:     #1A0A0D;
+      --muted:    rgba(26,10,13,0.52);
+      --green:    #0F9E76;
+      --red:      #C0392B;
+      --sidebar-w: 248px;
+    }
+    html, body { height:100%; background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; }
+    a { text-decoration:none; color:inherit; }
+
+    /* LAYOUT */
+    .layout { display:flex; min-height:100vh; }
+
+    /* SIDEBAR */
+    .sidebar {
+      width:var(--sidebar-w); background:linear-gradient(175deg,#0D2B5E 0%,#3D0F1D 100%);
+      display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; z-index:100;
+      transition:transform .25s;
+    }
+    .sidebar-top { padding:28px 20px 20px; border-bottom:1px solid rgba(255,255,255,0.1); }
+    .sidebar-logo { font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600;
+      letter-spacing:.08em; color:#fff; margin-bottom:18px; }
+    .sidebar-logo span { color:var(--crimson-l); }
+    .sidebar-badge {
+      font-family:'IBM Plex Mono',monospace; font-size:8px; letter-spacing:.18em;
+      text-transform:uppercase; color:var(--crimson-l);
+      background:rgba(155,34,56,0.2); border:1px solid rgba(155,34,56,0.35);
+      padding:3px 8px; border-radius:2px; display:inline-block; margin-bottom:10px;
+    }
+    .sidebar-client { font-size:14px; font-weight:700; color:#fff; }
+    .sidebar-sub { font-family:'IBM Plex Mono',monospace; font-size:10px; color:rgba(255,255,255,0.4); margin-top:3px; }
+    .sidebar-nav { flex:1; padding:16px 10px; overflow-y:auto; }
+    .nav-group-label {
+      font-family:'IBM Plex Mono',monospace; font-size:8px; letter-spacing:.2em;
+      text-transform:uppercase; color:rgba(255,255,255,0.25);
+      padding:0 10px; margin:14px 0 6px;
+    }
+    .nav-item {
+      display:flex; align-items:center; gap:8px; padding:9px 10px; border-radius:5px;
+      font-size:12.5px; color:rgba(255,255,255,0.55); cursor:pointer;
+      transition:background .15s,color .15s; margin-bottom:1px; user-select:none;
+    }
+    .nav-item:hover { background:rgba(255,255,255,0.08); color:#fff; }
+    .nav-item.active { background:rgba(255,255,255,0.1); color:var(--crimson-l); font-weight:600; }
+    .nav-icon { font-size:14px; width:18px; text-align:center; flex-shrink:0; }
+    .sidebar-footer { padding:14px 10px; border-top:1px solid rgba(255,255,255,0.1); }
+    .btn-period-info {
+      width:100%; padding:9px 12px; background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.15); border-radius:5px;
+      font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.1em;
+      text-transform:uppercase; color:rgba(255,255,255,0.55); text-align:center;
+    }
+
+    /* MAIN */
+    .main { margin-left:var(--sidebar-w); flex:1; display:flex; flex-direction:column; min-height:100vh; }
+
+    /* TOPBAR */
+    .topbar {
+      background:linear-gradient(90deg,#0D2B5E 0%,#3D0F1D 100%);
+      padding:0 28px; height:58px;
+      display:flex; align-items:center; justify-content:space-between;
+      position:sticky; top:0; z-index:50;
+    }
+    .topbar-left { display:flex; align-items:center; gap:14px; }
+    .topbar-badge {
+      font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.15em;
+      text-transform:uppercase; color:#fff; background:var(--crimson); padding:3px 10px; border-radius:2px;
+    }
+    .topbar-title {
+      font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.1em;
+      text-transform:uppercase; color:rgba(255,255,255,0.45);
+    }
+    .topbar-title b { color:#fff; font-weight:500; }
+    .topbar-right { display:flex; align-items:center; gap:10px; }
+    .btn-export {
+      display:flex; align-items:center; gap:5px; cursor:pointer; border-radius:4px;
+      padding:7px 12px; border:1px solid rgba(255,255,255,0.28);
+      background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.75);
+      font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.1em;
+      text-transform:uppercase; transition:all .2s;
+    }
+    .btn-export:hover { background:rgba(255,255,255,0.15); color:#fff; }
+    .period-label {
+      font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.08em;
+      color:rgba(255,255,255,0.6); padding:6px 12px;
+      border:1px solid rgba(255,255,255,0.15); border-radius:4px;
+    }
+
+    /* TAB BAR */
+    .tab-bar {
+      background:var(--bg-card); border-bottom:1px solid var(--border);
+      display:flex; padding:0 28px; overflow-x:auto;
+      position:sticky; top:58px; z-index:40;
+    }
+    .tab-bar::-webkit-scrollbar { height:2px; }
+    .tab-bar::-webkit-scrollbar-thumb { background:var(--crimson); }
+    .tab-btn {
+      font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.1em;
+      text-transform:uppercase; color:var(--muted); padding:0 18px; height:46px;
+      display:flex; align-items:center; white-space:nowrap; cursor:pointer;
+      border-bottom:2px solid transparent; transition:color .2s,border-color .2s; flex-shrink:0;
+      background:none; border-top:none; border-left:none; border-right:none;
+    }
+    .tab-btn:hover { color:var(--text); }
+    .tab-btn.active { color:var(--crimson); border-bottom-color:var(--crimson); }
+
+    /* CONTENT */
+    .content { flex:1; padding:32px 28px 80px; }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+
+    /* PAGE HEADER */
+    .page-header { margin-bottom:28px; }
+    .page-label { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--crimson); margin-bottom:7px; }
+    .page-title { font-family:'DM Sans',sans-serif; font-size:clamp(18px,2.5vw,26px); font-weight:700; color:var(--text); letter-spacing:-.02em; margin-bottom:5px; }
+    .page-subtitle { font-size:13px; color:var(--muted); }
+
+    /* KPI */
+    .kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:12px; margin-bottom:28px; }
+    .kpi-card {
+      background:var(--bg-card); border:1px solid var(--border); border-radius:10px;
+      padding:16px 18px; position:relative; overflow:hidden;
+    }
+    .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px;
+      background:linear-gradient(90deg,var(--crimson),transparent); }
+    .kpi-label { font-family:'IBM Plex Mono',monospace; font-size:8.5px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); margin-bottom:9px; }
+    .kpi-value { font-family:'DM Sans',sans-serif; font-size:24px; font-weight:700; color:var(--text); line-height:1; }
+    .kpi-unit { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--muted); margin-top:4px; }
+    .kpi-trend {
+      display:inline-flex; align-items:center; gap:3px;
+      font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.04em;
+      margin-top:7px; padding:2px 6px; border-radius:3px;
+    }
+    .kpi-trend.up   { background:rgba(15,158,118,0.1); color:var(--green); }
+    .kpi-trend.down { background:rgba(192,57,43,0.1);  color:var(--red); }
+    .kpi-trend.flat { background:rgba(0,0,0,0.04);     color:var(--muted); }
+
+    /* CHARTS */
+    .charts-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); gap:18px; margin-bottom:28px; }
+    .chart-card {
+      background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:22px;
+    }
+    .chart-card-title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:18px; }
+    .chart-wrap { position:relative; }
+    .chart-wrap canvas { max-height:280px; }
+    .chart-card.full-width { grid-column:1/-1; }
+
+    /* TABLES */
+    .table-wrap { overflow-x:auto; max-height:400px; overflow-y:auto; }
+    .data-table { width:100%; border-collapse:collapse; font-size:12.5px; }
+    .data-table thead th {
+      font-family:'IBM Plex Mono',monospace; font-size:8.5px; letter-spacing:.12em;
+      text-transform:uppercase; color:var(--muted); padding:8px 12px;
+      border-bottom:1px solid var(--border); background:var(--bg); text-align:left;
+      position:sticky; top:0;
+    }
+    .data-table tbody tr { border-bottom:1px solid rgba(0,0,0,0.04); transition:background .1s; }
+    .data-table tbody tr:hover { background:rgba(0,0,0,0.02); }
+    .data-table tbody td { padding:8px 12px; color:var(--text); vertical-align:middle; }
+
+    /* MAP */
+    .map-card {
+      background:var(--bg-card); border:1px solid var(--border); border-radius:10px;
+      padding:22px; margin-bottom:28px;
+    }
+    .map-card-title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:18px; }
+    .map-legend { display:flex; align-items:center; gap:8px; margin-top:12px; font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--muted); }
+    .map-legend-gradient { width:120px; height:10px; border-radius:3px;
+      background:linear-gradient(90deg,#f0e8ea,#7B1A2E); }
+
+    /* SECTION TITLE */
+    .section-title { font-size:14px; font-weight:700; color:var(--text); margin:20px 0 12px; }
+
+    /* MOBILE */
+    .hamburger { display:none; background:none; border:none; cursor:pointer;
+      color:#fff; font-size:22px; padding:4px; }
+    @media(max-width:768px) {
+      .sidebar { transform:translateX(-100%); }
+      .sidebar.open { transform:translateX(0); }
+      .main { margin-left:0; }
+      .hamburger { display:block; }
+      .charts-grid { grid-template-columns:1fr; }
+      .kpi-grid { grid-template-columns:repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-logo">FA<span>LAW</span></div>
+      <div class="sidebar-badge">Dashboard BI</div>
+      <div class="sidebar-client">iFood</div>
+      <div class="sidebar-sub">Relatório Processual</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-group-label">Visão Geral</div>
+      <div class="nav-item active" data-tab="geral">
+        <span class="nav-icon">📊</span> Visão Geral
+      </div>
+      <div class="nav-group-label">Por Causa Raiz</div>
+      <div class="nav-item" data-tab="nuvem">
+        <span class="nav-icon">☁️</span> Nuvem
+      </div>
+      <div class="nav-item" data-tab="ol">
+        <span class="nav-icon">🚴</span> OL
+      </div>
+      <div class="nav-item" data-tab="ex_foodlover">
+        <span class="nav-icon">⭐</span> Ex-Foodlover
+      </div>
+      <div class="nav-item" data-tab="terceiriza__o">
+        <span class="nav-icon">🏢</span> Terceirização
+      </div>
+      <div class="nav-item" data-tab="marketplace">
+        <span class="nav-icon">🛒</span> Marketplace
+      </div>
+      <div class="nav-item" data-tab="restaurantes">
+        <span class="nav-icon">🍽️</span> Restaurantes
+      </div>
+      <div class="nav-group-label">Outros</div>
+      <div class="nav-item" data-tab="suspensos">
+        <span class="nav-icon">⏸️</span> Suspensos
+      </div>
+      <div class="nav-item" data-tab="decisoes_periodo">
+        <span class="nav-icon">⚖️</span> Decisões do Período
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="btn-period-info">Período: 04/2026</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger">☰</button>
+        <span class="topbar-badge">iFood</span>
+        <span class="topbar-title">Falaw Advogados — <b>Dashboard Processual</b></span>
+      </div>
+      <div class="topbar-right">
+        <span class="period-label">04/2026</span>
+        <button class="btn-export" id="btn-export-pdf">⬇ Exportar PDF</button>
+      </div>
+    </header>
+
+    <!-- TAB BAR -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="geral">Visão Geral</button>
+      <button class="tab-btn" data-tab="nuvem">Nuvem</button>
+<button class="tab-btn" data-tab="ol">OL</button>
+<button class="tab-btn" data-tab="ex_foodlover">Ex-Foodlover</button>
+<button class="tab-btn" data-tab="terceiriza__o">Terceirização</button>
+<button class="tab-btn" data-tab="marketplace">Marketplace</button>
+<button class="tab-btn" data-tab="restaurantes">Restaurantes</button>
+
+      <button class="tab-btn" data-tab="suspensos">Suspensos</button>
+      <button class="tab-btn" data-tab="decisoes_periodo">Decisões do Período</button>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content" id="content-area">
+
+      <!-- ═══════════════════════════ VISÃO GERAL ═══════════════════════════ -->
+      <div id="tab-geral" class="tab-panel active">
+        <div class="page-header">
+          <div class="page-label">Dashboard iFood</div>
+          <h1 class="page-title">Visão Geral Processual</h1>
+          <p class="page-subtitle">Consolidado de todos os processos — Gerado em 07/04/2026</p>
+        </div>
+
+        <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total de Processos</div>
+          <div class="kpi-value">2.792</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Processos Ativos</div>
+          <div class="kpi-value">1.321</div>
+          <div class="kpi-unit">ativos</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Processos Encerrados</div>
+          <div class="kpi-value">1.471</div>
+          <div class="kpi-unit">encerrados</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Novos Casos no Mês</div>
+          <div class="kpi-value">8</div>
+          <div class="kpi-unit">novos</div>
+          <div class="kpi-trend up">+Período</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Decisões no Período</div>
+          <div class="kpi-value">77</div>
+          <div class="kpi-unit">decisões</div>
+          
+        </div></div>
+        <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Decisões Favoráveis</div>
+          <div class="kpi-value">23</div>
+          <div class="kpi-unit">(29,9%)</div>
+          <div class="kpi-trend up">Favorável</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Decisões Desfavoráveis</div>
+          <div class="kpi-value">54</div>
+          <div class="kpi-unit">(70,1%)</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Suspensos</div>
+          <div class="kpi-value">14</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div></div>
+
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-card-title">Distribuição por Causa Raiz (Ativos)</div>
+            <div class="chart-wrap"><canvas id="chart-cr-donut"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-card-title">Resultado dos Processos com Decisão</div>
+            <div class="chart-wrap"><canvas id="chart-resultados"></canvas></div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-card full-width">
+            <div class="chart-card-title">Decisões do Período por Causa Raiz</div>
+            <div class="chart-wrap"><canvas id="chart-dec-cr" style="max-height:260px"></canvas></div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-card-title">Fase Processual (Ativos)</div>
+            <div class="chart-wrap"><canvas id="chart-fase"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-card-title">Top 10 Advogados Adversários</div>
+            <div class="chart-wrap"><canvas id="chart-adv"></canvas></div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-card full-width">
+            <div class="chart-card-title">Top 15 Julgadores</div>
+            <div class="chart-wrap"><canvas id="chart-julgadores" style="max-height:340px"></canvas></div>
+          </div>
+        </div>
+
+        <!-- BRAZIL MAP -->
+        <div class="map-card">
+          <div class="map-card-title">Distribuição Geográfica por UF (Processos Ativos)</div>
+          
+<svg id="brazil-map" viewBox="0 0 800 860" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:520px;">
+  <!-- Simplified Brazil state polygons (approximate) -->
+  <g id="states">
+    <path id="AC" d="M80,420 L120,400 L160,410 L170,450 L130,460 L80,450 Z" stroke="#fff" stroke-width="1"/>
+    <path id="AL" d="M620,340 L650,330 L660,360 L630,370 L610,355 Z" stroke="#fff" stroke-width="1"/>
+    <path id="AM" d="M100,280 L200,240 L300,250 L320,300 L280,350 L200,360 L130,340 L90,310 Z" stroke="#fff" stroke-width="1"/>
+    <path id="AP" d="M440,170 L480,155 L500,185 L470,210 L440,200 Z" stroke="#fff" stroke-width="1"/>
+    <path id="BA" d="M530,330 L610,310 L640,370 L630,440 L580,480 L530,470 L500,430 L490,370 Z" stroke="#fff" stroke-width="1"/>
+    <path id="CE" d="M590,260 L640,250 L660,280 L640,310 L610,310 L590,290 Z" stroke="#fff" stroke-width="1"/>
+    <path id="DF" d="M515,415 L530,415 L530,430 L515,430 Z" stroke="#fff" stroke-width="1.5"/>
+    <path id="ES" d="M630,430 L660,420 L670,460 L645,470 L620,455 Z" stroke="#fff" stroke-width="1"/>
+    <path id="GO" d="M490,380 L550,370 L560,420 L540,460 L490,455 L470,420 Z" stroke="#fff" stroke-width="1"/>
+    <path id="MA" d="M480,250 L540,240 L560,280 L530,310 L490,300 L470,275 Z" stroke="#fff" stroke-width="1"/>
+    <path id="MG" d="M530,440 L610,420 L650,460 L640,520 L590,550 L540,540 L510,500 L510,460 Z" stroke="#fff" stroke-width="1"/>
+    <path id="MS" d="M420,480 L490,470 L510,510 L490,550 L440,555 L410,520 Z" stroke="#fff" stroke-width="1"/>
+    <path id="MT" d="M330,360 L420,340 L450,380 L450,440 L400,460 L340,450 L310,400 Z" stroke="#fff" stroke-width="1"/>
+    <path id="PA" d="M330,220 L440,190 L490,220 L500,270 L470,300 L390,310 L330,290 L300,260 Z" stroke="#fff" stroke-width="1"/>
+    <path id="PB" d="M640,280 L680,272 L688,298 L656,305 L638,295 Z" stroke="#fff" stroke-width="1"/>
+    <path id="PE" d="M570,300 L638,292 L650,318 L615,328 L572,320 Z" stroke="#fff" stroke-width="1"/>
+    <path id="PI" d="M535,268 L580,258 L590,298 L558,310 L532,300 Z" stroke="#fff" stroke-width="1"/>
+    <path id="PR" d="M480,570 L545,558 L565,595 L540,625 L485,625 L460,600 Z" stroke="#fff" stroke-width="1"/>
+    <path id="RJ" d="M615,500 L655,488 L670,515 L648,535 L615,525 Z" stroke="#fff" stroke-width="1"/>
+    <path id="RN" d="M652,260 L688,252 L698,275 L670,282 L650,272 Z" stroke="#fff" stroke-width="1"/>
+    <path id="RO" d="M200,370 L280,355 L300,400 L270,430 L210,430 L185,400 Z" stroke="#fff" stroke-width="1"/>
+    <path id="RR" d="M200,170 L270,155 L300,190 L280,230 L220,240 L185,210 Z" stroke="#fff" stroke-width="1"/>
+    <path id="RS" d="M445,650 L510,640 L535,680 L510,720 L455,725 L425,690 Z" stroke="#fff" stroke-width="1"/>
+    <path id="SC" d="M470,625 L540,615 L558,648 L530,668 L472,665 L452,645 Z" stroke="#fff" stroke-width="1"/>
+    <path id="SE" d="M650,360 L672,352 L678,375 L655,382 L640,370 Z" stroke="#fff" stroke-width="1"/>
+    <path id="SP" d="M520,495 L600,478 L625,510 L610,555 L555,565 L520,545 L505,515 Z" stroke="#fff" stroke-width="1"/>
+    <path id="TO" d="M450,300 L510,285 L530,330 L515,375 L470,378 L445,340 Z" stroke="#fff" stroke-width="1"/>
+  </g>
+  <!-- State labels -->
+  <g id="state-labels" font-family="IBM Plex Mono, monospace" font-size="9" fill="#fff" text-anchor="middle" font-weight="600" pointer-events="none">
+    <text x="128" y="435">AC</text>
+    <text x="632" y="353">AL</text>
+    <text x="205" y="305">AM</text>
+    <text x="468" y="185">AP</text>
+    <text x="565" y="400">BA</text>
+    <text x="622" y="283">CE</text>
+    <text x="522" y="424">DF</text>
+    <text x="645" y="447">ES</text>
+    <text x="515" y="418">GO</text>
+    <text x="510" y="278">MA</text>
+    <text x="580" y="490">MG</text>
+    <text x="455" y="515">MS</text>
+    <text x="385" y="402">MT</text>
+    <text x="405" y="255">PA</text>
+    <text x="662" y="290">PB</text>
+    <text x="608" y="312">PE</text>
+    <text x="558" y="288">PI</text>
+    <text x="510" y="595">PR</text>
+    <text x="638" y="513">RJ</text>
+    <text x="672" y="268">RN</text>
+    <text x="245" y="400">RO</text>
+    <text x="242" y="198">RR</text>
+    <text x="478" y="685">RS</text>
+    <text x="503" y="645">SC</text>
+    <text x="657" y="368">SE</text>
+    <text x="563" y="523">SP</text>
+    <text x="487" y="335">TO</text>
+  </g>
+</svg>
+
+          <div class="map-legend">
+            <span>0</span>
+            <div class="map-legend-gradient"></div>
+            <span id="map-max-label">331+</span>
+            <span style="margin-left:8px;font-size:10px">processos por estado</span>
+          </div>
+        </div>
+
+        <!-- TRT RANKING -->
+        <div class="chart-card">
+          <div class="chart-card-title">Ranking TRT — Distribuição por Tribunal</div>
+          
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>TRT</th><th>Processos</th><th>% Favorável</th></tr></thead>
+        <tbody><tr><td>TRT-15</td><td>231</td><td>5.2%</td></tr>
+<tr><td>TRT-3</td><td>190</td><td>0.0%</td></tr>
+<tr><td>TRT-1</td><td>168</td><td>0.6%</td></tr>
+<tr><td>TRT-4</td><td>157</td><td>0.6%</td></tr>
+<tr><td>TRT-2</td><td>100</td><td>2.0%</td></tr>
+<tr><td>TRT-5</td><td>94</td><td>3.2%</td></tr>
+<tr><td>TRT-7</td><td>71</td><td>0.0%</td></tr>
+<tr><td>TRT-13</td><td>65</td><td>0.0%</td></tr>
+<tr><td>TRT-19</td><td>49</td><td>2.0%</td></tr>
+<tr><td>TRT-6</td><td>30</td><td>3.3%</td></tr>
+<tr><td>TRT-8</td><td>24</td><td>8.3%</td></tr>
+<tr><td>TRT-12</td><td>22</td><td>0.0%</td></tr>
+<tr><td>TRT-10</td><td>21</td><td>0.0%</td></tr>
+<tr><td>TRT-17</td><td>12</td><td>0.0%</td></tr>
+<tr><td>TRT-9</td><td>12</td><td>0.0%</td></tr>
+<tr><td>TRT-18</td><td>12</td><td>8.3%</td></tr>
+<tr><td>TRT-16</td><td>12</td><td>0.0%</td></tr>
+<tr><td>TRT-21</td><td>12</td><td>0.0%</td></tr>
+<tr><td>TRT-11</td><td>11</td><td>0.0%</td></tr>
+<tr><td>TRT-22</td><td>10</td><td>10.0%</td></tr>
+<tr><td>TRT-20</td><td>8</td><td>0.0%</td></tr>
+<tr><td>TRT-23</td><td>5</td><td>0.0%</td></tr>
+<tr><td>TRT-14</td><td>4</td><td>0.0%</td></tr>
+<tr><td>TRT-24</td><td>1</td><td>0.0%</td></tr></tbody>
+      </table>
+    </div>
+        </div>
+      </div>
+      <!-- /VISÃO GERAL -->
+
+      <!-- ═══════════════════════════ CAUSA RAIZ TABS ═══════════════════════════ -->
+      
+  <div id="tab-nuvem" class="tab-panel">
+    <div class="page-header">
+      <div class="page-label">Causa Raiz</div>
+      <h1 class="page-title">Nuvem</h1>
+      <p class="page-subtitle">Visão consolidada dos processos desta categoria</p>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total de Processos</div>
+          <div class="kpi-value">1.525</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Processos Ativos</div>
+          <div class="kpi-value">590</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Processos Encerrados</div>
+          <div class="kpi-value">935</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div></div>
+    <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Decisões Favoráveis</div>
+          <div class="kpi-value">11</div>
+          <div class="kpi-unit">(44,0%)</div>
+          <div class="kpi-trend up">Favorável</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Decisões Desfavoráveis</div>
+          <div class="kpi-value">14</div>
+          <div class="kpi-unit">decisões do período</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Total Decisões</div>
+          <div class="kpi-value">25</div>
+          <div class="kpi-unit">no período</div>
+          
+        </div></div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">Decisões — Favorável × Desfavorável</div>
+        <div class="chart-wrap"><canvas id="chart_nuvem_dec"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Fase Processual</div>
+        <div class="chart-wrap"><canvas id="chart_nuvem_fase"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Distribuição por UF (Top 10)</div>
+        <div class="chart-wrap"><canvas id="chart_nuvem_uf"></canvas></div>
+      </div>
+    </div>
+
+    
+<div class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-card-title">Top 10 Advogados Adversários</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="chart_nuvem_adv"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-card-title">Top 15 Julgadores</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="chart_nuvem_julg"></canvas></div>
+  </div>
+</div>
+
+    
+    
+  </div>
+  <div id="tab-ol" class="tab-panel">
+    <div class="page-header">
+      <div class="page-label">Causa Raiz</div>
+      <h1 class="page-title">OL</h1>
+      <p class="page-subtitle">Visão consolidada dos processos desta categoria</p>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total de Processos</div>
+          <div class="kpi-value">904</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Processos Ativos</div>
+          <div class="kpi-value">489</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Processos Encerrados</div>
+          <div class="kpi-value">415</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div></div>
+    <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Decisões Favoráveis</div>
+          <div class="kpi-value">9</div>
+          <div class="kpi-unit">(31,0%)</div>
+          <div class="kpi-trend up">Favorável</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Decisões Desfavoráveis</div>
+          <div class="kpi-value">20</div>
+          <div class="kpi-unit">decisões do período</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Total Decisões</div>
+          <div class="kpi-value">29</div>
+          <div class="kpi-unit">no período</div>
+          
+        </div></div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">Decisões — Favorável × Desfavorável</div>
+        <div class="chart-wrap"><canvas id="chart_ol_dec"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Fase Processual</div>
+        <div class="chart-wrap"><canvas id="chart_ol_fase"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Distribuição por UF (Top 10)</div>
+        <div class="chart-wrap"><canvas id="chart_ol_uf"></canvas></div>
+      </div>
+    </div>
+
+    
+<div class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-card-title">Top 10 Advogados Adversários</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="chart_ol_adv"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-card-title">Top 15 Julgadores</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="chart_ol_julg"></canvas></div>
+  </div>
+</div>
+
+    
+    
+  </div>
+  <div id="tab-ex_foodlover" class="tab-panel">
+    <div class="page-header">
+      <div class="page-label">Causa Raiz</div>
+      <h1 class="page-title">Ex-Foodlover</h1>
+      <p class="page-subtitle">Visão consolidada dos processos desta categoria</p>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total de Processos</div>
+          <div class="kpi-value">243</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Processos Ativos</div>
+          <div class="kpi-value">186</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Processos Encerrados</div>
+          <div class="kpi-value">57</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div></div>
+    <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Decisões Favoráveis</div>
+          <div class="kpi-value">3</div>
+          <div class="kpi-unit">(15,0%)</div>
+          <div class="kpi-trend up">Favorável</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Decisões Desfavoráveis</div>
+          <div class="kpi-value">17</div>
+          <div class="kpi-unit">decisões do período</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Total Decisões</div>
+          <div class="kpi-value">20</div>
+          <div class="kpi-unit">no período</div>
+          
+        </div></div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">Decisões — Favorável × Desfavorável</div>
+        <div class="chart-wrap"><canvas id="chart_ex_foodlover_dec"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Fase Processual</div>
+        <div class="chart-wrap"><canvas id="chart_ex_foodlover_fase"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Distribuição por UF (Top 10)</div>
+        <div class="chart-wrap"><canvas id="chart_ex_foodlover_uf"></canvas></div>
+      </div>
+    </div>
+
+    
+<div class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-card-title">Top 10 Advogados Adversários</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="chart_ex_foodlover_adv"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-card-title">Top 15 Julgadores</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="chart_ex_foodlover_julg"></canvas></div>
+  </div>
+</div>
+
+    
+    <h3 class="section-title" style="margin:28px 0 16px">Ranking de Pedidos dos Reclamantes (Top 15)</h3>
+    <div class="charts-grid">
+      <div class="chart-card" style="grid-column:span 2">
+        <div class="chart-card-title">Pedidos Mais Frequentes — Ex-Foodlover</div>
+        <div class="chart-wrap" style="height:340px"><canvas id="chart_ex_foodlover_pedidos"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Tabela — Ranking de Pedidos</div>
+        
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>#</th><th>Pedido / Assunto</th><th>Ocorrências</th></tr></thead>
+        <tbody><tr><td>1</td><td>Horas Extras</td><td>117</td></tr>
+<tr><td>2</td><td>Intervalo Intrajornada</td><td>53</td></tr>
+<tr><td>3</td><td>Adicional De Horas Extras</td><td>45</td></tr>
+<tr><td>4</td><td>Indenizacao Por Dano Moral</td><td>30</td></tr>
+<tr><td>5</td><td>Assedio Moral</td><td>27</td></tr>
+<tr><td>6</td><td>Salario Por Equiparacao Isonomia</td><td>25</td></tr>
+<tr><td>7</td><td>Intervalo Interjornadas</td><td>24</td></tr>
+<tr><td>8</td><td>Honorarios Na Justica Do Trabalho</td><td>23</td></tr>
+<tr><td>9</td><td>Desconfiguracao De Justa Causa</td><td>23</td></tr>
+<tr><td>10</td><td>Reflexos</td><td>22</td></tr>
+<tr><td>11</td><td>Multa De Do Fgts</td><td>20</td></tr>
+<tr><td>12</td><td>Horas Extras Horas Extras Jornada De Trabalho Servidor Público Civil D</td><td>18</td></tr>
+<tr><td>13</td><td>Acumulo De Funcao</td><td>18</td></tr>
+<tr><td>14</td><td>Adicional De Hora Extra</td><td>18</td></tr>
+<tr><td>15</td><td>Intimacao Notificacao</td><td>16</td></tr></tbody>
+      </table>
+    </div>
+      </div>
+    </div>
+    
+  </div>
+  <div id="tab-terceiriza__o" class="tab-panel">
+    <div class="page-header">
+      <div class="page-label">Causa Raiz</div>
+      <h1 class="page-title">Terceirização</h1>
+      <p class="page-subtitle">Visão consolidada dos processos desta categoria</p>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total de Processos</div>
+          <div class="kpi-value">108</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Processos Ativos</div>
+          <div class="kpi-value">47</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Processos Encerrados</div>
+          <div class="kpi-value">61</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div></div>
+    <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Decisões Favoráveis</div>
+          <div class="kpi-value">0</div>
+          <div class="kpi-unit">(0,0%)</div>
+          <div class="kpi-trend up">Favorável</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Decisões Desfavoráveis</div>
+          <div class="kpi-value">3</div>
+          <div class="kpi-unit">decisões do período</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Total Decisões</div>
+          <div class="kpi-value">3</div>
+          <div class="kpi-unit">no período</div>
+          
+        </div></div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">Decisões — Favorável × Desfavorável</div>
+        <div class="chart-wrap"><canvas id="chart_terceiriza__o_dec"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Fase Processual</div>
+        <div class="chart-wrap"><canvas id="chart_terceiriza__o_fase"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Distribuição por UF (Top 10)</div>
+        <div class="chart-wrap"><canvas id="chart_terceiriza__o_uf"></canvas></div>
+      </div>
+    </div>
+
+    
+<div class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-card-title">Top 10 Advogados Adversários</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="chart_terceiriza__o_adv"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-card-title">Top 15 Julgadores</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="chart_terceiriza__o_julg"></canvas></div>
+  </div>
+</div>
+
+    
+    
+  </div>
+  <div id="tab-marketplace" class="tab-panel">
+    <div class="page-header">
+      <div class="page-label">Causa Raiz</div>
+      <h1 class="page-title">Marketplace</h1>
+      <p class="page-subtitle">Visão consolidada dos processos desta categoria</p>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total de Processos</div>
+          <div class="kpi-value">10</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Processos Ativos</div>
+          <div class="kpi-value">7</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Processos Encerrados</div>
+          <div class="kpi-value">3</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div></div>
+    <div class="kpi-grid"></div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">Decisões — Favorável × Desfavorável</div>
+        <div class="chart-wrap"><canvas id="chart_marketplace_dec"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Fase Processual</div>
+        <div class="chart-wrap"><canvas id="chart_marketplace_fase"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Distribuição por UF (Top 10)</div>
+        <div class="chart-wrap"><canvas id="chart_marketplace_uf"></canvas></div>
+      </div>
+    </div>
+
+    
+<div class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-card-title">Top 10 Advogados Adversários</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="chart_marketplace_adv"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-card-title">Top 15 Julgadores</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="chart_marketplace_julg"></canvas></div>
+  </div>
+</div>
+
+    
+    
+  </div>
+  <div id="tab-restaurantes" class="tab-panel">
+    <div class="page-header">
+      <div class="page-label">Causa Raiz</div>
+      <h1 class="page-title">Restaurantes</h1>
+      <p class="page-subtitle">Visão consolidada dos processos desta categoria</p>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total de Processos</div>
+          <div class="kpi-value">2</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Processos Ativos</div>
+          <div class="kpi-value">2</div>
+          <div class="kpi-unit">processos</div>
+          
+        </div></div>
+    <div class="kpi-grid"></div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">Decisões — Favorável × Desfavorável</div>
+        <div class="chart-wrap"><canvas id="chart_restaurantes_dec"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Fase Processual</div>
+        <div class="chart-wrap"><canvas id="chart_restaurantes_fase"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Distribuição por UF (Top 10)</div>
+        <div class="chart-wrap"><canvas id="chart_restaurantes_uf"></canvas></div>
+      </div>
+    </div>
+
+    
+<div class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-card-title">Top 10 Advogados Adversários</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="chart_restaurantes_adv"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-card-title">Top 15 Julgadores</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="chart_restaurantes_julg"></canvas></div>
+  </div>
+</div>
+
+    
+    
+  </div>
+
+      <!-- ═══════════════════════════ SUSPENSOS ═══════════════════════════ -->
+      <div id="tab-suspensos" class="tab-panel">
+        <div class="page-header">
+          <div class="page-label">Processos Suspensos</div>
+          <h1 class="page-title">Suspensos por Tema de Repercussão Geral</h1>
+          <p class="page-subtitle">Processos suspensos aguardando julgamento no STF/TST</p>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Suspensos Tema 1389</div>
+            <div class="kpi-value">6</div>
+            <div class="kpi-unit">processos</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Suspensos Tema 1291</div>
+            <div class="kpi-value">8</div>
+            <div class="kpi-unit">processos</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Suspensos</div>
+            <div class="kpi-value">14</div>
+            <div class="kpi-unit">processos</div>
+          </div>
+        </div>
+        <h3 class="section-title">Tema 1389</h3>
+        
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>NÚMERO DO PROCESSO</th><th>CAUSA RAIZ</th><th>TRIBUNAL</th><th>TURMA</th><th>RELATOR</th><th>TIPO DE DECISÃO</th><th>DATA DA PUBLICAÇÃO</th></tr></thead>
+        <tbody><tr><td>0010244-35.2024.5.15.0153</td><td>Nuvem</td><td>TRT</td><td>2ª Turma</td><td>Ana Amarylis Vivacqua de Oliveira Gulla</td><td>AGUARDANDO ACÓRDÃO</td><td>Decisão publicada em 02/03</td></tr>
+<tr><td>0001004-75.2024.5.05.0193</td><td>Nuvem</td><td>TST</td><td>2ª Turma</td><td>LIANA CHAIB</td><td>DESFAVORÁVEL</td><td>Decisão publicada em 20/03</td></tr>
+<tr><td>0000556-51.2024.5.05.0016</td><td>Nuvem</td><td>TST</td><td>2ª Turma</td><td>LIANA CHAIB</td><td>DESFAVORÁVEL</td><td>Decisão publicada em 23/03</td></tr>
+<tr><td>0011713-24.2023.5.15.0001</td><td>OL</td><td>TRT</td><td>5ªTurma</td><td>JOAO BATISTA MARTINS CESAR</td><td>AGUARDANDO ACÓRDÃO</td><td>Decisão publicada em 23/03</td></tr>
+<tr><td>1000067-49.2024.5.02.0058</td><td>OL</td><td>TST</td><td>2ª Turma</td><td>Ministra Liana Chaib</td><td>DESFAVORÁVEL</td><td>Decisão publicada em 30/03</td></tr>
+<tr><td>0021164-46.2023.5.04.0012</td><td>OL</td><td>TRT</td><td>3ª Turma</td><td>MARCOS FAGUNDES SALOMAO</td><td>AGUARDANDO ACÓRDÃO</td><td>Decisão publicada em 31/03</td></tr></tbody>
+      </table>
+    </div>
+        <h3 class="section-title" style="margin-top:28px">Tema 1291</h3>
+        
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>NÚMERO DO PROCESSO</th><th>CAUSA RAIZ</th><th>TRIBUNAL</th><th>TURMA</th><th>RELATOR</th><th>OBSERVAÇÃO</th></tr></thead>
+        <tbody><tr><td>0010244-35.2024.5.15.0153</td><td>NUVEM</td><td>TRT</td><td>2ª</td><td>Ana Amarylis Vivacqua de Oliveira Gulla</td><td>2026-03-02 00:00:00</td></tr>
+<tr><td>0011065-48.2023.5.03.0140</td><td>NUVEM</td><td>TST</td><td>3ª</td><td>Ministro Alberto Bastos Balazeiro</td><td>2026-03-05 00:00:00</td></tr>
+<tr><td>0000409-05.2023.5.19.0005</td><td>NUVEM</td><td>TST</td><td>3ª</td><td>Ministro Mauricio Godinho Delgado</td><td>2026-03-05 00:00:00</td></tr>
+<tr><td>0000343-05.2024.5.13.0022</td><td>NUVEM</td><td>TST</td><td>3ª</td><td>Ministro Mauricio Godinho Delgado</td><td>2026-03-05 00:00:00</td></tr>
+<tr><td>0000219-45.2023.5.07.0015</td><td>OL</td><td>TST</td><td>3ª</td><td>Ministro Mauricio Godinho Delgado</td><td>2026-03-05 00:00:00</td></tr>
+<tr><td>0010498-58.2023.5.03.0094</td><td>NUVEM</td><td>TST</td><td>3ª</td><td>Ministro Mauricio Godinho Delgado</td><td>2026-03-05 00:00:00</td></tr>
+<tr><td>0000554-79.2023.5.05.0028</td><td>NUVEM</td><td>TST</td><td>3ª</td><td>Ministro Mauricio Godinho Delgado</td><td>2026-03-05 00:00:00</td></tr>
+<tr><td>0000970-98.2024.5.05.0032</td><td>NUVEM</td><td>TST</td><td>7ª</td><td>Desembargador Convocado José Pedro de Camargo Rodrigues de Souza</td><td>2026-03-30 00:00:00</td></tr></tbody>
+      </table>
+    </div>
+      </div>
+
+      <!-- ═══════════════════════════ DECISÕES DO PERÍODO ═══════════════════════════ -->
+      <div id="tab-decisoes_periodo" class="tab-panel">
+        <div class="page-header">
+          <div class="page-label">Decisões do Período</div>
+          <h1 class="page-title">Todas as Decisões do Período</h1>
+          <p class="page-subtitle">Acórdãos e sentenças coletados no período de referência</p>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Total Decisões</div>
+            <div class="kpi-value">77</div>
+            <div class="kpi-unit">no período</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Favoráveis</div>
+            <div class="kpi-value" style="color:var(--green)">23</div>
+            <div class="kpi-unit">29,9%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Desfavoráveis</div>
+            <div class="kpi-value" style="color:var(--red)">54</div>
+            <div class="kpi-unit">70,1%</div>
+          </div>
+        </div>
+        <div class="kpi-grid"><div class="kpi-card"><div class="kpi-label">ACÓRDÃO DE RECURSO ORDINÁRIO</div><div class="kpi-value">19</div><div class="kpi-unit">decisões</div></div><div class="kpi-card"><div class="kpi-label">ACÓRDÃO DE RECURSO ORDINARIO</div><div class="kpi-value">14</div><div class="kpi-unit">decisões</div></div><div class="kpi-card"><div class="kpi-label">ACÓRDÃO TST - AIRR</div><div class="kpi-value">12</div><div class="kpi-unit">decisões</div></div><div class="kpi-card"><div class="kpi-label">DESPACHO DENEGATÓRIO DE RECURSO DE REVISTA</div><div class="kpi-value">8</div><div class="kpi-unit">decisões</div></div><div class="kpi-card"><div class="kpi-label">ACÓRDÃO TST - RR</div><div class="kpi-value">4</div><div class="kpi-unit">decisões</div></div><div class="kpi-card"><div class="kpi-label">DESPACHO DENEGATORIO DE RECURSO DE REVISTA</div><div class="kpi-value">3</div><div class="kpi-unit">decisões</div></div><div class="kpi-card"><div class="kpi-label">ACÓRDÃO TST - AI</div><div class="kpi-value">1</div><div class="kpi-unit">decisões</div></div><div class="kpi-card"><div class="kpi-label">ACÒRDÂO RR - TST</div><div class="kpi-value">1</div><div class="kpi-unit">decisões</div></div><div class="kpi-card"><div class="kpi-label">ACÓRDÃO TST - AGRAVO INTERNO</div><div class="kpi-value">1</div><div class="kpi-unit">decisões</div></div></div>
+        <div class="chart-card">
+          <div class="chart-card-title">Todas as Decisões</div>
+          
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Nº Processo</th><th>Causa Raiz</th><th>Resultado</th><th>Tipo de Decisão</th></tr></thead>
+        <tbody><tr><td>0012275-31.2023.5.15.0131</td><td>ENTREGADOR NUVEM</td><td>Acórdão Favorável</td><td>ACÓRDÃO TST - AIRR</td></tr>
+<tr><td>0021115-20.2023.5.04.0007</td><td>TERCEIRIZAÇÃO</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO TST - AIRR</td></tr>
+<tr><td>0020086-40.2024.5.04.0381</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0000480-44.2025.5.05.0193</td><td>ENTREGADOR NUVEM</td><td>Acórdão Favorável</td><td></td></tr>
+<tr><td>0001368-62.2023.5.11.0016</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO TST - AIRR</td></tr>
+<tr><td>0100238-14.2024.5.01.0008</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0101392-07.2024.5.01.0222</td><td>ENTREGADOR NUVEM</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0010832-83.2023.5.03.0097</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO TST - AIRR</td></tr>
+<tr><td>0021307-59.2023.5.04.0101</td><td>ENTREGADOR OL</td><td>Acórdão Favorável</td><td>ACÓRDÃO TST - RR</td></tr>
+<tr><td>0020021-52.2024.5.04.0023</td><td>ENTREGADOR OL</td><td>Sentença Improcedente</td><td></td></tr>
+<tr><td>0100824-07.2023.5.01.0034</td><td>ENTREGADOR OL</td><td>Sentença Improcedente</td><td></td></tr>
+<tr><td>1000913-64.2024.5.02.0382</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0000841-42.2023.5.07.0010</td><td>ENTREGADOR NUVEM</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0011182-59.2025.5.03.0143</td><td>EX-FOODLOVER</td><td>Sentença Desfavorável</td><td></td></tr>
+<tr><td>0010134-95.2024.5.15.0101</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0010508-91.2024.5.15.0043</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0011702-92.2023.5.15.0001</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0101145-30.2023.5.01.0038</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0000310-88.2024.5.05.0102</td><td>ENTREGADOR NUVEM</td><td>Acórdão Favorável</td><td>ACÓRDÃO TST - RR</td></tr>
+<tr><td>0001112-72.2023.5.07.0003</td><td>ENTREGADOR OL</td><td>Acórdão Favorável</td><td>ACÓRDÃO TST - AIRR</td></tr>
+<tr><td>0020823-07.2023.5.04.0663</td><td>ENTREGADOR NUVEM</td><td>Acórdão Favorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0100109-53.2024.5.01.0058</td><td>TERCEIRIZAÇÃO</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO TST - AIRR</td></tr>
+<tr><td>0000414-54.2023.5.05.0025</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0100108-51.2023.5.01.0075</td><td>ENTREGADOR NUVEM</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0100401-06.2025.5.01.0025</td><td>ENTREGADOR NUVEM</td><td>Sentença Improcedente</td><td></td></tr>
+<tr><td>0021103-88.2023.5.04.0012</td><td>ENTREGADOR NUVEM</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO TST - AIRR</td></tr>
+<tr><td>0016818-60.2025.5.16.0008</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>1001238-27.2024.5.02.0386</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO TST - AI</td></tr>
+<tr><td>0020249-33.2024.5.04.0021</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0020088-04.2024.5.04.0383</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0000411-50.2023.5.05.0009</td><td>ENTREGADOR NUVEM</td><td>Acórdão Favorável</td><td>ACÓRDÃO TST - AIRR</td></tr>
+<tr><td>0101175-75.2023.5.01.0067</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>1001605-54.2024.5.02.0385</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>DESPACHO DENEGATÓRIO DE RECURSO DE REVISTA</td></tr>
+<tr><td>0000300-22.2024.5.13.0005</td><td>TERCEIRIZAÇÃO</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO TST - AIRR</td></tr>
+<tr><td>0020309-21.2024.5.04.0016</td><td>ENTREGADOR OL</td><td>Sentença Desfavorável</td><td></td></tr>
+<tr><td>0010153-73.2024.5.15.0078</td><td>EX-FOODLOVER</td><td>Acórdão Favorável</td><td>ACÒRDÂO RR - TST</td></tr>
+<tr><td>0020096-34.2024.5.04.0333</td><td>ENTREGADOR OL</td><td>Sentença Desfavorável</td><td></td></tr>
+<tr><td>0016648-40.2024.5.16.0003</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>DESPACHO DENEGATÓRIO DE RECURSO DE REVISTA</td></tr>
+<tr><td>0021121-58.2023.5.04.0611</td><td>ENTREGADOR OL</td><td>Acórdão Anula Sentença</td><td></td></tr>
+<tr><td>0100986-83.2023.5.01.0007</td><td>ENTREGADOR OL</td><td>Acórdão Favorável</td><td></td></tr>
+<tr><td>0100252-05.2024.5.01.0038</td><td>ENTREGADOR OL</td><td>Sentença Improcedente</td><td></td></tr>
+<tr><td>1001121-75.2025.5.02.0006</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINARIO</td></tr>
+<tr><td>0020213-24.2024.5.04.0010</td><td>ENTREGADOR OL</td><td>Sentença Desfavorável</td><td></td></tr>
+<tr><td>0000556-15.2024.5.05.0028</td><td>ENTREGADOR NUVEM</td><td>Acórdão Favorável</td><td>ACÓRDÃO DE RECURSO ORDINARIO</td></tr>
+<tr><td>0000620-85.2024.5.05.0008</td><td>ENTREGADOR NUVEM</td><td>Acórdão Favorável</td><td>ACÓRDÃO DE RECURSO ORDINARIO</td></tr>
+<tr><td>0100930-62.2022.5.01.0079</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINARIO</td></tr>
+<tr><td>0000159-16.2024.5.05.0008</td><td>ENTREGADOR NUVEM</td><td>Acórdão Favorável</td><td>ACÓRDÃO TST - RR</td></tr>
+<tr><td>0010804-33.2023.5.15.0081</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>DESPACHO DENEGATÓRIO DE RECURSO DE REVISTA</td></tr>
+<tr><td>0016846-16.2025.5.16.0012</td><td>EX-FOODLOVER</td><td>Sentença Improcedente</td><td></td></tr>
+<tr><td>1001247-47.2025.5.02.0032</td><td>EX-FOODLOVER</td><td>Acórdão Anula Sentença</td><td>ACÓRDÃO DE RECURSO ORDINARIO</td></tr>
+<tr><td>1000351-92.2023.5.02.0381</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINARIO</td></tr>
+<tr><td>0000776-74.2023.5.07.0001</td><td>ENTREGADOR NUVEM</td><td>Acórdão Desfavorável</td><td>DESPACHO DENEGATORIO DE RECURSO DE REVISTA</td></tr>
+<tr><td>1001609-96.2023.5.02.0718</td><td>ENTREGADOR NUVEM</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINARIO</td></tr>
+<tr><td>0000252-63.2023.5.10.0011</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINARIO</td></tr>
+<tr><td>1001267-65.2025.5.02.0605</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINARIO</td></tr>
+<tr><td>1001400-95.2023.5.02.0373</td><td>ENTREGADOR NUVEM</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO TST - AGRAVO INTERNO</td></tr>
+<tr><td>0010247-44.2024.5.03.0049</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO TST - AIRR</td></tr>
+<tr><td>1000013-64.2023.5.02.0205</td><td>ENTREGADOR NUVEM</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINARIO</td></tr>
+<tr><td>0001155-04.2023.5.11.0001</td><td>ENTREGADOR OL</td><td>Acórdão Favorável</td><td>ACÓRDÃO DE RECURSO ORDINARIO</td></tr>
+<tr><td>0012363-19.2024.5.15.0007</td><td>ENTREGADOR NUVEM</td><td>Acórdão Favorável</td><td>ACÓRDÃO DE RECURSO ORDINARIO</td></tr>
+<tr><td>0000843-63.2024.5.07.0014</td><td>ENTREGADOR NUVEM</td><td>Acórdão Desfavorável</td><td>DESPACHO DENEGATORIO DE RECURSO DE REVISTA</td></tr>
+<tr><td>0000333-38.2024.5.07.0018</td><td>ENTREGADOR NUVEM</td><td>Acórdão Desfavorável</td><td>DESPACHO DENEGATORIO DE RECURSO DE REVISTA</td></tr>
+<tr><td>0010561-05.2024.5.15.0130</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINARIO</td></tr>
+<tr><td>0016942-92.2024.5.16.0003</td><td>ENTREGADOR NUVEM</td><td>Acórdão Favorável</td><td>ACÓRDÃO DE RECURSO ORDINARIO</td></tr>
+<tr><td>0000340-70.2023.5.23.0066</td><td>ENTREGADOR OL</td><td>Acórdão Favorável</td><td>ACÓRDÃO TST - AIRR</td></tr>
+<tr><td>0020817-22.2023.5.04.0203</td><td>ENTREGADOR OL</td><td>Sentença Improcedente</td><td></td></tr>
+<tr><td>0001049-71.2025.5.11.0001</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>1000594-93.2024.5.02.0383</td><td>EX-FOODLOVER</td><td>Acórdão Favorável</td><td>ACÓRDÃO TST - AIRR</td></tr>
+<tr><td>0020834-56.2023.5.04.0333</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td></td></tr>
+<tr><td>0020834-56.2023.5.04.0333</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>DESPACHO DENEGATÓRIO DE RECURSO DE REVISTA</td></tr>
+<tr><td>0001029-26.2023.5.07.0013</td><td>ENTREGADOR NUVEM</td><td>Acórdão Desfavorável</td><td>DESPACHO DENEGATÓRIO DE RECURSO DE REVISTA</td></tr>
+<tr><td>0011671-84.2023.5.15.0094</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0100523-61.2025.5.01.0302</td><td>EX-FOODLOVER</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO DE RECURSO ORDINÁRIO</td></tr>
+<tr><td>0010720-54.2024.5.03.0138</td><td>ENTREGADOR NUVEM</td><td>Acórdão Desfavorável</td><td>ACÓRDÃO TST - RR</td></tr>
+<tr><td>0000129-81.2024.5.05.0007</td><td>ENTREGADOR OL</td><td>Acórdão Desfavorável</td><td>DESPACHO DENEGATÓRIO DE RECURSO DE REVISTA</td></tr>
+<tr><td>0000967-85.2024.5.07.0001</td><td>ENTREGADOR NUVEM</td><td>Acórdão Desfavorável</td><td>DESPACHO DENEGATÓRIO DE RECURSO DE REVISTA</td></tr>
+<tr><td>0000284-94.2024.5.07.0018</td><td>ENTREGADOR NUVEM</td><td>Acórdão Desfavorável</td><td>DESPACHO DENEGATÓRIO DE RECURSO DE REVISTA</td></tr></tbody>
+      </table>
+    </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const UF_DATA = {"SP": 331, "ES": 12, "BA": 94, "PR": 12, "PE": 30, "RJ": 168, "RS": 157, "SC": 22, "RO": 1, "MG": 190, "PI": 10, "SE": 8, "GO": 10, "DF": 20, "AM": 11, "CE": 71, "MT": 5, "PA": 17, "AL": 49, "MA": 12, "AP": 7, "PB": 65, "RN": 12, "Go": 2, "AC": 3, "MS": 1, "TO": 1};
+const MAX_UF  = 331;
+
+// ── TAB SWITCHING ────────────────────────────────────────────────────────────
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn, .nav-item').forEach(b => b.classList.remove('active'));
+
+  const panel = document.getElementById('tab-' + tabId);
+  if (panel) panel.classList.add('active');
+
+  document.querySelectorAll('[data-tab="' + tabId + '"]').forEach(b => b.classList.add('active'));
+}
+
+document.querySelectorAll('.tab-btn, .nav-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.getAttribute('data-tab');
+    if (tab) switchTab(tab);
+    if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+  });
+});
+
+// Hamburger
+document.getElementById('hamburger').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+// ── EXPORT PDF ───────────────────────────────────────────────────────────────
+document.getElementById('btn-export-pdf').addEventListener('click', async () => {
+  const { jsPDF } = window.jspdf;
+  const panel = document.querySelector('.tab-panel.active');
+  if (!panel) return;
+  const canvas = await html2canvas(panel, { scale:1.5, useCORS:true, backgroundColor:'#FAF8F5' });
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+  const pw = pdf.internal.pageSize.getWidth();
+  const ph = pdf.internal.pageSize.getHeight();
+  const ratio = canvas.width / canvas.height;
+  const imgH = pw / ratio;
+  let pos = 0;
+  if (imgH <= ph) {
+    pdf.addImage(imgData, 'PNG', 0, 0, pw, imgH);
+  } else {
+    let remaining = canvas.height;
+    while (remaining > 0) {
+      pdf.addImage(imgData, 'PNG', 0, pos, pw, imgH);
+      remaining -= canvas.height * (ph / imgH);
+      pos -= ph;
+      if (remaining > 0) pdf.addPage();
+    }
+  }
+  pdf.save('falaw-ifood-dashboard-04/2026.pdf');
+});
+
+// ── BRAZIL MAP COLORING ──────────────────────────────────────────────────────
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return [r,g,b];
+}
+function interpolateColor(t) {
+  // white(#f0e8ea) → crimson(#7B1A2E)
+  const c0 = [240,232,234], c1 = [123,26,46];
+  const r = Math.round(c0[0] + (c1[0]-c0[0])*t);
+  const g = Math.round(c0[1] + (c1[1]-c0[1])*t);
+  const b = Math.round(c0[2] + (c1[2]-c0[2])*t);
+  return `rgb(${r},${g},${b})`;
+}
+
+document.querySelectorAll('#states path').forEach(path => {
+  const uf = path.id;
+  const count = UF_DATA[uf] || 0;
+  const t = MAX_UF > 0 ? count / MAX_UF : 0;
+  path.style.fill = interpolateColor(t);
+  path.setAttribute('title', uf + ': ' + count + ' processos');
+  path.style.cursor = 'pointer';
+  path.addEventListener('mouseenter', (e) => {
+    path.style.opacity = '0.8';
+    path.style.strokeWidth = '2';
+  });
+  path.addEventListener('mouseleave', () => {
+    path.style.opacity = '1';
+    path.style.strokeWidth = '1';
+  });
+});
+
+// ── CHARTS ───────────────────────────────────────────────────────────────────
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.color = '#1A0A0D';
+
+const PALETTE_CR = ['#0D2B5E','#7B1A2E','#0F9E76','#f59e0b','#6366f1','#ec4899'];
+
+// Visão Geral: Causa Raiz Doughnut
+new Chart(document.getElementById('chart-cr-donut'), {
+  type: 'doughnut',
+  data: {
+    labels: ["EX-FOODLOVER", "ENTREGADOR OL", "ENTREGADOR NUVEM", "TERCEIRIZAÇÃO", "ENTREGADOR - MARKETPLACE", "RESTAURANTES - CONTRATO"],
+    datasets: [{ data: [186, 489, 590, 47, 7, 2], backgroundColor: PALETTE_CR, borderWidth: 2, borderColor: '#fff' }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position:'right', labels:{ font:{ family:'IBM Plex Mono', size:10 }, padding:14, color:'#1A0A0D' } }
+    }
+  }
+});
+
+// Visão Geral: Resultados Doughnut
+new Chart(document.getElementById('chart-resultados'), {
+  type: 'doughnut',
+  data: {
+    labels: ["Desfavorável", "Neutro", "Favorável"],
+    datasets: [{ data: [109, 21, 40],
+      backgroundColor: ['#0F9E76','#C0392B','#f59e0b','#6366f1'],
+      borderWidth: 2, borderColor: '#fff' }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position:'right', labels:{ font:{ family:'IBM Plex Mono', size:10 }, padding:14, color:'#1A0A0D' } }
+    }
+  }
+});
+
+// Visão Geral: Decisões por CR grouped bar
+new Chart(document.getElementById('chart-dec-cr'), {
+  type: 'bar',
+  data: {
+    labels: ["ENTREGADOR NUVEM", "ENTREGADOR OL", "EX-FOODLOVER", "TERCEIRIZAÇÃO"],
+    datasets: [
+      { label:'Favorável',    data: [11, 9, 3, 0],  backgroundColor:'#0F9E76', borderRadius:3 },
+      { label:'Desfavorável', data: [14, 20, 17, 3], backgroundColor:'#C0392B', borderRadius:3 }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
+    scales: { x:{ grid:{ display:false } }, y:{ grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true } }
+  }
+});
+
+// Visão Geral: Fase Processual
+new Chart(document.getElementById('chart-fase'), {
+  type: 'bar',
+  data: {
+    labels: ["4-Recursal", "5-Executoria", "6-Arquivamento", "2-Instrutoria", "3-Decisoria"],
+    datasets: [{ label:'Processos', data: [977, 174, 64, 55, 19], backgroundColor:'#0D2B5E', borderRadius:4 }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend:{ display:false } },
+    scales: { x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false } } }
+  }
+});
+
+// Visão Geral: Top 10 Advogados
+new Chart(document.getElementById('chart-adv'), {
+  type: 'bar',
+  data: {
+    labels: ["Pedro Zattar Eugenio", "Pedro Paulo Polastri De Castro E Almeida", "Felipe Espindola Carmona", "FERRAZ ANDRADE SOCIEDADE INDIVIDUAL DE ADVOCACIA", "Luis Fernando Moreira Cantanhede", "Eduardo Cruvinel", "Carlos Faria Junior", "Odilon Pinto De Vasconcellos Neto", "Felipe Augusto Correa", "Renan De Arraes Queiroz"],
+    datasets: [{ label:'Processos', data: [1249, 1217, 163, 75, 75, 67, 42, 39, 35, 32], backgroundColor:'#7B1A2E', borderRadius:4 }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend:{ display:false } },
+    scales: { x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false }, ticks:{ font:{ size:9 } } } }
+  }
+});
+
+// Visão Geral: Top 15 Julgadores
+new Chart(document.getElementById('chart-julgadores'), {
+  type: 'bar',
+  data: {
+    labels: ["Ice Presidencia Judicial Analise De Recurso", "Cesar Pereira Da Silva Machado Junior", "Aline De Almeida Figueiredo", "Francisco De Assis Carvalho E Silva", "Vanda Maria Ferreira Lustosa", "Francisco Jose Gomes Da Silva", "Antonio Adrualdo Alcoforado Catao", "Paulo Maia Filho", "Delane Marcolino Ferreira", "Rosemary De Oliveira Pires", "Francisca Oliveira Formigosa", "Maria Roseli Mendes Alencar", "Eduardo Sergio De Almeida", "Helio Nogueira", "Regina Glaucia Cavalcante Nepomuceno"],
+    datasets: [{ label:'Decisões', data: [61, 26, 23, 18, 15, 15, 13, 13, 12, 12, 12, 11, 11, 11, 11], backgroundColor:'#6366f1', borderRadius:4 }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend:{ display:false } },
+    scales: { x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false }, ticks:{ font:{ size:9 } } } }
+  }
+});
+
+// ── CAUSA RAIZ CHARTS ────────────────────────────────────────────────────────
+
+    // — nuvem charts —
+    new Chart(document.getElementById('chart_nuvem_dec'), {
+      type: 'doughnut',
+      data: { labels: ["Favorável", "Desfavorável", "Neutro"], datasets: [{ data: [7, 3, 6],
+        backgroundColor: ['#0F9E76','#C0392B','#f59e0b'],
+        borderWidth: 0 }] },
+      options: { responsive:true, plugins:{ legend:{ position:'right', labels:{ font:{ family:'IBM Plex Mono', size:10 }, color:'#1A0A0D' } } } }
+    });
+    new Chart(document.getElementById('chart_nuvem_fase'), {
+      type: 'bar',
+      data: { labels: ["6-Arquivamento", "4-Recursal", "5-Executoria", "2-Instrutoria", "3-Decisoria"], datasets: [{ label:'Processos', data: [850, 510, 104, 21, 6],
+        backgroundColor: '#0D2B5E', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false } } } }
+    });
+    new Chart(document.getElementById('chart_nuvem_uf'), {
+      type: 'bar',
+      data: { labels: ["MG", "SP", "BA", "PB", "AL", "CE", "PE", "RJ", "RN", "RS"], datasets: [{ label:'Processos', data: [472, 213, 166, 137, 109, 96, 85, 65, 32, 29],
+        backgroundColor: '#7B1A2E', borderRadius: 4 }] },
+      options: { responsive:true, plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ display:false } }, y:{ grid:{ color:'rgba(0,0,0,0.05)' } } } }
+    });
+    new Chart(document.getElementById('chart_nuvem_adv'), {
+      type: 'bar',
+      data: { labels: ["Pedro Zattar Eugenio", "Pedro Paulo Polastri De Castro E Almeida", "FERRAZ ANDRADE SOCIEDADE INDIVIDUAL DE ADVOCACIA", "Pedro Paulo Polastri de Castro e Almeida", "PEDRO ZATTAR EUGENIO", "Bruno Alberto Maia Da Silva", "Felipe Augusto Correa", "Felipe Espindola Carmona", "Andre Mansur Brandao", "Renan De Arraes Queiroz"], datasets: [{ label:'Processos', data: [1243, 1211, 34, 30, 29, 28, 24, 23, 15, 14],
+        backgroundColor: '#7B1A2E', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false }, ticks:{ font:{ size:9 } } } }
+      }
+    });
+    new Chart(document.getElementById('chart_nuvem_julg'), {
+      type: 'bar',
+      data: { labels: ["Cesar Pereira Da Silva Machado Junior", "Aline De Almeida Figueiredo", "Francisco De Assis Carvalho E Silva", "Vanda Maria Ferreira Lustosa", "Ice Presidencia Judicial Analise De Recurso", "Antonio Adrualdo Alcoforado Catao", "Rosemary De Oliveira Pires", "Paulo Maia Filho", "Francisco Jose Gomes Da Silva", "Eduardo Sergio De Almeida"], datasets: [{ label:'Decisões', data: [25, 20, 15, 13, 13, 13, 12, 11, 11, 10],
+        backgroundColor: '#6366f1', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false }, ticks:{ font:{ size:9 } } } }
+      }
+    });
+    // — ol charts —
+    new Chart(document.getElementById('chart_ol_dec'), {
+      type: 'doughnut',
+      data: { labels: ["Favorável", "Desfavorável", "Neutro"], datasets: [{ data: [5, 23, 7],
+        backgroundColor: ['#0F9E76','#C0392B','#f59e0b'],
+        borderWidth: 0 }] },
+      options: { responsive:true, plugins:{ legend:{ position:'right', labels:{ font:{ family:'IBM Plex Mono', size:10 }, color:'#1A0A0D' } } } }
+    });
+    new Chart(document.getElementById('chart_ol_fase'), {
+      type: 'bar',
+      data: { labels: ["4-Recursal", "6-Arquivamento", "5-Executoria", "2-Instrutoria", "3-Decisoria"], datasets: [{ label:'Processos', data: [381, 254, 218, 31, 13],
+        backgroundColor: '#0D2B5E', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false } } } }
+    });
+    new Chart(document.getElementById('chart_ol_uf'), {
+      type: 'bar',
+      data: { labels: ["SP", "RS", "RJ", "MG", "PB", "CE", "AP", "SC", "PR", "DF"], datasets: [{ label:'Processos', data: [290, 163, 163, 36, 32, 32, 22, 21, 20, 20],
+        backgroundColor: '#7B1A2E', borderRadius: 4 }] },
+      options: { responsive:true, plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ display:false } }, y:{ grid:{ color:'rgba(0,0,0,0.05)' } } } }
+    });
+    new Chart(document.getElementById('chart_ol_adv'), {
+      type: 'bar',
+      data: { labels: ["Felipe Espindola Carmona", "Luis Fernando Moreira Cantanhede", "Eduardo Cruvinel", "Carlos Faria Junior", "Odilon Pinto De Vasconcellos Neto", "Celso Felipe Pimenta Pinto", "Renan De Arraes Queiroz", "Max Marques Studier", "Renata Araujo Martins", "Felipe Pires Queiroz"], datasets: [{ label:'Processos', data: [140, 75, 60, 42, 39, 22, 18, 17, 17, 17],
+        backgroundColor: '#7B1A2E', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false }, ticks:{ font:{ size:9 } } } }
+      }
+    });
+    new Chart(document.getElementById('chart_ol_julg'), {
+      type: 'bar',
+      data: { labels: ["Ice Presidencia Judicial Analise De Recurso", "Francisca Oliveira Formigosa", "Ida Selene Duarte Sirotheau Correa Braga", "Nelie Oliveira Perbeils", "Maria Valquiria Norat Coelho", "Sayonara Grillo Coutinho Leonardo Da Silva", "Alvaro Antonio Borges Faria", "Giselle Bondim Lopes Ribeiro", "Regina Glaucia Cavalcante Nepomuceno", "Jose Luis Campos Xavier"], datasets: [{ label:'Decisões', data: [33, 11, 7, 6, 6, 5, 5, 5, 5, 5],
+        backgroundColor: '#6366f1', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false }, ticks:{ font:{ size:9 } } } }
+      }
+    });
+    // — ex_foodlover charts —
+    new Chart(document.getElementById('chart_ex_foodlover_dec'), {
+      type: 'doughnut',
+      data: { labels: ["Favorável", "Desfavorável", "Neutro"], datasets: [{ data: [28, 83, 8],
+        backgroundColor: ['#0F9E76','#C0392B','#f59e0b'],
+        borderWidth: 0 }] },
+      options: { responsive:true, plugins:{ legend:{ position:'right', labels:{ font:{ family:'IBM Plex Mono', size:10 }, color:'#1A0A0D' } } } }
+    });
+    new Chart(document.getElementById('chart_ex_foodlover_fase'), {
+      type: 'bar',
+      data: { labels: ["4-Recursal", "5-Executoria", "6-Arquivamento", "2-Instrutoria", "3-Decisoria"], datasets: [{ label:'Processos', data: [123, 47, 35, 22, 3],
+        backgroundColor: '#0D2B5E', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false } } } }
+    });
+    new Chart(document.getElementById('chart_ex_foodlover_uf'), {
+      type: 'bar',
+      data: { labels: ["SP", "MG", "RJ", "RS", "BA", "ES", "PE", "MA", "DF", "CE"], datasets: [{ label:'Processos', data: [120, 33, 12, 10, 9, 8, 6, 6, 5, 5],
+        backgroundColor: '#7B1A2E', borderRadius: 4 }] },
+      options: { responsive:true, plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ display:false } }, y:{ grid:{ color:'rgba(0,0,0,0.05)' } } } }
+    });
+    new Chart(document.getElementById('chart_ex_foodlover_adv'), {
+      type: 'bar',
+      data: { labels: ["Luciane Adam De Oliveira", "Tiago Farneti De Carvalho", "Marina De Sousa Saraiva Correa Vianna", "Filipe Balbino Da Silva", "Nagila Flavia Godinho Mauricio", "FERRAZ ANDRADE SOCIEDADE INDIVIDUAL DE ADVOCACIA", "Andreia Cristina Martins Daros Vargas", "Marina Ribeiro Scalfone", "Antonio Squillaci", "Dejair Passerine Da Silva"], datasets: [{ label:'Processos', data: [27, 21, 18, 17, 13, 13, 12, 10, 7, 7],
+        backgroundColor: '#7B1A2E', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false }, ticks:{ font:{ size:9 } } } }
+      }
+    });
+    new Chart(document.getElementById('chart_ex_foodlover_julg'), {
+      type: 'bar',
+      data: { labels: ["Ice Presidencia Judicial Analise De Recurso", "Paulo Jose Ribeiro Mota", "Fernando Cesar Teixeira Franca", "Ricardo Apostolico Silva", "Ivani Contini Bramante", "Francisco Ferreira Jorge Neto", "Maria De Lourdes Antonio", "Jorge Berg De Mendonca", "Andreia Paola Nicolau Serpa", "Dulce Maria Soler Gomes Rijo"], datasets: [{ label:'Decisões', data: [14, 4, 3, 3, 3, 2, 2, 2, 2, 2],
+        backgroundColor: '#6366f1', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false }, ticks:{ font:{ size:9 } } } }
+      }
+    });
+    new Chart(document.getElementById('chart_ex_foodlover_pedidos'), {
+      type: 'bar',
+      data: { labels: ["Horas Extras", "Intervalo Intrajornada", "Adicional De Horas Extras", "Indenizacao Por Dano Moral", "Assedio Moral", "Salario Por Equiparacao Isonomia", "Intervalo Interjornadas", "Honorarios Na Justica Do Trabalho", "Desconfiguracao De Justa Causa", "Reflexos", "Multa De Do Fgts", "Horas Extras Horas Extras Jornada De Trabalho Servidor Público Civil D", "Acumulo De Funcao", "Adicional De Hora Extra", "Intimacao Notificacao"], datasets: [{ label:'Ocorrências', data: [117, 53, 45, 30, 27, 25, 24, 23, 23, 22, 20, 18, 18, 18, 16],
+        backgroundColor: ['#7B1A2E','#0D2B5E','#0F9E76','#E67E22','#8E44AD',
+                          '#C0392B','#2563EB','#059669','#D97706','#7C3AED',
+                          '#B91C1C','#1D4ED8','#065F46','#92400E','#5B21B6'],
+        borderRadius: 5 }] },
+      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false },
+          tooltip:{ callbacks:{ label: ctx => ' ' + ctx.parsed.x + ' processos' } } },
+        scales:{
+          x:{ grid:{ color:'rgba(0,0,0,0.05)' }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } },
+          y:{ grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono', size:10 }, color:'#3D2B2E' } }
+        }
+      }
+    });
+    // — terceiriza__o charts —
+    new Chart(document.getElementById('chart_terceiriza__o_dec'), {
+      type: 'doughnut',
+      data: { labels: ["Favorável", "Desfavorável", "Neutro"], datasets: [{ data: [0, 0, 0],
+        backgroundColor: ['#0F9E76','#C0392B','#f59e0b'],
+        borderWidth: 0 }] },
+      options: { responsive:true, plugins:{ legend:{ position:'right', labels:{ font:{ family:'IBM Plex Mono', size:10 }, color:'#1A0A0D' } } } }
+    });
+    new Chart(document.getElementById('chart_terceiriza__o_fase'), {
+      type: 'bar',
+      data: { labels: ["6-Arquivamento", "5-Executoria", "4-Recursal", "2-Instrutoria", "3-Decisoria"], datasets: [{ label:'Processos', data: [42, 27, 12, 5, 4],
+        backgroundColor: '#0D2B5E', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false } } } }
+    });
+    new Chart(document.getElementById('chart_terceiriza__o_uf'), {
+      type: 'bar',
+      data: { labels: ["SP", "PE", "RJ", "RS", "MG", "PB", "PR", "CE", "GO", "SE"], datasets: [{ label:'Processos', data: [62, 10, 9, 7, 7, 3, 3, 2, 2, 1],
+        backgroundColor: '#7B1A2E', borderRadius: 4 }] },
+      options: { responsive:true, plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ display:false } }, y:{ grid:{ color:'rgba(0,0,0,0.05)' } } } }
+    });
+    new Chart(document.getElementById('chart_terceiriza__o_adv'), {
+      type: 'bar',
+      data: { labels: ["FERRAZ ANDRADE SOCIEDADE INDIVIDUAL DE ADVOCACIA", "Marcio De Aquino Soares", "Marco Augusto De Argenton E Queiroz", "Hermes Pereira Junior", "Karla Nemes", "Tiago Santa Lucia Lagoas", "Uilson De Souza Silva", "Sabrina De Lima Moreira", "Ketley Fernanda Braghetti Piovezan", "Leticia Garofallo Zavarize Nais"], datasets: [{ label:'Processos', data: [18, 5, 4, 3, 3, 3, 3, 3, 2, 2],
+        backgroundColor: '#7B1A2E', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false }, ticks:{ font:{ size:9 } } } }
+      }
+    });
+    new Chart(document.getElementById('chart_terceiriza__o_julg'), {
+      type: 'bar',
+      data: { labels: ["Regina Celi Vieira Ferro", "Claudinei Zapata Marques", "Ice Presidencia Judicial Analise De Recurso", "Marcelo Jose Duarte Raffaele", "Fernando Antonio Sampaio Da Silva", "Ubiratan Moreira Delgado", "Emilio Papaleo Zin", "Sergio Roberto Rodrigues", "Daniel Vieira Zaina Santos", "Persio Luis Teixeira De Carvalho"], datasets: [{ label:'Decisões', data: [2, 2, 1, 1, 1, 1, 1, 1, 1, 1],
+        backgroundColor: '#6366f1', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false }, ticks:{ font:{ size:9 } } } }
+      }
+    });
+    // — marketplace charts —
+    new Chart(document.getElementById('chart_marketplace_dec'), {
+      type: 'doughnut',
+      data: { labels: ["Favorável", "Desfavorável", "Neutro"], datasets: [{ data: [0, 0, 0],
+        backgroundColor: ['#0F9E76','#C0392B','#f59e0b'],
+        borderWidth: 0 }] },
+      options: { responsive:true, plugins:{ legend:{ position:'right', labels:{ font:{ family:'IBM Plex Mono', size:10 }, color:'#1A0A0D' } } } }
+    });
+    new Chart(document.getElementById('chart_marketplace_fase'), {
+      type: 'bar',
+      data: { labels: ["4-Recursal", "5-Executoria", "6-Arquivamento"], datasets: [{ label:'Processos', data: [5, 2, 2],
+        backgroundColor: '#0D2B5E', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false } } } }
+    });
+    new Chart(document.getElementById('chart_marketplace_uf'), {
+      type: 'bar',
+      data: { labels: ["SP", "RJ", "SC"], datasets: [{ label:'Processos', data: [5, 4, 1],
+        backgroundColor: '#7B1A2E', borderRadius: 4 }] },
+      options: { responsive:true, plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ display:false } }, y:{ grid:{ color:'rgba(0,0,0,0.05)' } } } }
+    });
+    new Chart(document.getElementById('chart_marketplace_adv'), {
+      type: 'bar',
+      data: { labels: ["Celso Dos Santos", "Willian De Souza Freitas", "Priscila Maiara Zanghelini", "Melissa De Castro Vilela Carvalho Da Silveira", "Aluysio Gonzaga Pires", "Marcelo Jose De Abreu E Silva", "Anna Carolina Vieira Cortes", "Barbara Goncalves Leite", "FERRAZ ANDRADE SOCIEDADE INDIVIDUAL DE ADVOCACIA"], datasets: [{ label:'Processos', data: [2, 2, 1, 1, 1, 1, 1, 1, 1],
+        backgroundColor: '#7B1A2E', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false }, ticks:{ font:{ size:9 } } } }
+      }
+    });
+    new Chart(document.getElementById('chart_marketplace_julg'), {
+      type: 'bar',
+      data: { labels: ["Maria Cristina Christianini Trentini", "Jose Nascimento Araujo Netto", "Gabriel Lopes Coutinho Filho"], datasets: [{ label:'Decisões', data: [1, 1, 1],
+        backgroundColor: '#6366f1', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false }, ticks:{ font:{ size:9 } } } }
+      }
+    });
+    // — restaurantes charts —
+    new Chart(document.getElementById('chart_restaurantes_dec'), {
+      type: 'doughnut',
+      data: { labels: ["Favorável", "Desfavorável", "Neutro"], datasets: [{ data: [0, 0, 0],
+        backgroundColor: ['#0F9E76','#C0392B','#f59e0b'],
+        borderWidth: 0 }] },
+      options: { responsive:true, plugins:{ legend:{ position:'right', labels:{ font:{ family:'IBM Plex Mono', size:10 }, color:'#1A0A0D' } } } }
+    });
+    new Chart(document.getElementById('chart_restaurantes_fase'), {
+      type: 'bar',
+      data: { labels: [], datasets: [{ label:'Processos', data: [],
+        backgroundColor: '#0D2B5E', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false } } } }
+    });
+    new Chart(document.getElementById('chart_restaurantes_uf'), {
+      type: 'bar',
+      data: { labels: ["RS"], datasets: [{ label:'Processos', data: [2],
+        backgroundColor: '#7B1A2E', borderRadius: 4 }] },
+      options: { responsive:true, plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ display:false } }, y:{ grid:{ color:'rgba(0,0,0,0.05)' } } } }
+    });
+    new Chart(document.getElementById('chart_restaurantes_adv'), {
+      type: 'bar',
+      data: { labels: ["FERRAZ ANDRADE SOCIEDADE INDIVIDUAL DE ADVOCACIA"], datasets: [{ label:'Processos', data: [2],
+        backgroundColor: '#7B1A2E', borderRadius: 4 }] },
+      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' } }, y:{ grid:{ display:false }, ticks:{ font:{ size:9 } } } }
+      }
+    });
+
+</script>
+</body>
+</html>
