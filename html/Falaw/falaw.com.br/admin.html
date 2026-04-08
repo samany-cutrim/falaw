@@ -335,6 +335,50 @@
     .form-field select:focus { border-color: var(--c-accent); background: #fff; }
     .form-field textarea { resize: vertical; min-height: 120px; }
 
+    /* ── RICH EDITOR ── */
+    .rich-toolbar {
+      display: flex; gap: 2px; align-items: center; flex-wrap: wrap;
+      background: #f0ece8; border: 1px solid var(--c-divider);
+      border-bottom: none; border-radius: 2px 2px 0 0; padding: 6px 8px;
+    }
+    .rich-toolbar button {
+      background: none; border: 1px solid transparent; border-radius: 2px;
+      padding: 4px 8px; font-size: 13px; cursor: pointer; color: var(--c-dark);
+      font-family: var(--f-body); line-height: 1; transition: background .15s, border-color .15s;
+    }
+    .rich-toolbar button:hover { background: #fff; border-color: var(--c-divider); }
+    .rich-toolbar .tb-sep { width: 1px; height: 20px; background: var(--c-divider); margin: 0 4px; flex-shrink: 0; }
+    .tb-color-popup {
+      position: absolute; top: 36px; left: 0; background: #fff;
+      border: 1px solid var(--c-divider); border-radius: 4px; padding: 8px;
+      display: grid; grid-template-columns: repeat(6, 22px); gap: 4px;
+      z-index: 999; box-shadow: 0 4px 16px rgba(0,0,0,.14);
+    }
+    .tb-color-swatch {
+      width: 22px; height: 22px; border-radius: 2px; cursor: pointer;
+      border: 2px solid #fff; box-shadow: 0 0 0 1px var(--c-divider);
+      transition: transform .1s;
+    }
+    .tb-color-swatch:hover { transform: scale(1.2); }
+    .rich-editor {
+      width: 100%; min-height: 220px; max-height: 520px; overflow-y: auto;
+      border: 1px solid var(--c-divider); border-radius: 0 0 2px 2px;
+      padding: 14px 16px; font-family: var(--f-body); font-size: 14px;
+      color: var(--c-dark); background: #fafaf8; outline: none;
+      line-height: 1.8; transition: border-color .2s;
+    }
+    .rich-editor:focus { border-color: var(--c-accent); background: #fff; }
+    .rich-editor:empty::before { content: attr(data-placeholder); color: var(--c-muted); pointer-events: none; }
+    .rich-editor p { margin-bottom: 8px; }
+    .rich-editor ul, .rich-editor ol { padding-left: 20px; margin-bottom: 8px; }
+    .rich-editor h3 { font-family: var(--f-display); font-size: 16px; margin-bottom: 8px; color: var(--c-accent); }
+    .rich-source {
+      display: none; width: 100%; min-height: 220px;
+      border: 1px solid var(--c-accent); border-top: none; border-radius: 0 0 2px 2px;
+      padding: 12px 14px; font-family: var(--f-mono); font-size: 12px;
+      background: #0d1b2e; color: #a8d8ff; outline: none; resize: vertical;
+    }
+
     /* ── BLOG POST TAG ── */
     .post-tag {
       display: inline-block;
@@ -1007,8 +1051,37 @@
           </div>
         </div>
         <div class="form-field">
-          <label>Texto / Análise (HTML aceito: &lt;p&gt;, &lt;strong&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;br&gt;)</label>
-          <textarea id="ifood-cnt-editor" rows="12" placeholder="Digite aqui a análise escrita para esta aba. Você pode usar HTML básico: &lt;p&gt;Parágrafo&lt;/p&gt;, &lt;strong&gt;negrito&lt;/strong&gt;, &lt;ul&gt;&lt;li&gt;item&lt;/li&gt;&lt;/ul&gt;"></textarea>
+          <label>Texto / Análise — Editor Visual</label>
+          <!-- TOOLBAR -->
+          <div class="rich-toolbar" id="rich-toolbar">
+            <button type="button" onclick="richFmt('bold')"          title="Negrito (Ctrl+B)"><strong>B</strong></button>
+            <button type="button" onclick="richFmt('italic')"        title="Itálico (Ctrl+I)"><em>I</em></button>
+            <button type="button" onclick="richFmt('underline')"     title="Sublinhado"><u>U</u></button>
+            <button type="button" onclick="richFmt('strikeThrough')" title="Tachado"><s>S</s></button>
+            <div class="tb-sep"></div>
+            <button type="button" onclick="richFmt('insertUnorderedList')" title="Lista com marcadores">≡</button>
+            <button type="button" onclick="richFmt('insertOrderedList')"   title="Lista numerada">1.</button>
+            <button type="button" onclick="richBlock('h3')"  title="Subtítulo">H3</button>
+            <button type="button" onclick="richBlock('p')"   title="Parágrafo normal">¶</button>
+            <div class="tb-sep"></div>
+            <div style="position:relative;display:inline-flex;align-items:center">
+              <button type="button" id="tb-color-btn" onclick="richToggleColorPicker(event)" title="Cor do texto" style="display:flex;align-items:center;gap:5px">
+                <span style="font-weight:600">A</span>
+                <span id="tb-color-bar" style="display:inline-block;width:16px;height:3px;background:#0D2B5E;border-radius:1px;margin-top:2px"></span>
+              </button>
+              <div class="tb-color-popup" id="tb-color-popup" style="display:none"></div>
+            </div>
+            <div class="tb-sep"></div>
+            <button type="button" onclick="richFmt('removeFormat')" title="Limpar formatação" style="font-size:11px">✕ fmt</button>
+            <div class="tb-sep"></div>
+            <button type="button" id="tb-source-btn" onclick="richToggleSource()" title="Ver/editar HTML fonte" style="font-family:var(--f-mono);font-size:10px;letter-spacing:.05em">&lt;/&gt;</button>
+          </div>
+          <!-- WYSIWYG -->
+          <div id="ifood-cnt-editor" class="rich-editor" contenteditable="true"
+               data-placeholder="Digite aqui a análise para esta aba…"
+               onkeydown="richKeydown(event)"></div>
+          <!-- HTML SOURCE (toggle) -->
+          <textarea id="ifood-cnt-source" class="rich-source" placeholder="Código HTML fonte…"></textarea>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <button type="button" class="btn btn-primary" onclick="ifoodSaveContent()">Salvar Texto</button>
@@ -4024,7 +4097,9 @@ async function ifoodLoadContent() {
   const tabKey   = document.getElementById('ifood-cnt-tab').value;
   if (!periodId || !tabKey) return;
   const { data, error } = await sb.from('ifood_content').select('*').eq('period_id', periodId).eq('tab_key', tabKey).single();
-  document.getElementById('ifood-cnt-editor').value = (!error && data) ? (data.content_html || '') : '';
+  const html = (!error && data) ? (data.content_html || '') : '';
+  document.getElementById('ifood-cnt-editor').innerHTML = html;
+  document.getElementById('ifood-cnt-source').value = html;
   document.getElementById('ifood-cnt-preview').style.display = 'none';
 }
 
@@ -4032,20 +4107,105 @@ async function ifoodSaveContent() {
   const sb = ifoodSB(); if (!sb) return;
   const periodId = document.getElementById('ifood-cnt-period').value;
   const tabKey   = document.getElementById('ifood-cnt-tab').value;
-  const html     = document.getElementById('ifood-cnt-editor').value;
+  const srcMode  = document.getElementById('ifood-cnt-source').style.display !== 'none';
+  const html     = srcMode
+    ? document.getElementById('ifood-cnt-source').value
+    : document.getElementById('ifood-cnt-editor').innerHTML;
   if (!periodId || !tabKey) { showToast('Selecione período e aba.'); return; }
   const row = { period_id: periodId, tab_key: tabKey, content_html: html, updated_at: new Date().toISOString() };
-  // Upsert
   const { error } = await sb.from('ifood_content').upsert({ ...row, id: ifoodId() }, { onConflict: 'period_id,tab_key', ignoreDuplicates: false });
   if (error) { showToast('Erro: ' + error.message); return; }
   showToast('Texto salvo.');
 }
 
 function ifoodPreviewContent() {
-  const raw = document.getElementById('ifood-cnt-editor').value;
+  const srcMode = document.getElementById('ifood-cnt-source').style.display !== 'none';
+  const raw = srcMode
+    ? document.getElementById('ifood-cnt-source').value
+    : document.getElementById('ifood-cnt-editor').innerHTML;
   const prev = document.getElementById('ifood-cnt-preview');
   prev.innerHTML = raw || '<em>Nenhum conteúdo.</em>';
   prev.style.display = 'block';
+}
+
+// ── RICH EDITOR ──────────────────────
+(function initRichEditor() {
+  const COLORS = [
+    '#060E1A','#0D2B5E','#1A4080','#7B1A2E','#B91C1C','#D97706',
+    '#059669','#2563EB','#7C3AED','#374151','#6B7280','#ffffff',
+  ];
+  const popup = document.getElementById('tb-color-popup');
+  if (popup) {
+    COLORS.forEach(c => {
+      const sw = document.createElement('div');
+      sw.className = 'tb-color-swatch';
+      sw.style.background = c;
+      sw.title = c;
+      sw.onclick = () => { richApplyColor(c); popup.style.display = 'none'; };
+      popup.appendChild(sw);
+    });
+    // custom color input
+    const inp = document.createElement('input');
+    inp.type = 'color'; inp.title = 'Cor personalizada';
+    inp.style.cssText = 'width:22px;height:22px;border:none;padding:0;cursor:pointer;border-radius:2px;';
+    inp.oninput = (e) => richApplyColor(e.target.value);
+    popup.appendChild(inp);
+  }
+  document.addEventListener('click', e => {
+    const pop = document.getElementById('tb-color-popup');
+    if (pop && !pop.contains(e.target) && e.target.id !== 'tb-color-btn' && !e.target.closest('#tb-color-btn')) {
+      pop.style.display = 'none';
+    }
+  });
+})();
+
+function richFmt(cmd) {
+  document.getElementById('ifood-cnt-editor').focus();
+  document.execCommand(cmd, false, null);
+}
+
+function richApplyColor(color) {
+  document.getElementById('ifood-cnt-editor').focus();
+  document.execCommand('foreColor', false, color);
+  const bar = document.getElementById('tb-color-bar');
+  if (bar) bar.style.background = color;
+}
+
+function richBlock(tag) {
+  document.getElementById('ifood-cnt-editor').focus();
+  document.execCommand('formatBlock', false, tag);
+}
+
+function richKeydown(e) {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;');
+  }
+}
+
+function richToggleColorPicker(e) {
+  e.stopPropagation();
+  const pop = document.getElementById('tb-color-popup');
+  pop.style.display = pop.style.display === 'none' ? 'grid' : 'none';
+}
+
+let _richSourceMode = false;
+function richToggleSource() {
+  const editor = document.getElementById('ifood-cnt-editor');
+  const source = document.getElementById('ifood-cnt-source');
+  const btn    = document.getElementById('tb-source-btn');
+  _richSourceMode = !_richSourceMode;
+  if (_richSourceMode) {
+    source.value = editor.innerHTML;
+    editor.style.display = 'none';
+    source.style.display = 'block';
+    btn.style.background = 'var(--c-accent)'; btn.style.color = '#fff';
+  } else {
+    editor.innerHTML = source.value;
+    source.style.display = 'none';
+    editor.style.display = 'block';
+    btn.style.background = ''; btn.style.color = '';
+  }
 }
 
 // ── HIGHLIGHTS ───────────────────────

@@ -97,6 +97,14 @@ def json_safe(obj):
         return None
     return obj
 
+def filter_nonzero(labels, data):
+    """Remove entries where data value is 0 or None."""
+    pairs = [(l, d) for l, d in zip(labels, data) if d and int(d) > 0]
+    if not pairs:
+        return [], []
+    ls, ds = zip(*pairs)
+    return list(ls), list(ds)
+
 def get_trt(uf, vara=""):
     uf = safe_str(uf).upper()
     vara_lower = safe_str(vara).lower()
@@ -381,12 +389,12 @@ def compute_causa_raiz_kpis(records, decisoes, causa_raiz, suspensos_1389, suspe
     adv_counter = Counter()
     for r in recs:
         for a in [r["adv1"], r["adv2"], r["adv3"]]:
-            if a and a.lower() not in ("nan", "none", ""):
+            if a and a.lower() not in ("nan", "none", "", "0"):
                 adv_counter[a] += 1
     top_advs = adv_counter.most_common(10)
 
     # Julgadores
-    julg_counter = Counter(r["julgador"] for r in recs if r["julgador"] and r["julgador"].lower() not in ("nan", "none", ""))
+    julg_counter = Counter(r["julgador"] for r in recs if r["julgador"] and r["julgador"].lower() not in ("nan", "none", "", "0"))
     top_julgs = julg_counter.most_common(10)
 
     # Results
@@ -443,7 +451,7 @@ def compute_global_charts(records, decisoes):
     fase_data   = [v for _, v in fase_counter.most_common()]
 
     # Top 15 julgadores
-    julg_counter = Counter(r["julgador"] for r in records if r["julgador"] and r["julgador"].lower() not in ("nan", "none", ""))
+    julg_counter = Counter(r["julgador"] for r in records if r["julgador"] and r["julgador"].lower() not in ("nan", "none", "", "0"))
     top15_julg = julg_counter.most_common(15)
     julg_labels = [k for k, _ in top15_julg]
     julg_data   = [v for _, v in top15_julg]
@@ -452,7 +460,7 @@ def compute_global_charts(records, decisoes):
     adv_counter = Counter()
     for r in records:
         for a in [r["adv1"], r["adv2"], r["adv3"]]:
-            if a and a.lower() not in ("nan", "none", ""):
+            if a and a.lower() not in ("nan", "none", "", "0"):
                 adv_counter[a] += 1
     top10_adv = adv_counter.most_common(10)
     adv_labels = [k for k, _ in top10_adv]
@@ -623,18 +631,25 @@ def build_table(headers, rows, max_rows=200):
 
 def build_causa_raiz_tab(tab_id, label, data):
     """Build a complete causa raiz tab panel."""
-    kpis_row1 = build_kpi_cards([
-        ("Processos Ativos",   fmt_br(data["ativos"]),    "processos", "", ""),
-        ("Encerrados",         fmt_br(data["encerrados"]), "processos", "", ""),
-        ("Suspensos",          fmt_br(data["suspensos"]),  "processos", "", ""),
-    ])
+    # Change 8: Filter zero values in KPI cards
+    kpi_cards = []
+    if data["total"] > 0:
+        kpi_cards.insert(0, ("Total de Processos", fmt_br(data["total"]), "processos", "", ""))
+    if data["ativos"] > 0:
+        kpi_cards.append(("Processos Ativos", fmt_br(data["ativos"]), "processos", "", ""))
+    if data["encerrados"] > 0:
+        kpi_cards.append(("Processos Encerrados", fmt_br(data["encerrados"]), "processos", "", ""))
+    if data["suspensos"] > 0:
+        kpi_cards.append(("Suspensos", fmt_br(data["suspensos"]), "processos", "", ""))
+    kpis_row1 = build_kpi_cards(kpi_cards) if kpi_cards else ""
 
-    dec_pct_fav = fmt_pct(data["dec_fav"], data["dec_total"]) if data["dec_total"] else "N/A"
-    kpis_row2 = build_kpi_cards([
-        ("Decisões Favoráveis",    fmt_br(data["dec_fav"]),   f"{dec_pct_fav} do total", "up", "Favorável"),
-        ("Decisões Desfavoráveis", fmt_br(data["dec_desf"]),  "decisões do período", "down", ""),
-        ("Total Decisões",         fmt_br(data["dec_total"]), "no período", "flat", ""),
-    ])
+    dec_cards = []
+    if data["dec_fav"] > 0 or data["dec_desf"] > 0:
+        dec_pct_fav = fmt_pct(data["dec_fav"], data["dec_total"]) if data["dec_total"] else "N/A"
+        dec_cards.append(("Decisões Favoráveis", fmt_br(data["dec_fav"]), f"({dec_pct_fav})", "up", "Favorável"))
+        dec_cards.append(("Decisões Desfavoráveis", fmt_br(data["dec_desf"]), "decisões do período", "down", ""))
+        dec_cards.append(("Total Decisões", fmt_br(data["dec_total"]), "no período", "flat", ""))
+    kpis_row2 = build_kpi_cards(dec_cards) if dec_cards else ""
 
     # Suspensos tables
     susp_html = ""
@@ -650,18 +665,13 @@ def build_causa_raiz_tab(tab_id, label, data):
         susp_html += f'<h3 class="section-title" style="margin:24px 0 12px">Processos Suspensos — Tema 1291</h3>'
         susp_html += build_table(cols_1291, rows_1291)
 
-    # Advogados table
-    adv_rows = [[rank+1, a, fmt_br(v)] for rank, (a, v) in enumerate(zip(data["adv_labels"], data["adv_data"]))]
-    adv_table = build_table(["#", "Advogado", "Processos"], adv_rows)
-
-    # Julgadores table
-    julg_rows = [[rank+1, j, fmt_br(v)] for rank, (j, v) in enumerate(zip(data["julg_labels"], data["julg_data"]))]
-    julg_table = build_table(["#", "Julgador", "Decisões"], julg_rows)
-
-    fase_id   = f"chart_{tab_id}_fase"
-    uf_id     = f"chart_{tab_id}_uf"
-    dec_id    = f"chart_{tab_id}_dec"
+    fase_id    = f"chart_{tab_id}_fase"
+    uf_id      = f"chart_{tab_id}_uf"
+    dec_id     = f"chart_{tab_id}_dec"
     pedidos_id = f"chart_{tab_id}_pedidos"
+    # Change 5: new canvas IDs for adv and julg charts
+    adv_id  = f"chart_{tab_id}_adv"
+    julg_id = f"chart_{tab_id}_julg"
 
     # Pedidos section — only for EX-FOODLOVER
     pedidos_html = ""
@@ -680,6 +690,19 @@ def build_causa_raiz_tab(tab_id, label, data):
         {ped_table}
       </div>
     </div>"""
+
+    # Change 5: ranking section with charts for adv and julg
+    ranking_section = f"""
+<div class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-card-title">Top 10 Advogados Adversários</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="{adv_id}"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-card-title">Top 15 Julgadores</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="{julg_id}"></canvas></div>
+  </div>
+</div>"""
 
     return f"""
   <div id="tab-{tab_id}" class="tab-panel">
@@ -707,16 +730,7 @@ def build_causa_raiz_tab(tab_id, label, data):
       </div>
     </div>
 
-    <div class="charts-grid">
-      <div class="chart-card">
-        <div class="chart-card-title">Ranking Advogados Adversários (Top 10)</div>
-        {adv_table}
-      </div>
-      <div class="chart-card">
-        <div class="chart-card-title">Ranking Julgadores</div>
-        {julg_table}
-      </div>
-    </div>
+    {ranking_section}
 
     {pedidos_html}
     {susp_html}
@@ -724,10 +738,16 @@ def build_causa_raiz_tab(tab_id, label, data):
 
 def build_causa_raiz_js(tab_id, data):
     """Build Chart.js initialization code for a causa raiz tab."""
-    fase_labels = json.dumps(data["fase_labels"], ensure_ascii=False)
-    fase_data   = json.dumps(data["fase_data"])
-    uf_labels   = json.dumps(data["uf_labels"], ensure_ascii=False)
-    uf_data     = json.dumps(data["uf_data"])
+    # Change 3: apply filter_nonzero to all chart data
+    fase_labels_f, fase_data_f = filter_nonzero(data["fase_labels"], data["fase_data"])
+    uf_labels_f, uf_data_f     = filter_nonzero(data["uf_labels"],   data["uf_data"])
+    adv_labels_f, adv_data_f   = filter_nonzero(data["adv_labels"],  data["adv_data"])
+    julg_labels_f, julg_data_f = filter_nonzero(data["julg_labels"], data["julg_data"])
+
+    fase_labels = json.dumps(fase_labels_f, ensure_ascii=False)
+    fase_data   = json.dumps(fase_data_f)
+    uf_labels   = json.dumps(uf_labels_f, ensure_ascii=False)
+    uf_data     = json.dumps(uf_data_f)
     dec_labels  = json.dumps(["Favorável", "Desfavorável", "Neutro"], ensure_ascii=False)
     dec_data    = json.dumps([data["res_fav"], data["res_desf"], data["res_neutro"]])
 
@@ -753,6 +773,37 @@ def build_causa_raiz_js(tab_id, data):
       }}
     }});"""
 
+    # Change 6: adv and julg chart JS
+    adv_js = ""
+    if adv_labels_f:
+        adv_labels_s = json.dumps(adv_labels_f, ensure_ascii=False)
+        adv_data_s   = json.dumps(adv_data_f)
+        adv_js = f"""
+    new Chart(document.getElementById('chart_{tab_id}_adv'), {{
+      type: 'bar',
+      data: {{ labels: {adv_labels_s}, datasets: [{{ label:'Processos', data: {adv_data_s},
+        backgroundColor: '#7B1A2E', borderRadius: 4 }}] }},
+      options: {{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{{ legend:{{ display:false }} }},
+        scales:{{ x:{{ grid:{{ color:'rgba(0,0,0,0.05)' }} }}, y:{{ grid:{{ display:false }}, ticks:{{ font:{{ size:9 }} }} }} }}
+      }}
+    }});"""
+
+    julg_js = ""
+    if julg_labels_f:
+        julg_labels_s = json.dumps(julg_labels_f, ensure_ascii=False)
+        julg_data_s   = json.dumps(julg_data_f)
+        julg_js = f"""
+    new Chart(document.getElementById('chart_{tab_id}_julg'), {{
+      type: 'bar',
+      data: {{ labels: {julg_labels_s}, datasets: [{{ label:'Decisões', data: {julg_data_s},
+        backgroundColor: '#6366f1', borderRadius: 4 }}] }},
+      options: {{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{{ legend:{{ display:false }} }},
+        scales:{{ x:{{ grid:{{ color:'rgba(0,0,0,0.05)' }} }}, y:{{ grid:{{ display:false }}, ticks:{{ font:{{ size:9 }} }} }} }}
+      }}
+    }});"""
+
     return f"""
     // — {tab_id} charts —
     new Chart(document.getElementById('chart_{tab_id}_dec'), {{
@@ -775,24 +826,26 @@ def build_causa_raiz_js(tab_id, data):
         backgroundColor: '#7B1A2E', borderRadius: 4 }}] }},
       options: {{ responsive:true, plugins:{{ legend:{{ display:false }} }},
         scales:{{ x:{{ grid:{{ display:false }} }}, y:{{ grid:{{ color:'rgba(0,0,0,0.05)' }} }} }} }}
-    }});{pedidos_js}"""
+    }});{adv_js}{julg_js}{pedidos_js}"""
 
 
 def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1291,
                decisoes, period_str):
 
     # ── VISÃO GERAL KPIs ──
+    # Change 4: updated KPI rows to match screenshot layout
     kpi_row1 = build_kpi_cards([
-        ("Total Ativos",     fmt_br(kpis["ativos"]),     "processos", "", ""),
-        ("Total Encerrados", fmt_br(kpis["encerrados"]), "processos", "", ""),
-        ("Novas Ações",      fmt_br(kpis["novos"]),      "novos casos", "up", "+Período"),
-        ("Suspensos",        fmt_br(kpis["suspensos"]),  "total suspensos", "flat", ""),
+        ("Total de Processos",    fmt_br(kpis["total"]),     "processos",  "", ""),
+        ("Processos Ativos",      fmt_br(kpis["ativos"]),    "ativos",     "", ""),
+        ("Processos Encerrados",  fmt_br(kpis["encerrados"]),"encerrados", "", ""),
+        ("Novos Casos no Mês",    fmt_br(kpis["novos"]),     "novos",      "up", "+Período"),
+        ("Decisões no Período",   fmt_br(kpis["dec_total"]), "decisões",   "flat", ""),
     ])
     dec_pct = fmt_pct(kpis["dec_fav"], kpis["dec_total"]) if kpis["dec_total"] else "N/A"
     kpi_row2 = build_kpi_cards([
-        ("Decisões Favoráveis",    fmt_br(kpis["dec_fav"]),   f"{dec_pct} do total", "up", "Favorável"),
-        ("Decisões Desfavoráveis", fmt_br(kpis["dec_desf"]),  "do período", "down", ""),
-        ("Total Decisões",         fmt_br(kpis["dec_total"]), "no período", "flat", ""),
+        ("Decisões Favoráveis",    fmt_br(kpis["dec_fav"]),  f"({dec_pct})",   "up",   "Favorável"),
+        ("Decisões Desfavoráveis", fmt_br(kpis["dec_desf"]), f"({fmt_pct(kpis['dec_desf'], kpis['dec_total'])})" if kpis["dec_total"] else "", "down", ""),
+        ("Suspensos",              fmt_br(kpis["suspensos"]), "processos",     "flat", ""),
     ])
 
     # ── TRT RANKING TABLE ──
@@ -824,7 +877,7 @@ def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1
     for causa, label in CAUSA_RAIZ_TABS:
         tab_id = re.sub(r'[^a-z0-9]', '_', label.lower())
         data = causa_raiz_data.get(causa, {
-            "ativos":0,"encerrados":0,"arquivados":0,"suspensos":0,
+            "total":0,"ativos":0,"encerrados":0,"arquivados":0,"suspensos":0,
             "dec_fav":0,"dec_desf":0,"dec_total":0,
             "fase_labels":[],"fase_data":[],"uf_labels":[],"uf_data":[],
             "adv_labels":[],"adv_data":[],"julg_labels":[],"julg_data":[],
@@ -849,20 +902,36 @@ def build_html(kpis, global_charts, causa_raiz_data, suspensos_1389, suspensos_1
     uf_json = json.dumps(global_charts["uf_counter"], ensure_ascii=False)
     max_uf  = max(global_charts["uf_counter"].values()) if global_charts["uf_counter"] else 1
 
-    # ── GLOBAL CHART DATA ──
-    cr_labels_js    = json.dumps(global_charts["cr_labels"], ensure_ascii=False)
-    cr_data_js      = json.dumps(global_charts["cr_data"])
-    fase_labels_js  = json.dumps(global_charts["fase_labels"], ensure_ascii=False)
-    fase_data_js    = json.dumps(global_charts["fase_data"])
-    julg_labels_js  = json.dumps(global_charts["julg_labels"], ensure_ascii=False)
-    julg_data_js    = json.dumps(global_charts["julg_data"])
-    adv_labels_js   = json.dumps(global_charts["adv_labels"], ensure_ascii=False)
-    adv_data_js     = json.dumps(global_charts["adv_data"])
-    res_labels_js   = json.dumps(global_charts["res_labels"], ensure_ascii=False)
-    res_data_js     = json.dumps(global_charts["res_data"])
-    dec_cr_labels_js = json.dumps(global_charts["dec_cr_labels"], ensure_ascii=False)
-    dec_cr_fav_js   = json.dumps(global_charts["dec_cr_fav"])
-    dec_cr_desf_js  = json.dumps(global_charts["dec_cr_desf"])
+    # ── GLOBAL CHART DATA — Change 7: apply filter_nonzero ──
+    cr_labels_f, cr_data_f = filter_nonzero(global_charts["cr_labels"], global_charts["cr_data"])
+    fase_labels_f, fase_data_f = filter_nonzero(global_charts["fase_labels"], global_charts["fase_data"])
+    julg_labels_f, julg_data_f = filter_nonzero(global_charts["julg_labels"], global_charts["julg_data"])
+    adv_labels_f, adv_data_f = filter_nonzero(global_charts["adv_labels"], global_charts["adv_data"])
+    res_labels_f, res_data_f = filter_nonzero(global_charts["res_labels"], global_charts["res_data"])
+
+    cr_labels_js    = json.dumps(cr_labels_f, ensure_ascii=False)
+    cr_data_js      = json.dumps(cr_data_f)
+    fase_labels_js  = json.dumps(fase_labels_f, ensure_ascii=False)
+    fase_data_js    = json.dumps(fase_data_f)
+    julg_labels_js  = json.dumps(julg_labels_f, ensure_ascii=False)
+    julg_data_js    = json.dumps(julg_data_f)
+    adv_labels_js   = json.dumps(adv_labels_f, ensure_ascii=False)
+    adv_data_js     = json.dumps(adv_data_f)
+    res_labels_js   = json.dumps(res_labels_f, ensure_ascii=False)
+    res_data_js     = json.dumps(res_data_f)
+
+    # Change 7: filter dec_cr grouped bar per-dataset
+    dec_cr_pairs = [(l, f, d) for l, f, d in zip(global_charts["dec_cr_labels"], global_charts["dec_cr_fav"], global_charts["dec_cr_desf"]) if f > 0 or d > 0]
+    if dec_cr_pairs:
+        dec_cr_labels_f = [x[0] for x in dec_cr_pairs]
+        dec_cr_fav_f    = [x[1] for x in dec_cr_pairs]
+        dec_cr_desf_f   = [x[2] for x in dec_cr_pairs]
+    else:
+        dec_cr_labels_f, dec_cr_fav_f, dec_cr_desf_f = [], [], []
+
+    dec_cr_labels_js = json.dumps(dec_cr_labels_f, ensure_ascii=False)
+    dec_cr_fav_js   = json.dumps(dec_cr_fav_f)
+    dec_cr_desf_js  = json.dumps(dec_cr_desf_f)
 
     # ── DECISÕES SUMMARY ──
     dec_fav_count  = sum(1 for d in decisoes if classify_decisao(d["resultado"]) == "Favorável")
