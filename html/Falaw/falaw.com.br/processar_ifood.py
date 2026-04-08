@@ -142,7 +142,7 @@ def parse_ifood_sheet(df):
     Actual Excel structure (sheet 'todos', 68 cols):
       0=causa_raiz, 1=num_processo, 2=TRT (ex: 'TRT 2'), 3=status,
       4=cargo, 5=assunto, 6=vara, 7=cidade, 8=UF,
-      16=adv1, 17=juiz_sentenca, 23=fase, 36=arquivado,
+      15=adv1(EscrCNA), 16=juiz_sentenca, 22=fase, 35=arquivado,
       44=autor_recurso, 52=resultado_final, 59=julgador_2inst,
       64=resultado_recente, 67=primeiro_resultado
     """
@@ -423,23 +423,37 @@ def compute_causa_raiz_kpis(records, decisoes, causa_raiz, suspensos_1389, suspe
                 adv_counter[a] += 1
     top_advs = adv_counter.most_common(10)
 
-    # Julgadores — cruzados com aba Decisões por num_processo
-    # Mapa: num_processo → resultado da decisão
-    dec_by_proc = {d["num_processo"]: classify_decisao(d["resultado"]) for d in decs if d["num_processo"]}
+    # Julgadores fav/desf — exclusivamente da aba Decisões, com nome do juiz
+    # vindo da aba todos cruzado por num_processo.
+    # Sentença* → juiz_sentenca (col 16); Acórdão*/Decisão TST → julgador_2inst (col 58)
+    rec_by_proc = {r["num_processo"]: r for r in recs if r["num_processo"]}
 
     julg_counter      = Counter()
     julg_fav_counter  = Counter()
     julg_desf_counter = Counter()
-    for r in recs:
-        j = r["julgador"]
+
+    for d in decs:
+        proc = d["num_processo"]
+        res  = d["resultado"]
+        cls  = classify_decisao(res)
+        if cls not in ("Favorável", "Desfavorável"):
+            continue
+        r = rec_by_proc.get(proc)
+        if not r:
+            continue
+        # Escolhe o juiz correto pelo tipo de decisão
+        if res.lower().startswith("sentença"):
+            j = r.get("juiz_sentenca", "")
+        else:
+            j = r.get("julgador", "") or r.get("juiz_sentenca", "")
         if not j or j.lower() in ("nan", "none", "", "0"):
             continue
         julg_counter[j] += 1
-        cls_dec = dec_by_proc.get(r["num_processo"])
-        if cls_dec == "Favorável":
+        if cls == "Favorável":
             julg_fav_counter[j] += 1
-        elif cls_dec == "Desfavorável":
+        else:
             julg_desf_counter[j] += 1
+
     top_julgs      = julg_counter.most_common(10)
     top_julgs_fav  = julg_fav_counter.most_common(10)
     top_julgs_desf = julg_desf_counter.most_common(10)
