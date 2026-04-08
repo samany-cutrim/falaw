@@ -4536,11 +4536,29 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   push('visao-geral','chart_fase','Fase Processual','','',
     _xlChartBar(faseTop.map(([l])=>l),faseTop.map(([,v])=>v),'Processos','#0D2B5E'), 'Distribuição por Fase Processual');
 
-  // TRT ranking
-  const trtC = _xlCounter(records.filter(r=>r.status==='ativo'&&r.trt).map(r=>r.trt));
-  const trtTop = _xlTopN(trtC,15);
-  push('visao-geral','chart_trt','Ranking por TRT','','',
-    _xlChartBarVertical(trtTop.map(([l])=>l),trtTop.map(([,v])=>v),'Processos Ativos','#0D2B5E'), 'Volume de Processos por TRT');
+  // TRT — agrupado: total ativos + favoráveis + desfavoráveis
+  const _REC_FAV_TRT  = new Set(['Improcedente','Extinto sem Resolução']);
+  const _REC_DESF_TRT = new Set(['Procedente','Parc. Procedente']);
+  const trtMap = {};
+  records.filter(r=>r.status==='ativo'&&r.trt).forEach(r=>{
+    if(!trtMap[r.trt]) trtMap[r.trt]={total:0,fav:0,desf:0};
+    trtMap[r.trt].total++;
+    if(_REC_FAV_TRT.has(r.resultado_recente))  trtMap[r.trt].fav++;
+    if(_REC_DESF_TRT.has(r.resultado_recente)) trtMap[r.trt].desf++;
+  });
+  const trtTop = Object.entries(trtMap).sort((a,b)=>b[1].total-a[1].total).slice(0,15);
+  push('visao-geral','chart_trt','Volumetria por TRT','','',
+    { type:'bar',
+      data:{ labels: trtTop.map(([l])=>l), datasets:[
+        { label:'Total Ativos',  data:trtTop.map(([,v])=>v.total), backgroundColor:'#0D2B5E', borderRadius:4 },
+        { label:'Favoráveis',    data:trtTop.map(([,v])=>v.fav),   backgroundColor:'#0F9E76', borderRadius:4 },
+        { label:'Desfavoráveis', data:trtTop.map(([,v])=>v.desf),  backgroundColor:'#7B1A2E', borderRadius:4 }
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 }, padding:16 } } },
+        scales:{ x:{ grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } },
+                 y:{ grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true } } }
+    }, 'Total de Ações por TRT — Ativos, Favoráveis e Desfavoráveis');
 
   // Julgadores
   const _isValidJulg = j => j && !['nan','none','','0'].includes(j.toLowerCase());
