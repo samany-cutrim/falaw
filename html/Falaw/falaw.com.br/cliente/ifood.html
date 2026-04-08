@@ -744,7 +744,13 @@ function trendHtml(pct) {
 function renderKpis(tabKey, kpis) {
   const el = document.getElementById('kpis-' + tabKey);
   if (!el) return;
-  const filtered = kpis.filter(k => k.tab_key === tabKey);
+  const filtered = kpis.filter(k => {
+    if (k.tab_key !== tabKey) return false;
+    if (k.chart_data) return false; // charts go to renderCharts, not KPI cards
+    const v = String(k.value ?? '').trim();
+    if (!v || v === '0' || v === '0,0' || v === '0.0') return false;
+    return true;
+  });
   if (!filtered.length) {
     el.innerHTML = '<div class="kpi-empty-state">Nenhum indicador disponível para este período.</div>';
     return;
