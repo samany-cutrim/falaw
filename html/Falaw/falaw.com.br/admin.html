@@ -4359,17 +4359,38 @@ function _xlGetTRT(uf, vara) {
 
 const _XL_VALID_UF = new Set(['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']);
 function _xlParseIfood(rawRows) {
+  // Actual Excel structure (sheet 'todos', 68 cols):
+  //  0=causa_raiz, 1=num_processo, 2=TRT ('TRT 2'), 3=status ('Ativo'/'Encerrado'),
+  //  4=cargo, 5=assunto, 6=vara, 7=cidade, 8=UF,
+  //  16=adv1, 17=juiz_sentenca, 23=fase, 36=arquivado,
+  //  44=autor_recurso, 52=resultado_final, 59=julgador_2inst,
+  //  64=resultado_recente, 67=primeiro_resultado
   const c = (r, i) => String(r[i] ?? '').trim();
   const normalizeStatus = s => { const l=s.toLowerCase(); if(l==='ativo'||l==='active'||l==='1') return 'ativo'; if(l==='encerrado'||l==='closed'||l==='0'||l==='encerrada') return 'encerrado'; return l; };
   const normalizeUF = s => { const u=s.toUpperCase().replace(/[^A-Z]/g,''); return _XL_VALID_UF.has(u) ? u : ''; };
-  return rawRows.filter(r => r && r[0] && String(r[0]).trim() && String(r[0]).trim().toLowerCase() !== 'causa raiz').map(r => ({
-    causa_raiz: c(r,0), num_processo: c(r,1), status: normalizeStatus(c(r,2)),
-    assunto: c(r,4), vara: c(r,5), cidade: c(r,8), uf: normalizeUF(c(r,9)),
-    adv1: c(r,17), adv2: c(r,18), adv3: c(r,19),
-    fase: c(r,60), arquivado: c(r,95),
-    julgador: c(r,125), resultado_recente: c(r,148),
-    trt: _xlGetTRT(c(r,9), c(r,5)),
-  }));
+  const normalizeTRT = s => s ? s.replace(/TRT\s+/i, 'TRT-').trim() : '';
+  return rawRows.filter(r => r && r[0] && String(r[0]).trim() && String(r[0]).trim().toLowerCase() !== 'causa raiz').map(r => {
+    const uf = normalizeUF(c(r,8));
+    const vara = c(r,6);
+    const trtRaw = normalizeTRT(c(r,2));
+    const trt = trtRaw || _xlGetTRT(uf, vara);
+    return {
+      causa_raiz: c(r,0), num_processo: c(r,1),
+      trt,
+      status: normalizeStatus(c(r,3)),
+      cargo: c(r,4), assunto: c(r,5), vara,
+      cidade: c(r,7), uf,
+      adv1: c(r,16), adv2: '', adv3: '',
+      juiz_sentenca: c(r,17),
+      fase: c(r,23),
+      arquivado: c(r,36),
+      autor_recurso: c(r,44),
+      resultado_final: c(r,52),
+      julgador: c(r,59),
+      resultado_recente: c(r,64),
+      primeiro_resultado: c(r,67),
+    };
+  });
 }
 
 function _xlParseDecisoes(rawRows) {
@@ -4580,7 +4601,7 @@ async function ifoodSaveExcel() {
     const findSh = (...names) => { for (const n of names) { const f=wb.SheetNames.find(s=>s.toLowerCase().includes(n.toLowerCase())); if(f) return wb.Sheets[f]; } return null; };
 
     setStatus('Lendo aba IFOOD…');
-    const ifoodSh = findSh('IFOOD') || wb.Sheets[wb.SheetNames[0]];
+    const ifoodSh = findSh('IFOOD','todos','ifood','all') || wb.Sheets[wb.SheetNames[0]];
     const ifoodRaw = XLSX.utils.sheet_to_json(ifoodSh, { header:1, defval:'' });
     const records = _xlParseIfood(ifoodRaw.slice(1));
 

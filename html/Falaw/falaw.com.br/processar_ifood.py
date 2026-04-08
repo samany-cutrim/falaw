@@ -137,7 +137,14 @@ def load_excel(path):
 
 
 def parse_ifood_sheet(df):
-    """Parse the main IFOOD sheet by column index."""
+    """Parse the main IFOOD sheet by column index.
+    Actual Excel structure (sheet 'todos', 68 cols):
+      0=causa_raiz, 1=num_processo, 2=TRT (ex: 'TRT 2'), 3=status,
+      4=cargo, 5=assunto, 6=vara, 7=cidade, 8=UF,
+      16=adv1, 17=juiz_sentenca, 23=fase, 36=arquivado,
+      44=autor_recurso, 52=resultado_final, 59=julgador_2inst,
+      64=resultado_recente, 67=primeiro_resultado
+    """
     if df.empty:
         return []
     rows = []
@@ -151,34 +158,38 @@ def parse_ifood_sheet(df):
             except Exception:
                 return ""
 
-        causa_raiz       = c(0)
-        num_processo     = c(1)
-        status           = c(2)
-        cargo            = c(3)
-        assunto          = c(4)
-        vara             = c(5)
-        data_inicio      = c(6)
-        valor            = c(7)
-        cidade           = c(8)
-        uf               = c(9)
-        adv1             = c(17)
-        adv2             = c(18)
-        adv3             = c(19)
-        juiz_proc        = c(26)
-        juiz_sentenca    = c(27)
-        fase             = c(60)
-        arquivado        = c(95)
-        num_arquivamentos = c(97)
-        autor_recurso    = c(113)
-        resultado_recurso = c(122)
-        resultado_final  = c(124)
-        julgador         = c(125)
-        orgao_julgador   = c(128)
-        julgador_2inst   = c(135)
-        resultado_recente = c(148)
-        primeiro_resultado = c(151)
+        causa_raiz        = c(0)
+        num_processo      = c(1)
+        trt_raw           = c(2)   # already "TRT 2", "TRT 15", etc.
+        status_raw        = c(3)
+        cargo             = c(4)
+        assunto           = c(5)
+        vara              = c(6)
+        cidade            = c(7)
+        uf                = c(8)
+        adv1              = c(16)
+        juiz_sentenca     = c(17)
+        fase              = c(23)
+        arquivado         = c(36)
+        autor_recurso     = c(44)
+        resultado_final   = c(52)
+        julgador_2inst    = c(59)
+        resultado_recente = c(64)
+        primeiro_resultado = c(67)
 
-        trt = get_trt(uf, vara)
+        # Normalize TRT: "TRT 2" → "TRT-2", "TRT 15" → "TRT-15"
+        trt = re.sub(r'TRT\s+', 'TRT-', trt_raw, flags=re.IGNORECASE).strip()
+        if not trt:
+            trt = get_trt(uf, vara)
+
+        # Normalize status
+        s = status_raw.lower()
+        if s in ("ativo", "active", "1"):
+            status = "ativo"
+        elif s in ("encerrado", "encerrada", "closed", "0"):
+            status = "encerrado"
+        else:
+            status = status_raw
 
         rows.append({
             "causa_raiz": causa_raiz,
@@ -187,24 +198,17 @@ def parse_ifood_sheet(df):
             "cargo": cargo,
             "assunto": assunto,
             "vara": vara,
-            "data_inicio": data_inicio,
-            "valor": valor,
             "cidade": cidade,
             "uf": uf,
             "adv1": adv1,
-            "adv2": adv2,
-            "adv3": adv3,
-            "juiz_proc": juiz_proc,
+            "adv2": "",
+            "adv3": "",
             "juiz_sentenca": juiz_sentenca,
             "fase": fase,
             "arquivado": arquivado,
-            "num_arquivamentos": num_arquivamentos,
             "autor_recurso": autor_recurso,
-            "resultado_recurso": resultado_recurso,
             "resultado_final": resultado_final,
-            "julgador": julgador,
-            "orgao_julgador": orgao_julgador,
-            "julgador_2inst": julgador_2inst,
+            "julgador": julgador_2inst,
             "resultado_recente": resultado_recente,
             "primeiro_resultado": primeiro_resultado,
             "trt": trt,
@@ -1739,7 +1743,7 @@ def main():
         print(f"[WARN] Nenhuma aba encontrada para keywords {keywords}. Abas disponíveis: {available}")
         return pd.DataFrame()
 
-    df_ifood    = find_sheet("ifood", "processos", "base", "relatório")
+    df_ifood    = find_sheet("todos", "ifood", "processos", "base", "relatório")
     df_decisoes = find_sheet("decis", "decisão", "decisao", "julgamento", "acórdão", "acordao")
     df_novos    = find_sheet("novos", "novo caso", "entrada", "novos casos", "ajuizamento")
     df_susp1389 = find_sheet("1389", "susp 1389", "suspensos 1389", "tema 1389")
