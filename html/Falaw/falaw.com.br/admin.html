@@ -3339,21 +3339,27 @@ function copyEmailHTML() {
 function sendEmailViaMailto() {
   if (!emailArticle) return;
   const subject = encodeURIComponent(document.getElementById('email-subject').value.trim() || emailArticle.title);
-  const body    = encodeURIComponent(
+  const bodyText =
     emailArticle.title + '\n\n' +
     (emailArticle.excerpt || '') + '\n\n' +
-    'Leia o artigo completo: ' + SITE_BASE + (emailArticle.url || '')
-  );
+    'Leia o artigo completo: ' + SITE_BASE + (emailArticle.url || '');
+  const body = encodeURIComponent(bodyText);
 
   let to = '';
   if (emailMode === 'newsletter') {
     const subs = load(KEYS.newsletter) || [];
-    to = subs.map(s => encodeURIComponent(s.email)).join(',');
+    to = subs.map(s => s.email).join(',');
   } else {
-    to = encodeURIComponent(document.getElementById('email-custom-to').value.trim());
+    to = document.getElementById('email-custom-to').value.trim();
   }
 
-  window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+  // Abre o Gmail (compose) em vez do cliente de e-mail padrão
+  const gmailUrl = 'https://mail.google.com/mail/?view=cm'
+    + '&to=' + encodeURIComponent(to)
+    + '&su=' + subject
+    + '&body=' + body;
+
+  window.open(gmailUrl, '_blank', 'noopener,noreferrer');
 }
 
 /* ══════════════════════════════════════════
