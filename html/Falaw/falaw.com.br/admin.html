@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin — Falaw Advogados</title>
   <meta name="robots" content="noindex, nofollow" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://*.n8n.cloud https://*.n8n.io https://*.supabase.co; img-src 'self' data: https:; frame-ancestors 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://*.n8n.cloud https://*.n8n.io https://*.supabase.co https://api.anthropic.com https://generativelanguage.googleapis.com; img-src 'self' data: https:; frame-ancestors 'none';" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1345,9 +1345,18 @@
           <h3 class="cfg-card-title">IA — Geração de Artigos</h3>
           <p class="cfg-card-desc">As chaves ficam salvas apenas neste navegador e nunca são enviadas ao repositório.</p>
           <div class="form-field">
-            <label>n8n Webhook URL</label>
+            <label>Chave API — Anthropic (Claude)</label>
+            <input type="password" id="cfg-claude-key" placeholder="sk-ant-api03-…" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">Obtenha em <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Fica salva apenas neste navegador.</p>
+          </div>
+          <div class="form-field">
+            <label>Chave API — Google (Gemini)</label>
+            <input type="password" id="cfg-gemini-key" placeholder="AIzaSy…" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">Obtenha em <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com</a>. Fica salva apenas neste navegador.</p>
+          </div>
+          <div class="form-field">
+            <label>n8n Webhook URL <span style="font-weight:400;font-size:11px;color:var(--text-muted)">(opcional — legado)</span></label>
             <input type="text" id="cfg-n8n-url" placeholder="https://seu-usuario.app.n8n.cloud/webhook/falaw-ia" autocomplete="off" />
-            <p class="cfg-hint" style="margin-top:6px;">Cole a URL do webhook após importar e ativar o workflow no n8n. O arquivo do workflow está em <strong>n8n-workflow/falaw-ia-workflow.json</strong>.</p>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
             <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar chaves</button>
@@ -2779,6 +2788,8 @@ function loadConfig() {
   document.getElementById('cfg-linkedin').value     = cfg.linkedin  || '';
   document.getElementById('cfg-github-token').value = ghToken();
   document.getElementById('cfg-n8n-url').value = localStorage.getItem('fa_n8n_url') || '';
+  document.getElementById('cfg-claude-key').value = localStorage.getItem('fa_claude_key') || '';
+  document.getElementById('cfg-gemini-key').value = localStorage.getItem('fa_gemini_key') || '';
   document.getElementById('cfg-supabase-url').value = sbUrl();
   document.getElementById('cfg-supabase-key').value = sbKey();
 }
@@ -2789,24 +2800,45 @@ async function testAPIs() {
   box.innerHTML = 'Testando…';
   const lines = [];
 
-  // Test n8n
-  const n8nUrl = localStorage.getItem('fa_n8n_url') || '';
-  if (!n8nUrl) {
-    lines.push('❌ n8n: URL não salva em Configurações');
+  // Test Claude direto
+  const claudeKey = localStorage.getItem('fa_claude_key') || '';
+  if (!claudeKey) {
+    lines.push('⚠️ Claude: chave não configurada');
   } else {
-    lines.push('🔗 n8n URL: ' + n8nUrl);
-    for (const provider of ['claude', 'gemini']) {
-      try {
-        const model = provider === 'claude' ? 'claude-sonnet-4-5' : 'gemini-2.0-flash';
-        const r = await fetch(n8nUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ provider, model, messages: [{ role: 'user', content: 'Responda apenas: ok' }], temperature: 0.1 })
-        });
-        const txt = await r.text();
-        lines.push((r.ok ? '✅' : '❌') + ' ' + provider + ' HTTP ' + r.status + ' — ' + txt.slice(0, 120));
-      } catch(e) { lines.push('❌ ' + provider + ' erro: ' + e.message); }
-    }
+    try {
+      const txt = await callClaude([{ role: 'user', content: 'Responda apenas: ok' }], 0.1);
+      lines.push('✅ Claude: ' + txt.slice(0, 80));
+    } catch(e) { lines.push('❌ Claude: ' + e.message); }
+  }
+
+  // Test Gemini direto
+  const geminiKey = localStorage.getItem('fa_gemini_key') || '';
+  if (!geminiKey) {
+    lines.push('⚠️ Gemini: chave não configurada');
+  } else {
+    try {
+      const txt = await callGemini([{ role: 'user', content: 'Responda apenas: ok' }], 0.1);
+      lines.push('✅ Gemini: ' + txt.slice(0, 80));
+    } catch(e) { lines.push('❌ Gemini: ' + e.message); }
+  }
+
+  // Test n8n (legado)
+  const n8nUrl = localStorage.getItem('fa_n8n_url') || '';
+  if (n8nUrl) {
+    lines.push('🔗 n8n URL (legado): ' + n8nUrl);
+    try {
+      const r = await fetch(n8nUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'gemini', model: 'gemini-2.0-flash', messages: [{ role: 'user', content: 'Responda apenas: ok' }], temperature: 0.1 })
+      });
+      const txt = await r.text();
+      lines.push((r.ok ? '✅' : '❌') + ' n8n HTTP ' + r.status + ' — ' + txt.slice(0, 120));
+    } catch(e) { lines.push('❌ n8n erro: ' + e.message); }
+  }
+
+  if (!claudeKey && !geminiKey && !n8nUrl) {
+    lines.push('⚠️ Nenhuma chave ou URL configurada. Vá em Configurações e adicione a chave do Claude ou Gemini.');
   }
 
   box.innerHTML = lines.join('<br>');
@@ -2826,6 +2858,10 @@ function saveConfig() {
   else localStorage.removeItem(KEYS.githubToken);
   const n8nUrl = document.getElementById('cfg-n8n-url').value.trim();
   if (n8nUrl) localStorage.setItem('fa_n8n_url', n8nUrl); else localStorage.removeItem('fa_n8n_url');
+  const claudeKey = document.getElementById('cfg-claude-key').value.trim();
+  if (claudeKey) localStorage.setItem('fa_claude_key', claudeKey); else localStorage.removeItem('fa_claude_key');
+  const geminiKey = document.getElementById('cfg-gemini-key').value.trim();
+  if (geminiKey) localStorage.setItem('fa_gemini_key', geminiKey); else localStorage.removeItem('fa_gemini_key');
   const sbUrlVal = document.getElementById('cfg-supabase-url').value.trim();
   const sbKeyVal = document.getElementById('cfg-supabase-key').value.trim();
   if (sbUrlVal) localStorage.setItem('fa_supabase_url', sbUrlVal); else localStorage.removeItem('fa_supabase_url');
@@ -2926,9 +2962,9 @@ function toggleAiPanel() {
 }
 
 async function callClaude(messages, temperature) {
-  const proxyUrl = localStorage.getItem('fa_claude_proxy') || '';
-  const model    = localStorage.getItem('fa_claude_model') || 'claude-sonnet-4-5';
-  if (!proxyUrl) throw new Error('Claude Proxy URL não configurada — vá em Configurações e cole a URL do Cloudflare Worker.');
+  const apiKey = localStorage.getItem('fa_claude_key') || '';
+  const model  = localStorage.getItem('fa_claude_model') || 'claude-sonnet-4-5';
+  if (!apiKey) throw new Error('Chave da API Anthropic não configurada — vá em Configurações e cole sua API key do Claude.');
   const system  = messages.find(m => m.role === 'system');
   const userMsg = messages.filter(m => m.role !== 'system');
   const body = {
@@ -2938,15 +2974,20 @@ async function callClaude(messages, temperature) {
     messages: userMsg,
     ...(system ? { system: system.content } : {})
   };
-  const res = await fetch(proxyUrl, {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-api-access': 'true'
+    },
     body: JSON.stringify(body)
   });
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
     const msg = e.error?.message || e.error || '';
-    if (res.status === 401 || res.status === 403) throw new Error('Chave inválida no Worker. Verifique a variável ANTHROPIC_API_KEY nas Settings do Cloudflare Worker.');
+    if (res.status === 401 || res.status === 403) throw new Error('Chave da API Claude inválida. Verifique a chave em Configurações.');
     if (res.status === 404) throw new Error('Modelo "' + model + '" não encontrado. Verifique o nome em Configurações.');
     throw new Error(msg || 'HTTP ' + res.status);
   }
@@ -2954,7 +2995,46 @@ async function callClaude(messages, temperature) {
   return data.content?.[0]?.text || '';
 }
 
+async function callGemini(messages, temperature) {
+  const apiKey = localStorage.getItem('fa_gemini_key') || '';
+  if (!apiKey) throw new Error('Chave da API Gemini não configurada — vá em Configurações e cole sua API key do Google AI Studio.');
+  // Converte messages para formato Gemini
+  const contents = [];
+  let systemInstruction = null;
+  for (const m of messages) {
+    if (m.role === 'system') { systemInstruction = m.content; continue; }
+    contents.push({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] });
+  }
+  const body = {
+    contents,
+    generationConfig: { temperature: temperature || 0.7, maxOutputTokens: 4096 },
+    ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction }] } } : {})
+  };
+  const model = 'gemini-2.0-flash';
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    const msg = e.error?.message || '';
+    if (res.status === 400 && msg.includes('API_KEY')) throw new Error('Chave da API Gemini inválida. Verifique a chave em Configurações.');
+    throw new Error(msg || 'HTTP ' + res.status);
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
 async function callAI(messages, temperature) {
+  const engine = document.getElementById('ai-engine-select')?.value || 'gemini';
+  // Tenta chaves diretas primeiro; cai para n8n se não houver chave
+  if (engine === 'claude') {
+    if (localStorage.getItem('fa_claude_key')) return callClaude(messages, temperature);
+  } else {
+    if (localStorage.getItem('fa_gemini_key')) return callGemini(messages, temperature);
+  }
+  // Fallback para n8n legado
   return callN8N(messages, temperature);
 }
 
