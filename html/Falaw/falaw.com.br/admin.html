@@ -3233,7 +3233,7 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 /* ══════════════════════════════════════
    E-MAIL
 ══════════════════════════════════════ */
-const SITE_BASE = 'https://samany-cutrim.github.io/falaw/';
+const SITE_BASE = 'https://www.falaw.com.br/';
 let emailArticle = null;
 let emailMode = 'newsletter';
 
@@ -3243,7 +3243,7 @@ function openEmailModal(id) {
 
   // Subject
   document.getElementById('email-subject').value =
-    'Newsletter FA · ' + emailArticle.title;
+    'Newsletter Falaw · ' + emailArticle.title;
 
   // Subscribers list
   const subs = load(KEYS.newsletter) || [];
@@ -3295,8 +3295,8 @@ function generateEmailHTML(a) {
 
   <!-- Header -->
   <tr><td style="background:#060E1A;padding:28px 40px;border-radius:4px 4px 0 0;">
-    <p style="font-family:monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#0D2B5E;margin:0 0 6px 0;">FERRAZ ANDRADE ADVOGADOS</p>
-    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.35);margin:0;">Newsletter · ${escHtml(a.category)}</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#4a90d9;margin:0 0 6px 0;">NEWSLETTER FALAW</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.35);margin:0;">${escHtml(a.category)}</p>
   </td></tr>
 
   <!-- Body -->
@@ -3338,12 +3338,7 @@ function copyEmailHTML() {
 
 function sendEmailViaMailto() {
   if (!emailArticle) return;
-  const subject = encodeURIComponent(document.getElementById('email-subject').value.trim() || emailArticle.title);
-  const bodyText =
-    emailArticle.title + '\n\n' +
-    (emailArticle.excerpt || '') + '\n\n' +
-    'Leia o artigo completo: ' + SITE_BASE + (emailArticle.url || '');
-  const body = encodeURIComponent(bodyText);
+  const subject = encodeURIComponent(document.getElementById('email-subject').value.trim() || ('Newsletter Falaw · ' + emailArticle.title));
 
   let to = '';
   if (emailMode === 'newsletter') {
@@ -3353,11 +3348,16 @@ function sendEmailViaMailto() {
     to = document.getElementById('email-custom-to').value.trim();
   }
 
-  // Abre o Gmail (compose) em vez do cliente de e-mail padrão
+  // Gmail não suporta HTML no body via URL — envia o HTML para a área de transferência
+  // e abre o Gmail em modo compose para o usuário colar.
+  const htmlContent = generateEmailHTML(emailArticle);
+  navigator.clipboard.writeText(htmlContent).then(() => {
+    showToast('HTML copiado! Cole (Ctrl+V) no corpo do e-mail no Gmail.');
+  }).catch(() => {});
+
   const gmailUrl = 'https://mail.google.com/mail/?view=cm'
     + '&to=' + encodeURIComponent(to)
-    + '&su=' + subject
-    + '&body=' + body;
+    + '&su=' + subject;
 
   window.open(gmailUrl, '_blank', 'noopener,noreferrer');
 }
