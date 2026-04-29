@@ -33,14 +33,6 @@ var FALAW_TEAM = [
     "email": "fernando@falaw.com.br"
   },
   {
-    "id": "mn1yd8t2fje0",
-    "name": "Indyara Brito",
-    "role": "Advogada",
-    "status": "active",
-    "bio": "Graduada em Direito pelas Faculdades Metropolitanas Unidas (FMU) e pós-graduada em Direito Processual Civil pela Escola Paulista de Direito (EPD). Extensões em Direito Digital e Proteção de Dados pela PUC-SP e em Compliance Empresarial pela EPD. Atua com foco em conformidade regulatória, segurança da informação e riscos jurídicos no ambiente digital.",
-    "email": "indyara@falaw.com.br"
-  },
-  {
     "id": "mn1yd8t2i1lh",
     "name": "Letícia Silva",
     "role": "Advogada Controller",
