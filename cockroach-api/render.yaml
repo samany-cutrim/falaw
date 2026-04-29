@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: falaw-cockroach-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: cockroach-api
+    buildCommand: npm ci && npx prisma generate
+    startCommand: npm run start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PORT
+        value: "8787"
+      - key: CORS_ORIGIN
+        value: "*"
