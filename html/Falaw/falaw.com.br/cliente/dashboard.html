@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Portal do Cliente — Falaw Advogados</title>
   <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co; img-src 'self' data: https:; frame-ancestors 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https:; img-src 'self' data: https:; frame-ancestors 'none';" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -907,7 +907,25 @@ async function init() {
 
   const session = JSON.parse(raw);
 
-  // Carrega dados SEMPRE do Supabase (fonte de verdade)
+  function apiBase() {
+    const cfg = (localStorage.getItem('fa_backend_api_url') || window.BACKEND_API_URL || '').trim();
+    return cfg.replace(/\/$/, '');
+  }
+
+  async function loadReportsFromApi(clientId) {
+    const base = apiBase();
+    if (!base || !clientId) return [];
+    try {
+      const res = await fetch(base + '/api/reports/' + encodeURIComponent(clientId));
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  }
+
+  // Cliente continua no Supabase; relatórios/dashboards vêm da Cockroach API
   let client = null;
   const sbUrl = (window.SB_URL || '').trim();
   const sbKey = (window.SB_KEY || '').trim();
@@ -918,8 +936,9 @@ async function init() {
       if (!error && data) {
         const local = (function(){ try { return JSON.parse(localStorage.getItem('falaw_portal'))||[]; } catch { return []; } })();
         const lc = local.find(l => l.id === data.id);
-        const sbReports = data.reports || [];
-        // Supabase é a fonte de verdade — preserva só fileData local (binários offline)
+        const apiReports = await loadReportsFromApi(data.id);
+        // Perfil/acesso vem do Supabase; relatórios vêm do Cockroach API.
+        // Preserva só fileData local (binários offline)
         client = {
           id: data.id,
           name: (data.name || '').trim() || (data.company || '').trim() || session.name || '',
@@ -927,7 +946,7 @@ async function init() {
           email: (data.email || '').trim() || session.email || '',
           code: data.code,
           createdAt: data.created_at,
-          reports: sbReports.map(rep => {
+          reports: apiReports.map(rep => {
             const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
             return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
           })

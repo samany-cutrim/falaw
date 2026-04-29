@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin — Falaw Advogados</title>
   <meta name="robots" content="noindex, nofollow" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://*.n8n.cloud https://*.n8n.io https://*.supabase.co https://api.anthropic.com https://generativelanguage.googleapis.com; img-src 'self' data: https:; frame-ancestors 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https: https://api.github.com https://raw.githubusercontent.com https://*.n8n.cloud https://*.n8n.io https://*.supabase.co https://api.anthropic.com https://generativelanguage.googleapis.com; img-src 'self' data: https:; frame-ancestors 'none';" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -743,6 +743,7 @@
     <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png"
          alt="Falaw Advogados" class="login-logo" />
     <p>Área Administrativa</p>
+    <input type="email" id="login-email" placeholder="E-mail admin (Supabase)" maxlength="180" autocomplete="username" />
     <input type="password" id="login-pwd" placeholder="Senha de acesso" maxlength="128" autocomplete="current-password" />
     <button onclick="doLogin()">Entrar →</button>
     <p class="login-error" id="login-error">Senha incorreta. Tente novamente.</p>
@@ -1131,7 +1132,7 @@
           <p style="font-size:11px;color:var(--c-muted);margin-top:8px">Exibindo as primeiras 20 linhas. O arquivo completo será processado ao salvar.</p>
         </div>
         <div id="ifood-xl-status" style="display:none;font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-bottom:12px;"></div>
-        <button type="button" class="btn btn-primary" onclick="ifoodSaveExcel()">Salvar dados no Supabase</button>
+        <button type="button" class="btn btn-primary" onclick="ifoodSaveExcel()">Salvar dados no Cockroach</button>
       </div>
 
       <!-- MODAL: Período -->
@@ -1322,8 +1323,12 @@
 
         <!-- Supabase -->
         <div class="cfg-card">
-          <h3 class="cfg-card-title">Banco de Dados — Supabase</h3>
-          <p class="cfg-card-desc">Conecte ao Supabase para sincronizar clientes, newsletter, contato e currículos em tempo real entre todos os dispositivos. <strong>Requer executar o script SQL</strong> em <code>supabase-setup.sql</code> no SQL Editor do Supabase.</p>
+          <h3 class="cfg-card-title">Autenticação — Supabase + Arquivos no Cockroach</h3>
+          <p class="cfg-card-desc">Use o Supabase para autenticação/acessos (admin e clientes), newsletter, contatos e cadastro de currículos. Use a API Cockroach para relatórios de clientes, dashboard iFood (períodos/KPIs/conteúdo/destaques) e arquivos enviados. <strong>Requer executar o script SQL</strong> em <code>supabase-setup.sql</code> no SQL Editor do Supabase.</p>
+          <div class="form-field">
+            <label>E-mail Admin (Supabase Auth)</label>
+            <input type="email" id="cfg-admin-email" placeholder="admin@falaw.com.br" autocomplete="off" maxlength="180" />
+          </div>
           <div class="form-field">
             <label>Supabase URL</label>
             <input type="text" id="cfg-supabase-url" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off" maxlength="200" />
@@ -1333,6 +1338,11 @@
             <input type="password" id="cfg-supabase-key" placeholder="eyJ…" autocomplete="off" maxlength="500" />
           </div>
           <p class="cfg-hint">Crie um projeto em <strong>supabase.com</strong>, vá em <strong>Settings → API</strong> e copie a <em>Project URL</em> e a <em>anon public</em> key. Com GitHub Token configurado, as páginas públicas são atualizadas automaticamente.</p>
+          <div class="form-field">
+            <label>API URL (Cockroach/Prisma)</label>
+            <input type="text" id="cfg-backend-api-url" placeholder="https://seu-backend.com" autocomplete="off" maxlength="220" />
+          </div>
+          <p class="cfg-hint">A API Cockroach recebe arquivos e também os dados dos dashboards/relatórios (incluindo iFood). Exemplo local: <strong>http://localhost:8787</strong>.</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar</button>
             <button type="button" class="btn btn-ghost" onclick="testSupabase()">Testar conexão</button>
@@ -1579,6 +1589,8 @@ const GITHUB_PATH_PORTAL     = 'html/Falaw/falaw.com.br/cliente/portal-data.js';
 const GITHUB_PATH_NEWSLETTER = 'html/Falaw/falaw.com.br/newsletter-data.js';
 const GITHUB_PATH_CONTATO    = 'html/Falaw/falaw.com.br/contato-data.js';
 const GITHUB_PATH_CURRICULOS = 'html/Falaw/falaw.com.br/curriculos-data.js';
+const AUTH_EMAIL_KEY = 'fa_admin_auth_email';
+const BACKEND_API_URL_KEY = 'fa_backend_api_url';
 const SB_ADMIN_SETTINGS_TABLE = 'admin_settings';
 const SB_ADMIN_PASSWORD_ID = 'admin_password';
 const KEYS = { adminPwdHash: 'fa_admin_pwd_h', githubToken: 'fa_github_token', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions', curriculos: 'fa_curriculos' };
@@ -1605,6 +1617,105 @@ function getSB() {
   return _sbClient;
 }
 function sbReset() { _sbClient = null; }
+
+function backendApiBase() {
+  return (localStorage.getItem(BACKEND_API_URL_KEY) || '').replace(/\/$/, '');
+}
+
+async function apiUploadFile(kind, ownerId, fileName, dataUrl) {
+  const base = backendApiBase();
+  if (!base) return null;
+  try {
+    const res = await fetch(base + '/api/files', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind, ownerId, fileName, dataUrl })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    return data && data.url ? data.url : null;
+  } catch (e) {
+    console.warn('Cockroach API upload:', e.message);
+    return null;
+  }
+}
+
+function apiExtractFileId(fileUrl) {
+  if (!fileUrl) return null;
+  try {
+    const m = fileUrl.match(/\/api\/files\/([^?#/]+)/);
+    return m ? decodeURIComponent(m[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function apiDeleteFile(fileUrl) {
+  const base = backendApiBase();
+  const id = apiExtractFileId(fileUrl);
+  if (!base || !id) return false;
+  try {
+    const res = await fetch(base + '/api/files/' + encodeURIComponent(id), { method: 'DELETE' });
+    return res.ok;
+  } catch (e) {
+    console.warn('Cockroach API delete:', e.message);
+    return false;
+  }
+}
+
+async function apiListReportsForClient(clientId) {
+  const base = backendApiBase();
+  if (!base || !clientId) return [];
+  try {
+    const res = await fetch(base + '/api/reports/' + encodeURIComponent(clientId));
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('Cockroach API reports list:', e.message);
+    return [];
+  }
+}
+
+async function apiSaveReportMeta(report) {
+  const base = backendApiBase();
+  if (!base) return false;
+  try {
+    const res = await fetch(base + '/api/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(report)
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn('Cockroach API report save:', e.message);
+    return false;
+  }
+}
+
+async function apiDeleteReportMeta(reportId) {
+  const base = backendApiBase();
+  if (!base || !reportId) return false;
+  try {
+    const res = await fetch(base + '/api/reports/' + encodeURIComponent(reportId), { method: 'DELETE' });
+    return res.ok;
+  } catch (e) {
+    console.warn('Cockroach API report delete:', e.message);
+    return false;
+  }
+}
+
+async function apiDeleteReportsByClient(clientId) {
+  const base = backendApiBase();
+  if (!base || !clientId) return false;
+  try {
+    const res = await fetch(base + '/api/reports/by-client/' + encodeURIComponent(clientId), { method: 'DELETE' });
+    return res.ok;
+  } catch (e) {
+    console.warn('Cockroach API reports by client delete:', e.message);
+    return false;
+  }
+}
 
 async function sbReadAdminPasswordHash() {
   const sb = getSB();
@@ -1716,6 +1827,9 @@ async function sbInsertCurriculo(entry) {
 }
 
 async function sbUploadCV(cvId, fileName, dataUrl) {
+  const apiUrl = await apiUploadFile('curriculo', cvId, fileName, dataUrl);
+  if (apiUrl) return apiUrl;
+
   const sb = getSB();
   if (!sb) return pushCurriculoFileToGitHub(cvId, fileName, dataUrl);
   try {
@@ -1751,9 +1865,10 @@ async function loadPortalFromSupabase() {
 
   // Supabase é a fonte de verdade — só preserva fileData do localStorage (binários para download offline)
   const local = getClients();
-  const clients = data.map(r => {
+  const reportsByClient = await Promise.all(data.map(r => apiListReportsForClient(r.id)));
+  const clients = data.map((r, idx) => {
     const lc = local.find(l => l.id === r.id);
-    const sbReports = r.reports || [];
+    const apiReports = reportsByClient[idx] || [];
     return {
       id: r.id,
       name: (r.name || '').trim() || (r.company || '').trim(),
@@ -1761,7 +1876,7 @@ async function loadPortalFromSupabase() {
       email: r.email,
       code: r.code,
       createdAt: r.created_at,
-      reports: sbReports.map(rep => {
+      reports: apiReports.map(rep => {
         const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
         return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
       })
@@ -1773,7 +1888,7 @@ async function loadPortalFromSupabase() {
 async function sbSaveClients(list) {
   const sb = getSB();
   if (!sb) { showToast('⚠️ Supabase não configurado. Configure nas Configurações.'); return false; }
-  const stripped = list.map(c => ({ id: c.id, name: c.name, company: c.company, email: c.email, code: c.code, created_at: c.createdAt || new Date().toISOString(), reports: (c.reports || []).map(({ fileData, ...rest }) => rest) }));
+  const stripped = list.map(c => ({ id: c.id, name: c.name, company: c.company, email: c.email, code: c.code, created_at: c.createdAt || new Date().toISOString() }));
   const { error } = await sb.from('clients').upsert(stripped);
   if (error) {
     console.warn('SB clients upsert:', error.message);
@@ -1786,12 +1901,16 @@ async function sbSaveClients(list) {
 async function sbDeleteClientRecord(id) {
   const sb = getSB();
   if (!sb) return { error: { message: 'Supabase não configurado.' } };
+  await apiDeleteReportsByClient(id);
   const { error } = await sb.from('clients').delete().eq('id', id);
   if (error) console.warn('SB delete client:', error.message);
   return { error };
 }
 
 async function sbUploadReport(reportId, fileName, dataUrl) {
+  const apiUrl = await apiUploadFile('report', reportId, fileName, dataUrl);
+  if (apiUrl) return apiUrl;
+
   const sb = getSB();
   if (!sb) return pushReportFileToGitHub(reportId, fileName, dataUrl);
   try {
@@ -1809,6 +1928,9 @@ async function sbUploadReport(reportId, fileName, dataUrl) {
 }
 
 async function sbDeleteReport(fileUrl) {
+  const deletedByApi = await apiDeleteFile(fileUrl);
+  if (deletedByApi) return;
+
   const sb = getSB();
   if (!sb) { deleteReportFileFromGitHub(fileUrl); return; }
   const m = fileUrl.match(/\/object\/public\/reports\/(.+)$/);
@@ -2023,8 +2145,35 @@ async function doLogin() {
   const lockMsg = _checkLock();
   if (lockMsg) { errEl.textContent = lockMsg; errEl.style.display = 'block'; return; }
 
+  const emailInput = (document.getElementById('login-email').value || '').trim();
   const pwd = document.getElementById('login-pwd').value;
   if (!pwd) return;
+
+  const authEmail = emailInput || (localStorage.getItem(AUTH_EMAIL_KEY) || '').trim();
+  const sb = getSB();
+  if (sb && authEmail) {
+    try {
+      const { error } = await sb.auth.signInWithPassword({ email: authEmail, password: pwd });
+      if (!error) {
+        localStorage.setItem(AUTH_EMAIL_KEY, authEmail);
+        _setLock({ attempts: 0, lockedUntil: 0 });
+        sessionStorage.setItem('fa_admin_session', String(Date.now()));
+        sessionStorage.setItem('fa_admin_supabase_auth', '1');
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('admin-shell').style.display = 'block';
+        errEl.style.display = 'none';
+        seedData();
+        loadArticlesFromGitHub().then(renderBlog);
+        renderEquipe();
+        loadNewsletterFromSupabase().then(renderNewsletter);
+        loadContatoFromSupabase().then(renderContato);
+        loadConfig();
+        return;
+      }
+    } catch (e) {
+      console.warn('Supabase auth login:', e.message);
+    }
+  }
 
   const inputHash  = await _sha256(pwd);
   const storedHash = await _getStoredHash();
@@ -2032,6 +2181,7 @@ async function doLogin() {
   if (inputHash === storedHash) {
     _setLock({ attempts: 0, lockedUntil: 0 });
     sessionStorage.setItem('fa_admin_session', String(Date.now()));
+    sessionStorage.removeItem('fa_admin_supabase_auth');
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-shell').style.display = 'block';
     errEl.style.display = 'none';
@@ -2060,6 +2210,10 @@ async function doLogin() {
 document.getElementById('login-pwd').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
 });
+document.getElementById('login-email').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('login-email').value = localStorage.getItem(AUTH_EMAIL_KEY) || '';
 
 // Timeout de sessão: 30 min de inatividade
 let _adminTimer;
@@ -2074,7 +2228,12 @@ function _resetAdminTimer() {
 );
 
 function doLogout() {
+  const sb = getSB();
+  if (sb && sessionStorage.getItem('fa_admin_supabase_auth') === '1') {
+    sb.auth.signOut().catch(() => {});
+  }
   sessionStorage.removeItem('fa_admin_session');
+  sessionStorage.removeItem('fa_admin_supabase_auth');
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('admin-shell').style.display = 'none';
   document.getElementById('login-pwd').value = '';
@@ -2852,6 +3011,8 @@ function loadConfig() {
   document.getElementById('cfg-gemini-key').value = localStorage.getItem('fa_gemini_key') || '';
   document.getElementById('cfg-supabase-url').value = sbUrl();
   document.getElementById('cfg-supabase-key').value = sbKey();
+  document.getElementById('cfg-admin-email').value = localStorage.getItem(AUTH_EMAIL_KEY) || '';
+  document.getElementById('cfg-backend-api-url').value = localStorage.getItem(BACKEND_API_URL_KEY) || '';
 }
 
 async function testAPIs() {
@@ -2924,8 +3085,12 @@ function saveConfig() {
   if (geminiKey) localStorage.setItem('fa_gemini_key', geminiKey); else localStorage.removeItem('fa_gemini_key');
   const sbUrlVal = document.getElementById('cfg-supabase-url').value.trim();
   const sbKeyVal = document.getElementById('cfg-supabase-key').value.trim();
+  const authEmail = document.getElementById('cfg-admin-email').value.trim();
+  const backendApi = document.getElementById('cfg-backend-api-url').value.trim().replace(/\/$/, '');
   if (sbUrlVal) localStorage.setItem('fa_supabase_url', sbUrlVal); else localStorage.removeItem('fa_supabase_url');
   if (sbKeyVal) localStorage.setItem('fa_supabase_key', sbKeyVal); else localStorage.removeItem('fa_supabase_key');
+  if (authEmail) localStorage.setItem(AUTH_EMAIL_KEY, authEmail); else localStorage.removeItem(AUTH_EMAIL_KEY);
+  if (backendApi) localStorage.setItem(BACKEND_API_URL_KEY, backendApi); else localStorage.removeItem(BACKEND_API_URL_KEY);
   sbReset(); // reseta o cliente para usar novas credenciais
   document.getElementById('blog-no-token').hidden = !!token;
   // Se Supabase + GitHub configurados, atualiza sb-config.js no repositório
@@ -2944,6 +3109,25 @@ async function changePassword() {
   if (!np) { showToast('⚠ Digite a nova senha.'); return; }
   if (np !== cp) { showToast('⚠ As senhas não coincidem.'); return; }
   if (np.length < 8) { showToast('⚠ A senha deve ter pelo menos 8 caracteres.'); return; }
+
+  const sb = getSB();
+  if (sb) {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session) {
+        const { error } = await sb.auth.updateUser({ password: np });
+        if (!error) {
+          document.getElementById('cfg-new-pwd').value = '';
+          document.getElementById('cfg-confirm-pwd').value = '';
+          showToast('Senha alterada via Supabase Auth com sucesso.');
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase auth change password:', e.message);
+    }
+  }
+
   const h = await _sha256(np);
   localStorage.setItem(KEYS.adminPwdHash, h);
   localStorage.removeItem('fa_admin_pwd'); // remove plaintext legado se existir
@@ -3571,6 +3755,10 @@ async function saveClient() {
 
 async function deleteClient(id) {
   if (!confirm('Excluir este cliente e todos os seus relatórios?')) return;
+  const existing = getClients().find(c => c.id === id);
+  (existing?.reports || []).forEach(r => {
+    if (r.fileUrl) sbDeleteReport(r.fileUrl);
+  });
   const { error } = await sbDeleteClientRecord(id);
   if (error) { showToast('⚠️ Erro ao excluir: ' + error.message); return; }
   const clients = getClients().filter(c => c.id !== id);
@@ -3635,7 +3823,7 @@ function saveReport() {
     if (idx < 0) { alert('Cliente não encontrado.'); return; }
 
     const reportId = cliUID();
-    // Envia arquivo ao Supabase Storage (ou GitHub como fallback)
+    // Envia arquivo para Cockroach API (ou fallback legado)
     let fileUrl = null;
     if (getSB() || ghToken()) {
       btn.textContent = 'Enviando arquivo…';
@@ -3658,15 +3846,28 @@ function saveReport() {
     clients[idx].reports = clients[idx].reports || [];
     clients[idx].reports.push(report);
 
-    btn.textContent = 'Salvando no Supabase…';
+    btn.textContent = 'Salvando metadados…';
+    const reportMetaSaved = await apiSaveReportMeta({
+      id: report.id,
+      clientId,
+      title: report.title,
+      period: report.period,
+      description: report.description,
+      fileName: report.fileName,
+      fileUrl: report.fileUrl,
+      fileSize: report.fileSize,
+      uploadedAt: report.uploadedAt,
+      stats: report.stats || null
+    });
     const ok = await saveClients(clients);
 
     setTimeout(() => {
       closeReportModal();
       renderClients();
-      if (ok && fileUrl) showToast('✓ Relatório salvo e sincronizado no Supabase.');
-      else if (ok)       showToast('✓ Relatório salvo no Supabase (sem arquivo na nuvem).');
-      else               showToast('⚠️ Erro ao salvar no Supabase. Verifique as configurações.');
+      if (ok && reportMetaSaved && fileUrl) showToast('✓ Relatório salvo no Cockroach e cliente atualizado.');
+      else if (ok && reportMetaSaved)       showToast('✓ Relatório salvo no Cockroach (sem arquivo na nuvem).');
+      else if (ok)                          showToast('⚠️ Cliente salvo, mas falhou salvar relatório no Cockroach.');
+      else                                  showToast('⚠️ Erro ao salvar cliente no Supabase.');
     }, 200);
   };
   reader.onerror = () => { alert('Erro ao ler o arquivo.'); btn.disabled = false; btn.textContent = 'Enviar Relatório'; };
@@ -3831,6 +4032,7 @@ function deleteReport(clientId, reportId) {
   if (idx < 0) return;
   const report = (clients[idx].reports || []).find(r => r.id === reportId);
   if (report && report.fileUrl) sbDeleteReport(report.fileUrl); // async em background
+  apiDeleteReportMeta(reportId);
   clients[idx].reports = (clients[idx].reports || []).filter(r => r.id !== reportId);
   saveClients(clients);
   renderClients();
@@ -3958,7 +4160,10 @@ async function saveCurriculo() {
 
 function deleteCurriculo(id) {
   if (!confirm('Excluir este currículo?')) return;
-  saveCurriculosLocal(getCurriculos().filter(c => c.id !== id));
+  const all = getCurriculos();
+  const row = all.find(c => c.id === id);
+  saveCurriculosLocal(all.filter(c => c.id !== id));
+  if (row && row.cvUrl) apiDeleteFile(row.cvUrl);
   sbDeleteCurriculo(id);
   renderCurriculos();
   showToast('Currículo excluído.');
@@ -4017,11 +4222,27 @@ function renderCurriculos() {
 ══════════════════════════════════════ */
 
 // ── helpers ──────────────────────────
-function ifoodSB() {
-  const url = (sbUrl() || window.SB_URL || '').trim();
-  const key = (sbKey() || window.SB_KEY || '').trim();
-  if (!url || !key || typeof supabase === 'undefined') return null;
-  return supabase.createClient(url, key);
+function ifoodApiBase() {
+  return backendApiBase();
+}
+
+async function ifoodApi(path, options) {
+  const base = ifoodApiBase();
+  if (!base) return { data: null, error: { message: 'Configure a URL da Cockroach API em Configurações.' } };
+  try {
+    const res = await fetch(base + path, options || {});
+    const text = await res.text();
+    let data = null;
+    if (text) {
+      try { data = JSON.parse(text); } catch { data = text; }
+    }
+    if (!res.ok) {
+      return { data: null, error: { message: (data && data.error) ? data.error : ('HTTP ' + res.status) } };
+    }
+    return { data, error: null };
+  } catch (e) {
+    return { data: null, error: { message: e.message || String(e) } };
+  }
 }
 
 function ifoodId() {
@@ -4032,9 +4253,8 @@ let _ifoodPeriods = [];
 
 // ── main loader ──────────────────────
 async function loadIfoodAdmin() {
-  const sb = ifoodSB();
-  if (!sb) { showToast('Configure o Supabase em Configurações.'); return; }
-  const { data, error } = await sb.from('ifood_periods').select('*').order('month_year', { ascending: false });
+  const { data, error } = await ifoodApi('/api/ifood/periods');
+  if (error) { showToast('Configure a Cockroach API em Configurações.'); return; }
   _ifoodPeriods = (error ? [] : data) || [];
   renderIfoodPeriods();
   populateIfoodPeriodSelects();
@@ -4097,26 +4317,28 @@ function ifoodOpenPeriodModal(id) {
 function ifoodClosePeriodModal() { document.getElementById('ifoodPeriodModal').classList.remove('open'); }
 
 async function ifoodSavePeriod() {
-  const sb = ifoodSB(); if (!sb) return;
   const id     = document.getElementById('ifp-id').value.trim();
   const label  = document.getElementById('ifp-label').value.trim();
   const month  = document.getElementById('ifp-month').value.trim();
   const active = document.getElementById('ifp-active').checked;
   if (!label || !month) { showToast('Preencha rótulo e mês/ano.'); return; }
 
-  // Se ativando, desativa os demais
-  if (active) {
-    await sb.from('ifood_periods').update({ is_active: false }).neq('id', id || 'none');
-  }
-
-  const row = { label, month_year: month, is_active: active };
-  let error;
-  if (id) {
-    ({ error } = await sb.from('ifood_periods').update(row).eq('id', id));
-  } else {
-    ({ error } = await sb.from('ifood_periods').insert({ ...row, id: ifoodId() }));
-  }
+  const row = {
+    id: id || ifoodId(),
+    label,
+    month_year: month,
+    is_active: active,
+    created_at: new Date().toISOString()
+  };
+  const { error } = await ifoodApi('/api/ifood/periods', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(row)
+  });
   if (error) { showToast('Erro: ' + error.message); return; }
+  if (active) {
+    await ifoodApi('/api/ifood/periods/' + encodeURIComponent(row.id) + '/activate', { method: 'POST' });
+  }
   ifoodClosePeriodModal();
   showToast('Período salvo.');
   await loadIfoodAdmin();
@@ -4124,33 +4346,22 @@ async function ifoodSavePeriod() {
 
 async function ifoodClearPeriodContent(id) {
   if (!confirm('Limpar apenas os TEXTOS e DESTAQUES deste período?\n\nOs KPIs e gráficos (dados do Excel) serão mantidos.')) return;
-  const sb = ifoodSB(); if (!sb) return;
-  const [r1, r2] = await Promise.all([
-    sb.from('ifood_content').delete().eq('period_id', id),
-    sb.from('ifood_highlights').delete().eq('period_id', id),
-  ]);
-  if (r1.error) { showToast('Erro ao limpar textos: ' + r1.error.message); return; }
+  const { error } = await ifoodApi('/api/ifood/periods/' + encodeURIComponent(id) + '/clear-text', { method: 'POST' });
+  if (error) { showToast('Erro ao limpar textos: ' + error.message); return; }
   showToast('Textos e destaques removidos. KPIs mantidos.');
   await loadIfoodAdmin();
 }
 
 async function ifoodDeletePeriod(id) {
   if (!confirm('EXCLUIR TUDO?\n\nIsso apagará o período e TODOS os dados: KPIs, textos, destaques e gráficos.\n\nPara remover apenas os textos, use "Limpar Textos".')) return;
-  const sb = ifoodSB(); if (!sb) return;
-  // Explicitly delete child tables before the period (prevent any FK cascade surprises)
-  await sb.from('ifood_content').delete().eq('period_id', id);
-  await sb.from('ifood_highlights').delete().eq('period_id', id);
-  await sb.from('ifood_kpis').delete().eq('period_id', id);
-  const { error } = await sb.from('ifood_periods').delete().eq('id', id);
+  const { error } = await ifoodApi('/api/ifood/periods/' + encodeURIComponent(id), { method: 'DELETE' });
   if (error) { showToast('Erro: ' + error.message); return; }
   showToast('Período e todos os dados excluídos.');
   await loadIfoodAdmin();
 }
 
 async function ifoodActivatePeriod(id) {
-  const sb = ifoodSB(); if (!sb) return;
-  await sb.from('ifood_periods').update({ is_active: false }).neq('id', id);
-  const { error } = await sb.from('ifood_periods').update({ is_active: true }).eq('id', id);
+  const { error } = await ifoodApi('/api/ifood/periods/' + encodeURIComponent(id) + '/activate', { method: 'POST' });
   if (error) { showToast('Erro: ' + error.message); return; }
   showToast('Período ativado.');
   await loadIfoodAdmin();
@@ -4160,11 +4371,10 @@ async function ifoodActivatePeriod(id) {
 let _ifoodKpis = [];
 
 async function ifoodLoadKpis() {
-  const sb = ifoodSB(); if (!sb) return;
   const periodId = document.getElementById('ifood-kpi-period').value;
   const tabKey   = document.getElementById('ifood-kpi-tab').value;
   if (!periodId || !tabKey) { document.getElementById('ifood-kpis-list').innerHTML = ''; return; }
-  const { data, error } = await sb.from('ifood_kpis').select('*').eq('period_id', periodId).eq('tab_key', tabKey).order('sort_order');
+  const { data, error } = await ifoodApi('/api/ifood/kpis?periodId=' + encodeURIComponent(periodId) + '&tabKey=' + encodeURIComponent(tabKey));
   _ifoodKpis = (error ? [] : data) || [];
   renderIfoodKpis();
 }
@@ -4207,7 +4417,6 @@ function ifoodOpenKpiModal(id) {
 function ifoodCloseKpiModal() { document.getElementById('ifoodKpiModal').classList.remove('open'); }
 
 async function ifoodSaveKpi() {
-  const sb = ifoodSB(); if (!sb) return;
   const id         = document.getElementById('ifk-id').value.trim();
   const periodId   = document.getElementById('ifk-period').value.trim();
   const tabKey     = document.getElementById('ifk-tab').value.trim();
@@ -4228,17 +4437,16 @@ async function ifoodSaveKpi() {
   }
 
   const row = {
+    id: id || ifoodId(),
     period_id: periodId, tab_key: tabKey, kpi_key: kpiKey, label, value, unit,
     trend_pct: trendRaw !== '' ? parseFloat(trendRaw) : null,
     sort_order: order, chart_title: chartTitle, chart_data: chartData
   };
-
-  let error;
-  if (id) {
-    ({ error } = await sb.from('ifood_kpis').update(row).eq('id', id));
-  } else {
-    ({ error } = await sb.from('ifood_kpis').insert({ ...row, id: ifoodId() }));
-  }
+  const { error } = await ifoodApi('/api/ifood/kpis', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(row)
+  });
   if (error) { showToast('Erro: ' + error.message); return; }
   ifoodCloseKpiModal();
   showToast('KPI salvo.');
@@ -4247,8 +4455,7 @@ async function ifoodSaveKpi() {
 
 async function ifoodDeleteKpi(id) {
   if (!confirm('Excluir este KPI?')) return;
-  const sb = ifoodSB(); if (!sb) return;
-  const { error } = await sb.from('ifood_kpis').delete().eq('id', id);
+  const { error } = await ifoodApi('/api/ifood/kpis/' + encodeURIComponent(id), { method: 'DELETE' });
   if (error) { showToast('Erro: ' + error.message); return; }
   showToast('KPI excluído.');
   await ifoodLoadKpis();
@@ -4256,19 +4463,18 @@ async function ifoodDeleteKpi(id) {
 
 // ── CONTENT ──────────────────────────
 async function ifoodLoadContent() {
-  const sb = ifoodSB(); if (!sb) return;
   const periodId = document.getElementById('ifood-cnt-period').value;
   const tabKey   = document.getElementById('ifood-cnt-tab').value;
   if (!periodId || !tabKey) return;
-  const { data, error } = await sb.from('ifood_content').select('*').eq('period_id', periodId).eq('tab_key', tabKey).single();
-  const html = (!error && data) ? (data.content_html || '') : '';
+  const { data, error } = await ifoodApi('/api/ifood/content?periodId=' + encodeURIComponent(periodId) + '&tabKey=' + encodeURIComponent(tabKey));
+  const row = !error && Array.isArray(data) && data.length ? data[0] : null;
+  const html = row ? (row.content_html || '') : '';
   document.getElementById('ifood-cnt-editor').innerHTML = html;
   document.getElementById('ifood-cnt-source').value = html;
   document.getElementById('ifood-cnt-preview').style.display = 'none';
 }
 
 async function ifoodSaveContent() {
-  const sb = ifoodSB(); if (!sb) return;
   const periodId = document.getElementById('ifood-cnt-period').value;
   const tabKey   = document.getElementById('ifood-cnt-tab').value;
   const srcMode  = document.getElementById('ifood-cnt-source').style.display !== 'none';
@@ -4276,8 +4482,12 @@ async function ifoodSaveContent() {
     ? document.getElementById('ifood-cnt-source').value
     : document.getElementById('ifood-cnt-editor').innerHTML;
   if (!periodId || !tabKey) { showToast('Selecione período e aba.'); return; }
-  const row = { period_id: periodId, tab_key: tabKey, content_html: html, updated_at: new Date().toISOString() };
-  const { error } = await sb.from('ifood_content').upsert({ ...row, id: ifoodId() }, { onConflict: 'period_id,tab_key', ignoreDuplicates: false });
+  const row = { id: ifoodId(), period_id: periodId, tab_key: tabKey, content_html: html, updated_at: new Date().toISOString() };
+  const { error } = await ifoodApi('/api/ifood/content', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(row)
+  });
   if (error) { showToast('Erro: ' + error.message); return; }
   showToast('Texto salvo.');
 }
@@ -4376,10 +4586,9 @@ function richToggleSource() {
 let _ifoodHighlights = [];
 
 async function ifoodLoadHighlights() {
-  const sb = ifoodSB(); if (!sb) return;
   const periodId = document.getElementById('ifood-hl-period').value;
   if (!periodId) { document.getElementById('ifood-hl-list').innerHTML = ''; return; }
-  const { data, error } = await sb.from('ifood_highlights').select('*').eq('period_id', periodId).order('sort_order');
+  const { data, error } = await ifoodApi('/api/ifood/highlights?periodId=' + encodeURIComponent(periodId));
   _ifoodHighlights = (error ? [] : data) || [];
   renderIfoodHighlights(periodId);
 }
@@ -4420,7 +4629,6 @@ function ifoodOpenHighlightModal(id) {
 function ifoodCloseHlModal() { document.getElementById('ifoodHlModal').classList.remove('open'); }
 
 async function ifoodSaveHighlight() {
-  const sb = ifoodSB(); if (!sb) return;
   const id       = document.getElementById('ifh-id').value.trim();
   const periodId = document.getElementById('ifh-period').value.trim();
   const icon     = document.getElementById('ifh-icon').value.trim() || '★';
@@ -4428,13 +4636,12 @@ async function ifoodSaveHighlight() {
   const body     = document.getElementById('ifh-body').value.trim();
   const order    = parseInt(document.getElementById('ifh-order').value, 10) || 0;
   if (!periodId || !title) { showToast('Selecione um período e preencha o título.'); return; }
-  const row = { period_id: periodId, icon, title, body, sort_order: order };
-  let error;
-  if (id) {
-    ({ error } = await sb.from('ifood_highlights').update(row).eq('id', id));
-  } else {
-    ({ error } = await sb.from('ifood_highlights').insert({ ...row, id: ifoodId() }));
-  }
+  const row = { id: id || ifoodId(), period_id: periodId, icon, title, body, sort_order: order };
+  const { error } = await ifoodApi('/api/ifood/highlights', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(row)
+  });
   if (error) { showToast('Erro: ' + error.message); return; }
   ifoodCloseHlModal();
   showToast('Destaque salvo.');
@@ -4443,8 +4650,7 @@ async function ifoodSaveHighlight() {
 
 async function ifoodDeleteHighlight(id) {
   if (!confirm('Excluir este destaque?')) return;
-  const sb = ifoodSB(); if (!sb) return;
-  const { error } = await sb.from('ifood_highlights').delete().eq('id', id);
+  const { error } = await ifoodApi('/api/ifood/highlights/' + encodeURIComponent(id), { method: 'DELETE' });
   if (error) { showToast('Erro: ' + error.message); return; }
   showToast('Destaque excluído.');
   await ifoodLoadHighlights();
@@ -4452,6 +4658,15 @@ async function ifoodDeleteHighlight(id) {
 
 // ── EXCEL UPLOAD ─────────────────────
 let _ifoodExcelData = null;
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Falha ao converter arquivo para base64.'));
+    reader.readAsDataURL(file);
+  });
+}
 
 async function ifoodPreviewExcel(input) {
   const file = input.files && input.files[0];
@@ -4472,8 +4687,8 @@ async function ifoodPreviewExcel(input) {
     html += '</tbody>';
     document.getElementById('ifood-xl-table').innerHTML = html;
     document.getElementById('ifood-xl-preview').style.display = 'block';
-    _ifoodExcelData = { filename: file.name, wb };
-    st.textContent = `✓ ${wb.SheetNames.length} aba(s): ${wb.SheetNames.join(', ')}. ${previewRows.length - 1} linhas na primeira aba. Selecione o período e clique em "Salvar dados no Supabase".`;
+    _ifoodExcelData = { filename: file.name, wb, file };
+    st.textContent = `✓ ${wb.SheetNames.length} aba(s): ${wb.SheetNames.join(', ')}. ${previewRows.length - 1} linhas na primeira aba. Selecione o período e clique em "Salvar dados no Cockroach".`;
   } catch(e) {
     st.textContent = 'Erro ao ler arquivo: ' + e.message;
     console.error(e);
@@ -4858,7 +5073,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
 }
 
 async function ifoodSaveExcel() {
-  const sb = ifoodSB(); if (!sb) return;
+  if (!ifoodApiBase()) { showToast('Configure a Cockroach API em Configurações.'); return; }
   if (!_ifoodExcelData) { showToast('Selecione um arquivo primeiro.'); return; }
   const periodId = document.getElementById('ifood-xl-period').value;
   if (!periodId) { showToast('Selecione um período.'); return; }
@@ -4866,7 +5081,7 @@ async function ifoodSaveExcel() {
   const setStatus = msg => { st.style.display='block'; st.textContent=msg; };
 
   try {
-    const { wb, filename } = _ifoodExcelData;
+    const { wb, filename, file } = _ifoodExcelData;
     const findSh = (...names) => { for (const n of names) { const f=wb.SheetNames.find(s=>s.toLowerCase().includes(n.toLowerCase())); if(f) return wb.Sheets[f]; } return null; };
 
     setStatus('Lendo aba IFOOD…');
@@ -4890,21 +5105,39 @@ async function ifoodSaveExcel() {
     setStatus(`Computando KPIs… (${decisoes.length} decisões, ${novos.total} novos casos)`);
     const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291);
 
+    // Upload do arquivo Excel bruto para Cockroach (quando API configurada)
+    let ifoodExcelFileUrl = null;
+    if (file) {
+      try {
+        setStatus('Enviando arquivo Excel bruto para Cockroach…');
+        const dataUrl = await fileToDataUrl(file);
+        ifoodExcelFileUrl = await apiUploadFile('ifood_excel', periodId, filename, dataUrl);
+      } catch (e) {
+        console.warn('iFood excel upload (Cockroach):', e.message);
+      }
+    }
+
     // Preservar KPIs adicionados manualmente: busca os existentes cujo kpi_key
     // não será sobrescrito pela geração automática, e os reinserimos após.
     setStatus('Verificando KPIs manuais existentes…');
-    const { data: existingKpis } = await sb.from('ifood_kpis').select('*').eq('period_id', periodId);
+    const { data: existingKpisResp, error: existingKpisErr } = await ifoodApi('/api/ifood/kpis?periodId=' + encodeURIComponent(periodId));
+    if (existingKpisErr) throw new Error('Erro ao ler KPIs existentes: ' + existingKpisErr.message);
+    const existingKpis = Array.isArray(existingKpisResp) ? existingKpisResp : [];
     const autoKeySet = new Set(kpiRows.map(r => r.tab_key + '||' + r.kpi_key));
     const manualKpis = (existingKpis || []).filter(k => !autoKeySet.has(k.tab_key + '||' + k.kpi_key));
 
     setStatus('Removendo KPIs gerados automaticamente…');
-    const { error: delErr } = await sb.from('ifood_kpis').delete().eq('period_id', periodId);
+    const { error: delErr } = await ifoodApi('/api/ifood/kpis/by-period/' + encodeURIComponent(periodId), { method: 'DELETE' });
     if (delErr) throw new Error('Erro ao limpar KPIs: ' + delErr.message);
 
     const BATCH = 40;
     for (let i = 0; i < kpiRows.length; i += BATCH) {
       setStatus(`Salvando KPIs… (${Math.min(i+BATCH,kpiRows.length)}/${kpiRows.length})`);
-      const { error } = await sb.from('ifood_kpis').insert(kpiRows.slice(i, i+BATCH));
+      const { error } = await ifoodApi('/api/ifood/kpis/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: kpiRows.slice(i, i+BATCH) })
+      });
       if (error) throw new Error('KPI insert: ' + error.message);
     }
 
@@ -4914,14 +5147,19 @@ async function ifoodSaveExcel() {
       const maxSo = kpiRows.reduce((m, r) => Math.max(m, r.sort_order), 0);
       manualKpis.forEach((k, i) => { k.sort_order = maxSo + i + 1; delete k.created_at; });
       for (let i = 0; i < manualKpis.length; i += BATCH) {
-        const { error } = await sb.from('ifood_kpis').insert(manualKpis.slice(i, i+BATCH));
+        const { error } = await ifoodApi('/api/ifood/kpis/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: manualKpis.slice(i, i+BATCH) })
+        });
         if (error) console.warn('KPI manual reinsert:', error.message);
       }
     }
 
     // Content HTML per tab — só insere se ainda não existir texto escrito manualmente
     setStatus('Verificando textos de análise existentes…');
-    const { data: existingContent } = await sb.from('ifood_content').select('tab_key, content_html').eq('period_id', periodId);
+    const { data: existingContentResp } = await ifoodApi('/api/ifood/content?periodId=' + encodeURIComponent(periodId));
+    const existingContent = Array.isArray(existingContentResp) ? existingContentResp : [];
     const existingTabs = new Set((existingContent||[]).filter(c=>c.content_html&&c.content_html.trim()).map(c=>c.tab_key));
     const tabMap = { 'visao-geral':'Visão Geral', nuvem:'Nuvem', 'op-logistico':'Op. Logístico', 'ex-foodlover':'Ex-Foodlover', terceirizacao:'Terceirização', marketplace:'Marketplace' };
     for (const [tabKey, tabLabel] of Object.entries(tabMap)) {
@@ -4933,25 +5171,61 @@ async function ifoodSaveExcel() {
       const tf = decs.filter(d=>_xlClassifyDec(d.resultado)==='F').length;
       const td = decs.filter(d=>_xlClassifyDec(d.resultado)==='D').length;
       const html = `<p>Total de <strong>${_xlFmtBr(recs.length)}</strong> processos, sendo <strong>${_xlFmtBr(ta)}</strong> ativos. No período foram registradas <strong>${_xlFmtBr(decs.length)}</strong> decisões, com índice de favorabilidade de <strong>${_xlFmtPct(tf,decs.length)}</strong> (${_xlFmtBr(tf)} favoráveis / ${_xlFmtBr(td)} desfavoráveis).</p>`;
-      await sb.from('ifood_content').upsert({ id:ifoodId(), period_id:periodId, tab_key:tabKey, content_html:html, updated_at:new Date().toISOString() }, { onConflict:'period_id,tab_key', ignoreDuplicates:true });
+      await ifoodApi('/api/ifood/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id:ifoodId(), period_id:periodId, tab_key:tabKey, content_html:html, updated_at:new Date().toISOString() })
+      });
     }
 
     // Highlights
     setStatus('Salvando destaques…');
-    await sb.from('ifood_highlights').delete().eq('period_id', periodId);
+    await ifoodApi('/api/ifood/highlights/by-period/' + encodeURIComponent(periodId), { method: 'DELETE' });
     const total  = records.length;
     const ativos = records.filter(r=>r.status==='ativo').length;
     const decF   = decisoes.filter(d=>_xlClassifyDec(d.resultado)==='F').length;
     const decTot = decisoes.length;
-    const { error: hlErr } = await sb.from('ifood_highlights').insert([
+    const { error: hlErr } = await ifoodApi('/api/ifood/highlights/replace', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ periodId, rows: [
       { id:ifoodId(), period_id:periodId, icon:'⚖️', title:'Total de Processos', body:`${_xlFmtBr(total)} processos no portfólio, dos quais ${_xlFmtBr(ativos)} ativos.`, sort_order:0 },
       { id:ifoodId(), period_id:periodId, icon:'✅', title:'Índice de Favorabilidade', body:`${_xlFmtPct(decF,decTot)} das decisões no período foram favoráveis para o iFood (${_xlFmtBr(decF)} de ${_xlFmtBr(decTot)}).`, sort_order:1 },
       { id:ifoodId(), period_id:periodId, icon:'📋', title:'Novos Casos no Período', body:`${_xlFmtBr(novos.total||0)} novos casos recebidos no mês.`, sort_order:2 },
       { id:ifoodId(), period_id:periodId, icon:'📊', title:'Decisões do Período', body:`${_xlFmtBr(decTot)} decisões registradas — ${_xlFmtBr(decF)} favoráveis e ${_xlFmtBr(decisoes.filter(d=>_xlClassifyDec(d.resultado)==='D').length)} desfavoráveis.`, sort_order:3 },
-    ]);
+    ] })
+    });
     if (hlErr) console.warn('highlights:', hlErr.message);
 
-    setStatus(`✓ Concluído! ${kpiRows.length} KPIs computados e salvos no Supabase a partir de "${filename}". Recarregue o dashboard do cliente para visualizar os dados.`);
+    // Registro técnico do upload/processamento em ifood_raw_data (quando a tabela existir)
+    try {
+      const rawPayload = {
+        workbook_sheets: wb.SheetNames,
+        process_summary: {
+          records: records.length,
+          decisoes: decisoes.length,
+          novos_casos: novos.total || 0,
+          kpis_gerados: kpiRows.length
+        },
+        cockroach_file_url: ifoodExcelFileUrl || null,
+        processed_at: new Date().toISOString()
+      };
+      await ifoodApi('/api/ifood/raw-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+        id: ifoodId(),
+        period_id: periodId,
+        filename,
+        raw_json: rawPayload,
+        uploaded_at: new Date().toISOString()
+      })
+      });
+    } catch (e) {
+      console.warn('ifood_raw_data upsert:', e.message);
+    }
+
+    setStatus(`✓ Concluído! ${kpiRows.length} KPIs computados e salvos no Cockroach a partir de "${filename}". Recarregue o dashboard do cliente para visualizar os dados.`);
     showToast('Excel processado com sucesso!');
   } catch(e) {
     setStatus('Erro: ' + e.message);

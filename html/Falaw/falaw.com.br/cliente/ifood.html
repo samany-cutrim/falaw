@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dashboard iFood — Falaw Advogados</title>
   <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://www.gstatic.com https://www.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://www.google.com https://www.gstatic.com; img-src 'self' data: blob: https:; frame-ancestors 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://www.gstatic.com https://www.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https: https://www.google.com https://www.gstatic.com; img-src 'self' data: blob: https:; frame-ancestors 'none';" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
 
@@ -13,14 +13,12 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Google Charts (GeoChart) -->
   <script src="https://www.gstatic.com/charts/loader.js"></script>
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <!-- html2canvas + jsPDF (export) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <!-- PptxGenJS (export PPT) -->
   <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-  <!-- Supabase config -->
+  <!-- App config -->
   <script src="../sb-config.js" onerror="void 0"></script>
 
   <style>
@@ -661,7 +659,6 @@
    CONSTANTS & GLOBALS
 ═══════════════════════════════════════════════════════════ */
 const TAB_KEYS = ['visao-geral','nuvem','op-logistico','ex-foodlover','terceirizacao','marketplace','destaques'];
-let sb = null;
 let currentPeriod = null;
 let allPeriods = [];
 let allKpis = [];
@@ -691,45 +688,65 @@ function closeSidebar() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SUPABASE INIT
+   COCKROACH API INIT
 ═══════════════════════════════════════════════════════════ */
-function initSB() {
-  const url = (window.SB_URL || '').trim();
-  const key = (window.SB_KEY || '').trim();
-  if (url && key && typeof supabase !== 'undefined') {
-    sb = supabase.createClient(url, key);
-  }
+function apiBase() {
+  const cfg = (localStorage.getItem('fa_backend_api_url') || window.BACKEND_API_URL || '').trim();
+  return cfg.replace(/\/$/, '');
+}
+
+async function apiGet(path) {
+  const base = apiBase();
+  if (!base) throw new Error('Cockroach API não configurada');
+  const res = await fetch(base + path);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
 }
 
 /* ═══════════════════════════════════════════════════════════
    DATA LOADING
 ═══════════════════════════════════════════════════════════ */
 async function loadPeriods() {
-  if (!sb) return [];
-  const { data, error } = await sb.from('ifood_periods').select('*').order('month_year', { ascending: false });
-  if (error) { console.warn('ifood_periods:', error.message); return []; }
-  return data || [];
+  try {
+    const data = await apiGet('/api/ifood/periods');
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('ifood_periods:', e.message);
+    return [];
+  }
 }
 
 async function loadKpis(periodId) {
-  if (!sb || !periodId) return [];
-  const { data, error } = await sb.from('ifood_kpis').select('*').eq('period_id', periodId).order('sort_order');
-  if (error) { console.warn('ifood_kpis:', error.message); return []; }
-  return data || [];
+  if (!periodId) return [];
+  try {
+    const data = await apiGet('/api/ifood/kpis?periodId=' + encodeURIComponent(periodId));
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('ifood_kpis:', e.message);
+    return [];
+  }
 }
 
 async function loadContent(periodId) {
-  if (!sb || !periodId) return [];
-  const { data, error } = await sb.from('ifood_content').select('*').eq('period_id', periodId);
-  if (error) { console.warn('ifood_content:', error.message); return []; }
-  return data || [];
+  if (!periodId) return [];
+  try {
+    const data = await apiGet('/api/ifood/content?periodId=' + encodeURIComponent(periodId));
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('ifood_content:', e.message);
+    return [];
+  }
 }
 
 async function loadHighlights(periodId) {
-  if (!sb || !periodId) return [];
-  const { data, error } = await sb.from('ifood_highlights').select('*').eq('period_id', periodId).order('sort_order');
-  if (error) { console.warn('ifood_highlights:', error.message); return []; }
-  return data || [];
+  if (!periodId) return [];
+  try {
+    const data = await apiGet('/api/ifood/highlights?periodId=' + encodeURIComponent(periodId));
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('ifood_highlights:', e.message);
+    return [];
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1235,11 +1252,9 @@ async function init() {
   document.getElementById('sidebarEmail').textContent = displayEmail;
   document.getElementById('topbarCompany').textContent = displayCompany;
 
-  initSB();
-
-  if (!sb) {
+  if (!apiBase()) {
     document.getElementById('loadingOverlay').style.display = 'none';
-    showToast('Supabase não configurado. Configure em Configurações no admin.');
+    showToast('Cockroach API não configurada. Configure em Configurações no admin.');
     return;
   }
 
