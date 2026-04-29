@@ -59,12 +59,20 @@ CREATE TABLE IF NOT EXISTS clients (
   reports    JSONB NOT NULL DEFAULT '[]'::jsonb
 );
 
+-- 6. Configuracoes de Admin (senha compartilhada entre navegadores)
+CREATE TABLE IF NOT EXISTS admin_settings (
+  id            TEXT PRIMARY KEY,
+  password_hash TEXT NOT NULL,
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Row Level Security (RLS)
 ALTER TABLE newsletter ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contato    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE curriculos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE articles   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clients    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_settings ENABLE ROW LEVEL SECURITY;
 
 -- Permite acesso total com a anon key
 DROP POLICY IF EXISTS "anon full access" ON newsletter;
@@ -72,12 +80,14 @@ DROP POLICY IF EXISTS "anon full access" ON contato;
 DROP POLICY IF EXISTS "anon full access" ON curriculos;
 DROP POLICY IF EXISTS "anon full access" ON articles;
 DROP POLICY IF EXISTS "anon full access" ON clients;
+DROP POLICY IF EXISTS "anon full access" ON admin_settings;
 
 CREATE POLICY "anon full access" ON newsletter FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon full access" ON contato    FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon full access" ON curriculos FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon full access" ON articles   FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon full access" ON clients    FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "anon full access" ON admin_settings FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- Storage Buckets
 -- Crie manualmente no Supabase: Storage > New bucket

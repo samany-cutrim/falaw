@@ -10,6 +10,7 @@
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="./sb-config.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1578,6 +1579,8 @@ const GITHUB_PATH_PORTAL     = 'html/Falaw/falaw.com.br/cliente/portal-data.js';
 const GITHUB_PATH_NEWSLETTER = 'html/Falaw/falaw.com.br/newsletter-data.js';
 const GITHUB_PATH_CONTATO    = 'html/Falaw/falaw.com.br/contato-data.js';
 const GITHUB_PATH_CURRICULOS = 'html/Falaw/falaw.com.br/curriculos-data.js';
+const SB_ADMIN_SETTINGS_TABLE = 'admin_settings';
+const SB_ADMIN_PASSWORD_ID = 'admin_password';
 const KEYS = { adminPwdHash: 'fa_admin_pwd_h', githubToken: 'fa_github_token', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions', curriculos: 'fa_curriculos' };
 const _LOCK_KEY = 'fa_admin_lock';
 
@@ -1592,8 +1595,8 @@ let GH_CURRICULOS_SHA  = '';
 /* ══════════════════════════════════════
    SUPABASE — helpers
 ══════════════════════════════════════ */
-function sbUrl() { return localStorage.getItem('fa_supabase_url') || ''; }
-function sbKey() { return localStorage.getItem('fa_supabase_key') || ''; }
+function sbUrl() { return localStorage.getItem('fa_supabase_url') || window.SB_URL || ''; }
+function sbKey() { return localStorage.getItem('fa_supabase_key') || window.SB_KEY || ''; }
 let _sbClient = null;
 function getSB() {
   const url = sbUrl(), key = sbKey();
@@ -1602,6 +1605,48 @@ function getSB() {
   return _sbClient;
 }
 function sbReset() { _sbClient = null; }
+
+async function sbReadAdminPasswordHash() {
+  const sb = getSB();
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb
+      .from(SB_ADMIN_SETTINGS_TABLE)
+      .select('password_hash')
+      .eq('id', SB_ADMIN_PASSWORD_ID)
+      .maybeSingle();
+    if (error) {
+      console.warn('SB admin hash read:', error.message);
+      return null;
+    }
+    return data && data.password_hash ? data.password_hash : null;
+  } catch (e) {
+    console.warn('SB admin hash read err:', e.message);
+    return null;
+  }
+}
+
+async function sbWriteAdminPasswordHash(hash) {
+  const sb = getSB();
+  if (!sb || !hash) return false;
+  try {
+    const { error } = await sb
+      .from(SB_ADMIN_SETTINGS_TABLE)
+      .upsert({
+        id: SB_ADMIN_PASSWORD_ID,
+        password_hash: hash,
+        updated_at: new Date().toISOString()
+      });
+    if (error) {
+      console.warn('SB admin hash write:', error.message);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.warn('SB admin hash write err:', e.message);
+    return false;
+  }
+}
 
 /* ── Newsletter ── */
 async function loadNewsletterFromSupabase() {
@@ -1934,12 +1979,27 @@ async function _sha256(str) {
 }
 
 async function _getStoredHash() {
-  const stored = localStorage.getItem(KEYS.adminPwdHash);
-  if (stored) return stored;
+  const localHash = localStorage.getItem(KEYS.adminPwdHash);
+  const sbHash = await sbReadAdminPasswordHash();
+
+  // Supabase é a fonte de verdade para senha quando disponível.
+  if (sbHash) {
+    if (localHash !== sbHash) localStorage.setItem(KEYS.adminPwdHash, sbHash);
+    localStorage.removeItem('fa_admin_pwd');
+    return sbHash;
+  }
+
+  if (localHash) {
+    await sbWriteAdminPasswordHash(localHash);
+    localStorage.removeItem('fa_admin_pwd');
+    return localHash;
+  }
+
   // Migração: hash do padrão e armazena (remove plaintext antigo)
   const h = await _sha256(ADMIN_PASSWORD_DEFAULT);
   localStorage.setItem(KEYS.adminPwdHash, h);
   localStorage.removeItem('fa_admin_pwd'); // remove versão plaintext legada
+  await sbWriteAdminPasswordHash(h);
   return h;
 }
 
@@ -2887,9 +2947,10 @@ async function changePassword() {
   const h = await _sha256(np);
   localStorage.setItem(KEYS.adminPwdHash, h);
   localStorage.removeItem('fa_admin_pwd'); // remove plaintext legado se existir
+  const synced = await sbWriteAdminPasswordHash(h);
   document.getElementById('cfg-new-pwd').value    = '';
   document.getElementById('cfg-confirm-pwd').value = '';
-  showToast('Senha alterada com sucesso.');
+  showToast(synced ? 'Senha alterada e sincronizada no Supabase.' : 'Senha alterada neste navegador. Configure o Supabase para sincronizar entre navegadores.');
 }
 
 /* ══════════════════════════════════════
