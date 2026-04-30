@@ -3,6 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Trabalhe Conosco na Falaw Advogados. Envie seu currículo para vagas em Direito do Trabalho, contencioso, consultivo, compliance e legal operations em Sao Paulo." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Falaw Advogados" />
+  <meta property="og:title" content="Trabalhe Conosco — Falaw Advogados" />
+  <meta property="og:description" content="Envie seu currículo para oportunidades na Falaw Advogados, escritório especializado em Direito do Trabalho para empresas, startups e tecnologia." />
+  <meta property="og:locale" content="pt_BR" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Trabalhe Conosco — Falaw Advogados" />
+  <meta name="twitter:description" content="Envie seu currículo para oportunidades na Falaw Advogados, escritório especializado em Direito do Trabalho para empresas, startups e tecnologia." />
+  <meta name="robots" content="index, follow" />
+  <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <meta name="author" content="Falaw Advogados" />
+  <meta name="keywords" content="trabalhe conosco advocacia, vagas advogado trabalhista sao paulo, carreira juridica trabalhista, vagas legal operations, Falaw Advogados curriculo" />
+  <meta name="language" content="pt-BR" />
+  <link rel="canonical" href="https://falaw.com.br/trabalhe-conosco.html" />
+  <link rel="alternate" hreflang="pt-BR" href="https://falaw.com.br/trabalhe-conosco.html" />
+  <link rel="alternate" hreflang="en" href="https://falaw.com.br/trabalhe-conosco.html" />
+  <link rel="alternate" hreflang="x-default" href="https://falaw.com.br/trabalhe-conosco.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "JobPosting",
+    "title": "Oportunidades em Direito do Trabalho",
+    "description": "Banco de talentos para atuação em contencioso trabalhista, consultivo, compliance e legal operations.",
+    "datePosted": "2026-01-01",
+    "employmentType": "FULL_TIME",
+    "hiringOrganization": {
+      "@type": "Organization",
+      "name": "Falaw Advogados",
+      "sameAs": "https://falaw.com.br"
+    },
+    "jobLocation": {
+      "@type": "Place",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Av. Francisco Matarazzo, 1752, Salas 414 e 415",
+        "addressLocality": "Sao Paulo",
+        "addressRegion": "SP",
+        "postalCode": "05001-200",
+        "addressCountry": "BR"
+      }
+    }
+  }
+  </script>
   <title>Trabalhe Conosco — Falaw Advogados</title>
   <link rel="icon" type="image/png" href="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
   <link rel="stylesheet" href="falaw-design.css" />
@@ -507,11 +551,12 @@ const _MAX_SIZE_MB   = 10;
 function handleFileSelect(input) {
   const file = input.files[0];
   const el   = document.getElementById('uploadFilename');
+  const i18n = window.FalawI18n;
   if (!file) return;
 
   // Verificar extensão
   if (!_ALLOWED_EXT.test(file.name)) {
-    el.textContent = '✗ Tipo não permitido. Use PDF, DOC ou DOCX.';
+    el.textContent = i18n ? i18n.t('careers.invalidType') : '✗ Tipo não permitido. Use PDF, DOC ou DOCX.';
     el.style.color = '#C0392B';
     el.style.display = 'block';
     input.value = '';
@@ -520,7 +565,7 @@ function handleFileSelect(input) {
 
   // Verificar tamanho (10 MB)
   if (file.size > _MAX_SIZE_MB * 1024 * 1024) {
-    el.textContent = `✗ Arquivo muito grande. Máximo ${_MAX_SIZE_MB} MB.`;
+    el.textContent = i18n ? i18n.t('careers.invalidSize', _MAX_SIZE_MB) : `✗ Arquivo muito grande. Máximo ${_MAX_SIZE_MB} MB.`;
     el.style.color = '#C0392B';
     el.style.display = 'block';
     input.value = '';
@@ -536,7 +581,7 @@ function handleFileSelect(input) {
     const isDOCX = hex.startsWith('504B0304');          // ZIP (DOCX/XLSX)
     const isDOC  = hex.startsWith('D0CF11E0');          // OLE2 (DOC)
     if (!isPDF && !isDOCX && !isDOC) {
-      el.textContent = '✗ Conteúdo do arquivo inválido.';
+      el.textContent = i18n ? i18n.t('careers.invalidContent') : '✗ Conteúdo do arquivo inválido.';
       el.style.color = '#C0392B';
       el.style.display = 'block';
       input.value = '';
@@ -565,13 +610,14 @@ document.getElementById('careersForm').addEventListener('submit', async function
   const apresentacao = document.getElementById('message').value.trim();
   const fileInput    = document.getElementById('fileInput');
   const file         = fileInput && fileInput.files[0];
+  const i18n         = window.FalawI18n;
 
-  if (!nome || !email) { alert('Por favor, preencha nome e e-mail.'); return; }
-  if (!file) { alert('Por favor, anexe seu currículo.'); return; }
+  if (!nome || !email) { alert(i18n ? i18n.t('careers.requiredFields') : 'Por favor, preencha nome e e-mail.'); return; }
+  if (!file) { alert(i18n ? i18n.t('careers.attachCv') : 'Por favor, anexe seu currículo.'); return; }
 
   const btn = this.querySelector('button[type="submit"]');
   btn.disabled = true;
-  btn.textContent = 'Enviando…';
+  btn.textContent = i18n ? i18n.t('careers.sending') : 'Enviando…';
 
   const id = 'cv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,6);
   let cvUrl = null;

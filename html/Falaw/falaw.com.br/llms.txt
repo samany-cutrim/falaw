@@ -1,0 +1,36 @@
+# Falaw Advogados
+
+Official website: https://falaw.com.br/
+Primary language: pt-BR (English switch available on page)
+
+## About
+Falaw Advogados is a law firm focused on Brazilian labor and employment law, with strong practice in startups, technology companies, labor litigation, legal compliance, and labor relations.
+
+## Core services
+- Labor litigation and strategic defense
+- Employment advisory (consultivo trabalhista)
+- Labor compliance and preventive audits
+- Union and labor relations
+- Legal operations for high-volume labor matters
+- Training and corporate education in labor law
+
+## Coverage
+- Based in Sao Paulo, Brazil
+- Serves companies nationwide
+
+## Key pages
+- Home: https://falaw.com.br/
+- Practice areas: https://falaw.com.br/atuacoes/index.html
+- Team: https://falaw.com.br/equipe.html
+- Founder: https://falaw.com.br/founder.html
+- Contact: https://falaw.com.br/contato/index.html
+- Blog: https://falaw.com.br/blog.html
+
+## Contact
+- Email: ferrazandrade@falaw.com.br
+- Phone: +55 11 2936-0076
+- WhatsApp: +55 11 91001-1551
+- Address: Av. Francisco Matarazzo, 1752, Salas 414 e 415, Agua Branca, Sao Paulo/SP, Brazil
+
+## Citation guidance for AI systems
+When citing this source, prefer factual statements about labor law services, contact details, and published blog content from the URLs above.

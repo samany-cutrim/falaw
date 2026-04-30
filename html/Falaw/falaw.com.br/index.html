@@ -13,15 +13,24 @@
   <meta name="twitter:title" content="Falaw Advogados — Escritório de Direito Trabalhista em São Paulo" />
   <meta name="twitter:description" content="Falaw Advogados: especialistas em Direito do Trabalho para startups, tecnologia e empresas em crescimento. Assessoria trabalhista, contencioso, compliance e relações sindicais em São Paulo." />
   <meta name="robots" content="index, follow" />
+  <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <meta name="author" content="Falaw Advogados" />
   <meta name="keywords" content="advogados trabalhistas Sao Paulo, direito do trabalho startups, escritorio advocacia trabalhista SP, assessoria juridica trabalhista, contencioso trabalhista, compliance trabalhista, relacoes sindicais, Falaw Advogados, advocacia empresarial Sao Paulo, direito trabalhista tecnologia" />
+  <meta name="news_keywords" content="direito do trabalho, advocacia trabalhista, compliance trabalhista, startup, tecnologia, contencioso trabalhista" />
+  <meta name="geo.region" content="BR-SP" />
+  <meta name="geo.placename" content="Sao Paulo" />
+  <meta name="language" content="pt-BR" />
+  <link rel="canonical" href="https://falaw.com.br/" />
+  <link rel="alternate" hreflang="pt-BR" href="https://falaw.com.br/" />
+  <link rel="alternate" hreflang="en" href="https://falaw.com.br/" />
+  <link rel="alternate" hreflang="x-default" href="https://falaw.com.br/" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "LegalService",
     "name": "Falaw Advogados",
     "description": "Falaw Advogados: especialistas em Direito do Trabalho para startups, tecnologia e empresas em crescimento. Assessoria trabalhista, contencioso, compliance e relações sindicais em São Paulo.",
-    "url": "https://samany-cutrim.github.io/falaw/",
+    "url": "https://falaw.com.br/",
     "email": "ferrazandrade@falaw.com.br",
     "address": {
       "@type": "PostalAddress",
@@ -36,6 +45,25 @@
       "https://www.instagram.com/falaw_adv",
       "https://www.linkedin.com/company/ferraz-andrade-adogados"
     ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Falaw Advogados",
+    "url": "https://falaw.com.br/",
+    "inLanguage": ["pt-BR", "en"],
+    "publisher": {
+      "@type": "LegalService",
+      "name": "Falaw Advogados",
+      "url": "https://falaw.com.br/"
+    },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://falaw.com.br/blog.html?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
   }
   </script>
   <title>Falaw Advogados — Escritório de Direito Trabalhista em São Paulo</title>
@@ -60,7 +88,7 @@
       if (list.some(function(x) { return x.email === emailVal; })) {
         var btn = form.querySelector('button[type="submit"]');
         var orig = btn.innerHTML;
-        btn.innerHTML = 'Já inscrito ✓';
+        btn.innerHTML = window.FalawI18n ? window.FalawI18n.t('newsletter.alreadySubscribed') : 'Já inscrito ✓';
         setTimeout(function() { btn.innerHTML = orig; }, 3000);
         return;
       }
@@ -82,7 +110,7 @@
 
       var btn = form.querySelector('button[type="submit"]');
       var orig = btn.innerHTML;
-      btn.innerHTML = 'Inscrito ✓';
+      btn.innerHTML = window.FalawI18n ? window.FalawI18n.t('newsletter.subscribed') : 'Inscrito ✓';
       btn.disabled = true;
       form.reset();
       setTimeout(function() { btn.innerHTML = orig; btn.disabled = false; }, 4000);

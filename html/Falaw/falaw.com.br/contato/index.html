@@ -13,15 +13,21 @@
   <meta name="twitter:title" content="Contato — Falaw Advogados | Advogados Trabalhistas Sao Paulo" />
   <meta name="twitter:description" content="Entre em contato com a Falaw Advogados. Escritorio especializado em Direito do Trabalho na Av. Francisco Matarazzo, 1752, Sao Paulo/SP. Agende sua consulta." />
   <meta name="robots" content="index, follow" />
+  <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <meta name="author" content="Falaw Advogados" />
   <meta name="keywords" content="contato advogados trabalhistas Sao Paulo, escritorio direito trabalho SP, agendar consulta advogado trabalhista, Falaw Advogados endereco, advocacia trabalhista Agua Branca SP" />
+  <meta name="language" content="pt-BR" />
+  <link rel="canonical" href="https://falaw.com.br/contato/index.html" />
+  <link rel="alternate" hreflang="pt-BR" href="https://falaw.com.br/contato/index.html" />
+  <link rel="alternate" hreflang="en" href="https://falaw.com.br/contato/index.html" />
+  <link rel="alternate" hreflang="x-default" href="https://falaw.com.br/contato/index.html" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "LegalService",
     "name": "Falaw Advogados",
     "description": "Entre em contato com a Falaw Advogados. Escritorio especializado em Direito do Trabalho na Av. Francisco Matarazzo, 1752, Sao Paulo/SP. Agende sua consulta.",
-    "url": "https://samany-cutrim.github.io/falaw/",
+    "url": "https://falaw.com.br/contato/index.html",
     "email": "ferrazandrade@falaw.com.br",
     "address": {
       "@type": "PostalAddress",
@@ -89,7 +95,7 @@
       } else {
         var btn = form.querySelector('button[type="submit"]');
         var orig = btn.innerHTML;
-        btn.innerHTML = 'Mensagem enviada ✓';
+        btn.innerHTML = window.FalawI18n ? window.FalawI18n.t('contact.sent') : 'Mensagem enviada ✓';
         btn.disabled = true;
         setTimeout(function() { btn.innerHTML = orig; btn.disabled = false; }, 4000);
       }

@@ -114,6 +114,39 @@ button { cursor: none; }
 .nav-links a:hover::after,
 .nav-links a.active::after { width: 100%; }
 
+.lang-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(6,14,26,0.12);
+  border-radius: 999px;
+  background: rgba(6,14,26,0.03);
+}
+
+.lang-switcher button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--c-muted);
+  font-family: var(--f-mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  padding: 7px 10px;
+  text-transform: uppercase;
+  transition: background .2s ease, color .2s ease;
+}
+
+.lang-switcher button.active {
+  background: var(--c-accent);
+  color: var(--c-light-text);
+}
+
+.lang-switcher button:focus-visible {
+  outline: 2px solid rgba(13,43,94,0.35);
+  outline-offset: 2px;
+}
+
 /* ────────────────────────────────────────
    DOT NAVIGATION
 ──────────────────────────────────────── */
@@ -1471,6 +1504,7 @@ h3 {
   .nav { padding: 0 24px; }
   .nav-counter { display: none; }
   .nav-links { gap: 16px; }
+  .lang-switcher { margin-left: auto; }
   .section-inner { padding: var(--nav-h) 24px 0; }
   .hero-split { grid-template-columns: 1fr; grid-template-rows: 45vh 1fr; }
   .hero-photo { border-radius: 0 0 40% 40% / 0 0 20% 20%; margin: 0; border-bottom: 1px solid rgba(26,10,13,.12); }
@@ -1501,12 +1535,35 @@ h3 {
   .footer-social { flex-direction: row; }
   .footer-bottom { padding: 16px 24px; text-align: center; }
   .como-shape { display: none; }
+  /* Atuacoes: reduce excessive top padding on tablet */
+  .svc-section-inner { padding-top: calc(var(--nav-h) + 32px); padding-bottom: 48px; }
+  /* Section inner: ensure content has bottom breathing room */
+  .section-inner { padding-bottom: 48px; }
+  /* Equipe section: let content scroll naturally, not fixed height */
+  .s-equipe .section-inner { min-height: calc(100vh - var(--nav-h)); }
+  /* Contato: info before form on mobile — info is first in HTML so order is fine */
+  .contato-form { padding-top: 0; }
+  /* Areas split panel: allow natural height */
+  .areas-panel { min-height: 0; }
 }
 
 /* ── MOBILE (768px) — hamburger + ajustes gerais ── */
 @media (max-width: 768px) {
   /* Hamburger: aparece em mobile */
   .nav-burger { display: flex; }
+  .lang-switcher {
+    position: relative;
+    z-index: 1002;
+    margin-left: auto;
+    margin-right: 12px;
+    background: rgba(247,245,242,0.08);
+    border-color: rgba(247,245,242,0.18);
+  }
+  .lang-switcher button { color: rgba(247,245,242,0.72); }
+  .lang-switcher button.active {
+    background: #F7F5F2;
+    color: var(--c-dark);
+  }
   .nav-links {
     display: flex !important;
     position: fixed;
@@ -1570,6 +1627,26 @@ h3 {
   .newsletter-input-wrap { flex-direction: column; border: none; gap: 0; }
   .newsletter-input-wrap input { border: 1px solid rgba(247,245,242,.2); border-radius: 2px 2px 0 0; padding: 14px 16px; }
   .newsletter-input-wrap button { width: 100%; border-radius: 0 0 2px 2px; padding: 14px 16px; }
+  /* Prevent nav from wrapping on small screens */
+  .nav { gap: 8px; overflow: hidden; }
+  /* Ensure lang-switcher fits */
+  .lang-switcher { margin-right: 8px; flex-shrink: 0; }
+  /* Section inner: ensure bottom padding */
+  .section-inner { padding-bottom: 40px; }
+  /* Svc section inner: reduce top padding */
+  .svc-section-inner { padding-top: calc(var(--nav-h) + 24px); padding-bottom: 40px; }
+  /* Atuacoes hero: use single column */
+  .hero-split { grid-template-rows: 36vw 1fr; }
+  /* Team bio: add click/tap hint */
+  .team-row-header { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  /* Areas split: stack panel below list */
+  .areas-split { gap: 24px; }
+  .areas-panel { display: none; }
+  .areas-panel.active { display: block; }
+  /* Contato: remove top padding on form */
+  .contato-form { padding-top: 0; }
+  /* Footer: single column links */
+  .footer-links { grid-template-columns: 1fr 1fr; }
 }
 
 /* ── MOBILE PEQUENO (600px) ── */
@@ -1636,8 +1713,92 @@ h3 {
   .article-stats { grid-template-columns: 1fr; }
   .article-pull-quote { float: none; width: 100%; margin: 0 0 28px 0; }
   .article-end { flex-direction: column; }
+  /* Touch targets */
+  .form-submit { width: 100%; justify-content: center; min-height: 52px; }
+  .btn, .nav-item, .nav-links a { min-height: 44px; }
+  .cta, .contato-map-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+  /* Blog */
+  .article-header,
+  .article-cover,
+  .article-body,
+  .article-back,
+  .article-end { padding-left: 16px; padding-right: 16px; }
+  .article-stats { grid-template-columns: 1fr; }
+  .article-pull-quote { float: none; width: 100%; margin: 0 0 28px 0; }
+  .article-end { flex-direction: column; }
+  /* Article feature box: reduce padding */
+  .article-feature-box { padding: 20px 18px; }
+  /* Blog grid: allow narrower cards */
+  .blog-grid { grid-template-columns: 1fr; }
+  /* Section inner: ensure readable bottom padding */
+  .section-inner { padding-bottom: 56px; }
+  /* Section-stack: remove forced 100vh so content determines height on small phones */
+  .section-stack { min-height: unset; }
+  /* S-hero keeps full screen height but using dvh for iOS Safari address bar */
+  .s-hero { height: 100dvh; height: 100vh; min-height: -webkit-fill-available; }
+  /* Atuacoes: single col dif-cards and reduced section padding */
+  .svc-section-inner { padding-top: calc(var(--nav-h) + 16px); padding-bottom: 40px; }
+  /* Footer: single column links */
+  .footer-links { grid-template-columns: 1fr; gap: 6px 0; }
+  /* WhatsApp: smaller on mobile */
+  .whatsapp-btn { width: 52px; height: 52px; right: 16px; bottom: 24px; }
+  .whatsapp-btn img { width: 52px; height: 52px; }
+  /* Diferenciais: 1 column on small phones for readability */
+  #s-diferenciais .ajudar-grid { grid-template-columns: 1fr; }
+  /* Equipe section: natural height, scrollable */
+  .s-equipe .section-inner { overflow-y: visible; min-height: unset; padding-bottom: 64px; }
+  /* Team row: tap to expand bio */
+  .team-row-header { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  .team-bio-wrap { grid-template-rows: 0fr; }
+  .team-row.bio-open .team-bio-wrap { grid-template-rows: 1fr; }
+  /* Hide hover-based bio expand on touch devices, use .bio-open instead */
+  .team-row:hover .team-bio-wrap { grid-template-rows: 0fr; }
+  .team-row.bio-open .team-bio-wrap { grid-template-rows: 1fr; }
+  /* Contato: full-width form */
+  .contato-form-ice { border-radius: 12px; }
+  /* Selos: always stack */
+  #s-selos .container { flex-direction: column !important; }
+  /* Hero copy reduced padding */
+  .hero-copy { padding: 24px 16px 40px; }
+  /* Nav padding tighter */
+  .nav { padding: 0 16px; }
 }
 
+/* ── MOBILE MUITO PEQUENO (480px) ── */
+@media (max-width: 480px) {
+  /* Nav: hide lang-switcher text, keep compact */
+  .lang-switcher button { padding: 6px 8px; font-size: 9px; }
+  /* Hero: photo row shorter */
+  .hero-split { grid-template-rows: 32vw 1fr; }
+  .hero-photo, .hero-photo-right { max-height: 32vw !important; }
+  /* Headings: clamp to fit narrow viewport */
+  h1, h2 { font-size: clamp(22px, 7vw, 36px); }
+  /* Hero title */
+  .hero-title { font-size: clamp(20px, 8vw, 32px); }
+  /* Careers hero */
+  .careers-hero-img { height: 38vw; }
+  .careers-hero-copy { padding: 24px 16px 24px; }
+  /* Blog cards */
+  .blog-card { padding: 24px 16px; }
+  /* Stats: 1 column on tiny phones */
+  .stats-grid { grid-template-columns: 1fr; gap: 12px; }
+  /* Ajudar: reduce padding */
+  .ajudar-card { padding: 20px 16px; }
+  /* Founder grid: 1 col */
+  .founder-grid { grid-template-columns: 1fr; }
+  /* Section inner padding */
+  .section-inner { padding-left: 12px; padding-right: 12px; padding-bottom: 48px; }
+  /* Footer: stack brand/links/social */
+  .footer-inner { padding: 28px 12px 20px; gap: 24px; }
+  .footer-bottom { padding: 12px 12px; flex-direction: column; gap: 6px; }
+  /* Contato form padding */
+  .contato-form-ice { padding: 16px 14px; }
+  /* Selos: very small images */
+  .selo-item img { max-height: 50px; }
+  /* svc-blocks: reduce padding */
+  .svc-block, .svc-block--right { padding: 36px 0; }
+}
 /* ============================================================
    BLOG — design system
    ============================================================ */
@@ -2345,4 +2506,25 @@ h3 {
   0%   { transform: scale(1);    opacity: 0.6; }
   70%  { transform: scale(1.6);  opacity: 0; }
   100% { transform: scale(1.6);  opacity: 0; }
+
+/* ────────────────────────────────────────
+   TOUCH DEVICES — hover-free interactions
+──────────────────────────────────────── */
+@media (hover: none), (pointer: coarse) {
+  /* Team bio: disable CSS hover expand; JS handles .bio-open */
+  .team-row:hover .team-bio-wrap { grid-template-rows: 0fr; }
+  .team-row.bio-open .team-bio-wrap { grid-template-rows: 1fr; }
+  .team-row-header { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  /* Areas interactive: make active panel visible and scrollable */
+  .areas-panel { position: relative; opacity: 1; transform: none; pointer-events: auto; min-height: 0; display: none; }
+  .areas-panel.active { display: block; }
+  /* Areas container: remove forced min-height */
+  .areas-panel { min-height: 0; }
+  /* Individual panels: hide/show instead of opacity trick */
+  .area-panel { display: none; opacity: 1; transform: none; pointer-events: auto; position: relative; }
+  .area-panel.active { display: block; }
+  .areas-split { gap: 24px; }
+  /* Prevent 300ms tap delay on interactive elements */
+  a, button, .area-item, .dot, .cta, .blog-filter-pill, .nav-burger { touch-action: manipulation; }
+}
 }

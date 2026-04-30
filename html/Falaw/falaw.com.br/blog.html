@@ -13,15 +13,22 @@
   <meta name="twitter:title" content="Blog Juridico — Falaw Advogados | Direito do Trabalho e Inovacao" />
   <meta name="twitter:description" content="Blog juridico da Falaw Advogados: artigos sobre Direito do Trabalho, inovacao juridica, compliance trabalhista, startups e tecnologia. Conteudo especializado para empresas em Sao Paulo." />
   <meta name="robots" content="index, follow" />
+  <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <meta name="author" content="Falaw Advogados" />
   <meta name="keywords" content="blog juridico direito trabalho, artigos advogados trabalhistas, inovacao juridica Sao Paulo, compliance trabalhista blog, direito trabalho startups artigos, Falaw Advogados blog" />
+  <meta name="news_keywords" content="artigos direito do trabalho, jurisprudencia trabalhista, compliance, relacoes sindicais, startup e tecnologia" />
+  <meta name="language" content="pt-BR" />
+  <link rel="canonical" href="https://falaw.com.br/blog.html" />
+  <link rel="alternate" hreflang="pt-BR" href="https://falaw.com.br/blog.html" />
+  <link rel="alternate" hreflang="en" href="https://falaw.com.br/blog.html" />
+  <link rel="alternate" hreflang="x-default" href="https://falaw.com.br/blog.html" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "Blog",
     "name": "Falaw Advogados",
     "description": "Blog juridico da Falaw Advogados: artigos sobre Direito do Trabalho, inovacao juridica, compliance trabalhista, startups e tecnologia. Conteudo especializado para empresas em Sao Paulo.",
-    "url": "https://samany-cutrim.github.io/falaw/",
+    "url": "https://falaw.com.br/blog.html",
     "email": "ferrazandrade@falaw.com.br",
     "address": {
       "@type": "PostalAddress",
@@ -189,14 +196,43 @@
   var query    = '';
   var category = 'Todos';
 
+  function lang() {
+    return window.FalawI18n ? window.FalawI18n.getLanguage() : 'pt';
+  }
+
+  function t(key) {
+    return window.FalawI18n ? window.FalawI18n.t(key) : '';
+  }
+
+  function allLabel() {
+    return t('blog.all') || 'Todos';
+  }
+
+  function displayedCategory(rawCategory) {
+    if (rawCategory === 'Todos') return allLabel();
+    return rawCategory;
+  }
+
+  function updateSearchChrome() {
+    searchInput.placeholder = t('blog.searchPlaceholder') || 'Buscar artigos…';
+    searchInput.setAttribute('aria-label', t('blog.searchLabel') || 'Buscar artigos');
+    clearBtn.setAttribute('aria-label', t('blog.clearLabel') || 'Limpar busca');
+  }
+
   /* Category pills */
   var cats = ['Todos'];
   ALL.forEach(function (a) {
     if (a.category && cats.indexOf(a.category) === -1) cats.push(a.category);
   });
-  filterRow.innerHTML = cats.map(function (c) {
-    return '<button type="button" class="blog-filter-pill' + (c === 'Todos' ? ' active' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>';
-  }).join('');
+
+  function renderFilters() {
+    filterRow.innerHTML = cats.map(function (c) {
+      var label = displayedCategory(c);
+      return '<button type="button" class="blog-filter-pill' + (c === category ? ' active' : '') + '" data-cat="' + esc(c) + '">' + esc(label) + '</button>';
+    }).join('');
+  }
+
+  renderFilters();
   filterRow.addEventListener('click', function (e) {
     var pill = e.target.closest('.blog-filter-pill');
     if (!pill) return;
@@ -232,27 +268,27 @@
     });
 
     if (query || category !== 'Todos') {
-      countEl.textContent = filtered.length + (filtered.length === 1 ? ' artigo encontrado' : ' artigos encontrados');
+      countEl.textContent = window.FalawI18n ? window.FalawI18n.t('blog.results', filtered.length, true) : filtered.length + (filtered.length === 1 ? ' artigo encontrado' : ' artigos encontrados');
     } else {
-      countEl.textContent = ALL.length + (ALL.length === 1 ? ' artigo' : ' artigos');
+      countEl.textContent = window.FalawI18n ? window.FalawI18n.t('blog.results', ALL.length, false) : ALL.length + (ALL.length === 1 ? ' artigo' : ' artigos');
     }
 
     if (!filtered.length) {
       grid.innerHTML =
         '<div class="blog-no-results">' +
-          '<p>Nenhum artigo encontrado para "' + esc(searchInput.value) + '"</p>' +
-          '<button type="button" onclick="clearSearch()">Limpar busca</button>' +
+          '<p>' + esc(t('blog.noResults') || 'Nenhum artigo encontrado para') + ' "' + esc(searchInput.value) + '"</p>' +
+          '<button type="button" onclick="clearSearch()">' + esc(t('blog.clear') || 'Limpar busca') + '</button>' +
         '</div>';
       return;
     }
 
     grid.innerHTML = filtered.map(function (a) {
       return '<article class="blog-card">' +
-        '<div class="blog-card-category">' + esc(a.category) + '</div>' +
+        '<div class="blog-card-category">' + esc(displayedCategory(a.category)) + '</div>' +
         '<h2 class="blog-card-title">' + highlight(esc(a.title), query) + '</h2>' +
         '<p class="blog-card-excerpt">' + highlight(esc(a.excerpt), query) + '</p>' +
-        '<div class="blog-card-meta"><span>' + esc(a.date) + '</span><span>·</span><span>' + esc(a.readTime) + ' de leitura</span></div>' +
-        '<a href="' + esc(a.url) + '" class="blog-card-link">Ler artigo <span class="arr">→</span></a>' +
+        '<div class="blog-card-meta"><span>' + esc(a.date) + '</span><span>·</span><span>' + esc(a.readTime) + ' ' + esc(t('blog.readTime') || 'de leitura') + '</span></div>' +
+        '<a href="' + esc(a.url) + '" class="blog-card-link">' + esc(t('blog.readArticle') || 'Ler artigo') + ' <span class="arr">→</span></a>' +
         '</article>';
     }).join('');
   }
@@ -278,7 +314,14 @@
     render();
   };
 
+  updateSearchChrome();
   render();
+
+  window.addEventListener('falaw:languagechange', function () {
+    updateSearchChrome();
+    renderFilters();
+    render();
+  });
 })();
 </script>
 <a href="https://wa.me/+5511910011551" target="_blank" rel="noopener" class="whatsapp-btn" aria-label="WhatsApp">
