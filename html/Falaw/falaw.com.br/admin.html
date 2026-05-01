@@ -5285,6 +5285,8 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
         }
       }, `Decisões por TRT — ${label}`);
     }
+
+    if (['op-logistico','terceirizacao','marketplace'].includes(tabKey)) {
       const coReusC = {};
       recs.forEach(r => {
         _xlParseEntityList(r.co_reus).forEach(name => {
