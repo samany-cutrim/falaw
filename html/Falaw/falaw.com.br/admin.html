@@ -4710,6 +4710,49 @@ const _XL_UF_TRT = { MG:'TRT-3',RJ:'TRT-1',RS:'TRT-4',BA:'TRT-5',PE:'TRT-6',CE:'
 const _XL_DEC_FAV  = new Set(['Acórdão Favorável','Sentença Improcedente','Decisão Favorável TST']);
 const _XL_DEC_DESF = new Set(['Acórdão Desfavorável','Sentença Desfavorável','Acórdão Anula Sentença','Decisão Desfavorável TST','Acórdão Desfavorável TST']);
 
+function _xlNormTxt(v) {
+  return String(v || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+const _XL_CR_CANON = {
+  'NUVEM': 'ENTREGADOR NUVEM',
+  'ENTREGADOR NUVEM': 'ENTREGADOR NUVEM',
+  'OL': 'ENTREGADOR OL',
+  'OP LOGISTICO': 'ENTREGADOR OL',
+  'OPERACAO LOGISTICA': 'ENTREGADOR OL',
+  'ENTREGADOR OL': 'ENTREGADOR OL',
+  'EX FOODLOVER': 'EX-FOODLOVER',
+  'EX-FOODLOVER': 'EX-FOODLOVER',
+  'TERCEIRIZACAO': 'TERCEIRIZAÇÃO',
+  'TERCEIRIZACAO ': 'TERCEIRIZAÇÃO',
+  'TERCEIRIZAÇÃO': 'TERCEIRIZAÇÃO',
+  'MARKETPLACE': 'ENTREGADOR - MARKETPLACE',
+  'ENTREGADOR MARKETPLACE': 'ENTREGADOR - MARKETPLACE',
+  'ENTREGADOR - MARKETPLACE': 'ENTREGADOR - MARKETPLACE',
+  'RESTAURANTES': 'RESTAURANTES - CONTRATO',
+  'RESTAURANTES CONTRATO': 'RESTAURANTES - CONTRATO',
+  'RESTAURANTES - CONTRATO': 'RESTAURANTES - CONTRATO',
+};
+
+function _xlCanonCR(v) {
+  const n = _xlNormTxt(v).replace(/[^A-Z0-9\- ]+/g, '').trim();
+  return _XL_CR_CANON[n] || String(v || '').trim();
+}
+
+function _xlNormalizeTRT(v) {
+  const n = _xlNormTxt(v);
+  if (!n) return '';
+  const m = n.match(/TRT\s*-?\s*(\d{1,2})/);
+  if (m) return `TRT-${m[1]}`;
+  if (/^\d{1,2}$/.test(n)) return `TRT-${n}`;
+  return String(v || '').trim();
+}
+
 function _xlGetTRT(uf, vara) {
   uf = (uf||'').toUpperCase(); vara = (vara||'').toLowerCase();
   if (uf === 'SP') {
@@ -4722,39 +4765,85 @@ function _xlGetTRT(uf, vara) {
 
 const _XL_VALID_UF = new Set(['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']);
 function _xlParseIfood(rawRows) {
-  // Actual Excel structure (sheet 'todos', 67 cols, 0-indexed):
-  //  0=causa_raiz, 1=num_processo, 2=TRT, 3=status, 4=cargo, 5=assunto,
-  //  6=vara, 7=cidade, 8=UF, 14=Requerente1, 15=Escritorio CNA Requerente,
-  //  16=Juiz sentença, 22=Fase Processual, 35=Se está arquivado,
-  //  43=Autor do Recurso, 51=Resultado Final, 58=Julgador 2a Instancia,
-  //  63=Resultado Julgamento mais recente, 66=1o resultado do processo
-  const c = (r, i) => String(r[i] ?? '').trim();
-  const normalizeStatus = s => { const l=s.toLowerCase(); if(l==='ativo'||l==='active'||l==='1') return 'ativo'; if(l==='encerrado'||l==='closed'||l==='0'||l==='encerrada') return 'encerrado'; return l; };
-  const normalizeUF = s => { const u=s.toUpperCase().replace(/[^A-Z]/g,''); return _XL_VALID_UF.has(u) ? u : ''; };
-  const normalizeTRT = s => s ? s.replace(/TRT\s+/i, 'TRT-').trim() : '';
-  return rawRows.filter(r => r && r[0] && String(r[0]).trim() && String(r[0]).trim().toLowerCase() !== 'causa raiz').map(r => {
-    const uf = normalizeUF(c(r,8));
-    const vara = c(r,6);
-    const trtRaw = normalizeTRT(c(r,2));
+  const header = Array.isArray(rawRows[0]) ? rawRows[0] : [];
+  const hn = header.map(h => _xlNormTxt(h));
+  const findIdx = (...patterns) => {
+    for (const p of patterns) {
+      const i = hn.findIndex(h => h.includes(_xlNormTxt(p)));
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+  const idx = {
+    causa: findIdx('CAUSA RAIZ'),
+    proc: findIdx('NUMERO DO PROCESSO', 'N PROCESSO', 'Nº PROCESSO'),
+    trt: findIdx('TRT'),
+    status: findIdx('STATUS'),
+    cargo: findIdx('CARGO'),
+    assunto: findIdx('ASSUNTO'),
+    vara: findIdx('VARA'),
+    cidade: findIdx('CIDADE', 'COMARCA'),
+    uf: findIdx('UF'),
+    advCna: findIdx('ESCRITORIO CNA REQUERENTE'),
+    advAdverso: findIdx('ADVOGADO ADVERSO'),
+    juizSent: findIdx('JUIZ SENTENCA'),
+    fase: findIdx('FASE PROCESSUAL'),
+    arquivado: findIdx('ARQUIVADO'),
+    autorRec: findIdx('AUTOR DO RECURSO'),
+    resFinal: findIdx('RESULTADO FINAL', 'RESULTADO DA DECISAO DE 1 GRAU'),
+    julgador: findIdx('JULGADOR 2A INSTANCIA', 'JUIZ/ RELATOR', 'JUIZ RELATOR'),
+    resRec: findIdx('RESULTADO JULGAMENTO MAIS RECENTE', 'RESULTADO DA DECISAO DE 2 GRAU'),
+    primeiro: findIdx('1O RESULTADO DO PROCESSO')
+  };
+  const c = (r, i, fb = '') => (i >= 0 ? String(r[i] ?? '').trim() : fb);
+  const normalizeStatus = (s) => {
+    const l = _xlNormTxt(s).toLowerCase();
+    if (l === 'ativo' || l === 'active' || l === 'a' || l === '1') return 'ativo';
+    if (l === 'encerrado' || l === 'closed' || l === 'e' || l === '0' || l === 'encerrada') return 'encerrado';
+    return l;
+  };
+  const normalizeUF = (s) => {
+    const u = _xlNormTxt(s).replace(/[^A-Z]/g, '');
+    return _XL_VALID_UF.has(u) ? u : '';
+  };
+
+  return rawRows.slice(1).filter(r => Array.isArray(r) && r.length).map(r => {
+    const proc = c(r, idx.proc, c(r, 1));
+    if (!proc) return null;
+
+    const causa = _xlCanonCR(c(r, idx.causa, c(r, 0)));
+    const vara = c(r, idx.vara, c(r, 6));
+    const cidadeRaw = c(r, idx.cidade, c(r, 7));
+    const splitComarca = cidadeRaw.includes('/') ? cidadeRaw.split('/') : null;
+    const cidade = splitComarca ? splitComarca[0].trim() : cidadeRaw;
+    const ufFromComarca = splitComarca ? normalizeUF(splitComarca[1]) : '';
+    const uf = normalizeUF(c(r, idx.uf, c(r, 8))) || ufFromComarca;
+    const trtRaw = _xlNormalizeTRT(c(r, idx.trt, c(r, 2)));
     const trt = trtRaw || _xlGetTRT(uf, vara);
+
     return {
-      causa_raiz: c(r,0), num_processo: c(r,1),
+      causa_raiz: causa,
+      num_processo: proc,
       trt,
-      status: normalizeStatus(c(r,3)),
-      cargo: c(r,4), assunto: c(r,5), vara,
-      cidade: c(r,7), uf,
-      adv1: c(r,15),  // Escritorio CNA Requerente
-      adv2: '', adv3: '',
-      juiz_sentenca: c(r,16),
-      fase: c(r,22),
-      arquivado: c(r,35),
-      autor_recurso: c(r,43),
-      resultado_final: c(r,51),
-      julgador: c(r,58),
-      resultado_recente: c(r,63),
-      primeiro_resultado: c(r,66),
+      status: normalizeStatus(c(r, idx.status, c(r, 3))),
+      cargo: c(r, idx.cargo, c(r, 4)),
+      assunto: c(r, idx.assunto, c(r, 5)),
+      vara,
+      cidade,
+      uf,
+      adv1: c(r, idx.advCna, c(r, idx.advAdverso, c(r, 15))),
+      adv2: '',
+      adv3: '',
+      juiz_sentenca: c(r, idx.juizSent, c(r, 16)),
+      fase: c(r, idx.fase, c(r, 22)),
+      arquivado: c(r, idx.arquivado, c(r, 35)),
+      autor_recurso: c(r, idx.autorRec, c(r, 43)),
+      resultado_final: c(r, idx.resFinal, c(r, 51)),
+      julgador: c(r, idx.julgador, c(r, 58)),
+      resultado_recente: c(r, idx.resRec, c(r, 63)),
+      primeiro_resultado: c(r, idx.primeiro, c(r, 66)),
     };
-  });
+  }).filter(Boolean);
 }
 
 function _xlParseDecisoes(rawRows) {
@@ -4762,8 +4851,8 @@ function _xlParseDecisoes(rawRows) {
   const c = (r, i) => String(r[i] ?? '').trim();
   return rawRows.filter(r => r && r[0] && String(r[0]).trim() && c(r,2)).map(r => ({
     num_processo: c(r,0),
-    trt:          c(r,1),
-    causa_raiz:   c(r,2),
+    trt:          _xlNormalizeTRT(c(r,1)),
+    causa_raiz:   _xlCanonCR(c(r,2)),
     resultado:    c(r,3),
     juiz_relator: c(r,4),
     varaturma:    c(r,5),
@@ -4782,7 +4871,10 @@ function _xlParseNovos(rawRows) {
     if (v0.toLowerCase() === 'causa raiz') { inTable = true; continue; }
     if (inTable && v0 && v0.toLowerCase() !== 'total') {
       const cnt = parseInt(r[1] ?? 0);
-      if (!isNaN(cnt) && cnt > 0) byCR[v0.toUpperCase().trim()] = cnt;
+      if (!isNaN(cnt) && cnt > 0) {
+        const cr = _xlCanonCR(v0);
+        byCR[cr] = (byCR[cr] || 0) + cnt;
+      }
     }
   }
   if (!total) total = Object.values(byCR).reduce((a,b)=>a+b,0);
@@ -4790,6 +4882,9 @@ function _xlParseNovos(rawRows) {
 }
 
 function _xlClassifyDec(res) {
+  const n = _xlNormTxt(res);
+  if (n.includes('DESFAVOR')) return 'D';
+  if (n.includes('FAVOR')) return 'F';
   if (_XL_DEC_FAV.has(res))  return 'F';
   if (_XL_DEC_DESF.has(res)) return 'D';
   return 'O';
@@ -4963,8 +5058,8 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     const td = decs.filter(d=>_xlClassifyDec(d.resultado)==='D').length;
 
     // Suspensos para esta causa raiz
-    const tSusp1389 = susp1389.filter(s=>String(s[2]||'').toUpperCase().trim()===cr.toUpperCase().trim());
-    const tSusp1291 = susp1291.filter(s=>String(s[2]||'').toUpperCase().trim()===cr.toUpperCase().trim());
+    const tSusp1389 = susp1389.filter(s=>_xlCanonCR(String(s[2]||''))===cr);
+    const tSusp1291 = susp1291.filter(s=>_xlCanonCR(String(s[2]||''))===cr);
     const tSusp = tSusp1389.length + tSusp1291.length;
 
     push(tabKey,'total','Total de Processos',_xlFmtBr(recs.length),'processos');
