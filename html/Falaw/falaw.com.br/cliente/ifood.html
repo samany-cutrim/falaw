@@ -817,7 +817,10 @@ function renderKpis(tabKey, kpis) {
 
 // ── Chart.js global defaults ──────────────────────────────────────────────────
 if (typeof Chart !== 'undefined') {
-  Chart.defaults.animation = { duration: 750, easing: 'easeOutQuart' };
+  // Do NOT replace Chart.defaults.animation — it's a special object in v4.
+  // Set individual properties only to preserve internal prototype methods.
+  Chart.defaults.animation.duration = 750;
+  Chart.defaults.animation.easing   = 'easeOutQuart';
   Chart.defaults.font.family = 'IBM Plex Mono';
   Chart.defaults.color = 'rgba(26,10,13,0.65)';
   Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(13,20,40,0.92)';
@@ -1022,12 +1025,16 @@ function applyFalawTheme(cfg) {
   cfg.options.interaction = cfg.options.interaction || { mode: 'nearest', intersect: false };
 
   // Normalize legacy Chart.js animation keys from older payloads.
+  // animateRotate / animateScale are doughnut/polar-specific — keep them as-is
+  // but remove any other unknown keys that break the v4 animator (this._fn).
   if (cfg.options.animation && typeof cfg.options.animation === 'object') {
-    if ('animateRotate' in cfg.options.animation || 'animateScale' in cfg.options.animation) {
-      cfg.options.animation = {
-        duration: Number(cfg.options.animation.duration || 700),
-        easing: cfg.options.animation.easing || 'easeOutQuart'
-      };
+    const anim = cfg.options.animation;
+    const knownKeys = new Set(['duration','easing','delay','loop','animateRotate','animateScale','from','to','type']);
+    const unknownKeys = Object.keys(anim).filter(k => !knownKeys.has(k));
+    if (unknownKeys.length) {
+      const clean = {};
+      knownKeys.forEach(k => { if (k in anim) clean[k] = anim[k]; });
+      cfg.options.animation = clean;
     }
   }
 
