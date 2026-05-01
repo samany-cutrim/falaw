@@ -244,7 +244,7 @@
       border-color: rgba(123,26,46,0.28);
       box-shadow: 0 24px 48px rgba(13,43,94,0.11), 0 0 0 1px rgba(183,121,31,0.08);
     }
-    .chart-card.wide { grid-column: span 2; }
+    .chart-card.wide { grid-column: span 1; }
     .chart-card.featured {
       background:
         linear-gradient(180deg, rgba(183,121,31,0.05), rgba(255,255,255,0)) padding-box,
@@ -827,33 +827,6 @@ if (typeof Chart !== 'undefined') {
   Chart.defaults.plugins.tooltip.cornerRadius = 8;
   Chart.defaults.plugins.tooltip.titleFont  = { family: 'Sora', size: 12, weight: '700' };
   Chart.defaults.plugins.tooltip.bodyFont   = { family: 'IBM Plex Mono', size: 11 };
-
-  // Gradient plugin — applies to single-color bar dataset (non-array bg)
-  Chart.register({
-    id: 'falawGradient',
-    afterInit(chart) {
-      if (chart.config.type !== 'bar') return;
-      const ctx = chart.ctx;
-      const ca  = chart.chartArea;
-      if (!ca) return;
-      const isHoriz = chart.config.options?.indexAxis === 'y';
-      let changed = false;
-      chart.data.datasets.forEach(ds => {
-        if (typeof ds.backgroundColor !== 'string') return;
-        const hex = ds.backgroundColor.match(/^(#[0-9a-f]{6})/i);
-        if (!hex) return;
-        const base = hex[1];
-        const grad = isHoriz
-          ? ctx.createLinearGradient(ca.left, 0, ca.right, 0)
-          : ctx.createLinearGradient(0, ca.bottom, 0, ca.top);
-        grad.addColorStop(0, base + 'AA');
-        grad.addColorStop(1, base + 'FF');
-        ds.backgroundColor = grad;
-        changed = true;
-      });
-      if (changed) chart.update('none');
-    }
-  });
 }
 
 function enhanceFalawChart(cfg) {
@@ -926,9 +899,12 @@ function renderCharts(tabKey, kpis) {
   const el = document.getElementById('charts-' + tabKey);
   if (!el) return;
   const withCharts = kpis.filter(k => k.tab_key === tabKey && k.chart_data);
-  if (!withCharts.length) { el.innerHTML = ''; return; }
+  if (!withCharts.length) {
+    el.innerHTML = '<div class="analysis-empty">Nenhum gráfico disponível para esta aba.</div>';
+    return;
+  }
 
-  const wideKeys    = new Set(['chart_cr_dist','chart_novos_cr','chart_dec_cr','chart_trt_cr','chart_trt_overview']);
+  const wideKeys    = new Set([]);
   const featureKeys  = new Set(['chart_cr_dist','chart_novos_cr']);
   const tallKeys     = new Set(['chart_trt_overview','chart_julgadores','chart_dec_vt','chart_dec_julgador','chart_coreus','chart_julg_fav','chart_julg_desf']);
 
@@ -959,17 +935,29 @@ function renderCharts(tabKey, kpis) {
       enhanceFalawChart(cfg);
       applyFalawTheme(cfg);
       chartInstances[canvasId] = new Chart(ctx, cfg);
-    } catch(e) { console.warn('Chart error for', tabKey, i, e); }
+    } catch(e) {
+      console.warn('Chart error for', tabKey, i, e);
+      const wrap = el.querySelector(`[data-kpi-key="${escHtml(k.kpi_key || '')}"] .chart-wrap`);
+      if (wrap) wrap.innerHTML = '<div class="analysis-empty" style="padding:18px 0">Erro ao renderizar gráfico</div>';
+    }
   });
 }
 
 function applyFalawTheme(cfg) {
   // Colors: crimson-first palette for Falaw brand
-  const palette = ['#7B1A2E','#0D2B5E','#0F9E76','#1A4080','#9B2238','#6366f1','#059669','#D97706'];
+  const palette = ['#7B1A2E','#0D2B5E','#0F9E76','#B7791F'];
   if (!cfg || !cfg.data) return;
 
   if (cfg.data.datasets) {
     cfg.data.datasets.forEach((ds, i) => {
+      // Keep visual language sober: bars use one solid brand color per dataset.
+      if (cfg.type === 'bar') {
+        ds.backgroundColor = palette[i % palette.length];
+      }
+      if (cfg.type === 'doughnut' || cfg.type === 'pie' || cfg.type === 'polarArea') {
+        ds.backgroundColor = palette.slice(0, ds.data ? ds.data.length : palette.length);
+      }
+
       // Only fill color if completely missing
       if (!ds.backgroundColor || (Array.isArray(ds.backgroundColor) && !ds.backgroundColor.length)) {
         ds.backgroundColor = cfg.type === 'line'
@@ -991,14 +979,18 @@ function applyFalawTheme(cfg) {
   cfg.options = cfg.options || {};
   cfg.options.responsive = true;
   cfg.options.maintainAspectRatio = false;
+  cfg.options.interaction = cfg.options.interaction || { mode: 'nearest', intersect: false };
 
   cfg.options.plugins = cfg.options.plugins || {};
+  cfg.options.plugins.tooltip = cfg.options.plugins.tooltip || {};
+  cfg.options.plugins.tooltip.enabled = cfg.options.plugins.tooltip.enabled !== false;
   if (!cfg.options.plugins.legend) {
     cfg.options.plugins.legend = {
       labels: { font: { family: 'IBM Plex Mono', size: 10 }, color: 'rgba(26,10,13,0.6)', padding: 14 }
     };
   }
-  cfg.options.plugins.tooltip = cfg.options.plugins.tooltip || {
+  if (!cfg.options.plugins.tooltip.titleFont || !cfg.options.plugins.tooltip.bodyFont) cfg.options.plugins.tooltip = {
+    ...cfg.options.plugins.tooltip,
     titleFont: { family: 'IBM Plex Mono', size: 11 },
     bodyFont:  { family: 'Inter', size: 12 }
   };

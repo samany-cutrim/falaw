@@ -4930,7 +4930,7 @@ function _xlChartBar(labels, data, datasetLabel, color, horizontal) {
 function _xlChartBarVertical(labels, data, datasetLabel, color) {
   return _xlChartBar(labels, data, datasetLabel, color, false);
 }
-const _XL_PAL = ['#7B1A2E','#0D2B5E','#0F9E76','#B7791F','#6366f1','#ec4899','#1A4080','#9B2238','#059669','#D97706','#8B5CF6','#14B8A6'];
+const _XL_PAL = ['#7B1A2E','#0D2B5E','#0F9E76','#B7791F','#1A4080','#9B2238'];
 
 function _xlChartDoughnut(labels, data) {
   return {
@@ -4942,12 +4942,18 @@ function _xlChartDoughnut(labels, data) {
 }
 
 /** Horizontal bar with one distinct color per bar */
-function _xlChartMultiBar(labels, data, datasetLabel, horizontal) {
-  const horiz = horizontal !== false;
-  const colors = labels.map((_, i) => _XL_PAL[i % _XL_PAL.length]);
+function _xlChartMultiBar(labels, data, datasetLabel, colorOrHorizontal, horizontalMaybe) {
+  let color = '#0D2B5E';
+  let horiz = true;
+  if (typeof colorOrHorizontal === 'boolean') {
+    horiz = colorOrHorizontal;
+  } else {
+    color = colorOrHorizontal || '#0D2B5E';
+    if (typeof horizontalMaybe === 'boolean') horiz = horizontalMaybe;
+  }
   return {
     type:'bar',
-    data:{ labels, datasets:[{ label:datasetLabel||'Processos', data, backgroundColor:colors, borderRadius:6, maxBarThickness:30 }] },
+    data:{ labels, datasets:[{ label:datasetLabel||'Processos', data, backgroundColor:color, borderRadius:6, maxBarThickness:30 }] },
     options:{
       indexAxis: horiz ? 'y' : 'x',
       responsive:true, maintainAspectRatio:false,
