@@ -212,22 +212,37 @@
     }
 
     /* ── CHARTS GRID ── */
-    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px; margin-bottom: 32px; grid-auto-flow: dense; }
+    .charts-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 32px; }
+    @keyframes fadeUpIn {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
     .chart-card {
       background: var(--bg-card); border: 1px solid var(--border);
       border-radius: 16px; padding: 24px; position: relative; overflow: hidden;
       transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
       box-shadow: 0 14px 34px rgba(13,43,94,0.05);
+      animation: fadeUpIn .45s ease both;
     }
+    .charts-grid .chart-card:nth-child(1)  { animation-delay: .04s; }
+    .charts-grid .chart-card:nth-child(2)  { animation-delay: .08s; }
+    .charts-grid .chart-card:nth-child(3)  { animation-delay: .12s; }
+    .charts-grid .chart-card:nth-child(4)  { animation-delay: .16s; }
+    .charts-grid .chart-card:nth-child(5)  { animation-delay: .20s; }
+    .charts-grid .chart-card:nth-child(6)  { animation-delay: .24s; }
+    .charts-grid .chart-card:nth-child(7)  { animation-delay: .28s; }
+    .charts-grid .chart-card:nth-child(8)  { animation-delay: .32s; }
     .chart-card::before {
       content: ''; position: absolute; inset: 0 0 auto 0; height: 3px;
       background: linear-gradient(90deg, rgba(183,121,31,0.95), rgba(13,43,94,0.75), rgba(123,26,46,0.88));
       opacity: .9;
+      transition: opacity .22s;
     }
+    .chart-card:hover::before { opacity: 1; }
     .chart-card:hover {
-      transform: translateY(-3px);
-      border-color: rgba(123,26,46,0.22);
-      box-shadow: 0 20px 42px rgba(13,43,94,0.08);
+      transform: translateY(-4px);
+      border-color: rgba(123,26,46,0.28);
+      box-shadow: 0 24px 48px rgba(13,43,94,0.11), 0 0 0 1px rgba(183,121,31,0.08);
     }
     .chart-card.wide { grid-column: span 2; }
     .chart-card.featured {
@@ -443,7 +458,7 @@
       .kpi-value { font-size: 20px; }
 
       .charts-grid { grid-template-columns: 1fr; gap: 14px; }
-      .chart-card.wide { grid-column: auto; }
+      .chart-card.wide { grid-column: span 1; }
 
       .highlights-grid { grid-template-columns: 1fr; gap: 14px; }
 
@@ -800,6 +815,47 @@ function renderKpis(tabKey, kpis) {
     </div>`).join('');
 }
 
+// ── Chart.js global defaults ──────────────────────────────────────────────────
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.animation = { duration: 750, easing: 'easeOutQuart' };
+  Chart.defaults.font.family = 'IBM Plex Mono';
+  Chart.defaults.color = 'rgba(26,10,13,0.65)';
+  Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(13,20,40,0.92)';
+  Chart.defaults.plugins.tooltip.titleColor = '#fff';
+  Chart.defaults.plugins.tooltip.bodyColor  = 'rgba(255,255,255,0.85)';
+  Chart.defaults.plugins.tooltip.padding    = 12;
+  Chart.defaults.plugins.tooltip.cornerRadius = 8;
+  Chart.defaults.plugins.tooltip.titleFont  = { family: 'Sora', size: 12, weight: '700' };
+  Chart.defaults.plugins.tooltip.bodyFont   = { family: 'IBM Plex Mono', size: 11 };
+
+  // Gradient plugin — applies to single-color bar dataset (non-array bg)
+  Chart.register({
+    id: 'falawGradient',
+    afterInit(chart) {
+      if (chart.config.type !== 'bar') return;
+      const ctx = chart.ctx;
+      const ca  = chart.chartArea;
+      if (!ca) return;
+      const isHoriz = chart.config.options?.indexAxis === 'y';
+      let changed = false;
+      chart.data.datasets.forEach(ds => {
+        if (typeof ds.backgroundColor !== 'string') return;
+        const hex = ds.backgroundColor.match(/^(#[0-9a-f]{6})/i);
+        if (!hex) return;
+        const base = hex[1];
+        const grad = isHoriz
+          ? ctx.createLinearGradient(ca.left, 0, ca.right, 0)
+          : ctx.createLinearGradient(0, ca.bottom, 0, ca.top);
+        grad.addColorStop(0, base + 'AA');
+        grad.addColorStop(1, base + 'FF');
+        ds.backgroundColor = grad;
+        changed = true;
+      });
+      if (changed) chart.update('none');
+    }
+  });
+}
+
 function enhanceFalawChart(cfg) {
   const meta = cfg && cfg.falaw_meta;
   if (!meta) return;
@@ -829,6 +885,31 @@ function enhanceFalawChart(cfg) {
     };
   }
 
+  if (meta.tooltip_mode === 'trt_full') {
+    cfg.options.plugins.tooltip = {
+      ...tooltip,
+      padding: tooltip.padding || 14,
+      displayColors: tooltip.displayColors !== false,
+      callbacks: {
+        ...callbacks,
+        label(context) {
+          const value = context.raw ?? context.parsed?.x ?? context.parsed?.y ?? 0;
+          return `${context.dataset.label}: ${value}`;
+        },
+        afterLabel(context) {
+          const ds  = context.dataset.label;
+          const trt = context.label;
+          const vtLines = ((meta.vtDetails || {})[ds] || {})[trt] || [];
+          const jrLines = ((meta.jrDetails || {})[ds] || {})[trt] || [];
+          const out = [];
+          if (vtLines.length) { out.push('', 'Turma/VT:'); vtLines.forEach(l => out.push('  ' + l)); }
+          if (jrLines.length) { out.push('', 'Julgador/Relator:'); jrLines.forEach(l => out.push('  ' + l)); }
+          return out;
+        }
+      }
+    };
+  }
+
   if (meta.axisLabelMax && cfg.type === 'bar' && cfg.options.indexAxis === 'y') {
     cfg.options.scales = cfg.options.scales || {};
     cfg.options.scales.y = cfg.options.scales.y || {};
@@ -847,17 +928,18 @@ function renderCharts(tabKey, kpis) {
   const withCharts = kpis.filter(k => k.tab_key === tabKey && k.chart_data);
   if (!withCharts.length) { el.innerHTML = ''; return; }
 
-  const wideKeys = new Set(['chart_cr_dist','chart_novos_cr','chart_dec_cr']);
-  const featureKeys = new Set(['chart_cr_dist','chart_novos_cr']);
-  const tallKeys = new Set(['chart_dec_vt','chart_dec_julgador','chart_julgadores','chart_coreus']);
+  const wideKeys    = new Set(['chart_cr_dist','chart_novos_cr','chart_dec_cr','chart_trt_cr','chart_trt_overview']);
+  const featureKeys  = new Set(['chart_cr_dist','chart_novos_cr']);
+  const tallKeys     = new Set(['chart_trt_overview','chart_julgadores','chart_dec_vt','chart_dec_julgador','chart_coreus','chart_julg_fav','chart_julg_desf']);
 
   el.innerHTML = withCharts.map((k, i) => {
     let cfg; try { cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; } catch(e) { cfg = {}; }
-    const isDonut = cfg.type === 'doughnut' || cfg.type === 'pie';
-    const isHoriz = cfg.options && cfg.options.indexAxis === 'y';
-    const isWide = wideKeys.has(k.kpi_key);
-    const isTall = tallKeys.has(k.kpi_key);
-    const h = isDonut ? '280px' : isTall ? '360px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
+    const isPolar  = cfg.type === 'polarArea';
+    const isDonut  = cfg.type === 'doughnut' || cfg.type === 'pie';
+    const isHoriz  = cfg.options && cfg.options.indexAxis === 'y';
+    const isWide   = wideKeys.has(k.kpi_key);
+    const isTall   = tallKeys.has(k.kpi_key);
+    const h = isPolar ? '310px' : isDonut ? '290px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
     const classes = ['chart-card'];
     if (isWide) classes.push('wide');
     if (featureKeys.has(k.kpi_key)) classes.push('featured');
@@ -920,6 +1002,14 @@ function applyFalawTheme(cfg) {
     titleFont: { family: 'IBM Plex Mono', size: 11 },
     bodyFont:  { family: 'Inter', size: 12 }
   };
+
+  if (cfg.type === 'polarArea') {
+    cfg.options.scales = cfg.options.scales || {};
+    cfg.options.scales.r = cfg.options.scales.r || {};
+    cfg.options.scales.r.ticks = { display: false, backdropColor: 'transparent' };
+    cfg.options.scales.r.grid  = { color: 'rgba(0,0,0,0.07)' };
+    cfg.options.animation = cfg.options.animation || { animateRotate: true, animateScale: true, duration: 900 };
+  }
 
   // Scales defaults only if not already set
   if (cfg.type === 'bar') {
