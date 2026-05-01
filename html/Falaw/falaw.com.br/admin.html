@@ -4776,7 +4776,7 @@ function _xlParseIfood(rawRows) {
   };
   const idx = {
     causa: findIdx('CAUSA RAIZ'),
-    proc: findIdx('NUMERO DO PROCESSO', 'N PROCESSO', 'Nº PROCESSO'),
+    proc: findIdx('NUMERO DO PROCESSO', 'N PROCESSO', 'Nº PROCESSO', 'PROCESSO'),
     trt: findIdx('TRT'),
     status: findIdx('STATUS'),
     cargo: findIdx('CARGO'),
@@ -5183,7 +5183,7 @@ async function ifoodSaveExcel() {
     setStatus('Lendo aba IFOOD…');
     const ifoodSh = findSh('IFOOD','todos','ifood','all') || wb.Sheets[wb.SheetNames[0]];
     const ifoodRaw = XLSX.utils.sheet_to_json(ifoodSh, { header:1, defval:'' });
-    const records = _xlParseIfood(ifoodRaw.slice(1));
+    const records = _xlParseIfood(ifoodRaw);
 
     setStatus(`Lendo Decisões… (${records.length} processos)`);
     const decSh = findSh('Decisões','Decisoes','Decisão','Decisao');
