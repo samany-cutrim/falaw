@@ -3012,7 +3012,7 @@ function loadConfig() {
   document.getElementById('cfg-supabase-url').value = sbUrl();
   document.getElementById('cfg-supabase-key').value = sbKey();
   document.getElementById('cfg-admin-email').value = localStorage.getItem(AUTH_EMAIL_KEY) || '';
-  document.getElementById('cfg-backend-api-url').value = localStorage.getItem(BACKEND_API_URL_KEY) || '';
+  document.getElementById('cfg-backend-api-url').value = localStorage.getItem(BACKEND_API_URL_KEY) || window.BACKEND_API_URL || '';
 }
 
 async function testAPIs() {
@@ -3095,7 +3095,8 @@ function saveConfig() {
   document.getElementById('blog-no-token').hidden = !!token;
   // Se Supabase + GitHub configurados, atualiza sb-config.js no repositório
   if (sbUrlVal && sbKeyVal && token) {
-    const sbCfg = `/* sb-config.js — gerado pelo admin Falaw. */\nwindow.SB_URL='${sbUrlVal}';\nwindow.SB_KEY='${sbKeyVal}';\n`;
+    const escCfg = (v) => String(v || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const sbCfg = `/* sb-config.js — gerado pelo admin Falaw. */\nwindow.SB_URL='${escCfg(sbUrlVal)}';\nwindow.SB_KEY='${escCfg(sbKeyVal)}';\nwindow.BACKEND_API_URL='${escCfg(backendApi)}';\n`;
     _ghPush('html/Falaw/falaw.com.br/sb-config.js', sbCfg, null, 'Admin: update Supabase config')
       .then(sha => { if (sha) showToast('✓ Configurações salvas e sb-config.js publicado.'); else showToast('Configurações salvas.'); });
   } else {
