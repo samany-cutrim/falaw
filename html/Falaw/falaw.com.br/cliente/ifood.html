@@ -925,20 +925,47 @@ function renderCharts(tabKey, kpis) {
     </div>`;
   }).join('');
 
+  if (typeof Chart === 'undefined') {
+    el.querySelectorAll('.chart-wrap').forEach(w => {
+      w.innerHTML = '<div class="analysis-empty" style="padding:18px 0">Chart.js não carregado</div>';
+    });
+    return;
+  }
+
   withCharts.forEach((k, i) => {
     try {
       const cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data;
       const canvasId = `chart-${tabKey}-${i}`;
       const ctx = document.getElementById(canvasId);
       if (!ctx) return;
+
+      if (!cfg || !cfg.type || !cfg.data) {
+        const wrap = el.querySelectorAll('.chart-wrap')[i];
+        if (wrap) wrap.innerHTML = '<div class="analysis-empty" style="padding:18px 0">Configuração de gráfico inválida</div>';
+        return;
+      }
+
       if (chartInstances[canvasId]) { chartInstances[canvasId].destroy(); }
+
+      // Enforce interactive tooltips even if legacy payload disabled them.
+      cfg.options = cfg.options || {};
+      cfg.options.events = ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'];
+      cfg.options.interaction = { mode: 'nearest', intersect: false, ...(cfg.options.interaction || {}) };
+      cfg.options.plugins = cfg.options.plugins || {};
+      cfg.options.plugins.tooltip = { enabled: true, ...(cfg.options.plugins.tooltip || {}) };
+
       enhanceFalawChart(cfg);
       applyFalawTheme(cfg);
       chartInstances[canvasId] = new Chart(ctx, cfg);
+      chartInstances[canvasId].resize();
+      chartInstances[canvasId].update('none');
     } catch(e) {
       console.warn('Chart error for', tabKey, i, e);
-      const wrap = el.querySelector(`[data-kpi-key="${escHtml(k.kpi_key || '')}"] .chart-wrap`);
-      if (wrap) wrap.innerHTML = '<div class="analysis-empty" style="padding:18px 0">Erro ao renderizar gráfico</div>';
+      const wrap = el.querySelectorAll('.chart-wrap')[i];
+      if (wrap) {
+        const msg = (e && e.message) ? e.message : 'Erro ao renderizar gráfico';
+        wrap.innerHTML = `<div class="analysis-empty" style="padding:18px 0">${escHtml(msg)}</div>`;
+      }
     }
   });
 }
@@ -1135,8 +1162,9 @@ document.getElementById('tabBar').addEventListener('click', e => {
   // Render only when the panel is visible to avoid zero-size Chart.js canvases.
   if (tabKey !== 'destaques') {
     renderKpis(tabKey, allKpis);
-    renderCharts(tabKey, allKpis);
     renderContent(tabKey, allContent);
+    // Wait one frame so layout is final before Chart.js measures canvas.
+    requestAnimationFrame(() => renderCharts(tabKey, allKpis));
   }
 });
 
