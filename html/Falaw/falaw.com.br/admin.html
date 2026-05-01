@@ -4724,16 +4724,22 @@ const _XL_CR_CANON = {
   'ENTREGADOR NUVEM': 'ENTREGADOR NUVEM',
   'OL': 'ENTREGADOR OL',
   'OP LOGISTICO': 'ENTREGADOR OL',
+  'OP LOGISTICA': 'ENTREGADOR OL',
+  'OP LOGISTICO': 'ENTREGADOR OL',
   'OPERACAO LOGISTICA': 'ENTREGADOR OL',
   'ENTREGADOR OL': 'ENTREGADOR OL',
   'EX FOODLOVER': 'EX-FOODLOVER',
   'EX-FOODLOVER': 'EX-FOODLOVER',
+  'TERCEIRIZADO': 'TERCEIRIZAÇÃO',
+  'TERCEIRIZADOS': 'TERCEIRIZAÇÃO',
   'TERCEIRIZACAO': 'TERCEIRIZAÇÃO',
   'TERCEIRIZACAO ': 'TERCEIRIZAÇÃO',
   'TERCEIRIZAÇÃO': 'TERCEIRIZAÇÃO',
+  'MARKET PLACE': 'ENTREGADOR - MARKETPLACE',
   'MARKETPLACE': 'ENTREGADOR - MARKETPLACE',
   'ENTREGADOR MARKETPLACE': 'ENTREGADOR - MARKETPLACE',
   'ENTREGADOR - MARKETPLACE': 'ENTREGADOR - MARKETPLACE',
+  'RESTAURANTE': 'RESTAURANTES - CONTRATO',
   'RESTAURANTES': 'RESTAURANTES - CONTRATO',
   'RESTAURANTES CONTRATO': 'RESTAURANTES - CONTRATO',
   'RESTAURANTES - CONTRATO': 'RESTAURANTES - CONTRATO',
@@ -4786,6 +4792,7 @@ function _xlParseIfood(rawRows) {
     uf: findIdx('UF'),
     advCna: findIdx('ESCRITORIO CNA REQUERENTE'),
     advAdverso: findIdx('ADVOGADO ADVERSO'),
+    coReus: findIdx('CO REUS', 'CO-REUS', 'CO RÉUS', 'CÓ-RÉUS'),
     juizSent: findIdx('JUIZ SENTENCA'),
     fase: findIdx('FASE PROCESSUAL'),
     arquivado: findIdx('ARQUIVADO'),
@@ -4820,6 +4827,7 @@ function _xlParseIfood(rawRows) {
     const uf = normalizeUF(c(r, idx.uf, c(r, 8))) || ufFromComarca;
     const trtRaw = _xlNormalizeTRT(c(r, idx.trt, c(r, 2)));
     const trt = trtRaw || _xlGetTRT(uf, vara);
+    const coReus = idx.coReus >= 0 ? c(r, idx.coReus) : '';
 
     return {
       causa_raiz: causa,
@@ -4834,6 +4842,7 @@ function _xlParseIfood(rawRows) {
       adv1: c(r, idx.advCna, c(r, idx.advAdverso, c(r, 15))),
       adv2: '',
       adv3: '',
+      co_reus: coReus,
       juiz_sentenca: c(r, idx.juizSent, c(r, 16)),
       fase: c(r, idx.fase, c(r, 22)),
       arquivado: c(r, idx.arquivado, c(r, 35)),
@@ -4936,6 +4945,49 @@ function _xlParsePedidos(assunto) {
   return m;
 }
 
+function _xlParseEntityList(value) {
+  return String(value || '')
+    .split(/\s*(?:;|\||\n|\r|\s\/\s)\s*/)
+    .map(part => part.replace(/\s+/g, ' ').trim())
+    .filter(part => part && !/^n\/?a$/i.test(part) && !/^nao informado$/i.test(part));
+}
+
+function _xlTopKeysByTotal(counterMaps, limit) {
+  return [...new Set((counterMaps || []).flatMap(map => Object.keys(map || {})))]
+    .sort((a, b) => (counterMaps || []).reduce((sum, map) => sum + Number((map || {})[b] || 0), 0) - (counterMaps || []).reduce((sum, map) => sum + Number((map || {})[a] || 0), 0))
+    .slice(0, limit);
+}
+
+function _xlTooltipLines(counter, limit) {
+  return Object.entries(counter || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit || 6)
+    .map(([label, count]) => `${label} (${count})`);
+}
+
+function _xlChartOutcomeByGroup(labels, favData, desfData, detailTitle, favDetails, desfDetails) {
+  return {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'Favorável', data:favData, backgroundColor:'#0F9E76', borderRadius:6, maxBarThickness:24 },
+      { label:'Desfavorável', data:desfData, backgroundColor:'#7B1A2E', borderRadius:6, maxBarThickness:24 }
+    ]},
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
+      scales:{
+        x:{ grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true, ticks:{ precision:0, font:{ family:'IBM Plex Mono', size:10 } } },
+        y:{ grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } }
+      }
+    },
+    falaw_meta:{
+      tooltip_mode:'trt_breakdown',
+      detail_title: detailTitle || 'Detalhes',
+      details:{ Favorável: favDetails || {}, Desfavorável: desfDetails || {} }
+    }
+  };
+}
+
 function _xlFaseValida(fase) { return fase && !fase.toLowerCase().includes('arquiv'); }
 
 function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391) {
@@ -4955,6 +5007,8 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   const decTot = decisoes.length;
   const novosTotal = (novos && typeof novos === 'object' && 'total' in novos) ? novos.total : (Array.isArray(novos) ? novos.length : 0);
   const novosByCR = (novos && novos.byCR) ? novos.byCR : {};
+  const _isValidJulg = j => j && !['nan','none','','0'].includes(j.toLowerCase());
+  const _isValidAdv = a => a && !['nan','none','','0','n/a','na'].includes(a.toLowerCase());
 
   push('visao-geral','total_processos','Total de Processos',_xlFmtBr(total),'processos');
   push('visao-geral','ativos','Processos Ativos',_xlFmtBr(ativos),'ativos');
@@ -4976,6 +5030,19 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   const crTop = _xlTopN(crC, 10);
   push('visao-geral','chart_cr_dist','Distribuição por Causa Raiz',_xlFmtBr(ativos),'ativos',
     _xlChartDoughnut(crTop.map(([l])=>l), crTop.map(([,v])=>v)), 'Processos Ativos por Causa Raiz');
+
+  const novosCrEntries = [
+    ..._XL_CR_TABS
+      .map(tab => [tab.label, Number(novosByCR[tab.cr] || 0)])
+      .filter(([, count]) => count > 0),
+    ...Object.entries(novosByCR)
+      .filter(([cr]) => !_XL_CR_TABS.some(tab => tab.cr === cr))
+      .map(([cr, count]) => [cr, Number(count || 0)])
+  ];
+  if (novosCrEntries.length) {
+    push('visao-geral','chart_novos_cr','Novos Casos por Causa Raiz',_xlFmtBr(novosTotal),'novos',
+      _xlChartBarVertical(novosCrEntries.map(([label])=>label), novosCrEntries.map(([,count])=>count), 'Novos Casos', '#B7791F'), 'Novos Casos por Causa Raiz');
+  }
 
   // Decisões por CR grouped bar
   const dByCrF={}, dByCrD={};
@@ -5022,25 +5089,22 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
                  y:{ stacked:true, grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true } } }
     }, 'Processos Ativos por TRT e Causa Raiz');
 
-  // Mapa UF — processos ativos por estado
-  const ufGeoC = {};
-  records.filter(r=>r.status==='ativo'&&r.uf&&_XL_VALID_UF.has(r.uf)).forEach(r=>{
-    ufGeoC[r.uf]=(ufGeoC[r.uf]||0)+1;
+  // Julgadores — a partir da aba Decisões
+  const decJFav = {}, decJDesf = {};
+  decisoes.forEach(d => {
+    const judge = String(d.juiz_relator || '').trim();
+    if (!_isValidJulg(judge)) return;
+    const cls = _xlClassifyDec(d.resultado);
+    if (cls === 'F') decJFav[judge] = (decJFav[judge] || 0) + 1;
+    if (cls === 'D') decJDesf[judge] = (decJDesf[judge] || 0) + 1;
   });
-  if(Object.keys(ufGeoC).length){
-    push('visao-geral','chart_uf_map','Processos por Estado (UF)','','',
-      { type:'geo_br', data: ufGeoC }, 'Distribuição Geográfica de Processos Ativos por Estado');
+  const julgTop = _xlTopKeysByTotal([decJFav, decJDesf], 15);
+  if (julgTop.length) {
+    push('visao-geral','chart_julgadores','Top 15 Julgadores','','',
+      _xlChartOutcomeByGroup(julgTop, julgTop.map(j=>decJFav[j]||0), julgTop.map(j=>decJDesf[j]||0), '', null, null), 'Top 15 Julgadores — Aba Decisões');
   }
 
-  // Julgadores
-  const _isValidJulg = j => j && !['nan','none','','0'].includes(j.toLowerCase());
-  const julgC = _xlCounter(records.filter(r=>_isValidJulg(r.julgador)).map(r=>r.julgador));
-  const julgTop = _xlTopN(julgC,15);
-  push('visao-geral','chart_julgadores','Top 15 Julgadores','','',
-    _xlChartBar(julgTop.map(([l])=>l),julgTop.map(([,v])=>v),'Processos','#6366f1'), 'Top 15 Julgadores');
-
   // Advogados adversários
-  const _isValidAdv = a => a && !['nan','none','','0'].includes(a.toLowerCase());
   const advC = {};
   records.forEach(r=>{ [r.adv1,r.adv2,r.adv3].forEach(a=>{ if(_isValidAdv(a)) advC[a]=(advC[a]||0)+1; }); });
   const advTop = _xlTopN(advC,10);
@@ -5049,9 +5113,9 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
 
   // ── PER CAUSA RAIZ TABS ──────────────────────────────────────────────────────
   for (const { cr, tabKey, label } of _XL_CR_TABS) {
-    const recs = records.filter(r=>r.causa_raiz===cr);
-    if (!recs.length) continue;
-    const decs = decisoes.filter(d=>d.causa_raiz===cr);
+    const recs = records.filter(r=>_xlCanonCR(r.causa_raiz)===cr);
+    const decs = decisoes.filter(d=>_xlCanonCR(d.causa_raiz)===cr);
+    if (!recs.length && !decs.length) continue;
     const ta = recs.filter(r=>r.status==='ativo').length;
     const te = recs.filter(r=>r.status==='encerrado').length;
     const tf = decs.filter(d=>_xlClassifyDec(d.resultado)==='F').length;
@@ -5095,15 +5159,14 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     if(decs.length>0) push(tabKey,'chart_decisoes','Decisões do Período',_xlFmtBr(decs.length),'decisões',
       _xlChartDoughnut(['Favorável','Desfavorável','Outro'],[tf,td,Math.max(0,decs.length-tf-td)]), `Decisões — ${label}`);
 
-    // Julgadores — da aba todos, independente da aba Decisões.
-    // Classifica por resultado_recente (col 63). Nome: julgador (col 58) ou juiz_sentenca (col 16).
-    const _REC_FAV  = new Set(['Improcedente','Extinto sem Resolução']);
-    const _REC_DESF = new Set(['Procedente','Parc. Procedente']);
+    // Julgadores — a partir da aba Decisões desta causa raiz.
     const julgFavC={}, julgDesfC={};
-    recs.forEach(r=>{
-      const j = r.julgador || r.juiz_sentenca; if(!_isValidJulg(j)) return;
-      if(_REC_FAV.has(r.resultado_recente))  julgFavC[j]=(julgFavC[j]||0)+1;
-      if(_REC_DESF.has(r.resultado_recente)) julgDesfC[j]=(julgDesfC[j]||0)+1;
+    decs.forEach(d=>{
+      const j = String(d.juiz_relator || '').trim();
+      if(!_isValidJulg(j)) return;
+      const cls = _xlClassifyDec(d.resultado);
+      if(cls==='F') julgFavC[j]=(julgFavC[j]||0)+1;
+      if(cls==='D') julgDesfC[j]=(julgDesfC[j]||0)+1;
     });
     const jFavTop=_xlTopN(julgFavC,10), jDesfTop=_xlTopN(julgDesfC,10);
     if(jFavTop.length) push(tabKey,'chart_julg_fav','Julgadores Favoráveis','','',
@@ -5111,49 +5174,74 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     if(jDesfTop.length) push(tabKey,'chart_julg_desf','Julgadores Desfavoráveis','','',
       _xlChartBar(jDesfTop.map(([l])=>l),jDesfTop.map(([,v])=>v),'Desfavoráveis','#7B1A2E'), `Julgadores Desfavoráveis — ${label}`);
 
+    if (['op-logistico','terceirizacao','marketplace'].includes(tabKey)) {
+      const coReusC = {};
+      recs.forEach(r => {
+        _xlParseEntityList(r.co_reus).forEach(name => {
+          coReusC[name] = (coReusC[name] || 0) + 1;
+        });
+      });
+      const coReusTop = _xlTopN(coReusC, 10);
+      if (coReusTop.length) push(tabKey,'chart_coreus','Top 10 Empresas Co-réus','','',
+        _xlChartBar(coReusTop.map(([name])=>name), coReusTop.map(([,count])=>count), 'Processos', '#B7791F'), `Top 10 Empresas Co-réus — ${label}`);
+    }
+
     // Turma/VT e Julgador/Relator — exclusivamente da aba Decisões
     if (decs.length > 0) {
-      // Turma/VT: fav vs desf — label inclui TRT para contexto regional
-      const vtFavC={}, vtDesfC={};
+      const vtFavC={}, vtDesfC={}, vtFavDetails={}, vtDesfDetails={};
       decs.forEach(d=>{
-        const vt = d.varaturma; if(!vt) return;
-        const key = d.trt ? `${d.trt} · ${vt}` : vt;
+        const trt = d.trt || 'TRT não informado';
+        const vt = String(d.varaturma || '').trim() || 'Não informado';
         const cls = _xlClassifyDec(d.resultado);
-        if(cls==='F') vtFavC[key]=(vtFavC[key]||0)+1;
-        if(cls==='D') vtDesfC[key]=(vtDesfC[key]||0)+1;
+        if(cls==='F') {
+          vtFavC[trt]=(vtFavC[trt]||0)+1;
+          if(!vtFavDetails[trt]) vtFavDetails[trt] = {};
+          vtFavDetails[trt][vt] = (vtFavDetails[trt][vt] || 0) + 1;
+        }
+        if(cls==='D') {
+          vtDesfC[trt]=(vtDesfC[trt]||0)+1;
+          if(!vtDesfDetails[trt]) vtDesfDetails[trt] = {};
+          vtDesfDetails[trt][vt] = (vtDesfDetails[trt][vt] || 0) + 1;
+        }
       });
-      const allVTs = [...new Set([...Object.keys(vtFavC),...Object.keys(vtDesfC)])].sort();
-      if(allVTs.length) push(tabKey,'chart_dec_vt','Decisões por Turma/VT','','',
-        { type:'bar', data:{ labels:allVTs, datasets:[
-            { label:'Favorável',    data:allVTs.map(v=>vtFavC[v]||0),  backgroundColor:'#0F9E76', borderRadius:4 },
-            { label:'Desfavorável', data:allVTs.map(v=>vtDesfC[v]||0), backgroundColor:'#7B1A2E', borderRadius:4 }
-          ]},
-          options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
-            plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
-            scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true },
-                     y:{ grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } } } }
-        }, `Decisões por Turma/VT — ${label}`);
+      const allTrtsVT = _xlTopKeysByTotal([vtFavC, vtDesfC], 12);
+      if(allTrtsVT.length) push(tabKey,'chart_dec_vt','Decisões por TRT','','',
+        _xlChartOutcomeByGroup(
+          allTrtsVT,
+          allTrtsVT.map(v=>vtFavC[v]||0),
+          allTrtsVT.map(v=>vtDesfC[v]||0),
+          'Turmas/VTs',
+          Object.fromEntries(allTrtsVT.map(trt => [trt, _xlTooltipLines(vtFavDetails[trt], 8)])),
+          Object.fromEntries(allTrtsVT.map(trt => [trt, _xlTooltipLines(vtDesfDetails[trt], 8)]))
+        ), `Decisões por TRT — Turmas/VTs — ${label}`);
 
-      // Julgador/Relator: fav vs desf — label inclui TRT para contexto regional
-      const jrFavC={}, jrDesfC={};
+      const jrFavC={}, jrDesfC={}, jrFavDetails={}, jrDesfDetails={};
       decs.forEach(d=>{
-        const jr = d.juiz_relator; if(!jr) return;
-        const key = d.trt ? `${jr} (${d.trt})` : jr;
+        const trt = d.trt || 'TRT não informado';
+        const jr = String(d.juiz_relator || '').trim();
+        if(!jr) return;
         const cls = _xlClassifyDec(d.resultado);
-        if(cls==='F') jrFavC[key]=(jrFavC[key]||0)+1;
-        if(cls==='D') jrDesfC[key]=(jrDesfC[key]||0)+1;
+        if(cls==='F') {
+          jrFavC[trt]=(jrFavC[trt]||0)+1;
+          if(!jrFavDetails[trt]) jrFavDetails[trt] = {};
+          jrFavDetails[trt][jr] = (jrFavDetails[trt][jr] || 0) + 1;
+        }
+        if(cls==='D') {
+          jrDesfC[trt]=(jrDesfC[trt]||0)+1;
+          if(!jrDesfDetails[trt]) jrDesfDetails[trt] = {};
+          jrDesfDetails[trt][jr] = (jrDesfDetails[trt][jr] || 0) + 1;
+        }
       });
-      const allJRs = [...new Set([...Object.keys(jrFavC),...Object.keys(jrDesfC)])].sort((a,b)=>((jrFavC[b]||0)+(jrDesfC[b]||0))-((jrFavC[a]||0)+(jrDesfC[a]||0))).slice(0,15);
-      if(allJRs.length) push(tabKey,'chart_dec_julgador','Decisões por Julgador/Relator','','',
-        { type:'bar', data:{ labels:allJRs, datasets:[
-            { label:'Favorável',    data:allJRs.map(j=>jrFavC[j]||0),  backgroundColor:'#0F9E76', borderRadius:4 },
-            { label:'Desfavorável', data:allJRs.map(j=>jrDesfC[j]||0), backgroundColor:'#7B1A2E', borderRadius:4 }
-          ]},
-          options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
-            plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
-            scales:{ x:{ grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true },
-                     y:{ grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono', size:9 } } } } }
-        }, `Decisões por Julgador/Relator — ${label}`);
+      const allJRTrts = _xlTopKeysByTotal([jrFavC, jrDesfC], 12);
+      if(allJRTrts.length) push(tabKey,'chart_dec_julgador','Decisões por TRT','','',
+        _xlChartOutcomeByGroup(
+          allJRTrts,
+          allJRTrts.map(j=>jrFavC[j]||0),
+          allJRTrts.map(j=>jrDesfC[j]||0),
+          'Julgadores/Relatores',
+          Object.fromEntries(allJRTrts.map(trt => [trt, _xlTooltipLines(jrFavDetails[trt], 8)])),
+          Object.fromEntries(allJRTrts.map(trt => [trt, _xlTooltipLines(jrDesfDetails[trt], 8)]))
+        ), `Decisões por TRT — Julgador/Relator — ${label}`);
     }
 
     // Pedidos ranking — somente Ex-Foodlover

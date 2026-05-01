@@ -5,14 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dashboard iFood — Falaw Advogados</title>
   <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://www.gstatic.com https://www.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https: https://www.google.com https://www.gstatic.com; img-src 'self' data: blob: https:; frame-ancestors 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https:; img-src 'self' data: blob: https:; frame-ancestors 'none';" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <!-- Google Charts (GeoChart) -->
-  <script src="https://www.gstatic.com/charts/loader.js"></script>
   <!-- html2canvas + jsPDF (export) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -214,10 +212,28 @@
     }
 
     /* ── CHARTS GRID ── */
-    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px; margin-bottom: 32px; }
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px; margin-bottom: 32px; grid-auto-flow: dense; }
     .chart-card {
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 10px; padding: 24px;
+      border-radius: 16px; padding: 24px; position: relative; overflow: hidden;
+      transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+      box-shadow: 0 14px 34px rgba(13,43,94,0.05);
+    }
+    .chart-card::before {
+      content: ''; position: absolute; inset: 0 0 auto 0; height: 3px;
+      background: linear-gradient(90deg, rgba(183,121,31,0.95), rgba(13,43,94,0.75), rgba(123,26,46,0.88));
+      opacity: .9;
+    }
+    .chart-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(123,26,46,0.22);
+      box-shadow: 0 20px 42px rgba(13,43,94,0.08);
+    }
+    .chart-card.wide { grid-column: span 2; }
+    .chart-card.featured {
+      background:
+        linear-gradient(180deg, rgba(183,121,31,0.05), rgba(255,255,255,0)) padding-box,
+        var(--bg-card);
     }
     .chart-card-title {
       font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700;
@@ -225,7 +241,6 @@
     }
     .chart-wrap { position: relative; height: 280px; }
     .chart-wrap canvas { max-height: 100%; }
-    .chart-card.geo-full { grid-column: 1 / -1; }
 
     /* ── ANALYSIS BLOCK ── */
     .analysis-block {
@@ -428,6 +443,7 @@
       .kpi-value { font-size: 20px; }
 
       .charts-grid { grid-template-columns: 1fr; gap: 14px; }
+      .chart-card.wide { grid-column: auto; }
 
       .highlights-grid { grid-template-columns: 1fr; gap: 14px; }
 
@@ -784,43 +800,45 @@ function renderKpis(tabKey, kpis) {
     </div>`).join('');
 }
 
-// Google GeoChart — load once, queue renders until ready
-let _geoReady = false;
-const _geoQueue = [];
-function _ensureGeo(cb) {
-  if (_geoReady) { cb(); return; }
-  _geoQueue.push(cb);
-  if (_geoQueue.length === 1) {
-    google.charts.load('current', { packages: ['geochart'] });
-    google.charts.setOnLoadCallback(() => {
-      _geoReady = true;
-      _geoQueue.forEach(fn => fn());
-      _geoQueue.length = 0;
-    });
-  }
-}
+function enhanceFalawChart(cfg) {
+  const meta = cfg && cfg.falaw_meta;
+  if (!meta) return;
+  cfg.options = cfg.options || {};
+  cfg.options.plugins = cfg.options.plugins || {};
+  const tooltip = cfg.options.plugins.tooltip || {};
+  const callbacks = tooltip.callbacks || {};
 
-function _renderGeoChart(divId, ufData) {
-  _ensureGeo(() => {
-    const div = document.getElementById(divId);
-    if (!div) return;
-    const rows = Object.entries(ufData).map(([uf, cnt]) => [`BR-${uf}`, cnt]);
-    const dataTable = new google.visualization.DataTable();
-    dataTable.addColumn('string', 'Estado');
-    dataTable.addColumn('number', 'Processos');
-    dataTable.addRows(rows);
-    const chart = new google.visualization.GeoChart(div);
-    chart.draw(dataTable, {
-      region: 'BR',
-      resolution: 'provinces',
-      colorAxis: { colors: ['#f0e6e8', '#7B1A2E'] },
-      backgroundColor: 'transparent',
-      datalessRegionColor: '#f5f5f5',
-      defaultColor: '#e0e0e0',
-      legend: 'none',
-      tooltip: { trigger: 'focus' }
-    });
-  });
+  if (meta.tooltip_mode === 'trt_breakdown') {
+    cfg.options.plugins.tooltip = {
+      ...tooltip,
+      padding: tooltip.padding || 12,
+      displayColors: tooltip.displayColors !== false,
+      callbacks: {
+        ...callbacks,
+        label(context) {
+          const value = context.raw ?? context.parsed?.x ?? context.parsed?.y ?? 0;
+          return `${context.dataset.label}: ${value}`;
+        },
+        afterLabel(context) {
+          const detailGroups = ((meta.details || {})[context.dataset.label] || {});
+          const lines = detailGroups[context.label] || [];
+          if (!lines.length) return '';
+          return ['', `${meta.detail_title || 'Detalhes'}:`, ...lines];
+        }
+      }
+    };
+  }
+
+  if (meta.axisLabelMax && cfg.type === 'bar' && cfg.options.indexAxis === 'y') {
+    cfg.options.scales = cfg.options.scales || {};
+    cfg.options.scales.y = cfg.options.scales.y || {};
+    cfg.options.scales.y.ticks = cfg.options.scales.y.ticks || {};
+    cfg.options.scales.y.ticks.callback = function(value) {
+      const raw = this.getLabelForValue(value);
+      if (typeof raw !== 'string') return raw;
+      return raw.length > meta.axisLabelMax ? raw.slice(0, meta.axisLabelMax - 1) + '…' : raw;
+    };
+  }
 }
 
 function renderCharts(tabKey, kpis) {
@@ -829,33 +847,34 @@ function renderCharts(tabKey, kpis) {
   const withCharts = kpis.filter(k => k.tab_key === tabKey && k.chart_data);
   if (!withCharts.length) { el.innerHTML = ''; return; }
 
-  // Doughnut charts are smaller; horizontal bar charts need more height; geo map is tall
+  const wideKeys = new Set(['chart_cr_dist','chart_novos_cr','chart_dec_cr']);
+  const featureKeys = new Set(['chart_cr_dist','chart_novos_cr']);
+  const tallKeys = new Set(['chart_dec_vt','chart_dec_julgador','chart_julgadores','chart_coreus']);
+
   el.innerHTML = withCharts.map((k, i) => {
     let cfg; try { cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; } catch(e) { cfg = {}; }
-    const isGeo   = cfg.type === 'geo_br';
     const isDonut = cfg.type === 'doughnut' || cfg.type === 'pie';
     const isHoriz = cfg.options && cfg.options.indexAxis === 'y';
-    const h = isGeo ? '420px' : isDonut ? '240px' : isHoriz ? '320px' : '280px';
-    const inner = isGeo
-      ? `<div id="geo-${tabKey}-${i}" style="width:100%;height:100%;"></div>`
-      : `<canvas id="chart-${tabKey}-${i}"></canvas>`;
-    return `<div class="chart-card${isGeo ? ' geo-full' : ''}">
+    const isWide = wideKeys.has(k.kpi_key);
+    const isTall = tallKeys.has(k.kpi_key);
+    const h = isDonut ? '280px' : isTall ? '360px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
+    const classes = ['chart-card'];
+    if (isWide) classes.push('wide');
+    if (featureKeys.has(k.kpi_key)) classes.push('featured');
+    return `<div class="${classes.join(' ')}" data-kpi-key="${escHtml(k.kpi_key || '')}">
       <div class="chart-card-title">${escHtml(k.chart_title || k.label)}</div>
-      <div class="chart-wrap" style="height:${h}">${inner}</div>
+      <div class="chart-wrap" style="height:${h}"><canvas id="chart-${tabKey}-${i}"></canvas></div>
     </div>`;
   }).join('');
 
   withCharts.forEach((k, i) => {
     try {
       const cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data;
-      if (cfg.type === 'geo_br') {
-        _renderGeoChart(`geo-${tabKey}-${i}`, cfg.data || {});
-        return;
-      }
       const canvasId = `chart-${tabKey}-${i}`;
       const ctx = document.getElementById(canvasId);
       if (!ctx) return;
       if (chartInstances[canvasId]) { chartInstances[canvasId].destroy(); }
+      enhanceFalawChart(cfg);
       applyFalawTheme(cfg);
       chartInstances[canvasId] = new Chart(ctx, cfg);
     } catch(e) { console.warn('Chart error for', tabKey, i, e); }
