@@ -976,7 +976,7 @@ async function renderCharts(tabKey, kpis) {
 
   const wideKeys    = new Set(['chart_dist_ano']);
   const featureKeys  = new Set(['chart_cr_dist','chart_novos_cr']);
-  const tallKeys     = new Set(['chart_trt_overview','chart_julgadores','chart_dec_vt','chart_dec_julgador','chart_coreus','chart_julg_fav','chart_julg_desf','chart_radar_cr']);
+  const tallKeys     = new Set(['chart_trt_overview','chart_dec_vt','chart_dec_julgador','chart_coreus','chart_julg_fav','chart_julg_desf','chart_radar_cr','chart_julgadores']);
   const treemapKeys  = new Set([]);
   const mapKeys      = new Set(['chart_uf']);
 
@@ -992,7 +992,7 @@ async function renderCharts(tabKey, kpis) {
     const isHoriz  = cfg.options && cfg.options.indexAxis === 'y';
     const isWide   = wideKeys.has(k.kpi_key);
     const isTall   = tallKeys.has(k.kpi_key);
-    const h = isChoropleth ? '420px' : isTreemap ? '360px' : isBubble ? '400px' : isRadar ? '340px' : isLine ? '300px' : isPolar ? '310px' : isDonut ? '290px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
+    const h = isChoropleth ? '420px' : isTreemap ? '360px' : isBubble ? '400px' : isRadar ? '340px' : isLine ? '300px' : isPolar ? '310px' : isDonut ? '290px' : k.kpi_key === 'chart_julgadores' ? '480px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
     const classes = ['chart-card'];
     if (isWide) classes.push('wide');
     if (featureKeys.has(k.kpi_key)) classes.push('featured');
@@ -1043,20 +1043,20 @@ async function renderCharts(tabKey, kpis) {
               outline: brazilGeo,
               data: features.map(f => {
                 const sigla = f.properties.sigla || _IBGE_SIGLA[String(f.properties.codarea||'')] || '';
-                return { feature: f, value: ufValues[sigla] || 0 };
+                return { feature: f, value: ufValues[sigla] || 0, sigla };
               }),
               backgroundColor(context) {
                 if (!context.raw) return 'rgba(13,43,94,0.08)';
                 const v = context.raw.value || 0;
-                if (v === 0) return 'rgba(13,43,94,0.08)';
-                const t = v / maxVal;
-                // Gradient: light → #7B1A2E (crimson)
-                const r = Math.round(255 + t * (123 - 255));
-                const g = Math.round(255 + t * (26  - 255));
-                const b = Math.round(255 + t * (46  - 255));
-                return `rgba(${r},${g},${b},0.9)`;
+                if (v === 0) return 'rgba(220,225,235,0.7)';
+                const t = Math.min(v / maxVal, 1);
+                // Gradient: light blue → crimson
+                const r = Math.round(180 + t * (123 - 180));
+                const g = Math.round(195 + t * (26  - 195));
+                const b = Math.round(215 + t * (46  - 215));
+                return `rgba(${r},${g},${b},0.95)`;
               },
-              borderColor: 'rgba(255,255,255,0.7)',
+              borderColor: 'rgba(255,255,255,0.9)',
               borderWidth: 1
             }]
           },
@@ -1069,7 +1069,10 @@ async function renderCharts(tabKey, kpis) {
               tooltip: {
                 enabled: true,
                 callbacks: {
-                  title(items) { return items[0]?.label || ''; },
+                  title(items) {
+                    const raw = items[0]?.raw;
+                    return raw?.sigla || raw?.feature?.properties?.sigla || items[0]?.label || '';
+                  },
                   label(item) {
                     const v = item.raw?.value || 0;
                     return v > 0 ? `Processos: ${v}` : 'Sem processos';
@@ -1079,12 +1082,7 @@ async function renderCharts(tabKey, kpis) {
             },
             scales: {
               projection: { axis: 'x', projection: 'mercator' },
-              color: { axis: 'x', display: false, interpolate: t => {
-                const r = Math.round(255 + t * (123 - 255));
-                const g = Math.round(255 + t * (26  - 255));
-                const b = Math.round(255 + t * (46  - 255));
-                return `rgba(${r},${g},${b},0.9)`;
-              }}
+              color: { display: false }
             }
           }
         };
@@ -1169,6 +1167,16 @@ function applyFalawTheme(cfg) {
 
   // Treemap, bubble e radar têm suas próprias configurações — não sobrescrever cores
   const skipColorOverride = ['treemap', 'bubble', 'radar'].includes(cfg.type);
+
+  // Recolorir treemaps do DB antigo para azul marinho
+  if (cfg.type === 'treemap' && cfg.data.datasets) {
+    const navyPal = ['#0D2B5E','#1A4080','#0F4C8A','#0A3560','#163F6E','#1D4E8F','#0B3070','#14437A','#0E3868','#1C4D85'];
+    cfg.data.datasets.forEach(ds => {
+      ds.backgroundColor = function(ctx) {
+        return navyPal[ctx.dataIndex % navyPal.length] + 'D0';
+      };
+    });
+  }
 
   if (cfg.data.datasets && !skipColorOverride) {
     cfg.data.datasets.forEach((ds, i) => {

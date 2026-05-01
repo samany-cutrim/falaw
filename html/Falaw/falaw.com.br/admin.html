@@ -5025,8 +5025,8 @@ function _xlChartTreemap(labels, data) {
       key:'v',
       groups:['g'],
       backgroundColor(ctx) {
-        const pal = ['#7B1A2E','#0D2B5E','#0F9E76','#B7791F','#1A4080','#9B2238','#5C3D2E','#2D6A4F','#6B3A8A','#1A5C6B'];
-        return pal[ctx.dataIndex % pal.length] + 'CC';
+        const pal = ['#0D2B5E','#1A4080','#0F4C8A','#0A3560','#163F6E','#1D4E8F','#0B3070','#14437A','#0E3868','#1C4D85'];
+        return pal[ctx.dataIndex % pal.length] + 'D0';
       },
       borderColor:'#fff', borderWidth:2,
       labels:{ display:true,
@@ -5338,13 +5338,15 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     if (cls === 'F') decJFav[judge] = (decJFav[judge] || 0) + 1;
     if (cls === 'D') decJDesf[judge] = (decJDesf[judge] || 0) + 1;
   });
-  const julgTop = _xlTopKeysByTotal([decJFav, decJDesf], 15);
+  const julgTop = _xlTopKeysByTotal([decJFav, decJDesf], 10);
   if (julgTop.length) {
-    const julgJRFavDetails = Object.fromEntries(julgTop.map(j=>[
-      j, _xlTooltipLines({[j]:decJFav[j]||0},1)
-    ]));
-    push('visao-geral','chart_julgadores','Top 15 Julgadores — Favoráveis vs Desfavoráveis','','',
-      _xlChartBubble(julgTop, julgTop.map(j=>decJFav[j]||0), julgTop.map(j=>decJDesf[j]||0)), 'Top 15 Julgadores — Favoráveis × Desfavoráveis');
+    push('visao-geral','chart_julgadores','Top 10 Julgadores — Favoráveis vs Desfavoráveis','','',
+      _xlChartOutcomeByGroup(
+        julgTop,
+        julgTop.map(j=>decJFav[j]||0),
+        julgTop.map(j=>decJDesf[j]||0),
+        null, null, null
+      ), 'Top 10 Julgadores — Favoráveis × Desfavoráveis');
   }
 
   // Advogados adversários
@@ -5359,7 +5361,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   records.forEach(r=>{ _xlParseEntityList(r.co_reus).forEach(name=>{ coReusAllC[name]=(coReusAllC[name]||0)+1; }); });
   const coReusAllTop = _xlTopN(coReusAllC, 10);
   if(coReusAllTop.length) push('visao-geral','chart_coreus_geral','Top 10 Empresas Co-réus','','',
-    _xlChartBar(coReusAllTop.map(([l])=>l), coReusAllTop.map(([,v])=>v), 'Processos', '#7B1A2E', true), 'Top 10 Empresas Co-réus');
+    _xlChartBar(coReusAllTop.map(([l])=>l), coReusAllTop.map(([,v])=>v), 'Processos', '#0D2B5E', true), 'Top 10 Empresas Co-réus');
 
   // Radar de comparação entre causas-raiz
   {
@@ -5497,7 +5499,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
       });
       const coReusTop = _xlTopN(coReusC, 10);
       if (coReusTop.length) push(tabKey,'chart_coreus','Top 10 Empresas Co-réus','','',
-        _xlChartBar(coReusTop.map(([name])=>name), coReusTop.map(([,count])=>count), 'Processos', '#7B1A2E', true), `Top 10 Empresas Co-réus — ${label}`);
+        _xlChartBar(coReusTop.map(([name])=>name), coReusTop.map(([,count])=>count), 'Processos', '#0D2B5E', true), `Top 10 Empresas Co-réus — ${label}`);
     }
 
 
