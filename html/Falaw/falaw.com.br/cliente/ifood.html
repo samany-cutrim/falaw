@@ -979,11 +979,14 @@ function applyFalawTheme(cfg) {
   cfg.options = cfg.options || {};
   cfg.options.responsive = true;
   cfg.options.maintainAspectRatio = false;
+  cfg.options.events = ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'];
   cfg.options.interaction = cfg.options.interaction || { mode: 'nearest', intersect: false };
 
   cfg.options.plugins = cfg.options.plugins || {};
   cfg.options.plugins.tooltip = cfg.options.plugins.tooltip || {};
-  cfg.options.plugins.tooltip.enabled = cfg.options.plugins.tooltip.enabled !== false;
+  cfg.options.plugins.tooltip.enabled = true;
+  cfg.options.plugins.tooltip.mode = cfg.options.plugins.tooltip.mode || 'nearest';
+  cfg.options.plugins.tooltip.intersect = cfg.options.plugins.tooltip.intersect ?? false;
   if (!cfg.options.plugins.legend) {
     cfg.options.plugins.legend = {
       labels: { font: { family: 'IBM Plex Mono', size: 10 }, color: 'rgba(26,10,13,0.6)', padding: 14 }
@@ -1095,8 +1098,12 @@ async function loadAndRenderPeriod(periodId) {
 }
 
 function renderAllTabs() {
+  const activeBtn = document.querySelector('.tab-btn.active');
+  const activeTab = (activeBtn && activeBtn.dataset.tab) || 'visao-geral';
+
   TAB_KEYS.forEach(tab => {
     if (tab === 'destaques') return;
+    if (tab !== activeTab) return;
     renderKpis(tab, allKpis);
     renderCharts(tab, allKpis);
     renderContent(tab, allContent);
@@ -1119,10 +1126,18 @@ function updatePeriodLabels() {
 document.getElementById('tabBar').addEventListener('click', e => {
   const btn = e.target.closest('.tab-btn');
   if (!btn) return;
+  const tabKey = btn.dataset.tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-' + btn.dataset.tab)?.classList.add('active');
+  document.getElementById('panel-' + tabKey)?.classList.add('active');
+
+  // Render only when the panel is visible to avoid zero-size Chart.js canvases.
+  if (tabKey !== 'destaques') {
+    renderKpis(tabKey, allKpis);
+    renderCharts(tabKey, allKpis);
+    renderContent(tabKey, allContent);
+  }
 });
 
 /* ═══════════════════════════════════════════════════════════
