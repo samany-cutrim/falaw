@@ -4781,6 +4781,7 @@ function _xlParseIfood(rawRows) {
     return -1;
   };
   const idx = {
+    dataDistrib: findIdx('DATA DE DISTRIBUICAO', 'DATA DE DISTRIBUIÇÃO', 'DATA DISTRIBUICAO', 'DATA DISTRIBUIÇÃO', 'DATA DE AJUIZAMENTO', 'DATA AJUIZAMENTO'),
     causa: findIdx('CAUSA RAIZ'),
     proc: findIdx('NUMERO DO PROCESSO', 'N PROCESSO', 'Nº PROCESSO', 'PROCESSO'),
     trt: findIdx('TRT'),
@@ -4846,6 +4847,7 @@ function _xlParseIfood(rawRows) {
       juiz_sentenca: c(r, idx.juizSent, c(r, 16)),
       fase: c(r, idx.fase, c(r, 22)),
       arquivado: c(r, idx.arquivado, c(r, 35)),
+      data_distrib: idx.dataDistrib >= 0 ? c(r, idx.dataDistrib) : c(r, 0),
       autor_recurso: c(r, idx.autorRec, c(r, 43)),
       resultado_final: c(r, idx.resFinal, c(r, 51)),
       julgador: c(r, idx.julgador, c(r, 58)),
@@ -4967,6 +4969,38 @@ function _xlChartMultiBar(labels, data, datasetLabel, colorOrHorizontal, horizon
   };
 }
 
+/** Line chart — distribuições por ano */
+function _xlChartLine(labels, datasets) {
+  const pal = ['#0D2B5E','#7B1A2E','#0F9E76','#B7791F','#1A4080'];
+  return {
+    type:'line',
+    data:{ labels, datasets: datasets.map((ds,i)=>({ 
+      label: ds.label,
+      data: ds.data,
+      borderColor: pal[i%pal.length],
+      backgroundColor: pal[i%pal.length]+'22',
+      borderWidth: 2.5,
+      pointRadius: 5,
+      pointHoverRadius: 8,
+      pointBackgroundColor: pal[i%pal.length],
+      tension: 0.35,
+      fill: datasets.length===1
+    })) },
+    options:{ responsive:true, maintainAspectRatio:false,
+      animation:{ duration:900, easing:'easeOutQuart' },
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 }, padding:14 } },
+        tooltip:{ mode:'index', intersect:false }
+      },
+      scales:{
+        x:{ grid:{ color:'rgba(0,0,0,0.05)' }, ticks:{ font:{ family:'IBM Plex Mono', size:11 } } },
+        y:{ beginAtZero:true, grid:{ color:'rgba(0,0,0,0.06)' }, ticks:{ precision:0, font:{ family:'IBM Plex Mono', size:11 } } }
+      }
+    }
+  };
+}
+
 /** Polar area — ideal for state/UF distribution */
 function _xlChartPolarArea(labels, data) {
   return {
@@ -4976,6 +5010,99 @@ function _xlChartPolarArea(labels, data) {
       animation:{ duration:900, easing:'easeOutQuart' },
       plugins:{ legend:{ position:'right', labels:{ font:{ family:'IBM Plex Mono', size:10 }, padding:12 } } },
       scales:{ r:{ ticks:{ display:false, backdropColor:'transparent' }, grid:{ color:'rgba(0,0,0,0.07)' } } }
+    }
+  };
+}
+
+/** Treemap — ideal para distribuição geográfica (UF) e co-réus */
+function _xlChartTreemap(labels, data) {
+  const treeData = labels.map((g, i) => ({ g, v: data[i] }));
+  return {
+    type:'treemap',
+    data:{ datasets:[{
+      label:'Processos',
+      data: treeData,
+      key:'v',
+      groups:['g'],
+      backgroundColor(ctx) {
+        const pal = ['#7B1A2E','#0D2B5E','#0F9E76','#B7791F','#1A4080','#9B2238','#5C3D2E','#2D6A4F','#6B3A8A','#1A5C6B'];
+        return pal[ctx.dataIndex % pal.length] + 'CC';
+      },
+      borderColor:'#fff', borderWidth:2,
+      labels:{ display:true,
+        formatter(ctx) { return [ctx.raw.g, String(ctx.raw.v)]; },
+        color:'#fff',
+        font:[{ size:12, weight:'600', family:'IBM Plex Mono' },{ size:10, family:'IBM Plex Mono' }]
+      }
+    }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{
+          title(items) { return items[0]?.raw?.g || ''; },
+          label(item) { return `Processos: ${item.raw?.v ?? ''}`; }
+        }}
+      }
+    }
+  };
+}
+
+/** Bubble chart — julgadores: x=Favoráveis, y=Desfavoráveis, r=volume total */
+function _xlChartBubble(names, favArr, desfArr) {
+  const maxTotal = Math.max(...names.map((_,i)=>favArr[i]+desfArr[i]), 1);
+  return {
+    type:'bubble',
+    data:{ datasets: names.map((name,i)=>{
+      const total = favArr[i]+desfArr[i];
+      const r = Math.max(5, Math.round(14*Math.sqrt(total/maxTotal)));
+      return {
+        label: name,
+        data:[{ x:favArr[i], y:desfArr[i], r }],
+        backgroundColor: _XL_PAL[i%_XL_PAL.length]+'99',
+        borderColor: _XL_PAL[i%_XL_PAL.length],
+        borderWidth:1.5
+      };
+    })},
+    options:{ responsive:true, maintainAspectRatio:false,
+      animation:{ duration:800, easing:'easeOutQuart' },
+      plugins:{
+        legend:{ position:'right', labels:{ font:{ family:'IBM Plex Mono', size:9 }, padding:8 } },
+        tooltip:{ callbacks:{
+          label(ctx) { return [`${ctx.dataset.label}`,`Fav: ${ctx.parsed.x}  |  Desf: ${ctx.parsed.y}`]; }
+        }}
+      },
+      scales:{
+        x:{ title:{ display:true, text:'Favoráveis', font:{ family:'IBM Plex Mono', size:10 } }, beginAtZero:true, ticks:{ precision:0, font:{ family:'IBM Plex Mono', size:10 } } },
+        y:{ title:{ display:true, text:'Desfavoráveis', font:{ family:'IBM Plex Mono', size:10 } }, beginAtZero:true, ticks:{ precision:0, font:{ family:'IBM Plex Mono', size:10 } } }
+      }
+    }
+  };
+}
+
+/** Radar — decisões por tipo (TST / Acórdão / Sentença) com FAV vs DESF */
+function _xlChartRadar(labels, datasets) {
+  const colors = [['#0F9E76','#0F9E7640'],['#7B1A2E','#7B1A2E40'],['#0D2B5E','#0D2B5E40'],['#B7791F','#B7791F40']];
+  return {
+    type:'radar',
+    data:{ labels, datasets: datasets.map((ds,i)=>({
+      label: ds.label,
+      data: ds.data,
+      borderColor: colors[i%colors.length][0],
+      backgroundColor: colors[i%colors.length][1],
+      borderWidth:2,
+      pointRadius:5,
+      pointBackgroundColor: colors[i%colors.length][0],
+      pointHoverRadius:7
+    }))},
+    options:{ responsive:true, maintainAspectRatio:false,
+      animation:{ duration:900, easing:'easeOutQuart' },
+      plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 }, padding:14 } } },
+      scales:{ r:{
+        beginAtZero:true,
+        grid:{ color:'rgba(0,0,0,0.08)' },
+        ticks:{ display:false },
+        pointLabels:{ font:{ family:'IBM Plex Mono', size:11 }, color:'rgba(26,10,13,0.75)' }
+      }}
     }
   };
 }
@@ -5034,6 +5161,22 @@ function _xlTooltipLines(counter, limit) {
     .map(([label, count]) => `${label} (${count})`);
 }
 
+/** Gera linhas combinando Julgador e VT/Turma: "NOME (total) — VT1 (n), VT2 (n)" */
+function _xlTooltipJrVtLines(jrVtMap, limit) {
+  // jrVtMap = { 'NOME DO JULGADOR': { 'VT/TURMA': count, ... }, ... }
+  return Object.entries(jrVtMap || {})
+    .map(([jr, vtMap]) => {
+      const total = Object.values(vtMap).reduce((s, v) => s + v, 0);
+      return [jr, total, vtMap];
+    })
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit || 8)
+    .map(([jr, total, vtMap]) => {
+      const vtParts = Object.entries(vtMap).sort((a,b) => b[1]-a[1]).map(([vt,c]) => `${vt} (${c})`).join(', ');
+      return `${jr} (${total}) — ${vtParts}`;
+    });
+}
+
 function _xlChartOutcomeByGroup(labels, favData, desfData, detailTitle, favDetails, desfDetails) {
   return {
     type:'bar',
@@ -5078,6 +5221,34 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   const novosByCR = (novos && novos.byCR) ? novos.byCR : {};
   const _isValidJulg = j => j && !['nan','none','','0'].includes(j.toLowerCase());
   const _isValidAdv = a => a && !['nan','none','','0','n/a','na'].includes(a.toLowerCase());
+
+  // Gráfico de linha: distribuições por ano (PRIMEIRO gráfico da visão geral)
+  {
+    const _parseYear = d => { const m=String(d||'').match(/(\d{4})/); return m?m[1]:null; };
+    const _byYearAll  = {}; // todos os processos
+    const _byYearCR   = {}; // por causa raiz
+    records.forEach(r => {
+      const y = _parseYear(r.data_distrib);
+      if(!y || y<'2015' || y>'2030') return;
+      _byYearAll[y]  = (_byYearAll[y]||0) + 1;
+      _byYearCR[r.causa_raiz] = _byYearCR[r.causa_raiz] || {};
+      _byYearCR[r.causa_raiz][y] = (_byYearCR[r.causa_raiz][y]||0) + 1;
+    });
+    const _years = Object.keys(_byYearAll).sort();
+    if(_years.length >= 2) {
+      // dataset total + por CR (somente CRs com ≥2 anos de dados)
+      const _datasets = [{ label:'Total', data:_years.map(y=>_byYearAll[y]||0) }];
+      for(const { cr, label: crLabel } of _XL_CR_TABS) {
+        const yCounts = _byYearCR[cr];
+        if(!yCounts) continue;
+        const yearsWithData = Object.keys(yCounts).filter(y=>_years.includes(y));
+        if(yearsWithData.length < 2) continue;
+        _datasets.push({ label: crLabel, data:_years.map(y=>(yCounts[y]||0)) });
+      }
+      push('visao-geral','chart_dist_ano','Ações Distribuídas por Ano','','',
+        _xlChartLine(_years, _datasets), 'Ações Distribuídas por Ano');
+    }
+  }
 
   push('visao-geral','total_processos','Total de Processos',_xlFmtBr(total),'processos');
   push('visao-geral','ativos','Processos Ativos',_xlFmtBr(ativos),'ativos');
@@ -5173,7 +5344,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
       j, _xlTooltipLines({[j]:decJFav[j]||0},1)
     ]));
     push('visao-geral','chart_julgadores','Top 15 Julgadores — Favoráveis vs Desfavoráveis','','',
-      _xlChartOutcomeByGroup(julgTop, julgTop.map(j=>decJFav[j]||0), julgTop.map(j=>decJDesf[j]||0), '', null, null), 'Top 15 Julgadores — Aba Decisões');
+      _xlChartBubble(julgTop, julgTop.map(j=>decJFav[j]||0), julgTop.map(j=>decJDesf[j]||0)), 'Top 15 Julgadores — Favoráveis × Desfavoráveis');
   }
 
   // Advogados adversários
@@ -5181,14 +5352,36 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   records.forEach(r=>{ [r.adv1,r.adv2,r.adv3].forEach(a=>{ if(_isValidAdv(a)) advC[a]=(advC[a]||0)+1; }); });
   const advTop = _xlTopN(advC,10);
   push('visao-geral','chart_advogados','Top 10 Advogados Adversários','','',
-    _xlChartMultiBar(advTop.map(([l])=>l),advTop.map(([,v])=>v),'Processos'), 'Top 10 Advogados Adversários');
+    _xlChartTreemap(advTop.map(([l])=>l),advTop.map(([,v])=>v)), 'Top 10 Advogados Adversários');
 
   // Co-réus geral — top 10
   const coReusAllC = {};
   records.forEach(r=>{ _xlParseEntityList(r.co_reus).forEach(name=>{ coReusAllC[name]=(coReusAllC[name]||0)+1; }); });
   const coReusAllTop = _xlTopN(coReusAllC, 10);
   if(coReusAllTop.length) push('visao-geral','chart_coreus_geral','Top 10 Empresas Co-réus','','',
-    _xlChartMultiBar(coReusAllTop.map(([l])=>l), coReusAllTop.map(([,v])=>v), 'Processos'), 'Top 10 Empresas Co-réus');
+    _xlChartTreemap(coReusAllTop.map(([l])=>l), coReusAllTop.map(([,v])=>v)), 'Top 10 Empresas Co-réus');
+
+  // Radar de comparação entre causas-raiz
+  {
+    const _radarCRs = _XL_CR_TABS.filter(tab => {
+      const recs = records.filter(r=>_xlCanonCR(r.causa_raiz)===tab.cr);
+      return recs.length > 0;
+    });
+    if (_radarCRs.length >= 3) {
+      const _radarLabels = _radarCRs.map(t=>t.label);
+      const _pctAtivos    = _radarCRs.map(t=>{ const r=records.filter(x=>_xlCanonCR(x.causa_raiz)===t.cr); return r.length?Math.round(100*r.filter(x=>x.status==='ativo').length/r.length):0; });
+      const _pctFav       = _radarCRs.map(t=>{ const d=decisoes.filter(x=>_xlCanonCR(x.causa_raiz)===t.cr); return d.length?Math.round(100*d.filter(x=>_xlClassifyDec(x.resultado)==='F').length/d.length):0; });
+      const maxDec = Math.max(..._radarCRs.map(t=>decisoes.filter(x=>_xlCanonCR(x.causa_raiz)===t.cr).length),1);
+      const _normDec = _radarCRs.map(t=>Math.round(100*decisoes.filter(x=>_xlCanonCR(x.causa_raiz)===t.cr).length/maxDec));
+      const maxNovos = Math.max(..._radarCRs.map(t=>Number(novosByCR[t.cr]||0)),1);
+      const _normNovos = _radarCRs.map(t=>Math.round(100*Number(novosByCR[t.cr]||0)/maxNovos));
+      push('visao-geral','chart_radar_cr','Comparativo entre Causas Raiz','','',
+        _xlChartRadar(
+          ['% Processos Ativos','% Favorabilidade','Volume Decisões','Novos Casos'],
+          _radarCRs.map((t,i)=>({ label:t.label, data:[_pctAtivos[i],_pctFav[i],_normDec[i],_normNovos[i]] }))
+        ), 'Comparativo de Desempenho por Causa Raiz');
+    }
+  }
 
   // ── PER CAUSA RAIZ TABS ──────────────────────────────────────────────────────
   for (const { cr, tabKey, label } of _XL_CR_TABS) {
@@ -5225,7 +5418,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     const tUfC = _xlCounter(recs.filter(r=>r.uf&&_XL_VALID_UF.has(r.uf)).map(r=>r.uf));
     const tUfTop = _xlTopN(tUfC,10);
     if(tUfTop.length) push(tabKey,'chart_uf','Estados com mais Processos','','',
-      _xlChartPolarArea(tUfTop.map(([l])=>l),tUfTop.map(([,v])=>v)), `Top 10 Estados — ${label}`);
+      { type:'choropleth', ufValues: Object.fromEntries(tUfTop) }, `Distribuição por Estado — ${label}`);
 
     // Escritórios CNA Requerente (col 15)
     const tAdvC = {};
@@ -5247,12 +5440,12 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
       });
       const _tiposAtivos = _TIPOS.filter(t=>_tipoFav[t]+_tipoDesf[t]>0);
       if(_tiposAtivos.length) push(tabKey,'chart_decisoes','Decisões por Tipo',_xlFmtBr(decs.length),'decisões',
-        _xlChartStackedOutcome(_tiposAtivos,_tiposAtivos.map(t=>_tipoFav[t]),_tiposAtivos.map(t=>_tipoDesf[t])), `Decisões por Tipo — ${label}`);
+        _xlChartRadar(_tiposAtivos,[{label:'Favorável',data:_tiposAtivos.map(t=>_tipoFav[t])},{label:'Desfavorável',data:_tiposAtivos.map(t=>_tipoDesf[t])}]), `Decisões por Tipo — ${label}`);
     }
 
     // Decisões por TRT — unificado (VT/Turma + Julgador/Relator no tooltip)
     if (decs.length > 0) {
-      const trtFavC={}, trtDesfC={}, trtFavVT={}, trtDesfVT={}, trtFavJR={}, trtDesfJR={};
+      const trtFavC={}, trtDesfC={}, trtFavVT={}, trtDesfVT={}, trtFavJR={}, trtDesfJR={}, trtFavJRVT={}, trtDesfJRVT={};
       decs.forEach(d=>{
         const trt = d.trt || 'TRT não informado';
         const vt  = String(d.varaturma   || '').trim() || 'Não informado';
@@ -5261,12 +5454,16 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
         if(cls==='F'){
           trtFavC[trt]=(trtFavC[trt]||0)+1;
           if(!trtFavVT[trt]) trtFavVT[trt]={}; trtFavVT[trt][vt]=(trtFavVT[trt][vt]||0)+1;
-          if(jr){ if(!trtFavJR[trt]) trtFavJR[trt]={}; trtFavJR[trt][jr]=(trtFavJR[trt][jr]||0)+1; }
+          if(jr){ if(!trtFavJR[trt]) trtFavJR[trt]={}; trtFavJR[trt][jr]=(trtFavJR[trt][jr]||0)+1;
+            if(!trtFavJRVT[trt]) trtFavJRVT[trt]={}; if(!trtFavJRVT[trt][jr]) trtFavJRVT[trt][jr]={};
+            trtFavJRVT[trt][jr][vt]=(trtFavJRVT[trt][jr][vt]||0)+1; }
         }
         if(cls==='D'){
           trtDesfC[trt]=(trtDesfC[trt]||0)+1;
           if(!trtDesfVT[trt]) trtDesfVT[trt]={}; trtDesfVT[trt][vt]=(trtDesfVT[trt][vt]||0)+1;
-          if(jr){ if(!trtDesfJR[trt]) trtDesfJR[trt]={}; trtDesfJR[trt][jr]=(trtDesfJR[trt][jr]||0)+1; }
+          if(jr){ if(!trtDesfJR[trt]) trtDesfJR[trt]={}; trtDesfJR[trt][jr]=(trtDesfJR[trt][jr]||0)+1;
+            if(!trtDesfJRVT[trt]) trtDesfJRVT[trt]={}; if(!trtDesfJRVT[trt][jr]) trtDesfJRVT[trt][jr]={};
+            trtDesfJRVT[trt][jr][vt]=(trtDesfJRVT[trt][jr][vt]||0)+1; }
         }
       });
       const allTrts = _xlTopKeysByTotal([trtFavC, trtDesfC], 15);
@@ -5286,8 +5483,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
         },
         falaw_meta:{
           tooltip_mode:'trt_full',
-          vtDetails:{ Favorável: Object.fromEntries(allTrts.map(t=>[t, _xlTooltipLines(trtFavVT[t],6)])), Desfavorável: Object.fromEntries(allTrts.map(t=>[t, _xlTooltipLines(trtDesfVT[t],6)])) },
-          jrDetails:{ Favorável: Object.fromEntries(allTrts.map(t=>[t, _xlTooltipLines(trtFavJR[t],6)])), Desfavorável: Object.fromEntries(allTrts.map(t=>[t, _xlTooltipLines(trtDesfJR[t],6)])) }
+          jrVtDetails:{ Favorável: Object.fromEntries(allTrts.map(t=>[t, _xlTooltipJrVtLines(trtFavJRVT[t],8)])), Desfavorável: Object.fromEntries(allTrts.map(t=>[t, _xlTooltipJrVtLines(trtDesfJRVT[t],8)])) }
         }
       }, `Decisões por TRT — ${label}`);
     }
@@ -5301,7 +5497,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
       });
       const coReusTop = _xlTopN(coReusC, 10);
       if (coReusTop.length) push(tabKey,'chart_coreus','Top 10 Empresas Co-réus','','',
-        _xlChartMultiBar(coReusTop.map(([name])=>name), coReusTop.map(([,count])=>count), 'Processos'), `Top 10 Empresas Co-réus — ${label}`);
+        _xlChartTreemap(coReusTop.map(([name])=>name), coReusTop.map(([,count])=>count)), `Top 10 Empresas Co-réus — ${label}`);
     }
 
 

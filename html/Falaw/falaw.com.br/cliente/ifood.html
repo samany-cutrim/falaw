@@ -11,6 +11,10 @@
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3.1.0/dist/chartjs-chart-treemap.min.js"></script>
+  <!-- TopoJSON + chartjs-chart-geo (mapa do Brasil) -->
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-geo@4.3.3/dist/chartjs-chart-geo.min.js"></script>
   <!-- html2canvas + jsPDF (export) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -244,7 +248,7 @@
       border-color: rgba(123,26,46,0.28);
       box-shadow: 0 24px 48px rgba(13,43,94,0.11), 0 0 0 1px rgba(183,121,31,0.08);
     }
-    .chart-card.wide { grid-column: span 1; }
+    .chart-card.wide { grid-column: 1 / -1; }
     .chart-card.featured {
       background:
         linear-gradient(180deg, rgba(183,121,31,0.05), rgba(255,255,255,0)) padding-box,
@@ -698,6 +702,44 @@ let allHighlights = [];
 const chartInstances = {};
 
 /* ═══════════════════════════════════════════════════════════
+   BRASIL GEO — cache único, carregado sob demanda
+═══════════════════════════════════════════════════════════ */
+let _brazilGeoCache = null;
+let _brazilGeoPromise = null;
+
+// Mapa IBGE codarea → sigla UF
+const _IBGE_SIGLA = {
+  '11':'RO','12':'AC','13':'AM','14':'RR','15':'PA','16':'AP','17':'TO',
+  '21':'MA','22':'PI','23':'CE','24':'RN','25':'PB','26':'PE','27':'AL',
+  '28':'SE','29':'BA',
+  '31':'MG','32':'ES','33':'RJ','35':'SP',
+  '41':'PR','42':'SC','43':'RS',
+  '50':'MS','51':'MT','52':'GO','53':'DF'
+};
+
+async function loadBrazilGeo() {
+  if (_brazilGeoCache) return _brazilGeoCache;
+  if (_brazilGeoPromise) return _brazilGeoPromise;
+  _brazilGeoPromise = fetch('https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=application/vnd.geo%2Bjson&qualidade=minima&intrarregiao=UF')
+    .then(r => r.json())
+    .then(geo => {
+      // Garante que cada feature tem uma propriedade `sigla`
+      if (geo && geo.features) {
+        geo.features.forEach(f => {
+          if (f.properties && !f.properties.sigla) {
+            const cod = String(f.properties.codarea || '');
+            f.properties.sigla = _IBGE_SIGLA[cod] || cod;
+          }
+        });
+      }
+      _brazilGeoCache = geo;
+      return geo;
+    })
+    .catch(() => null);
+  return _brazilGeoPromise;
+}
+
+/* ═══════════════════════════════════════════════════════════
    AUTH
 ═══════════════════════════════════════════════════════════ */
 const _TIMEOUT = 30 * 60 * 1000;
@@ -875,9 +917,17 @@ function enhanceFalawChart(cfg) {
         afterLabel(context) {
           const ds  = context.dataset.label;
           const trt = context.label;
+          const out = [];
+          // New format: jrVtDetails combines julgador + VT in each line
+          const jrVtLines = ((meta.jrVtDetails || {})[ds] || {})[trt] || [];
+          if (jrVtLines.length) {
+            out.push('', 'Julgador/Relator:');
+            jrVtLines.forEach(l => out.push('  ' + l));
+            return out;
+          }
+          // Fallback for legacy DB data (separate vtDetails + jrDetails)
           const vtLines = ((meta.vtDetails || {})[ds] || {})[trt] || [];
           const jrLines = ((meta.jrDetails || {})[ds] || {})[trt] || [];
-          const out = [];
           if (vtLines.length) { out.push('', 'Turma/VT:'); vtLines.forEach(l => out.push('  ' + l)); }
           if (jrLines.length) { out.push('', 'Julgador/Relator:'); jrLines.forEach(l => out.push('  ' + l)); }
           return out;
@@ -898,7 +948,7 @@ function enhanceFalawChart(cfg) {
   }
 }
 
-function renderCharts(tabKey, kpis) {
+async function renderCharts(tabKey, kpis) {
   const el = document.getElementById('charts-' + tabKey);
   if (!el) return;
   const withCharts = kpis.filter(k => k.tab_key === tabKey && k.chart_data);
@@ -907,18 +957,31 @@ function renderCharts(tabKey, kpis) {
     return;
   }
 
-  const wideKeys    = new Set([]);
+  // Pre-fetch Brazil geo if any chart in this tab is a choropleth
+  const hasChoropleth = withCharts.some(k => {
+    try { const cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; return cfg.type === 'choropleth'; } catch(e) { return false; }
+  });
+  const brazilGeo = hasChoropleth ? await loadBrazilGeo() : null;
+
+  const wideKeys    = new Set(['chart_dist_ano']);
   const featureKeys  = new Set(['chart_cr_dist','chart_novos_cr']);
-  const tallKeys     = new Set(['chart_trt_overview','chart_julgadores','chart_dec_vt','chart_dec_julgador','chart_coreus','chart_julg_fav','chart_julg_desf']);
+  const tallKeys     = new Set(['chart_trt_overview','chart_julgadores','chart_dec_vt','chart_dec_julgador','chart_coreus','chart_julg_fav','chart_julg_desf','chart_radar_cr']);
+  const treemapKeys  = new Set(['chart_coreus_geral','chart_coreus','chart_advogados']);
+  const mapKeys      = new Set(['chart_uf']);
 
   el.innerHTML = withCharts.map((k, i) => {
     let cfg; try { cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; } catch(e) { cfg = {}; }
+    const isChoropleth = cfg.type === 'choropleth' || mapKeys.has(k.kpi_key);
+    const isTreemap = cfg.type === 'treemap' || treemapKeys.has(k.kpi_key);
+    const isBubble = cfg.type === 'bubble';
+    const isRadar  = cfg.type === 'radar';
+    const isLine   = cfg.type === 'line';
     const isPolar  = cfg.type === 'polarArea';
     const isDonut  = cfg.type === 'doughnut' || cfg.type === 'pie';
     const isHoriz  = cfg.options && cfg.options.indexAxis === 'y';
     const isWide   = wideKeys.has(k.kpi_key);
     const isTall   = tallKeys.has(k.kpi_key);
-    const h = isPolar ? '310px' : isDonut ? '290px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
+    const h = isChoropleth ? '420px' : isTreemap ? '360px' : isBubble ? '400px' : isRadar ? '340px' : isLine ? '300px' : isPolar ? '310px' : isDonut ? '290px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
     const classes = ['chart-card'];
     if (isWide) classes.push('wide');
     if (featureKeys.has(k.kpi_key)) classes.push('featured');
@@ -942,13 +1005,87 @@ function renderCharts(tabKey, kpis) {
       const ctx = document.getElementById(canvasId);
       if (!ctx) return;
 
-      if (!cfg || !cfg.type || !cfg.data) {
+      if (!cfg || !cfg.type) {
         const wrap = el.querySelectorAll('.chart-wrap')[i];
         if (wrap) wrap.innerHTML = '<div class="analysis-empty" style="padding:18px 0">Configuração de gráfico inválida</div>';
         return;
       }
 
       if (chartInstances[canvasId]) { chartInstances[canvasId].destroy(); }
+
+      // ── Mapa do Brasil (choropleth) ─────────────────────────────────────────
+      if (cfg.type === 'choropleth' || mapKeys.has(k.kpi_key)) {
+        if (!brazilGeo || !brazilGeo.features) {
+          const wrap = el.querySelectorAll('.chart-wrap')[i];
+          if (wrap) wrap.innerHTML = '<div class="analysis-empty" style="padding:18px 0">Mapa indisponível (sem conexão)</div>';
+          return;
+        }
+        const ufValues = cfg.ufValues || {};
+        const maxVal = Math.max(...Object.values(ufValues), 1);
+        const features = brazilGeo.features;
+        const mapCfg = {
+          type: 'choropleth',
+          data: {
+            labels: features.map(f => f.properties.sigla || f.properties.codarea || ''),
+            datasets: [{
+              label: 'Processos',
+              outline: brazilGeo,
+              data: features.map(f => {
+                const sigla = f.properties.sigla || _IBGE_SIGLA[String(f.properties.codarea||'')] || '';
+                return { feature: f, value: ufValues[sigla] || 0 };
+              }),
+              backgroundColor(context) {
+                if (!context.raw) return 'rgba(13,43,94,0.08)';
+                const v = context.raw.value || 0;
+                if (v === 0) return 'rgba(13,43,94,0.08)';
+                const t = v / maxVal;
+                // Gradient: light → #7B1A2E (crimson)
+                const r = Math.round(255 + t * (123 - 255));
+                const g = Math.round(255 + t * (26  - 255));
+                const b = Math.round(255 + t * (46  - 255));
+                return `rgba(${r},${g},${b},0.9)`;
+              },
+              borderColor: 'rgba(255,255,255,0.7)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            events: ['mousemove','mouseout','click','touchstart','touchmove'],
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                enabled: true,
+                callbacks: {
+                  title(items) { return items[0]?.label || ''; },
+                  label(item) {
+                    const v = item.raw?.value || 0;
+                    return v > 0 ? `Processos: ${v}` : 'Sem processos';
+                  }
+                }
+              }
+            },
+            scales: {
+              projection: { axis: 'x', projection: 'mercator' },
+              color: { axis: 'x', display: false, interpolate: t => {
+                const r = Math.round(255 + t * (123 - 255));
+                const g = Math.round(255 + t * (26  - 255));
+                const b = Math.round(255 + t * (46  - 255));
+                return `rgba(${r},${g},${b},0.9)`;
+              }}
+            }
+          }
+        };
+        chartInstances[canvasId] = new Chart(ctx, mapCfg);
+        return;
+      }
+
+      if (!cfg.data) {
+        const wrap = el.querySelectorAll('.chart-wrap')[i];
+        if (wrap) wrap.innerHTML = '<div class="analysis-empty" style="padding:18px 0">Configuração de gráfico inválida</div>';
+        return;
+      }
 
       // Enforce interactive tooltips even if legacy payload disabled them.
       cfg.options = cfg.options || {};
@@ -990,7 +1127,10 @@ function applyFalawTheme(cfg) {
   const palette = ['#7B1A2E','#0D2B5E','#0F9E76','#B7791F'];
   if (!cfg || !cfg.data) return;
 
-  if (cfg.data.datasets) {
+  // Treemap, bubble e radar têm suas próprias configurações — não sobrescrever cores
+  const skipColorOverride = ['treemap', 'bubble', 'radar'].includes(cfg.type);
+
+  if (cfg.data.datasets && !skipColorOverride) {
     cfg.data.datasets.forEach((ds, i) => {
       // Keep visual language sober: bars use one solid brand color per dataset.
       if (cfg.type === 'bar') {
@@ -1060,6 +1200,37 @@ function applyFalawTheme(cfg) {
     cfg.options.scales.r.ticks = { display: false, backdropColor: 'transparent' };
     cfg.options.scales.r.grid  = { color: 'rgba(0,0,0,0.07)' };
     cfg.options.animation = cfg.options.animation || { duration: 900, easing: 'easeOutQuart' };
+  }
+
+  // Treemap: não tem scales cartesianas — evitar injeção que quebraria o plugin
+  if (cfg.type === 'treemap') {
+    // Garante que tooltip personalizado do treemap é preservado
+    cfg.options.interaction = { mode: 'point', intersect: true };
+    return; // sair sem injetar scales
+  }
+
+  // Radar: ajustes finos no eixo r
+  if (cfg.type === 'radar') {
+    cfg.options.scales = cfg.options.scales || {};
+    cfg.options.scales.r = cfg.options.scales.r || {};
+    cfg.options.scales.r.beginAtZero = true;
+    cfg.options.scales.r.ticks = cfg.options.scales.r.ticks || { display: false };
+    cfg.options.scales.r.grid  = cfg.options.scales.r.grid  || { color: 'rgba(0,0,0,0.08)' };
+    cfg.options.scales.r.pointLabels = cfg.options.scales.r.pointLabels || { font: { family: 'IBM Plex Mono', size: 11 }, color: 'rgba(26,10,13,0.75)' };
+    return;
+  }
+
+  // Bubble: ajustar escala x/y com labels
+  if (cfg.type === 'bubble') {
+    cfg.options.scales = cfg.options.scales || {};
+    cfg.options.scales.x = cfg.options.scales.x || {};
+    cfg.options.scales.x.beginAtZero = true;
+    cfg.options.scales.x.ticks = cfg.options.scales.x.ticks || { precision: 0, font: { family: 'IBM Plex Mono', size: 10 } };
+    cfg.options.scales.y = cfg.options.scales.y || {};
+    cfg.options.scales.y.beginAtZero = true;
+    cfg.options.scales.y.ticks = cfg.options.scales.y.ticks || { precision: 0, font: { family: 'IBM Plex Mono', size: 10 } };
+    cfg.options.interaction = { mode: 'point', intersect: true };
+    return;
   }
 
   // Scales defaults only if not already set
