@@ -14,7 +14,18 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3.1.0/dist/chartjs-chart-treemap.min.js"></script>
   <!-- TopoJSON + chartjs-chart-geo (mapa do Brasil) -->
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-geo@4.3.3/dist/chartjs-chart-geo.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-geo@4.3.3/build/index.umd.min.js"></script>
+  <script>
+    // chartjs-chart-geo não se auto-registra — registrar explicitamente
+    if (typeof ChartGeo !== 'undefined' && typeof Chart !== 'undefined') {
+      Chart.register(
+        ChartGeo.ChoroplethController,
+        ChartGeo.ProjectionScale,
+        ChartGeo.ColorScale,
+        ChartGeo.GeoFeature
+      );
+    }
+  </script>
   <!-- html2canvas + jsPDF (export) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -966,7 +977,7 @@ async function renderCharts(tabKey, kpis) {
   const wideKeys    = new Set(['chart_dist_ano']);
   const featureKeys  = new Set(['chart_cr_dist','chart_novos_cr']);
   const tallKeys     = new Set(['chart_trt_overview','chart_julgadores','chart_dec_vt','chart_dec_julgador','chart_coreus','chart_julg_fav','chart_julg_desf','chart_radar_cr']);
-  const treemapKeys  = new Set(['chart_coreus_geral','chart_coreus','chart_advogados']);
+  const treemapKeys  = new Set([]);
   const mapKeys      = new Set(['chart_uf']);
 
   el.innerHTML = withCharts.map((k, i) => {
@@ -1096,7 +1107,36 @@ async function renderCharts(tabKey, kpis) {
 
       enhanceFalawChart(cfg);
       applyFalawTheme(cfg);
-      chartInstances[canvasId] = new Chart(ctx, cfg);
+
+      // Bubble chart: inline plugin to draw "F:X / D:Y" below each bubble
+      const inlinePlugins = [];
+      if (cfg.type === 'bubble') {
+        inlinePlugins.push({
+          id: 'bubbleValueLabels',
+          afterDatasetsDraw(chart) {
+            const c = chart.ctx;
+            chart.data.datasets.forEach((ds, di) => {
+              const meta = chart.getDatasetMeta(di);
+              if (meta.hidden) return;
+              meta.data.forEach((point, pi) => {
+                const d = ds.data[pi];
+                if (!d) return;
+                const r = point.options.radius || 8;
+                const label = `F:${d.x}  D:${d.y}`;
+                c.save();
+                c.font = 'bold 8.5px "IBM Plex Mono", monospace';
+                c.fillStyle = '#333';
+                c.textAlign = 'center';
+                c.textBaseline = 'top';
+                c.fillText(label, point.x, point.y + r + 3);
+                c.restore();
+              });
+            });
+          }
+        });
+      }
+
+      chartInstances[canvasId] = new Chart(ctx, { ...cfg, plugins: [...(cfg.plugins||[]), ...inlinePlugins] });
       chartInstances[canvasId].resize();
       chartInstances[canvasId].update('none');
 

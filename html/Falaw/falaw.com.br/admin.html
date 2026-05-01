@@ -5352,14 +5352,14 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   records.forEach(r=>{ [r.adv1,r.adv2,r.adv3].forEach(a=>{ if(_isValidAdv(a)) advC[a]=(advC[a]||0)+1; }); });
   const advTop = _xlTopN(advC,10);
   push('visao-geral','chart_advogados','Top 10 Advogados Adversários','','',
-    _xlChartTreemap(advTop.map(([l])=>l),advTop.map(([,v])=>v)), 'Top 10 Advogados Adversários');
+    _xlChartBar(advTop.map(([l])=>l), advTop.map(([,v])=>v), 'Processos', '#0D2B5E', true), 'Top 10 Advogados Adversários');
 
   // Co-réus geral — top 10
   const coReusAllC = {};
   records.forEach(r=>{ _xlParseEntityList(r.co_reus).forEach(name=>{ coReusAllC[name]=(coReusAllC[name]||0)+1; }); });
   const coReusAllTop = _xlTopN(coReusAllC, 10);
   if(coReusAllTop.length) push('visao-geral','chart_coreus_geral','Top 10 Empresas Co-réus','','',
-    _xlChartTreemap(coReusAllTop.map(([l])=>l), coReusAllTop.map(([,v])=>v)), 'Top 10 Empresas Co-réus');
+    _xlChartBar(coReusAllTop.map(([l])=>l), coReusAllTop.map(([,v])=>v), 'Processos', '#7B1A2E', true), 'Top 10 Empresas Co-réus');
 
   // Radar de comparação entre causas-raiz
   {
@@ -5497,7 +5497,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
       });
       const coReusTop = _xlTopN(coReusC, 10);
       if (coReusTop.length) push(tabKey,'chart_coreus','Top 10 Empresas Co-réus','','',
-        _xlChartTreemap(coReusTop.map(([name])=>name), coReusTop.map(([,count])=>count)), `Top 10 Empresas Co-réus — ${label}`);
+        _xlChartBar(coReusTop.map(([name])=>name), coReusTop.map(([,count])=>count), 'Processos', '#7B1A2E', true), `Top 10 Empresas Co-réus — ${label}`);
     }
 
 
