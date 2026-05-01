@@ -4936,7 +4936,7 @@ function _xlChartDoughnut(labels, data) {
   return {
     type:'doughnut',
     data:{ labels, datasets:[{ data, backgroundColor:_XL_PAL.slice(0,data.length), borderWidth:3, borderColor:'#fff', hoverOffset:8 }] },
-    options:{ responsive:true, cutout:'62%', animation:{ animateRotate:true, animateScale:false, duration:900 },
+    options:{ responsive:true, cutout:'62%', animation:{ duration:900, easing:'easeOutQuart' },
       plugins:{ legend:{ position:'right', labels:{ font:{ family:'IBM Plex Mono', size:10 }, color:'rgba(26,10,13,0.7)', padding:14 } } } }
   };
 }
@@ -4973,7 +4973,7 @@ function _xlChartPolarArea(labels, data) {
     type:'polarArea',
     data:{ labels, datasets:[{ data, backgroundColor:_XL_PAL.slice(0,data.length).map(c=>c+'BB'), borderColor:_XL_PAL.slice(0,data.length), borderWidth:2 }] },
     options:{ responsive:true, maintainAspectRatio:false,
-      animation:{ animateRotate:true, animateScale:true, duration:900 },
+      animation:{ duration:900, easing:'easeOutQuart' },
       plugins:{ legend:{ position:'right', labels:{ font:{ family:'IBM Plex Mono', size:10 }, padding:12 } } },
       scales:{ r:{ ticks:{ display:false, backdropColor:'transparent' }, grid:{ color:'rgba(0,0,0,0.07)' } } }
     }

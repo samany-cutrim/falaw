@@ -959,6 +959,18 @@ function renderCharts(tabKey, kpis) {
       chartInstances[canvasId] = new Chart(ctx, cfg);
       chartInstances[canvasId].resize();
       chartInstances[canvasId].update('none');
+
+      // Some browsers/layout states need a second pass after paint.
+      requestAnimationFrame(() => {
+        const ch = chartInstances[canvasId];
+        if (!ch) return;
+        const hasLabels = Array.isArray(ch.data?.labels) && ch.data.labels.length > 0;
+        const anyDrawable = (ch.getSortedVisibleDatasetMetas?.() || []).some(meta => Array.isArray(meta.data) && meta.data.length > 0);
+        if (hasLabels && !anyDrawable) {
+          ch.resize();
+          ch.update();
+        }
+      });
     } catch(e) {
       console.warn('Chart error for', tabKey, i, e);
       const wrap = el.querySelectorAll('.chart-wrap')[i];
@@ -1009,6 +1021,16 @@ function applyFalawTheme(cfg) {
   cfg.options.events = ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'];
   cfg.options.interaction = cfg.options.interaction || { mode: 'nearest', intersect: false };
 
+  // Normalize legacy Chart.js animation keys from older payloads.
+  if (cfg.options.animation && typeof cfg.options.animation === 'object') {
+    if ('animateRotate' in cfg.options.animation || 'animateScale' in cfg.options.animation) {
+      cfg.options.animation = {
+        duration: Number(cfg.options.animation.duration || 700),
+        easing: cfg.options.animation.easing || 'easeOutQuart'
+      };
+    }
+  }
+
   cfg.options.plugins = cfg.options.plugins || {};
   cfg.options.plugins.tooltip = cfg.options.plugins.tooltip || {};
   cfg.options.plugins.tooltip.enabled = true;
@@ -1030,7 +1052,7 @@ function applyFalawTheme(cfg) {
     cfg.options.scales.r = cfg.options.scales.r || {};
     cfg.options.scales.r.ticks = { display: false, backdropColor: 'transparent' };
     cfg.options.scales.r.grid  = { color: 'rgba(0,0,0,0.07)' };
-    cfg.options.animation = cfg.options.animation || { animateRotate: true, animateScale: true, duration: 900 };
+    cfg.options.animation = cfg.options.animation || { duration: 900, easing: 'easeOutQuart' };
   }
 
   // Scales defaults only if not already set
@@ -1163,8 +1185,10 @@ document.getElementById('tabBar').addEventListener('click', e => {
   if (tabKey !== 'destaques') {
     renderKpis(tabKey, allKpis);
     renderContent(tabKey, allContent);
-    // Wait one frame so layout is final before Chart.js measures canvas.
+    // Render now and retry after layout settles to avoid blank canvases.
+    renderCharts(tabKey, allKpis);
     requestAnimationFrame(() => renderCharts(tabKey, allKpis));
+    setTimeout(() => renderCharts(tabKey, allKpis), 80);
   }
 });
 
