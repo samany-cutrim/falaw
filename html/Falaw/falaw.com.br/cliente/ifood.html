@@ -1045,6 +1045,15 @@ async function renderCharts(tabKey, kpis) {
                 const sigla = f.properties.sigla || _IBGE_SIGLA[String(f.properties.codarea||'')] || '';
                 return { feature: f, value: ufValues[sigla] || 0, sigla };
               }),
+              backgroundColor(ctx) {
+                const v = ctx.raw?.value || 0;
+                if (v === 0) return 'rgba(210,218,230,0.7)';
+                const t = Math.min(v / (maxVal || 1), 1);
+                const r = Math.round(180 + t * (123 - 180));
+                const g = Math.round(195 + t * (26  - 195));
+                const b = Math.round(215 + t * (46  - 215));
+                return `rgba(${r},${g},${b},0.95)`;
+              },
               borderColor: 'rgba(255,255,255,0.9)',
               borderWidth: 1
             }]
