@@ -3935,9 +3935,7 @@ async function notifyClientByEmail(client, report) {
   const portalUrl = (location.origin + location.pathname).replace(/admin\.html$/, '') + 'cliente/index.html';
   const clientName = client.name || client.company || 'Cliente';
   const periodLabel = report.period || '';
-  const subject = periodLabel
-    ? `Relatório ${periodLabel} disponível — Ferraz Andrade Advogados`
-    : `Novo relatório disponível — Ferraz Andrade Advogados`;
+  const subject = `RELATÓRIO MENSAL - ${clientName.toUpperCase()} - ${periodLabel || 'SEM PERÍODO'}/2026`;
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
