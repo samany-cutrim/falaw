@@ -3297,7 +3297,7 @@ async function callN8N(messages, temperature, extraBody) {
     throw new Error('n8n HTTP ' + res.status + (rawText ? ': ' + rawText.slice(0, 120) : ''));
   }
   if (!rawText || !rawText.trim()) {
-    throw new Error('n8n retornou resposta vazia. Verifique o nó "Respond to Webhook" no seu workflow n8n.');
+    throw new Error('n8n retornou resposta vazia — verifique se o token GitHub está configurado no nó "Configurar Chaves" do workflow e se o workflow está ativo.');
   }
   let data;
   try { data = JSON.parse(rawText); }
