@@ -201,7 +201,7 @@
       var sbKey = localStorage.getItem('fa_supabase_key');
       if (!sbUrl || !sbKey || typeof supabase === 'undefined') return;
       var client = supabase.createClient(sbUrl, sbKey);
-      client.from('articles').select('*').eq('published', true).order('date', { ascending: false })
+      client.from('articles').select('*').eq('published', true).order('id', { ascending: false })
         .then(function(res) {
           if (res.error || !res.data || !res.data.length) return;
           ALL = res.data.map(function(a) {
@@ -299,6 +299,13 @@
         norm(a.category).indexOf(query) !== -1 ||
         norm(a.excerpt).indexOf(query) !== -1;
       return matchCat && matchQ;
+    });
+
+    // Mais recentes primeiro: ordena pelo sufixo timestamp do id (base36)
+    filtered.sort(function (a, b) {
+      var tsA = (a.id || '').split('-').pop() || '';
+      var tsB = (b.id || '').split('-').pop() || '';
+      return tsB.localeCompare(tsA);
     });
 
     if (query || category !== 'Todos') {
