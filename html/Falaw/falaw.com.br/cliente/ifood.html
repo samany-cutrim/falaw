@@ -1010,36 +1010,63 @@ async function renderCharts(tabKey, kpis) {
 
       // ── Mapa do Brasil (choropleth) ─────────────────────────────────────────
       if (cfg.type === 'choropleth' || mapKeys.has(k.kpi_key)) {
-        // Simulação de mapa: bubble chart com coordenadas geográficas aproximadas por estado
+        // Simulação de mapa: bubble chart com coordenadas geográficas por TRT
         const ufValues = cfg.ufValues || {};
-        const maxVal = Math.max(...Object.values(ufValues), 1);
 
-        // Coordenadas normalizadas (x=longitude, y=latitude) aproximadas para o Brasil
-        const UF_POS = {
-          RR:{x:28,y:92}, AP:{x:44,y:95}, AM:{x:20,y:82}, PA:{x:42,y:83}, AC:{x:12,y:72},
-          RO:{x:22,y:68}, MT:{x:32,y:58}, TO:{x:50,y:72}, MA:{x:57,y:82}, PI:{x:62,y:76},
-          CE:{x:68,y:85}, RN:{x:74,y:88}, PB:{x:73,y:83}, PE:{x:70,y:79}, AL:{x:73,y:75},
-          SE:{x:72,y:71}, BA:{x:63,y:64}, GO:{x:47,y:55}, DF:{x:50,y:55}, MG:{x:57,y:52},
-          ES:{x:65,y:52}, RJ:{x:62,y:45}, SP:{x:53,y:44}, MS:{x:40,y:44}, PR:{x:47,y:36},
-          SC:{x:49,y:28}, RS:{x:47,y:18}
-        };
+        // Cada TRT: label exibido, UFs que representa (para somar processos), coordenadas
+        const TRT_MAP = [
+          { trt:'TRT-1',  ufs:['RJ'],         x:66,y:41 },
+          { trt:'TRT-2',  ufs:['SP'],         x:55,y:38, note:'Capital/ABC' },
+          { trt:'TRT-3',  ufs:['MG'],         x:59,y:50 },
+          { trt:'TRT-4',  ufs:['RS'],         x:49,y:16 },
+          { trt:'TRT-5',  ufs:['BA'],         x:65,y:62 },
+          { trt:'TRT-6',  ufs:['PE'],         x:72,y:77 },
+          { trt:'TRT-7',  ufs:['CE'],         x:70,y:84 },
+          { trt:'TRT-8',  ufs:['PA','AP'],    x:44,y:85 },
+          { trt:'TRT-9',  ufs:['PR'],         x:50,y:33 },
+          { trt:'TRT-10', ufs:['DF','TO'],    x:52,y:62 },
+          { trt:'TRT-11', ufs:['AM','RR'],    x:22,y:88 },
+          { trt:'TRT-12', ufs:['SC'],         x:50,y:25 },
+          { trt:'TRT-13', ufs:['PB'],         x:75,y:82 },
+          { trt:'TRT-14', ufs:['RO','AC'],    x:16,y:72 },
+          { trt:'TRT-15', ufs:['SP'],         x:55,y:44, note:'Campinas/interior' },
+          { trt:'TRT-16', ufs:['MA'],         x:58,y:80 },
+          { trt:'TRT-17', ufs:['ES'],         x:67,y:50 },
+          { trt:'TRT-18', ufs:['GO'],         x:48,y:56 },
+          { trt:'TRT-19', ufs:['AL'],         x:74,y:73 },
+          { trt:'TRT-20', ufs:['SE'],         x:73,y:69 },
+          { trt:'TRT-21', ufs:['RN'],         x:76,y:87 },
+          { trt:'TRT-22', ufs:['PI'],         x:63,y:75 },
+          { trt:'TRT-23', ufs:['MT'],         x:33,y:57 },
+          { trt:'TRT-24', ufs:['MS'],         x:41,y:43 },
+        ];
 
-        const allUFs = Object.keys(UF_POS);
-        const datasets = allUFs.map(uf => {
-          const v = ufValues[uf] || 0;
-          const pos = UF_POS[uf];
-          const r = v > 0 ? Math.max(8, Math.round(28 * Math.sqrt(v / maxVal))) : 5;
+        // Para TRT-2 e TRT-15 que compartilham SP: dividir proporcionalmente (50/50)
+        const spTotal = ufValues['SP'] || 0;
+        function getTrtValue(entry) {
+          if (entry.trt === 'TRT-2' || entry.trt === 'TRT-15') return Math.round(spTotal / 2);
+          return entry.ufs.reduce((s, uf) => s + (ufValues[uf] || 0), 0);
+        }
+
+        const maxVal = Math.max(...TRT_MAP.map(e => getTrtValue(e)), 1);
+
+        const datasets = TRT_MAP.map(entry => {
+          const v = getTrtValue(entry);
+          const ufLabel = entry.ufs.length === 1 ? entry.ufs[0] : entry.ufs.join('/');
+          const label = `${entry.trt} (${ufLabel})`;
+          const r = v > 0 ? Math.max(10, Math.round(30 * Math.sqrt(v / maxVal))) : 6;
           const t = v / maxVal;
           const red   = Math.round(180 + t * (123 - 180));
           const green = Math.round(195 + t * (26  - 195));
           const blue  = Math.round(215 + t * (46  - 215));
           const color = v > 0 ? `rgba(${red},${green},${blue},0.88)` : 'rgba(200,208,220,0.45)';
           return {
-            label: uf,
-            data: [{ x: pos.x, y: pos.y, r, value: v }],
+            label,
+            data: [{ x: entry.x, y: entry.y, r, value: v }],
             backgroundColor: color,
             borderColor: v > 0 ? `rgba(${red},${green},${blue},1)` : 'rgba(180,188,200,0.5)',
-            borderWidth: v > 0 ? 1.5 : 1
+            borderWidth: v > 0 ? 1.5 : 1,
+            _trt: entry.trt
           };
         });
 
@@ -1068,7 +1095,7 @@ async function renderCharts(tabKey, kpis) {
             }
           },
           plugins: [{
-            id: 'ufLabels',
+            id: 'trtLabels',
             afterDatasetsDraw(chart) {
               const c = chart.ctx;
               chart.data.datasets.forEach((ds, di) => {
@@ -1076,12 +1103,26 @@ async function renderCharts(tabKey, kpis) {
                 if (!meta.data[0]) return;
                 const pt = meta.data[0];
                 const v = ds.data[0]?.value || 0;
+                const r = ds.data[0]?.r || 6;
+                // Only draw label if bubble is large enough
+                if (r < 9 && v === 0) return;
                 c.save();
-                c.font = `bold ${v > 0 ? 9 : 7}px "IBM Plex Mono", monospace`;
-                c.fillStyle = v > 0 ? '#fff' : 'rgba(100,110,130,0.7)';
+                // TRT number on top line, UF on bottom line
+                const trt = ds._trt || ds.label;
+                const ufPart = ds.label.replace(trt + ' ', '');
+                const fontSize = Math.max(7, Math.min(10, Math.round(r * 0.55)));
+                c.fillStyle = v > 0 ? '#fff' : 'rgba(100,110,130,0.6)';
                 c.textAlign = 'center';
                 c.textBaseline = 'middle';
-                c.fillText(ds.label, pt.x, pt.y);
+                if (r >= 14) {
+                  c.font = `bold ${fontSize}px "IBM Plex Mono", monospace`;
+                  c.fillText(trt, pt.x, pt.y - fontSize * 0.6);
+                  c.font = `${fontSize - 1}px "IBM Plex Mono", monospace`;
+                  c.fillText(ufPart, pt.x, pt.y + fontSize * 0.6);
+                } else {
+                  c.font = `bold ${fontSize}px "IBM Plex Mono", monospace`;
+                  c.fillText(trt, pt.x, pt.y);
+                }
                 c.restore();
               });
             }
