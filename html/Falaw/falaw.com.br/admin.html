@@ -3920,6 +3920,55 @@ function openReportModal(clientId) {
 
 function closeReportModal() { document.getElementById('reportModal').classList.remove('open'); }
 
+async function notifyClientByEmail(client, report) {
+  const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
+  if (!n8nBase) return;
+
+  const portalUrl = (location.origin + location.pathname).replace(/admin\.html$/, '') + 'cliente/index.html';
+  const subject = 'Novo relatório disponível — ' + report.title;
+  const clientName = client.name || client.company || 'Cliente';
+  const period = report.period ? ` referente a <strong>${escHtml(report.period)}</strong>` : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>${escHtml(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f4f2ef;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+  <tr><td style="background:#060E1A;padding:28px 40px;border-radius:4px 4px 0 0;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#4a90d9;margin:0 0 6px 0;">FERRAZ ANDRADE ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.35);margin:0;">Portal do Cliente</p>
+  </td></tr>
+  <tr><td style="background:#ffffff;padding:40px;">
+    <p style="font-family:Georgia,serif;font-size:16px;color:#060E1A;margin:0 0 16px 0;">Olá, <strong>${escHtml(clientName)}</strong>.</p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.75;color:#060E1A;margin:0 0 24px 0;">
+      Um novo relatório foi disponibilizado no seu portal${period}: <strong>${escHtml(report.title)}</strong>.
+    </p>
+    ${report.description ? `<p style="font-family:Georgia,serif;font-size:14px;line-height:1.7;color:#4a4a4a;margin:0 0 28px 0;">${escHtml(report.description)}</p>` : ''}
+    <table cellpadding="0" cellspacing="0"><tr>
+      <td style="background:#0D2B5E;border-radius:2px;">
+        <a href="${portalUrl}" style="display:inline-block;padding:14px 28px;font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#ffffff;text-decoration:none;">Acessar portal &rarr;</a>
+      </td>
+    </tr></table>
+    <p style="font-family:monospace;font-size:10px;color:#7A7672;margin:28px 0 0 0;">Seu código de acesso: <strong>${escHtml(client.code || '')}</strong></p>
+  </td></tr>
+  <tr><td style="background:#f7f5f2;padding:24px 40px;border-radius:0 0 4px 4px;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FERRAZ ANDRADE ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;color:#7A7672;margin:0;">Av. Francisco Matarazzo, 1752 &middot; Salas 414 e 415 &middot; São Paulo / SP</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+
+  await fetch(n8nBase + '/falaw-newsletter', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subject, html, subscribers: [client.email] })
+  });
+}
+
 function saveReport() {
   const clientId = document.getElementById('rep-client-id').value;
   const title    = document.getElementById('rep-title').value.trim();
@@ -3988,10 +4037,15 @@ function saveReport() {
     });
     const ok = await saveClients(clients);
 
+    // Notificação por email ao cliente
+    if (ok && clients[idx].email) {
+      notifyClientByEmail(clients[idx], report).catch(() => {});
+    }
+
     setTimeout(() => {
       closeReportModal();
       renderClients();
-      if (ok && reportMetaSaved && fileUrl) showToast('✓ Relatório salvo no Cockroach e cliente atualizado.');
+      if (ok && reportMetaSaved && fileUrl) showToast('✓ Relatório salvo e e-mail enviado ao cliente.');
       else if (ok && reportMetaSaved)       showToast('✓ Relatório salvo no Cockroach (sem arquivo na nuvem).');
       else if (ok)                          showToast('⚠️ Cliente salvo, mas falhou salvar relatório no Cockroach.');
       else                                  showToast('⚠️ Erro ao salvar cliente no Supabase.');
