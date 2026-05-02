@@ -3542,15 +3542,20 @@ async function publishPreviewArticle() {
   const ok = await pushArticlesToGitHub();
   if (ok || sbOk) {
     renderBlog();
-    if (sendNewsletter) {
-      showToast('Artigo publicado! Abrindo newsletter…');
-      setTimeout(() => openEmailModal(id), 600);
-    } else {
-      showToast('Artigo publicado com sucesso!');
+    if (!ok && sbOk) {
+      showToast('⚠ Salvo no Supabase, mas falhou no GitHub. Verifique o token do GitHub nas configurações.');
+    } else if (ok) {
+      if (sendNewsletter) {
+        showToast('✓ Artigo publicado no site! Abrindo newsletter…');
+        setTimeout(() => openEmailModal(id), 600);
+      } else {
+        showToast('✓ Artigo publicado no site!');
+      }
     }
   } else {
     ALL_ARTICLES = snapshot;
     renderBlog();
+    showToast('⚠ Falha ao publicar. Verifique o token do GitHub e a conexão.');
   }
 }
 
