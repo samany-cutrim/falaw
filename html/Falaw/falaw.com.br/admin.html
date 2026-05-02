@@ -4011,7 +4011,7 @@ async function notifyClientByEmail(client, report) {
   await fetch(n8nBase + '/falaw-newsletter', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subject, html, subscribers: [client.email] })
+    body: JSON.stringify({ subject, html, subscribers: [client.notifyAddr || client.email] })
   });
 }
 
@@ -4086,7 +4086,8 @@ function saveReport() {
     // Notificação por email ao cliente
     const notifyAddr = clients[idx].notifyEmail || clients[idx].email;
     if (ok && notifyAddr) {
-      notifyClientByEmail({ ...clients[idx], email: notifyAddr }, report).catch(() => {});
+      // Mantém o email de acesso (clients[idx].email) no template; apenas envia para notifyAddr
+      notifyClientByEmail({ ...clients[idx], notifyAddr }, report).catch(() => {});
     }
 
     setTimeout(() => {
