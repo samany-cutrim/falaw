@@ -204,6 +204,63 @@
         1560,
         440
       ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "falaw-newsletter",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "node-nl-webhook",
+      "name": "Newsletter Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $json.body.from || 'newsletter@falaw.com.br' }}",
+        "toEmail": "={{ ($json.body.subscribers || []).join(',') }}",
+        "subject": "={{ $json.body.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.body.html }}",
+        "options": {}
+      },
+      "id": "node-nl-send",
+      "name": "Enviar Newsletter",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        500,
+        700
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "CONFIGURAR",
+          "name": "Gmail SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true }",
+        "options": {}
+      },
+      "id": "node-nl-respond",
+      "name": "Responder Newsletter",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        700
+      ]
     }
   ],
   "connections": {
@@ -296,6 +353,28 @@
         [
           {
             "node": "Responder Edicao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Newsletter Webhook": {
+      "main": [
+        [
+          {
+            "node": "Enviar Newsletter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Newsletter": {
+      "main": [
+        [
+          {
+            "node": "Responder Newsletter",
             "type": "main",
             "index": 0
           }

@@ -1577,7 +1577,8 @@
       <button type="button" class="btn btn-ghost" onclick="closeEmailModal()">Fechar</button>
       <button type="button" class="btn btn-ghost" onclick="copyEmailHTML()">Copiar HTML</button>
       <span class="copy-success" id="copy-success-msg">✓ Copiado!</span>
-      <button type="button" class="btn btn-primary" onclick="sendEmailViaMailto()">Abrir no e-mail →</button>
+      <button type="button" class="btn btn-ghost" onclick="sendEmailViaMailto()">Abrir no Gmail</button>
+      <button type="button" class="btn btn-primary" id="btn-send-newsletter" onclick="sendNewsletterViaN8N()">Enviar agora →</button>
     </div>
   </div>
 </div>
@@ -3744,6 +3745,47 @@ function copyEmailHTML() {
     msg.classList.add('show');
     setTimeout(() => msg.classList.remove('show'), 2500);
   });
+}
+
+async function sendNewsletterViaN8N() {
+  const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
+  if (!n8nBase) { showToast('URL do n8n não configurada.'); return; }
+  const url = n8nBase + '/falaw-newsletter';
+
+  if (!emailArticle) return;
+  const subject = document.getElementById('email-subject').value.trim() || ('Newsletter Falaw · ' + emailArticle.title);
+  const html = generateEmailHTML(emailArticle);
+
+  let subscribers = [];
+  if (emailMode === 'newsletter') {
+    const subs = load(KEYS.newsletter) || [];
+    subscribers = subs.map(s => s.email).filter(Boolean);
+  } else {
+    const raw = document.getElementById('email-custom-to').value.trim();
+    subscribers = raw.split(/[,;\s]+/).filter(Boolean);
+  }
+
+  if (!subscribers.length) { showToast('Nenhum destinatário.'); return; }
+
+  const btn = document.getElementById('btn-send-newsletter');
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, html, subscribers })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('✓ Newsletter enviada para ' + subscribers.length + ' inscrito(s)!');
+    closeEmailModal();
+  } catch(e) {
+    showToast('Erro ao enviar: ' + e.message);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Enviar agora →';
 }
 
 function sendEmailViaMailto() {
