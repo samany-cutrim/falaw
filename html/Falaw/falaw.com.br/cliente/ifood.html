@@ -1035,15 +1035,6 @@ async function renderCharts(tabKey, kpis) {
         const maxVal = Math.max(...Object.values(ufValues), 1);
         const features = brazilGeo.features;
 
-        function _geoColor(v) {
-          if (!v || v === 0) return 'rgba(210,218,230,0.7)';
-          const t = Math.min(v / maxVal, 1);
-          const r = Math.round(180 + t * (123 - 180));
-          const g = Math.round(195 + t * (26  - 195));
-          const b = Math.round(215 + t * (46  - 215));
-          return `rgba(${r},${g},${b},0.95)`;
-        }
-
         const mapCfg = {
           type: 'choropleth',
           data: {
@@ -1081,20 +1072,22 @@ async function renderCharts(tabKey, kpis) {
             },
             scales: {
               projection: { axis: 'x', projection: 'mercator' },
-              color: { axis: 'x', display: false, interpolate: _geoColor }
+              color: {
+                axis: 'x',
+                display: false,
+                min: 0,
+                max: maxVal,
+                // interpolate receives t ∈ [0,1] (normalized from min/max)
+                interpolate(t) {
+                  if (!t || t <= 0) return 'rgba(210,218,230,0.7)';
+                  const r = Math.round(180 + t * (123 - 180));
+                  const g = Math.round(195 + t * (26  - 195));
+                  const b = Math.round(215 + t * (46  - 215));
+                  return `rgba(${r},${g},${b},0.95)`;
+                }
+              }
             }
-          },
-          plugins: [{
-            id: 'geoColorizer',
-            afterUpdate(chart) {
-              const meta = chart.getDatasetMeta(0);
-              if (!meta || !meta.data) return;
-              meta.data.forEach((el, i) => {
-                const d = chart.data.datasets[0].data[i];
-                el.options.backgroundColor = _geoColor(d?.value || 0);
-              });
-            }
-          }]
+          }
         };
         chartInstances[canvasId] = new Chart(ctx, mapCfg);
         return;
