@@ -49,6 +49,7 @@
   <link rel="icon" type="image/png" href="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
   <link rel="stylesheet" href="falaw-design.css" />
   <script src="blog/articles-data.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
   <script src="falaw-main.js" defer></script>
@@ -192,6 +193,39 @@
   var countEl     = document.getElementById('resultsCount');
 
   var ALL = ((typeof FALAW_ARTICLES !== 'undefined') ? FALAW_ARTICLES : []).filter(function (a) { return a.published; });
+
+  // Tenta buscar artigos do Supabase (mais atualizados que o arquivo estático)
+  (function loadFromSupabase() {
+    try {
+      var sbUrl = localStorage.getItem('fa_supabase_url');
+      var sbKey = localStorage.getItem('fa_supabase_key');
+      if (!sbUrl || !sbKey || typeof supabase === 'undefined') return;
+      var client = supabase.createClient(sbUrl, sbKey);
+      client.from('articles').select('*').eq('published', true).order('date', { ascending: false })
+        .then(function(res) {
+          if (res.error || !res.data || !res.data.length) return;
+          ALL = res.data.map(function(a) {
+            return {
+              id:        a.id,
+              title:     a.title     || '',
+              category:  a.category  || '',
+              excerpt:   a.excerpt   || '',
+              date:      a.date      || '',
+              readTime:  a.readtime  || a.readTime || '',
+              url:       a.url       || '',
+              published: true,
+              content:   a.content   || '',
+              photo:     a.photo     || ''
+            };
+          });
+          // Re-renderiza com dados frescos do Supabase
+          category = 'Todos';
+          query = '';
+          renderFilters();
+          render();
+        });
+    } catch(e) { /* silencioso — fallback para arquivo estático */ }
+  })();
 
   var query    = '';
   var category = 'Todos';
