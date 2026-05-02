@@ -2974,7 +2974,7 @@ function renderContato() {
       </div>
       <div class="item-card-actions">
         ${!c.read ? `<button type="button" class="btn btn-ghost btn-sm" onclick="markRead('${c.id}')">Marcar lida</button>` : ''}
-        <a href="mailto:${escHtml(c.email)}?subject=Re: Contato Ferraz Andrade" class="btn btn-ghost btn-sm">Responder</a>
+        <a href="mailto:${escHtml(c.email)}?subject=Re: Contato Falaw Advogados" class="btn btn-ghost btn-sm">Responder</a>
         <button type="button" class="btn btn-danger btn-sm" onclick="deleteContato('${c.id}')">Excluir</button>
       </div>
     </div>
@@ -3738,7 +3738,7 @@ function generateEmailHTML(a) {
 
   <!-- Footer -->
   <tr><td style="background:#f7f5f2;padding:24px 40px;border-radius:0 0 4px 4px;">
-    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FERRAZ ANDRADE ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
     <p style="font-family:monospace;font-size:9px;color:#7A7672;margin:0;">Av. Francisco Matarazzo, 1752 &middot; Salas 414 e 415 &middot; São Paulo / SP</p>
   </td></tr>
 
@@ -3937,10 +3937,10 @@ async function notifyClientByEmail(client, report) {
   const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
   if (!n8nBase) return;
 
-  const portalUrl = (location.origin + location.pathname).replace(/admin\.html$/, '') + 'cliente/index.html';
+  const portalUrl = 'https://falaw.com.br/cliente/index.html';
   const clientName = client.name || client.company || 'Cliente';
   const periodLabel = report.period || '';
-  const subject = `RELATÓRIO MENSAL - ${clientName.toUpperCase()} - ${periodLabel || 'SEM PERÍODO'}/2026`;
+  const subject = `RELATÓRIO MENSAL - ${clientName.toUpperCase()} - ${periodLabel || 'SEM PERÍODO'}`;
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -3952,7 +3952,7 @@ async function notifyClientByEmail(client, report) {
 
   <!-- Cabeçalho -->
   <tr><td style="background:#060E1A;padding:32px 40px;border-radius:4px 4px 0 0;">
-    <p style="font-family:monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#4a90d9;margin:0 0 4px 0;">FERRAZ ANDRADE ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#4a90d9;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
     <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.4);margin:0;">Portal do Cliente</p>
   </td></tr>
 
@@ -3999,7 +3999,7 @@ async function notifyClientByEmail(client, report) {
 
   <!-- Rodapé -->
   <tr><td style="background:#f7f5f2;padding:24px 40px;border-radius:0 0 4px 4px;border-top:1px solid #e8e4df;">
-    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FERRAZ ANDRADE ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
     <p style="font-family:monospace;font-size:9px;color:#b0aba5;margin:0;">Av. Francisco Matarazzo, 1752 &middot; Salas 414 e 415 &middot; São Paulo / SP</p>
   </td></tr>
 
