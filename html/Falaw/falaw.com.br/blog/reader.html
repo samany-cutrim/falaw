@@ -109,23 +109,38 @@
   var id = new URLSearchParams(window.location.search).get('id');
   if (!id) { show404(); return; }
 
+  function renderArticle(art) {
+    document.title = art.title + ' — Falaw Advogados';
+    var d = null;
+    try {
+      var parsed = JSON.parse(art.content || '');
+      if (parsed && parsed.sections) d = parsed;
+    } catch(e) {}
+    if (d) { renderStructured(art, d); } else { renderLegacy(art); }
+  }
+
   var articles = (typeof FALAW_ARTICLES !== 'undefined') ? FALAW_ARTICLES : [];
   var art = articles.find(function (a) { return a.id === id; });
-  if (!art) { show404(); return; }
 
-  document.title = art.title + ' — Falaw Advogados';
-
-  // Try structured JSON content (new format)
-  var d = null;
-  try {
-    var parsed = JSON.parse(art.content || '');
-    if (parsed && parsed.sections) d = parsed;
-  } catch(e) {}
-
-  if (d) {
-    renderStructured(art, d);
+  if (art) {
+    renderArticle(art);
   } else {
-    renderLegacy(art);
+    // Fallback: busca no Supabase
+    var sbUrl = localStorage.getItem('fa_supabase_url');
+    var sbKey = localStorage.getItem('fa_supabase_key');
+    if (sbUrl && sbKey) {
+      fetch(sbUrl + '/rest/v1/articles?id=eq.' + encodeURIComponent(id) + '&published=eq.true&limit=1', {
+        headers: { 'apikey': sbKey, 'Authorization': 'Bearer ' + sbKey }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(rows) {
+        if (rows && rows.length) { renderArticle(rows[0]); }
+        else { show404(); }
+      })
+      .catch(function() { show404(); });
+    } else {
+      show404();
+    }
   }
 
   /* ── STRUCTURED RENDERER ── */
