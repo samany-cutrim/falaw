@@ -881,6 +881,11 @@
               <input id="cli-email" type="email" placeholder="cliente@empresa.com" />
             </div>
             <div class="form-field">
+              <label>E-mail para Notificações</label>
+              <input id="cli-notify-email" type="email" placeholder="responsavel@empresa.com (pode ser diferente do acesso)" />
+              <small style="color:var(--c-muted)">Receberá aviso automático ao incluir um novo relatório. Se em branco, usa o e-mail de acesso.</small>
+            </div>
+            <div class="form-field">
               <label>Código de Acesso *</label>
               <div style="display:flex;gap:8px">
                 <input id="cli-code" type="text" placeholder="Ex: FALAW2026@ABC" style="flex:1" />
@@ -3840,15 +3845,17 @@ function openClientModal(clientId) {
     if (!c) return;
     document.getElementById('clientModalTitle').textContent = 'Editar Cliente';
     document.getElementById('cli-id').value      = c.id;
-    document.getElementById('cli-company').value = c.company || c.name || '';
-    document.getElementById('cli-email').value   = c.email;
-    document.getElementById('cli-code').value    = c.code;
+    document.getElementById('cli-company').value      = c.company || c.name || '';
+    document.getElementById('cli-email').value         = c.email;
+    document.getElementById('cli-notify-email').value  = c.notifyEmail || '';
+    document.getElementById('cli-code').value          = c.code;
   } else {
     document.getElementById('clientModalTitle').textContent = 'Novo Cliente';
-    document.getElementById('cli-id').value      = '';
-    document.getElementById('cli-company').value = '';
-    document.getElementById('cli-email').value   = '';
-    document.getElementById('cli-code').value    = '';
+    document.getElementById('cli-id').value             = '';
+    document.getElementById('cli-company').value        = '';
+    document.getElementById('cli-email').value          = '';
+    document.getElementById('cli-notify-email').value   = '';
+    document.getElementById('cli-code').value           = '';
     genCode();
   }
 }
@@ -3856,10 +3863,11 @@ function openClientModal(clientId) {
 function closeClientModal() { document.getElementById('clientModal').classList.remove('open'); }
 
 async function saveClient() {
-  const company = document.getElementById('cli-company').value.trim();
-  const email   = document.getElementById('cli-email').value.trim().toLowerCase();
-  const code    = document.getElementById('cli-code').value.trim();
-  const id      = document.getElementById('cli-id').value;
+  const company     = document.getElementById('cli-company').value.trim();
+  const email       = document.getElementById('cli-email').value.trim().toLowerCase();
+  const notifyEmail = document.getElementById('cli-notify-email').value.trim().toLowerCase();
+  const code        = document.getElementById('cli-code').value.trim();
+  const id          = document.getElementById('cli-id').value;
 
   if (!company || !email || !code) { alert('Preencha empresa, e-mail e código de acesso.'); return; }
 
@@ -3867,9 +3875,9 @@ async function saveClient() {
 
   if (id) {
     const idx = clients.findIndex(c => c.id === id);
-    if (idx >= 0) clients[idx] = { ...clients[idx], name: company, company, email, code };
+    if (idx >= 0) clients[idx] = { ...clients[idx], name: company, company, email, notifyEmail, code };
   } else {
-    clients.push({ id: cliUID(), name: company, company, email, code, createdAt: new Date().toISOString(), reports: [] });
+    clients.push({ id: cliUID(), name: company, company, email, notifyEmail, code, createdAt: new Date().toISOString(), reports: [] });
   }
 
   const ok = await saveClients(clients);
@@ -4038,8 +4046,9 @@ function saveReport() {
     const ok = await saveClients(clients);
 
     // Notificação por email ao cliente
-    if (ok && clients[idx].email) {
-      notifyClientByEmail(clients[idx], report).catch(() => {});
+    const notifyAddr = clients[idx].notifyEmail || clients[idx].email;
+    if (ok && notifyAddr) {
+      notifyClientByEmail({ ...clients[idx], email: notifyAddr }, report).catch(() => {});
     }
 
     setTimeout(() => {
