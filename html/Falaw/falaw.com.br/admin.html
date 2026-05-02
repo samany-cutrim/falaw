@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin — Falaw Advogados</title>
   <meta name="robots" content="noindex, nofollow" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https: https://api.github.com https://raw.githubusercontent.com https://*.n8n.cloud https://*.n8n.io https://*.supabase.co https://api.anthropic.com https://generativelanguage.googleapis.com; img-src 'self' data: https:; frame-ancestors 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https: https://api.github.com https://raw.githubusercontent.com https://*.n8n.cloud https://*.n8n.io https://*.supabase.co; img-src 'self' data: https:; frame-ancestors 'none';" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -788,10 +788,7 @@
         <div class="ai-panel-header">
           <span class="ai-panel-title">Assistente IA — Gerar Artigo</span>
           <div style="display:flex;align-items:center;gap:12px;">
-            <select id="ai-engine-select" style="background:rgba(247,245,242,.08);border:1px solid rgba(247,245,242,.15);color:rgba(247,245,242,.8);font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;padding:4px 8px;border-radius:3px;cursor:pointer;">
-              <option value="claude">Claude (Anthropic)</option>
-              <option value="gemini">Gemini (Google)</option>
-            </select>
+            <span style="background:rgba(247,245,242,.08);border:1px solid rgba(247,245,242,.15);color:rgba(247,245,242,.6);font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;padding:4px 8px;border-radius:3px;">GitHub Models · gpt-4o</span>
             <button type="button" class="ai-toggle-btn" onclick="toggleAiPanel()">ocultar ▲</button>
           </div>
         </div>
@@ -1403,7 +1400,17 @@
   <div class="preview-modal-bar">
     <span class="preview-modal-bar-label">Pré-visualização do artigo</span>
     <button class="btn btn-ghost btn-sm" onclick="closeArticlePreview()">Descartar</button>
+    <button class="btn btn-ghost btn-sm" onclick="openEditArticlePanel()" id="btn-edit-article">✏ Editar</button>
     <button class="btn btn-sm" onclick="publishPreviewArticle()" style="background:var(--c-accent);color:#fff;border-color:var(--c-accent);">Publicar →</button>
+  </div>
+  <div id="edit-article-panel" style="display:none;padding:16px 24px;border-bottom:1px solid rgba(247,245,242,.1);background:rgba(6,14,26,.6);gap:12px;align-items:flex-start;flex-direction:column;">
+    <label style="font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;color:rgba(247,245,242,.5);">INSTRUÇÕES DE EDIÇÃO PARA A IA</label>
+    <div style="display:flex;gap:10px;width:100%;">
+      <textarea id="edit-instructions-input" rows="2" placeholder="Ex: Adicione um parágrafo sobre LGPD, troque o tom para mais formal, corrija o título…" style="flex:1;background:rgba(247,245,242,.06);border:1px solid rgba(247,245,242,.15);color:rgba(247,245,242,.85);font-size:13px;padding:8px 12px;border-radius:4px;resize:vertical;font-family:inherit;"></textarea>
+      <button class="btn btn-sm" onclick="applyAIEdit()" id="btn-apply-edit" style="background:var(--c-accent);color:#fff;border-color:var(--c-accent);white-space:nowrap;">Aplicar IA</button>
+      <button class="btn btn-ghost btn-sm" onclick="applyManualEdit()" style="white-space:nowrap;">Salvar texto</button>
+    </div>
+    <div id="edit-panel-status" style="font-size:12px;color:rgba(247,245,242,.5);"></div>
   </div>
   <div class="preview-modal-body">
     <div class="preview-article-wrap" id="preview-article-content"></div>
@@ -3273,26 +3280,17 @@ async function callGemini(messages, temperature) {
 }
 
 async function callAI(messages, temperature) {
-  const engine = document.getElementById('ai-engine-select')?.value || 'gemini';
-  // Tenta chaves diretas primeiro; cai para n8n se não houver chave
-  if (engine === 'claude') {
-    if (localStorage.getItem('fa_claude_key')) return callClaude(messages, temperature);
-  } else {
-    if (localStorage.getItem('fa_gemini_key')) return callGemini(messages, temperature);
-  }
-  // Fallback para n8n legado
   return callN8N(messages, temperature);
 }
 
-async function callN8N(messages, temperature) {
-  const url      = localStorage.getItem('fa_n8n_url') || '';
-  const provider = document.getElementById('ai-engine-select')?.value || 'gemini';
-  const model    = provider === 'claude' ? 'claude-sonnet-4-5' : 'gemini-2.0-flash';
+async function callN8N(messages, temperature, extraBody) {
+  const url = localStorage.getItem('fa_n8n_url') || '';
   if (!url) throw new Error('n8n Webhook URL não configurada — vá em Configurações e cole a URL do webhook.');
+  const payload = Object.assign({ model: 'gpt-4o', messages, temperature: temperature || 0.7 }, extraBody || {});
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ provider, model, messages, temperature: temperature || 0.7 })
+    body: JSON.stringify(payload)
   });
   const rawText = await res.text().catch(() => '');
   if (!res.ok) {
@@ -3304,7 +3302,6 @@ async function callN8N(messages, temperature) {
   let data;
   try { data = JSON.parse(rawText); }
   catch(e) {
-    // n8n às vezes retorna texto puro — usa direto
     if (rawText.length > 10) return rawText.trim();
     throw new Error('n8n resposta inválida: ' + rawText.slice(0, 120));
   }
@@ -3439,6 +3436,78 @@ function openArticlePreview(artJSON, aiSelected, dateStr) {
 function closeArticlePreview() {
   document.getElementById('article-preview-modal').classList.remove('open');
   _previewArtData = null;
+}
+
+function openEditArticlePanel() {
+  const panel = document.getElementById('edit-article-panel');
+  const btn   = document.getElementById('btn-edit-article');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'flex';
+  btn.textContent = isOpen ? '✏ Editar' : '✕ Fechar edição';
+}
+
+async function applyAIEdit() {
+  if (!_previewArtData) return;
+  const instructions = document.getElementById('edit-instructions-input').value.trim();
+  if (!instructions) { alert('Descreva o que deseja alterar no artigo.'); return; }
+
+  const btn    = document.getElementById('btn-apply-edit');
+  const status = document.getElementById('edit-panel-status');
+  btn.disabled = true;
+  btn.textContent = 'Processando…';
+  status.textContent = 'Enviando para a IA…';
+
+  try {
+    const articleText = JSON.stringify(_previewArtData.artJSON);
+    const url = localStorage.getItem('fa_n8n_url') || '';
+    if (!url) throw new Error('n8n Webhook URL não configurada.');
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        edit_instructions: instructions,
+        article: articleText
+      })
+    });
+    const rawText = await res.text().catch(() => '');
+    if (!res.ok) throw new Error('n8n HTTP ' + res.status);
+    if (!rawText || !rawText.trim()) throw new Error('n8n retornou resposta vazia.');
+
+    let data;
+    try { data = JSON.parse(rawText); } catch(e) { data = null; }
+    const item = Array.isArray(data) ? data[0] : data;
+    const revised = item?.text || item?.json?.text || rawText.trim();
+
+    // Tenta reparsar como JSON de artigo; senão guarda como texto
+    let newArt;
+    try { newArt = parseJSON(revised); } catch(e) { newArt = Object.assign({}, _previewArtData.artJSON, { _rawEdited: revised }); }
+
+    _previewArtData.artJSON = newArt;
+    document.getElementById('preview-article-content').innerHTML = buildPreviewHTML(newArt);
+    document.getElementById('edit-instructions-input').value = '';
+    status.textContent = '✓ Artigo atualizado com sucesso.';
+    document.getElementById('edit-article-panel').style.display = 'none';
+    document.getElementById('btn-edit-article').textContent = '✏ Editar';
+  } catch(e) {
+    status.textContent = 'Erro: ' + e.message;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Aplicar IA';
+}
+
+function applyManualEdit() {
+  if (!_previewArtData) return;
+  const instructions = document.getElementById('edit-instructions-input').value.trim();
+  if (!instructions) { alert('Digite o texto ou as alterações manuais no campo acima.'); return; }
+  // Guarda como nota de edição manual no campo excerpt
+  _previewArtData.artJSON = Object.assign({}, _previewArtData.artJSON, {
+    excerpt: instructions
+  });
+  document.getElementById('edit-panel-status').textContent = '✓ Alteração salva. Será publicada junto ao artigo.';
+  document.getElementById('edit-instructions-input').value = '';
 }
 
 async function publishPreviewArticle() {

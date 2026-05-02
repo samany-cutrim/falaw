@@ -20,14 +20,8 @@
           "assignments": [
             {
               "id": "k1",
-              "name": "ANTHROPIC_KEY",
-              "value": "SUA_CHAVE_ANTHROPIC_AQUI",
-              "type": "string"
-            },
-            {
-              "id": "k2",
-              "name": "GEMINI_KEY",
-              "value": "SUA_CHAVE_GEMINI_AQUI",
+              "name": "GITHUB_TOKEN",
+              "value": "SEU_TOKEN_GITHUB_AQUI",
               "type": "string"
             }
           ]
@@ -43,135 +37,133 @@
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
+          "string": [
             {
-              "id": "cond1",
-              "leftValue": "={{ $('Webhook').item.json.body.provider }}",
-              "rightValue": "claude",
-              "operator": { "type": "string", "operation": "equals" }
+              "value1": "={{ $('Webhook').item.json.body.edit_instructions }}",
+              "operation": "isNotEmpty"
             }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+          ]
+        }
       },
-      "id": "node-if",
-      "name": "Claude ou Gemini?",
+      "id": "node-if-edit",
+      "name": "É edição?",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [640, 300]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
+        "url": "https://models.inference.ai.azure.com/chat/completions",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "x-api-key",          "value": "={{ $('Configurar Chaves').item.json.ANTHROPIC_KEY }}" },
-            { "name": "anthropic-version",   "value": "2023-06-01" }
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Configurar Chaves').item.json.GITHUB_TOKEN }}" },
+            { "name": "Content-Type",  "value": "application/json" }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: $('Webhook').item.json.body.model || 'claude-sonnet-4-5', max_tokens: 8192, temperature: $('Webhook').item.json.body.temperature || 0.7, system: ($('Webhook').item.json.body.messages.find(m => m.role === 'system') || {content: ''}).content, messages: $('Webhook').item.json.body.messages.filter(m => m.role !== 'system') }) }}"
+        "jsonBody": "={{ JSON.stringify({ model: $('Webhook').item.json.body.model || 'gpt-4o', messages: $('Webhook').item.json.body.messages, temperature: $('Webhook').item.json.body.temperature || 0.7, max_tokens: 8192 }) }}"
       },
-      "id": "node-claude",
-      "name": "Chamar Claude",
+      "id": "node-ia-direct",
+      "name": "Chamar GitHub Models",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [860, 160]
+      "position": [900, 160]
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
             {
-              "id": "c1",
+              "id": "d1",
               "name": "text",
-              "value": "={{ $json.content[0].text }}",
+              "value": "={{ $json.choices[0].message.content }}",
               "type": "string"
             }
           ]
         },
         "options": {}
       },
-      "id": "node-claude-set",
-      "name": "Extrair Claude",
+      "id": "node-extract-direct",
+      "name": "Extrair Resposta",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1080, 160]
+      "position": [1120, 160]
     },
     {
-      "parameters": {
-        "respondWith": "allIncomingItems",
-        "options": {}
-      },
-      "id": "node-resp-claude",
-      "name": "Responder Claude",
+      "parameters": { "respondWith": "allIncomingItems", "options": {} },
+      "id": "node-respond-direct",
+      "name": "Responder",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1300, 160]
+      "position": [1340, 160]
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Webhook').item.json.body;\nconst messages = body.messages || [];\nconst systemMsg = messages.find(m => m.role === 'system');\nconst turns = messages\n  .filter(m => m.role !== 'system')\n  .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));\n\nreturn [{\n  json: {\n    geminiBody: {\n      contents: turns,\n      generationConfig: { temperature: body.temperature || 0.7, maxOutputTokens: 8192 },\n      ...(systemMsg ? { systemInstruction: { parts: [{ text: systemMsg.content }] } } : {})\n    },\n    geminiModel: body.model || 'gemini-2.0-flash',\n    geminiKey: $('Configurar Chaves').item.json.GEMINI_KEY\n  }\n}];"
+        "jsCode": "const body = $('Webhook').item.json.body;\nreturn [{\n  json: {\n    messages: [\n      {\n        role: 'system',\n        content: 'Você é um editor de conteúdo jurídico especializado. Revise e melhore artigos conforme as instruções fornecidas, mantendo o estilo profissional e a precisão jurídica. Retorne APENAS o artigo revisado, sem comentários adicionais.'\n      },\n      {\n        role: 'user',\n        content: 'Instruções de edição: ' + body.edit_instructions + '\\n\\nArtigo original:\\n' + body.article\n      }\n    ],\n    model: body.model || 'gpt-4o',\n    temperature: 0.5,\n    max_tokens: 8192\n  }\n}];"
       },
-      "id": "node-gemini-prep",
-      "name": "Preparar Gemini",
+      "id": "node-prep-edit",
+      "name": "Preparar Edição",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [860, 440]
+      "position": [900, 440]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/' + $json.geminiModel + ':generateContent?key=' + $json.geminiKey }}",
+        "url": "https://models.inference.ai.azure.com/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Configurar Chaves').item.json.GITHUB_TOKEN }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.geminiBody) }}"
+        "jsonBody": "={{ JSON.stringify({ model: $json.model, messages: $json.messages, temperature: $json.temperature, max_tokens: $json.max_tokens }) }}"
       },
-      "id": "node-gemini",
-      "name": "Chamar Gemini",
+      "id": "node-ia-edit",
+      "name": "Chamar IA — Edição",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1080, 440]
+      "position": [1120, 440]
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
             {
-              "id": "g1",
+              "id": "e1",
               "name": "text",
-              "value": "={{ $json.candidates[0].content.parts[0].text }}",
+              "value": "={{ $json.choices[0].message.content }}",
               "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "edited",
+              "value": true,
+              "type": "boolean"
             }
           ]
         },
         "options": {}
       },
-      "id": "node-gemini-set",
-      "name": "Extrair Gemini",
+      "id": "node-extract-edit",
+      "name": "Extrair Edição",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1300, 440]
+      "position": [1340, 440]
     },
     {
-      "parameters": {
-        "respondWith": "allIncomingItems",
-        "options": {}
-      },
-      "id": "node-resp-gemini",
-      "name": "Responder Gemini",
+      "parameters": { "respondWith": "allIncomingItems", "options": {} },
+      "id": "node-respond-edit",
+      "name": "Responder Edição",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1520, 440]
+      "position": [1560, 440]
     }
   ],
   "connections": {
@@ -179,28 +171,415 @@
       "main": [[{ "node": "Configurar Chaves", "type": "main", "index": 0 }]]
     },
     "Configurar Chaves": {
-      "main": [[{ "node": "Claude ou Gemini?", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "É edição?", "type": "main", "index": 0 }]]
     },
-    "Claude ou Gemini?": {
+    "É edição?": {
       "main": [
-        [{ "node": "Chamar Claude",   "type": "main", "index": 0 }],
-        [{ "node": "Preparar Gemini", "type": "main", "index": 0 }]
+        [{ "node": "Preparar Edição",     "type": "main", "index": 0 }],
+        [{ "node": "Chamar GitHub Models", "type": "main", "index": 0 }]
       ]
     },
-    "Chamar Claude": {
-      "main": [[{ "node": "Extrair Claude", "type": "main", "index": 0 }]]
+    "Chamar GitHub Models": {
+      "main": [[{ "node": "Extrair Resposta", "type": "main", "index": 0 }]]
     },
-    "Extrair Claude": {
-      "main": [[{ "node": "Responder Claude", "type": "main", "index": 0 }]]
+    "Extrair Resposta": {
+      "main": [[{ "node": "Responder", "type": "main", "index": 0 }]]
     },
-    "Preparar Gemini": {
-      "main": [[{ "node": "Chamar Gemini", "type": "main", "index": 0 }]]
+    "Preparar Edição": {
+      "main": [[{ "node": "Chamar IA — Edição", "type": "main", "index": 0 }]]
     },
-    "Chamar Gemini": {
-      "main": [[{ "node": "Extrair Gemini", "type": "main", "index": 0 }]]
+    "Chamar IA — Edição": {
+      "main": [[{ "node": "Extrair Edição", "type": "main", "index": 0 }]]
     },
-    "Extrair Gemini": {
-      "main": [[{ "node": "Responder Gemini", "type": "main", "index": 0 }]]
+    "Extrair Edição": {
+      "main": [[{ "node": "Responder Edição", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": []
+}
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "falaw-ia",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "node-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "k1",
+              "name": "GITHUB_TOKEN",
+              "value": "SEU_TOKEN_GITHUB_AQUI",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-keys",
+      "name": "Configurar Chaves",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.body.action }}",
+        "rules": {
+          "rules": [
+            { "value2": "suggest_topics" },
+            { "value2": "generate_article" },
+            { "value2": "edit_article" }
+          ]
+        },
+        "fallbackOutput": 3
+      },
+      "id": "node-router",
+      "name": "Roteador",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [640, 400]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook').item.json.body;\nconst area = body.area || 'direito empresarial';\nconst quantity = body.quantity || 5;\nreturn [{\n  json: {\n    messages: [\n      {\n        role: 'system',\n        content: 'Você é um especialista em marketing jurídico. Sugira temas relevantes e atuais para artigos de blog de um escritório de advocacia.'\n      },\n      {\n        role: 'user',\n        content: `Sugira ${quantity} temas para artigos sobre ${area}. Para cada tema forneça: título sugestivo, breve descrição (2 linhas) e público-alvo. Responda em JSON com a chave \"temas\" contendo um array de objetos { titulo, descricao, publico_alvo }.`\n      }\n    ],\n    model: body.model || 'gpt-4o',\n    temperature: body.temperature || 0.8,\n    max_tokens: 2048\n  }\n}];"
+      },
+      "id": "node-prep-topics",
+      "name": "Preparar Sugestão de Temas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://models.inference.ai.azure.com/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Configurar Chaves').item.json.GITHUB_TOKEN }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $json.model, messages: $json.messages, temperature: $json.temperature, max_tokens: $json.max_tokens }) }}"
+      },
+      "id": "node-ia-topics",
+      "name": "Chamar IA — Temas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1140, 160]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "t1",
+              "name": "action",
+              "value": "suggest_topics",
+              "type": "string"
+            },
+            {
+              "id": "t2",
+              "name": "text",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-extract-topics",
+      "name": "Extrair Temas",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1380, 160]
+    },
+    {
+      "parameters": { "respondWith": "allIncomingItems", "options": {} },
+      "id": "node-respond-topics",
+      "name": "Responder Temas",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1620, 160]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook').item.json.body;\nconst topic = body.topic || '';\nconst keywords = body.keywords || [];\nconst tone = body.tone || 'profissional e acessível';\nreturn [{\n  json: {\n    messages: [\n      {\n        role: 'system',\n        content: 'Você é um redator especializado em conteúdo jurídico. Escreva artigos claros, informativos e otimizados para SEO para o escritório de advocacia Ferraz Andrade.'\n      },\n      {\n        role: 'user',\n        content: `Escreva um artigo completo sobre: \"${topic}\"\\n\\nRequisitos:\\n- Tom: ${tone}\\n- Palavras-chave: ${keywords.length ? keywords.join(', ') : 'não especificado'}\\n- Inclua: introdução, desenvolvimento com subtítulos (H2/H3) e conclusão\\n- Formato: Markdown\\n- Tamanho: 600–900 palavras`\n      }\n    ],\n    model: body.model || 'gpt-4o',\n    temperature: body.temperature || 0.7,\n    max_tokens: 4096\n  }\n}];"
+      },
+      "id": "node-prep-article",
+      "name": "Preparar Geração de Artigo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://models.inference.ai.azure.com/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Configurar Chaves').item.json.GITHUB_TOKEN }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $json.model, messages: $json.messages, temperature: $json.temperature, max_tokens: $json.max_tokens }) }}"
+      },
+      "id": "node-ia-article",
+      "name": "Chamar IA — Artigo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1140, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = $json.choices[0].message.content;\nconst articleId = 'art_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);\nreturn [{\n  json: {\n    action: 'generate_article',\n    article_id: articleId,\n    text: content,\n    editable: true,\n    created_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-extract-article",
+      "name": "Extrair Artigo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, 400]
+    },
+    {
+      "parameters": { "respondWith": "allIncomingItems", "options": {} },
+      "id": "node-respond-article",
+      "name": "Responder Artigo",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1620, 400]
+    },
+
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $('Webhook').item.json.body.edit_instructions }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "node-check-edit-mode",
+      "name": "Edição por IA ou Manual?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 640]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook').item.json.body;\nreturn [{\n  json: {\n    messages: [\n      {\n        role: 'system',\n        content: 'Você é um editor de conteúdo jurídico especializado. Revise e melhore artigos conforme as instruções fornecidas, mantendo o estilo profissional e a precisão jurídica.'\n      },\n      {\n        role: 'user',\n        content: `Revise o artigo abaixo de acordo com as instruções:\\n\\nInstruções de edição: ${body.edit_instructions}\\n\\nArtigo original:\\n${body.article}\\n\\nRetorne apenas o artigo revisado em Markdown, sem comentários adicionais.`\n      }\n    ],\n    model: body.model || 'gpt-4o',\n    temperature: body.temperature || 0.5,\n    max_tokens: 4096,\n    article_id: body.article_id || null\n  }\n}];"
+      },
+      "id": "node-prep-revision",
+      "name": "Preparar Revisão por IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 540]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://models.inference.ai.azure.com/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Configurar Chaves').item.json.GITHUB_TOKEN }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $json.model, messages: $json.messages, temperature: $json.temperature, max_tokens: $json.max_tokens }) }}"
+      },
+      "id": "node-ia-revision",
+      "name": "Chamar IA — Revisão",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1380, 540]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "rv1",
+              "name": "action",
+              "value": "edit_article",
+              "type": "string"
+            },
+            {
+              "id": "rv2",
+              "name": "edit_mode",
+              "value": "ai",
+              "type": "string"
+            },
+            {
+              "id": "rv3",
+              "name": "article_id",
+              "value": "={{ $('Webhook').item.json.body.article_id }}",
+              "type": "string"
+            },
+            {
+              "id": "rv4",
+              "name": "text",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "rv5",
+              "name": "updated_at",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-extract-revision",
+      "name": "Extrair Revisão",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1620, 540]
+    },
+    {
+      "parameters": { "respondWith": "allIncomingItems", "options": {} },
+      "id": "node-respond-revision",
+      "name": "Responder Revisão",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1860, 540]
+    },
+
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "m1",
+              "name": "action",
+              "value": "edit_article",
+              "type": "string"
+            },
+            {
+              "id": "m2",
+              "name": "edit_mode",
+              "value": "manual",
+              "type": "string"
+            },
+            {
+              "id": "m3",
+              "name": "article_id",
+              "value": "={{ $('Webhook').item.json.body.article_id }}",
+              "type": "string"
+            },
+            {
+              "id": "m4",
+              "name": "text",
+              "value": "={{ $('Webhook').item.json.body.article }}",
+              "type": "string"
+            },
+            {
+              "id": "m5",
+              "name": "saved",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "m6",
+              "name": "updated_at",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-save-manual",
+      "name": "Salvar Edição Manual",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1140, 740]
+    },
+    {
+      "parameters": { "respondWith": "allIncomingItems", "options": {} },
+      "id": "node-respond-manual",
+      "name": "Responder Edição Manual",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1380, 740]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Configurar Chaves", "type": "main", "index": 0 }]]
+    },
+    "Configurar Chaves": {
+      "main": [[{ "node": "Roteador", "type": "main", "index": 0 }]]
+    },
+    "Roteador": {
+      "main": [
+        [{ "node": "Preparar Sugestão de Temas",  "type": "main", "index": 0 }],
+        [{ "node": "Preparar Geração de Artigo",  "type": "main", "index": 0 }],
+        [{ "node": "Edição por IA ou Manual?",    "type": "main", "index": 0 }]
+      ]
+    },
+    "Preparar Sugestão de Temas": {
+      "main": [[{ "node": "Chamar IA — Temas", "type": "main", "index": 0 }]]
+    },
+    "Chamar IA — Temas": {
+      "main": [[{ "node": "Extrair Temas", "type": "main", "index": 0 }]]
+    },
+    "Extrair Temas": {
+      "main": [[{ "node": "Responder Temas", "type": "main", "index": 0 }]]
+    },
+    "Preparar Geração de Artigo": {
+      "main": [[{ "node": "Chamar IA — Artigo", "type": "main", "index": 0 }]]
+    },
+    "Chamar IA — Artigo": {
+      "main": [[{ "node": "Extrair Artigo", "type": "main", "index": 0 }]]
+    },
+    "Extrair Artigo": {
+      "main": [[{ "node": "Responder Artigo", "type": "main", "index": 0 }]]
+    },
+    "Edição por IA ou Manual?": {
+      "main": [
+        [{ "node": "Preparar Revisão por IA",  "type": "main", "index": 0 }],
+        [{ "node": "Salvar Edição Manual",      "type": "main", "index": 0 }]
+      ]
+    },
+    "Preparar Revisão por IA": {
+      "main": [[{ "node": "Chamar IA — Revisão", "type": "main", "index": 0 }]]
+    },
+    "Chamar IA — Revisão": {
+      "main": [[{ "node": "Extrair Revisão", "type": "main", "index": 0 }]]
+    },
+    "Extrair Revisão": {
+      "main": [[{ "node": "Responder Revisão", "type": "main", "index": 0 }]]
+    },
+    "Salvar Edição Manual": {
+      "main": [[{ "node": "Responder Edição Manual", "type": "main", "index": 0 }]]
     }
   },
   "pinData": {},
