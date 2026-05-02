@@ -5363,6 +5363,29 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   if(coReusAllTop.length) push('visao-geral','chart_coreus_geral','Top 10 Empresas Co-réus','','',
     _xlChartBar(coReusAllTop.map(([l])=>l), coReusAllTop.map(([,v])=>v), 'Processos', '#0D2B5E', true), 'Top 10 Empresas Co-réus');
 
+  // Tabela consolidada — comparativo entre segmentos (causa raiz)
+  {
+    const crRows = _XL_CR_TABS.map(tab => {
+      const recs = records.filter(r => _xlCanonCR(r.causa_raiz) === tab.cr);
+      const decs = decisoes.filter(d => _xlCanonCR(d.causa_raiz) === tab.cr);
+      if (!recs.length && !decs.length) return null;
+      const ativos     = recs.filter(r => r.status === 'ativo').length;
+      const encerrados = recs.filter(r => r.status === 'encerrado').length;
+      const favDec     = decs.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
+      const desfDec    = decs.filter(d => _xlClassifyDec(d.resultado) === 'D').length;
+      const totalDec   = favDec + desfDec;
+      const pctFav     = totalDec > 0 ? Math.round(100 * favDec / totalDec) : null;
+      const novos      = Number(novosByCR[tab.cr] || 0);
+      return { label: tab.label, total: recs.length, ativos, encerrados, novos, favDec, desfDec, totalDec, pctFav };
+    }).filter(Boolean);
+
+    if (crRows.length >= 2) {
+      push('visao-geral', 'table_cr_consolidado', 'Consolidado por Segmento', '', '',
+        { type: 'table_cr', rows: crRows },
+        'Visão Consolidada por Segmento (Causa Raiz)');
+    }
+  }
+
   // Radar de comparação entre causas-raiz
   {
     const _radarCRs = _XL_CR_TABS.filter(tab => {
