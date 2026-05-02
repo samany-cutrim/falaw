@@ -12,20 +12,6 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3.1.0/dist/chartjs-chart-treemap.min.js"></script>
-  <!-- TopoJSON + chartjs-chart-geo (mapa do Brasil) -->
-  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-geo@4.3.3/build/index.umd.min.js"></script>
-  <script>
-    // chartjs-chart-geo não se auto-registra — registrar explicitamente
-    if (typeof ChartGeo !== 'undefined' && typeof Chart !== 'undefined') {
-      Chart.register(
-        ChartGeo.ChoroplethController,
-        ChartGeo.ProjectionScale,
-        ChartGeo.ColorScale,
-        ChartGeo.GeoFeature
-      );
-    }
-  </script>
   <!-- html2canvas + jsPDF (export) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -969,10 +955,8 @@ async function renderCharts(tabKey, kpis) {
   }
 
   // Pre-fetch Brazil geo if any chart in this tab is a choropleth
-  const hasChoropleth = withCharts.some(k => {
-    try { const cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; return cfg.type === 'choropleth'; } catch(e) { return false; }
-  });
-  const brazilGeo = hasChoropleth ? await loadBrazilGeo() : null;
+  const hasChoropleth = false; // geo simulation — no external fetch needed
+  const brazilGeo = null;
 
   const wideKeys    = new Set(['chart_dist_ano']);
   const featureKeys  = new Set(['chart_cr_dist','chart_novos_cr']);
@@ -1026,43 +1010,51 @@ async function renderCharts(tabKey, kpis) {
 
       // ── Mapa do Brasil (choropleth) ─────────────────────────────────────────
       if (cfg.type === 'choropleth' || mapKeys.has(k.kpi_key)) {
-        if (!brazilGeo || !brazilGeo.features) {
-          const wrap = el.querySelectorAll('.chart-wrap')[i];
-          if (wrap) wrap.innerHTML = '<div class="analysis-empty" style="padding:18px 0">Mapa indisponível (sem conexão)</div>';
-          return;
-        }
+        // Simulação de mapa: bubble chart com coordenadas geográficas aproximadas por estado
         const ufValues = cfg.ufValues || {};
         const maxVal = Math.max(...Object.values(ufValues), 1);
-        const features = brazilGeo.features;
 
-        const mapCfg = {
-          type: 'choropleth',
-          data: {
-            labels: features.map(f => f.properties.sigla || f.properties.codarea || ''),
-            datasets: [{
-              label: 'Processos',
-              outline: brazilGeo,
-              data: features.map(f => {
-                const sigla = f.properties.sigla || _IBGE_SIGLA[String(f.properties.codarea||'')] || '';
-                return { feature: f, value: ufValues[sigla] || 0, sigla };
-              }),
-              borderColor: 'rgba(255,255,255,0.9)',
-              borderWidth: 1
-            }]
-          },
+        // Coordenadas normalizadas (x=longitude, y=latitude) aproximadas para o Brasil
+        const UF_POS = {
+          RR:{x:28,y:92}, AP:{x:44,y:95}, AM:{x:20,y:82}, PA:{x:42,y:83}, AC:{x:12,y:72},
+          RO:{x:22,y:68}, MT:{x:32,y:58}, TO:{x:50,y:72}, MA:{x:57,y:82}, PI:{x:62,y:76},
+          CE:{x:68,y:85}, RN:{x:74,y:88}, PB:{x:73,y:83}, PE:{x:70,y:79}, AL:{x:73,y:75},
+          SE:{x:72,y:71}, BA:{x:63,y:64}, GO:{x:47,y:55}, DF:{x:50,y:55}, MG:{x:57,y:52},
+          ES:{x:65,y:52}, RJ:{x:62,y:45}, SP:{x:53,y:44}, MS:{x:40,y:44}, PR:{x:47,y:36},
+          SC:{x:49,y:28}, RS:{x:47,y:18}
+        };
+
+        const allUFs = Object.keys(UF_POS);
+        const datasets = allUFs.map(uf => {
+          const v = ufValues[uf] || 0;
+          const pos = UF_POS[uf];
+          const r = v > 0 ? Math.max(8, Math.round(28 * Math.sqrt(v / maxVal))) : 5;
+          const t = v / maxVal;
+          const red   = Math.round(180 + t * (123 - 180));
+          const green = Math.round(195 + t * (26  - 195));
+          const blue  = Math.round(215 + t * (46  - 215));
+          const color = v > 0 ? `rgba(${red},${green},${blue},0.88)` : 'rgba(200,208,220,0.45)';
+          return {
+            label: uf,
+            data: [{ x: pos.x, y: pos.y, r, value: v }],
+            backgroundColor: color,
+            borderColor: v > 0 ? `rgba(${red},${green},${blue},1)` : 'rgba(180,188,200,0.5)',
+            borderWidth: v > 0 ? 1.5 : 1
+          };
+        });
+
+        const simCfg = {
+          type: 'bubble',
+          data: { datasets },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            events: ['mousemove','mouseout','click','touchstart','touchmove'],
+            animation: { duration: 600 },
             plugins: {
               legend: { display: false },
               tooltip: {
-                enabled: true,
                 callbacks: {
-                  title(items) {
-                    const raw = items[0]?.raw;
-                    return raw?.sigla || raw?.feature?.properties?.sigla || items[0]?.label || '';
-                  },
+                  title(items) { return items[0]?.dataset?.label || ''; },
                   label(item) {
                     const v = item.raw?.value || 0;
                     return v > 0 ? `Processos: ${v}` : 'Sem processos';
@@ -1071,25 +1063,31 @@ async function renderCharts(tabKey, kpis) {
               }
             },
             scales: {
-              projection: { axis: 'x', projection: 'mercator' },
-              color: {
-                axis: 'x',
-                display: false,
-                min: 0,
-                max: maxVal,
-                // interpolate receives t ∈ [0,1] (normalized from min/max)
-                interpolate(t) {
-                  if (!t || t <= 0) return 'rgba(210,218,230,0.7)';
-                  const r = Math.round(180 + t * (123 - 180));
-                  const g = Math.round(195 + t * (26  - 195));
-                  const b = Math.round(215 + t * (46  - 215));
-                  return `rgba(${r},${g},${b},0.95)`;
-                }
-              }
+              x: { display: false, min: 0, max: 100 },
+              y: { display: false, min: 0, max: 100 }
             }
-          }
+          },
+          plugins: [{
+            id: 'ufLabels',
+            afterDatasetsDraw(chart) {
+              const c = chart.ctx;
+              chart.data.datasets.forEach((ds, di) => {
+                const meta = chart.getDatasetMeta(di);
+                if (!meta.data[0]) return;
+                const pt = meta.data[0];
+                const v = ds.data[0]?.value || 0;
+                c.save();
+                c.font = `bold ${v > 0 ? 9 : 7}px "IBM Plex Mono", monospace`;
+                c.fillStyle = v > 0 ? '#fff' : 'rgba(100,110,130,0.7)';
+                c.textAlign = 'center';
+                c.textBaseline = 'middle';
+                c.fillText(ds.label, pt.x, pt.y);
+                c.restore();
+              });
+            }
+          }]
         };
-        chartInstances[canvasId] = new Chart(ctx, mapCfg);
+        chartInstances[canvasId] = new Chart(ctx, simCfg);
         return;
       }
 
