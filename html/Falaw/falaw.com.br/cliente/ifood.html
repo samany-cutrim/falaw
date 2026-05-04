@@ -1545,6 +1545,23 @@ async function capturarPainel(tabKey, scale) {
 /* ═══════════════════════════════════════════════════════════
    EXPORT — PDF (todas as abas)
 ═══════════════════════════════════════════════════════════ */
+/* Carrega o logo Falaw como data URL (base64) */
+async function loadLogoBase64(dark) {
+  try {
+    const url = dark
+      ? 'https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-branco.png'
+      : 'https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png';
+    const resp = await fetch(url);
+    const blob = await resp.blob();
+    return await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = rej;
+      r.readAsDataURL(blob);
+    });
+  } catch(e) { return null; }
+}
+
 async function exportarPDF() {
   showExportOverlay('Gerando PDF… (1/' + TAB_KEYS.length + ')');
   try {
@@ -1553,6 +1570,10 @@ async function exportarPDF() {
     // Usa dimensões do primeiro canvas para definir o formato da página
     const firstCanvas = await capturarPainel(TAB_KEYS[0], 2);
     if (!firstCanvas) { showToast('Erro ao capturar conteúdo.'); hideExportOverlay(); return; }
+
+    // Carrega logos
+    const logoB64White = await loadLogoBase64(true);  // branco — para fundo escuro
+    const logoB64Dark  = await loadLogoBase64(false); // colorido — para fundo claro
 
     const pgRatio = firstCanvas.width / firstCanvas.height;
     const pgW = 297; // mm
@@ -1575,29 +1596,34 @@ async function exportarPDF() {
     pdf.setFillColor(85, 0, 0);             // #550000
     pdf.rect(0, 0, 4, pgH, 'F');
 
-    // Subtítulo superior (acima do nome)
+    // Logo — capa (fundo escuro → logo branco)
+    if (logoB64White) {
+      const logoW = 60, logoH = 22;
+      pdf.addImage(logoB64White, 'PNG', pgW / 2 - logoW / 2, pgH * 0.18, logoW, logoH);
+    } else {
+      // Fallback texto
+      pdf.setFontSize(38); pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('FALAW', pgW / 2, pgH * 0.28, { align: 'center' });
+      pdf.setFontSize(11); pdf.setTextColor(165, 144, 101);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('a d v o g a d o s', pgW / 2, pgH * 0.35, { align: 'center' });
+    }
+
+    // Subtítulo superior (acima do logo)
     pdf.setFontSize(8); pdf.setTextColor(165, 144, 101); // gold
-    pdf.text('RELATÓRIO JURÍDICO  ·  GESTÃO TRABALHISTA', pgW / 2, pgH * 0.14, { align: 'center' });
-
-    // Nome principal — FALAW
-    pdf.setFontSize(38); pdf.setTextColor(255, 255, 255);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('FALAW', pgW / 2, pgH * 0.28, { align: 'center' });
-
-    // Subtítulo logo
-    pdf.setFontSize(11); pdf.setTextColor(165, 144, 101); // gold
     pdf.setFont('helvetica', 'normal');
-    pdf.text('a d v o g a d o s', pgW / 2, pgH * 0.35, { align: 'center' });
+    pdf.text('RELATÓRIO JURÍDICO  ·  GESTÃO TRABALHISTA', pgW / 2, pgH * 0.13, { align: 'center' });
 
     // Linha separadora dourada estreita
     pdf.setDrawColor(165, 144, 101);
     pdf.setLineWidth(0.4);
     const lx1 = pgW / 2 - 20, lx2 = pgW / 2 + 20;
-    pdf.line(lx1, pgH * 0.41, lx2, pgH * 0.41);
+    pdf.line(lx1, pgH * 0.43, lx2, pgH * 0.43);
 
     // Cliente / dashboard
     pdf.setFontSize(13); pdf.setTextColor(200, 200, 220);
-    pdf.text('× iFood', pgW / 2, pgH * 0.47, { align: 'center' });
+    pdf.text('× iFood', pgW / 2, pgH * 0.49, { align: 'center' });
 
     // Período — na parte clara
     pdf.setFontSize(15); pdf.setTextColor(36, 36, 72); // #242448
@@ -1614,7 +1640,7 @@ async function exportarPDF() {
     pdf.text('DOCUMENTO CONFIDENCIAL  ·  USO RESTRITO', pgW / 2, pgH * 0.88, { align: 'center' });
 
     const tabLabels = { 'visao-geral':'Visão Geral','nuvem':'Nuvem','op-logistico':'Op. Logístico','ex-foodlover':'Ex-Foodlover','terceirizacao':'Terceirização','marketplace':'Marketplace','destaques':'Destaques do Mês','metas':'Metas' };
-    const hH = 8; // mm header
+    const hH = 10; // mm header
 
     for (let i = 0; i < TAB_KEYS.length; i++) {
       const tabKey = TAB_KEYS[i];
@@ -1631,14 +1657,24 @@ async function exportarPDF() {
       pdf.rect(0, hH - 0.7, pgW, 0.7, 'F');
       pdf.setFillColor(85, 0, 0);            // #550000 — faixa lateral
       pdf.rect(0, 0, 2.5, hH, 'F');
-      pdf.setFontSize(6); pdf.setTextColor(165, 144, 101); // gold
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('FALAW', 5, 5.2);
-      pdf.setFont('helvetica', 'normal');
+
+      // Logo no header (branco, altura = hH menos margens)
+      if (logoB64White) {
+        const lH = hH - 2, lW = lH * 3.5; // aspect ratio ~3.5:1
+        pdf.addImage(logoB64White, 'PNG', 5, 1, lW, lH);
+      } else {
+        pdf.setFontSize(6); pdf.setTextColor(165, 144, 101);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('FALAW', 5, 5.2);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(6); pdf.setTextColor(200, 200, 220);
+        pdf.text('advogados', 17, 5.2);
+      }
       pdf.setFontSize(6); pdf.setTextColor(200, 200, 220);
-      pdf.text('advogados  ·  iFood  ·  ' + (currentPeriod ? currentPeriod.label : ''), 17, 5.2);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('iFood  ·  ' + (currentPeriod ? currentPeriod.label : ''), 5, hH - 2.5);
       pdf.setFontSize(6); pdf.setTextColor(165, 144, 101);
-      pdf.text((tabLabels[tabKey] || tabKey).toUpperCase(), pgW - 5, 5.2, { align: 'right' });
+      pdf.text((tabLabels[tabKey] || tabKey).toUpperCase(), pgW - 5, hH / 2 + 1, { align: 'right' });
 
       // Imagem proporcional
       const r = c.width / c.height;
@@ -1673,6 +1709,10 @@ async function exportarPPT() {
     pptx.title = 'Falaw Advogados × iFood — ' + (currentPeriod ? currentPeriod.label : '');
     pptx.author = 'Falaw Advogados';
 
+    // Carrega logos
+    const logoB64White = await loadLogoBase64(true);  // branco — fundo escuro
+    const logoB64Dark  = await loadLogoBase64(false); // colorido — fundo claro
+
     const sW = 13.33, sH = 7.5;
 
     // Slide de capa — identidade visual Falaw
@@ -1685,13 +1725,19 @@ async function exportarPPT() {
     // Faixa lateral esquerda crimson
     capa.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 0.15, h: sH, fill: { color: '550000' }, line: { color: '550000', pt: 0 } });
     // Rótulo superior
-    capa.addText('RELATÓRIO JURÍDICO  ·  GESTÃO TRABALHISTA', { x: 0.5, y: 0.5, w: sW - 1, h: 0.3, fontSize: 9, color: 'A59065', fontFace: 'Arial', align: 'center', bold: false });
-    // Nome FALAW
-    capa.addText('FALAW', { x: 0.5, y: 1.1, w: sW - 1, h: 1.0, fontSize: 54, bold: true, color: 'FFFFFF', fontFace: 'Arial', align: 'center' });
-    // Subtítulo logo
-    capa.addText('a d v o g a d o s', { x: 0.5, y: 2.15, w: sW - 1, h: 0.4, fontSize: 13, color: 'A59065', fontFace: 'Arial', align: 'center' });
+    capa.addText('RELATÓRIO JURÍDICO  ·  GESTÃO TRABALHISTA', { x: 0.5, y: 0.4, w: sW - 1, h: 0.3, fontSize: 9, color: 'A59065', fontFace: 'Arial', align: 'center' });
+
+    // Logo na capa (branco, fundo escuro)
+    if (logoB64White) {
+      const lW = 3.5, lH = 1.0;
+      capa.addImage({ data: logoB64White, x: (sW - lW) / 2, y: 1.0, w: lW, h: lH });
+    } else {
+      capa.addText('FALAW', { x: 0.5, y: 1.0, w: sW - 1, h: 1.0, fontSize: 54, bold: true, color: 'FFFFFF', fontFace: 'Arial', align: 'center' });
+      capa.addText('a d v o g a d o s', { x: 0.5, y: 2.1, w: sW - 1, h: 0.4, fontSize: 13, color: 'A59065', fontFace: 'Arial', align: 'center' });
+    }
+
     // Cliente
-    capa.addText('× iFood', { x: 0.5, y: 2.8, w: sW - 1, h: 0.5, fontSize: 18, color: 'C8C8DC', fontFace: 'Arial', align: 'center' });
+    capa.addText('× iFood', { x: 0.5, y: 2.5, w: sW - 1, h: 0.5, fontSize: 18, color: 'C8C8DC', fontFace: 'Arial', align: 'center' });
     // Período (parte clara)
     capa.addText('Dashboard — ' + (currentPeriod ? currentPeriod.label : ''), { x: 0.5, y: sH * 0.62, w: sW - 1, h: 0.5, fontSize: 20, bold: true, color: '242448', fontFace: 'Arial', align: 'center' });
     // Data
@@ -1700,7 +1746,7 @@ async function exportarPPT() {
     capa.addText('DOCUMENTO CONFIDENCIAL  ·  USO RESTRITO', { x: 0.5, y: sH - 0.4, w: sW - 1, h: 0.25, fontSize: 8, color: 'A59065', fontFace: 'Arial', align: 'center' });
 
     const tabLabels = { 'visao-geral':'Visão Geral','nuvem':'Nuvem','op-logistico':'Op. Logístico','ex-foodlover':'Ex-Foodlover','terceirizacao':'Terceirização','marketplace':'Marketplace','destaques':'Destaques do Mês','metas':'Metas' };
-    const hH = 0.55; // header height inches
+    const hH = 0.65; // header height inches
 
     for (let i = 0; i < TAB_KEYS.length; i++) {
       const tabKey = TAB_KEYS[i];
@@ -1715,11 +1761,19 @@ async function exportarPPT() {
       // Cabeçalho — identidade Falaw
       slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: sW, h: hH, fill: { color: '242448' }, line: { color: '242448', pt: 0 } });
       // Faixa dourada inferior do header
-      slide.addShape(pptx.ShapeType.rect, { x: 0, y: hH - 0.03, w: sW, h: 0.03, fill: { color: 'A59065' }, line: { color: 'A59065', pt: 0 } });
+      slide.addShape(pptx.ShapeType.rect, { x: 0, y: hH - 0.04, w: sW, h: 0.04, fill: { color: 'A59065' }, line: { color: 'A59065', pt: 0 } });
       // Faixa crimson lateral
       slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 0.1, h: hH, fill: { color: '550000' }, line: { color: '550000', pt: 0 } });
-      slide.addText('FALAW', { x: 0.18, y: 0, w: 0.7, h: hH, fontSize: 9, bold: true, color: 'A59065', fontFace: 'Arial', valign: 'middle' });
-      slide.addText('advogados  ·  iFood  ·  ' + (currentPeriod ? currentPeriod.label : ''), { x: 0.9, y: 0, w: sW * 0.55, h: hH, fontSize: 8, color: 'C8C8DC', fontFace: 'Arial', valign: 'middle' });
+
+      // Logo no header (branco)
+      if (logoB64White) {
+        const lH = hH - 0.12, lW = lH * 3.5;
+        slide.addImage({ data: logoB64White, x: 0.18, y: 0.06, w: lW, h: lH });
+      } else {
+        slide.addText('FALAW', { x: 0.18, y: 0, w: 0.7, h: hH, fontSize: 9, bold: true, color: 'A59065', fontFace: 'Arial', valign: 'middle' });
+        slide.addText('advogados', { x: 0.9, y: 0, w: 0.9, h: hH, fontSize: 8, color: 'C8C8DC', fontFace: 'Arial', valign: 'middle' });
+      }
+      slide.addText('iFood  ·  ' + (currentPeriod ? currentPeriod.label : ''), { x: logoB64White ? 2.1 : 1.85, y: 0, w: sW * 0.45, h: hH, fontSize: 8, color: 'C8C8DC', fontFace: 'Arial', valign: 'middle' });
       slide.addText((tabLabels[tabKey] || tabKey).toUpperCase(), { x: sW * 0.65, y: 0, w: sW * 0.33, h: hH, fontSize: 9, bold: true, color: 'A59065', fontFace: 'Arial', align: 'right', valign: 'middle' });
 
       // Imagem — escala direta pelo tamanho do canvas vs slide disponível
