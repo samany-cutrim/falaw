@@ -422,6 +422,15 @@ app.post('/api/ifood/content', async (req, res) => {
   }
 });
 
+app.delete('/api/ifood/content/:id', async (req, res) => {
+  try {
+    await prisma.ifoodContent.delete({ where: { id: req.params.id } });
+    return res.json({ deleted: 1 });
+  } catch (e) {
+    return res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
 app.delete('/api/ifood/content/by-period/:periodId', async (req, res) => {
   try {
     const out = await prisma.ifoodContent.deleteMany({ where: { periodId: req.params.periodId } });

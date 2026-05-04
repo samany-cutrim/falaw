@@ -995,6 +995,7 @@
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('content')">✍️ Textos das Abas</div>
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('highlights')">⭐ Destaques do Mês</div>
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('excel')">📁 Upload Excel</div>
+        <div class="ifood-sub-tab"        onclick="ifoodSubTab('comparativo')">📊 Comparativo</div>
       </div>
 
       <!-- SUB: PERÍODOS -->
@@ -1135,6 +1136,33 @@
         </div>
         <div id="ifood-xl-status" style="display:none;font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-bottom:12px;"></div>
         <button type="button" class="btn btn-primary" onclick="ifoodSaveExcel()">Salvar dados no Cockroach</button>
+      </div>
+
+      <div id="ifood-sub-comparativo" style="display:none">
+        <p style="font-size:13px;color:var(--c-muted);margin-bottom:20px;">Configure a comparação de dois períodos. Ao salvar, uma aba <strong>Comparativo</strong> aparecerá automaticamente no dashboard do cliente quando o período B estiver selecionado.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+          <div class="form-field" style="margin:0">
+            <label>Período A (base / mais antigo) *</label>
+            <select id="ifood-comp-a" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;">
+              <option value="">— Selecione —</option>
+            </select>
+          </div>
+          <div class="form-field" style="margin:0">
+            <label>Período B (atual / mais recente) *</label>
+            <select id="ifood-comp-b" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;">
+              <option value="">— Selecione —</option>
+            </select>
+          </div>
+        </div>
+        <div id="ifood-comp-preview" style="display:none;margin-bottom:16px;padding:14px 18px;background:#f3faf6;border:1px solid #b7e0cb;border-radius:6px;font-size:13px;color:#1B7A4E"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button type="button" class="btn btn-primary" onclick="ifoodSaveComparativo()">Salvar Comparativo</button>
+          <button type="button" class="btn btn-ghost" onclick="ifoodRemoveComparativo()">Remover Comparativo</button>
+        </div>
+        <div style="margin-top:28px">
+          <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:12px">Comparativos Configurados</div>
+          <div id="ifood-comp-list"><div style="color:var(--c-muted);font-size:13px">Nenhum configurado.</div></div>
+        </div>
       </div>
 
       <!-- MODAL: Período -->
@@ -4506,10 +4534,65 @@ function ifoodSubTab(name) {
 // ── populate selects ──────────────────
 function populateIfoodPeriodSelects() {
   const opts = _ifoodPeriods.map(p => `<option value="${escHtml(p.id)}">${escHtml(p.label)}</option>`).join('');
-  ['ifood-kpi-period','ifood-cnt-period','ifood-hl-period','ifood-xl-period','ifk-period'].forEach(id => {
+  ['ifood-kpi-period','ifood-cnt-period','ifood-hl-period','ifood-xl-period','ifk-period','ifood-comp-a','ifood-comp-b'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '<option value="">— Selecione —</option>' + opts;
   });
+  ifoodLoadComparativoList();
+}
+
+// ── COMPARATIVO ──────────────────────
+async function ifoodLoadComparativoList() {
+  const listEl = document.getElementById('ifood-comp-list');
+  if (!listEl) return;
+  const { data, error } = await ifoodApi('/api/ifood/content?tab_key=comparativo');
+  if (error || !data || !data.length) {
+    listEl.innerHTML = '<div style="color:var(--c-muted);font-size:13px">Nenhum configurado.</div>';
+    return;
+  }
+  listEl.innerHTML = data.map(c => {
+    let cfg = {}; try { cfg = JSON.parse(c.content_html); } catch {}
+    const pB = _ifoodPeriods.find(p => p.id === c.period_id);
+    const pA = _ifoodPeriods.find(p => p.id === cfg.compareWithId);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border:1px solid var(--c-divider);border-radius:6px;margin-bottom:8px;font-size:13px">
+      <span><strong>${pB ? escHtml(pB.label) : c.period_id}</strong> vs <strong>${pA ? escHtml(pA.label) : (cfg.compareWithId||'?')}</strong></span>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="ifoodRemoveComparativoById('${escHtml(c.id)}')">Remover</button>
+    </div>`;
+  }).join('');
+}
+
+async function ifoodSaveComparativo() {
+  const periodA = document.getElementById('ifood-comp-a').value;
+  const periodB = document.getElementById('ifood-comp-b').value;
+  const preview = document.getElementById('ifood-comp-preview');
+  if (!periodA || !periodB) { showAdminToast('Selecione os dois períodos.', 'error'); return; }
+  if (periodA === periodB) { showAdminToast('Os períodos precisam ser diferentes.', 'error'); return; }
+  const id = `${periodB}-comparativo`;
+  const { error } = await ifoodApi('/api/ifood/content', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, period_id: periodB, tab_key: 'comparativo', content_html: JSON.stringify({ compareWithId: periodA }) })
+  });
+  if (error) { showAdminToast('Erro: ' + error.message, 'error'); return; }
+  const pA = _ifoodPeriods.find(p => p.id === periodA);
+  const pB = _ifoodPeriods.find(p => p.id === periodB);
+  if (preview) { preview.style.display = ''; preview.textContent = `✓ Comparativo salvo: ${pB ? pB.label : periodB} vs ${pA ? pA.label : periodA}`; }
+  showAdminToast('Comparativo salvo!');
+  ifoodLoadComparativoList();
+}
+
+async function ifoodRemoveComparativoById(contentId) {
+  if (!confirm('Remover este comparativo?')) return;
+  const { error } = await ifoodApi(`/api/ifood/content/${encodeURIComponent(contentId)}`, { method: 'DELETE' });
+  if (error) { showAdminToast('Erro: ' + error.message, 'error'); return; }
+  showAdminToast('Comparativo removido.');
+  ifoodLoadComparativoList();
+}
+
+async function ifoodRemoveComparativo() {
+  const periodB = document.getElementById('ifood-comp-b').value;
+  if (!periodB) { showAdminToast('Selecione o Período B.', 'error'); return; }
+  await ifoodRemoveComparativoById(`${periodB}-comparativo`);
 }
 
 // ── PERIODS ──────────────────────────

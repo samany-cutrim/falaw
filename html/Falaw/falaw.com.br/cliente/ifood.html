@@ -558,6 +558,7 @@
       <div class="tab-btn" data-tab="terceirizacao">Terceirização</div>
       <div class="tab-btn" data-tab="marketplace">Marketplace</div>
       <div class="tab-btn" data-tab="destaques">Destaques do Mês</div>
+      <div class="tab-btn tab-btn-comparativo" data-tab="comparativo" id="tabBtnComparativo" style="display:none">⚖️ Comparativo</div>
     </nav>
 
     <!-- Content -->
@@ -678,6 +679,20 @@
           <div class="analysis-block-header"><span class="analysis-label">Comentários do período</span></div>
           <div class="analysis-content" id="content-destaques"><div class="analysis-empty">Nenhum comentário para este período.</div></div>
         </div>
+      </div>
+
+      <!-- ── COMPARATIVO ── -->
+      <div class="tab-panel" id="panel-comparativo">
+        <div class="period-banner" id="bannerComparativo" style="background:linear-gradient(90deg,#1B0E3A 0%,#0D2B5E 100%)">
+          <div><div class="period-banner-label">Comparativo de Períodos</div><div class="period-banner-value" id="comparativoLabel">—</div></div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">Falaw Advogados · Gestão iFood</div>
+        </div>
+        <div class="page-header">
+          <div class="page-label">Comparativo</div>
+          <div class="page-title">Evolução entre Períodos</div>
+          <div class="page-subtitle">Comparação lado a lado dos indicadores entre dois períodos selecionados.</div>
+        </div>
+        <div id="comparativo-content"><div class="analysis-empty">Carregando dados comparativos…</div></div>
       </div>
 
     </div><!-- /content -->
@@ -1459,6 +1474,7 @@ function renderAllTabs() {
   });
   renderHighlights(allHighlights);
   renderContent('destaques', allContent);
+  await loadComparativo(periodId);
 }
 
 function updatePeriodLabels() {
@@ -1482,6 +1498,10 @@ document.getElementById('tabBar').addEventListener('click', e => {
   document.getElementById('panel-' + tabKey)?.classList.add('active');
 
   // Render only when the panel is visible to avoid zero-size Chart.js canvases.
+  if (tabKey === 'comparativo') {
+    renderComparativo();
+    return;
+  }
   if (tabKey !== 'destaques') {
     renderKpis(tabKey, allKpis);
     renderContent(tabKey, allContent);
@@ -1816,6 +1836,122 @@ function showToast(msg) {
   t.textContent = msg; t.classList.add('show');
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COMPARATIVO
+═══════════════════════════════════════════════════════════ */
+let comparativoConfig = null; // { periodA: id, periodB: id }
+let _compKpisA = [], _compKpisB = [];
+
+async function loadComparativo(periodId) {
+  // Busca content de tabKey='comparativo' para o período atual
+  const cfg = allContent.find(c => c.tab_key === 'comparativo');
+  if (!cfg || !cfg.content_html) {
+    document.getElementById('tabBtnComparativo').style.display = 'none';
+    return;
+  }
+  let parsed;
+  try { parsed = JSON.parse(cfg.content_html); } catch(e) { return; }
+  if (!parsed.compareWithId) {
+    document.getElementById('tabBtnComparativo').style.display = 'none';
+    return;
+  }
+  comparativoConfig = { periodA: parsed.compareWithId, periodB: periodId };
+  document.getElementById('tabBtnComparativo').style.display = '';
+
+  const periodAObj = allPeriods.find(p => p.id === parsed.compareWithId);
+  const periodBObj = currentPeriod;
+  const labelA = periodAObj ? periodAObj.label : parsed.compareWithId;
+  const labelB = periodBObj ? periodBObj.label : periodId;
+  const el = document.getElementById('comparativoLabel');
+  if (el) el.textContent = `${labelA} → ${labelB}`;
+
+  // Pré-carrega KPIs dos dois períodos (lazy — só quando a aba é aberta)
+  _compKpisA = null;
+  _compKpisB = null;
+  const cachedTabBtn = document.querySelector('[data-tab="comparativo"].active');
+  if (cachedTabBtn) await renderComparativo();
+}
+
+async function renderComparativo() {
+  const el = document.getElementById('comparativo-content');
+  if (!el || !comparativoConfig) return;
+  el.innerHTML = '<div class="analysis-empty">Carregando…</div>';
+
+  if (!_compKpisA) _compKpisA = await loadKpis(comparativoConfig.periodA);
+  if (!_compKpisB) _compKpisB = await loadKpis(comparativoConfig.periodB);
+
+  const periodAObj = allPeriods.find(p => p.id === comparativoConfig.periodA);
+  const periodBObj = allPeriods.find(p => p.id === comparativoConfig.periodB);
+  const labelA = periodAObj ? periodAObj.label : comparativoConfig.periodA;
+  const labelB = periodBObj ? periodBObj.label : comparativoConfig.periodB;
+
+  const TAB_LABELS = {
+    'visao-geral': 'Visão Geral', 'nuvem': 'Nuvem', 'op-logistico': 'Op. Logístico',
+    'ex-foodlover': 'Ex-Foodlover', 'terceirizacao': 'Terceirização', 'marketplace': 'Marketplace',
+  };
+
+  let html = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:24px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+    <div style="background:#0D2B5E;color:#fff;padding:14px 20px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;text-align:center">← ${escHtml(labelA)}</div>
+    <div style="background:#7B1A2E;color:#fff;padding:14px 20px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;text-align:center">${escHtml(labelB)} →</div>
+  </div>`;
+
+  const COMPARE_TABS = ['visao-geral', 'nuvem', 'op-logistico', 'ex-foodlover', 'terceirizacao', 'marketplace'];
+  for (const tabKey of COMPARE_TABS) {
+    const kpisA = _compKpisA.filter(k => k.tab_key === tabKey && !k.chart_data);
+    const kpisB = _compKpisB.filter(k => k.tab_key === tabKey && !k.chart_data);
+    if (!kpisA.length && !kpisB.length) continue;
+
+    // Build map by kpi_key for alignment
+    const keys = [...new Set([...kpisA.map(k => k.kpi_key), ...kpisB.map(k => k.kpi_key)])];
+
+    html += `<div style="margin-bottom:28px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)">${escHtml(TAB_LABELS[tabKey] || tabKey)}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">`;
+
+    for (const key of keys) {
+      const kA = kpisA.find(k => k.kpi_key === key);
+      const kB = kpisB.find(k => k.kpi_key === key);
+      const label = (kA || kB).label;
+      const valA = kA ? kA.value : '—';
+      const valB = kB ? kB.value : '—';
+      const unitA = kA ? (kA.unit || '') : '';
+      const unitB = kB ? (kB.unit || '') : '';
+
+      // Compute numeric delta
+      let deltaHtml = '';
+      const numA = parseFloat(String(valA).replace(/\./g, '').replace(',', '.'));
+      const numB = parseFloat(String(valB).replace(/\./g, '').replace(',', '.'));
+      if (!isNaN(numA) && !isNaN(numB) && numA !== 0) {
+        const pct = ((numB - numA) / Math.abs(numA) * 100).toFixed(1);
+        const sign = numB >= numA ? '+' : '';
+        const col = numB > numA ? '#0F9E76' : numB < numA ? '#7B1A2E' : '#666';
+        const arr = numB > numA ? '↑' : numB < numA ? '↓' : '→';
+        deltaHtml = `<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:${col};margin-top:6px">${arr} ${sign}${pct}%</div>`;
+      }
+
+      html += `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+        <div style="background:#f9f8f6;padding:8px 12px;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">${escHtml(label)}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <div style="padding:12px;border-right:1px solid var(--border);background:#EEF3FF">
+            <div style="font-size:9px;color:#0D2B5E;font-weight:700;margin-bottom:4px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase">${escHtml(labelA)}</div>
+            <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#0D2B5E;line-height:1">${escHtml(valA)}</div>
+            ${unitA ? `<div style="font-size:10px;color:var(--muted);margin-top:3px">${escHtml(unitA)}</div>` : ''}
+          </div>
+          <div style="padding:12px;background:#FFF5F6">
+            <div style="font-size:9px;color:#7B1A2E;font-weight:700;margin-bottom:4px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase">${escHtml(labelB)}</div>
+            <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#7B1A2E;line-height:1">${escHtml(valB)}</div>
+            ${unitB ? `<div style="font-size:10px;color:var(--muted);margin-top:3px">${escHtml(unitB)}</div>` : ''}
+          </div>
+        </div>
+        ${deltaHtml ? `<div style="padding:8px 12px;border-top:1px solid var(--border);background:#f9f8f6">${deltaHtml}</div>` : ''}
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
+
+  el.innerHTML = html || '<div class="analysis-empty">Nenhum KPI encontrado para comparação.</div>';
 }
 
 /* ═══════════════════════════════════════════════════════════
