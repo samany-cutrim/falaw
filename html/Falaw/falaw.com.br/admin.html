@@ -10,6 +10,7 @@
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
   <script src="./sb-config.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,7 +27,7 @@
       --f-display:'Sora', sans-serif;
     }
 
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@700&family=Raleway:wght@400;500;600;700&display=swap');
 
     body {
       font-family: var(--f-body);
@@ -617,33 +618,70 @@
 
     /* ── SOCIAL PANEL ── */
     .social-panel { background: linear-gradient(135deg,#060E1A 0%,#231018 100%); border-radius: 4px; padding: 24px 28px; margin-bottom: 32px; }
-    .social-platform-btns { display: flex; gap: 8px; margin-top: 14px; }
+    .social-platform-btns { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; align-items: center; }
     .btn-social { border: none; border-radius: 2px; padding: 10px 18px; font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; transition: background .2s, opacity .2s; display: flex; align-items: center; gap: 6px; }
     .btn-social:disabled { opacity: .35; cursor: not-allowed; }
     .btn-social.ig { background: linear-gradient(135deg,#C13584,#E1306C,#FD1D1D); color: #fff; }
     .btn-social.li { background: #0077B5; color: #fff; }
     .btn-social.ig:hover:not(:disabled) { filter: brightness(1.1); }
     .btn-social.li:hover:not(:disabled) { filter: brightness(1.1); }
-    .social-slides-wrap { margin-top: 22px; display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; }
-    .social-slides-wrap::-webkit-scrollbar { height: 4px; } .social-slides-wrap::-webkit-scrollbar-thumb { background: rgba(247,245,242,.15); border-radius: 2px; }
-    .social-slide { flex: 0 0 240px; scroll-snap-align: start; border-radius: 8px; padding: 28px 22px; display: flex; flex-direction: column; justify-content: space-between; min-height: 280px; position: relative; }
-    .social-slide.dark { background: #5C0A1A; color: #fff; }
-    .social-slide.gold { background: #A0895A; color: #fff; }
-    .social-slide.light { background: #F2F0EC; color: #1a1a2e; }
-    .social-slide.navy { background: #1A237E; color: #fff; }
-    .slide-num { font-family: var(--f-mono); font-size: 9px; letter-spacing: .12em; opacity: .45; margin-bottom: 10px; }
-    .slide-title { font-family: var(--f-display); font-size: 16px; font-weight: 700; line-height: 1.25; margin-bottom: 10px; }
-    .slide-subtitle { font-size: 12px; opacity: .75; line-height: 1.5; margin-bottom: 12px; }
-    .slide-tags { display: flex; flex-direction: column; gap: 5px; }
-    .slide-tag { background: rgba(255,255,255,.18); padding: 5px 10px; border-radius: 2px; font-size: 11px; text-align: center; }
-    .slide-tag.dark-bg { background: #5C0A1A; color: #fff; }
-    .slide-tag.gold-bg { background: #A0895A; color: #fff; }
-    .slide-logo { font-family: var(--f-mono); font-size: 9px; letter-spacing: .14em; opacity: .55; margin-top: 14px; }
+    /* Cores exatas da marca Falaw */
+    .social-slides-wrap { margin-top: 22px; display: flex; gap: 14px; overflow-x: auto; padding-bottom: 10px; scroll-snap-type: x mandatory; }
+    .social-slides-wrap::-webkit-scrollbar { height: 5px; } .social-slides-wrap::-webkit-scrollbar-thumb { background: rgba(247,245,242,.2); border-radius: 3px; }
+    .social-slide { flex: 0 0 290px; height: 290px; scroll-snap-align: start; border-radius: 6px; padding: 22px 20px 16px; display: flex; flex-direction: column; justify-content: space-between; position: relative; font-family: 'Raleway', 'Sora', sans-serif; overflow: hidden; }
+    .social-slide.dark  { background: #550000; color: #fff; }
+    .social-slide.gold  { background: #a59065; color: #fff; }
+    .social-slide.light { background: #f4f3f2; color: #242448; }
+    .social-slide.navy  { background: #242448; color: #fff; }
+    .slide-num  { font-family: 'IBM Plex Mono', monospace; font-size: 8px; letter-spacing: .14em; opacity: .38; margin-bottom: 8px; }
+    .slide-title { font-family: 'Raleway', 'Sora', sans-serif; font-size: 15px; font-weight: 700; line-height: 1.3; margin-bottom: 8px; }
+    .slide-subtitle { font-size: 11px; opacity: .78; line-height: 1.55; margin-bottom: 10px; }
+    .slide-tags { display: flex; flex-direction: column; gap: 4px; flex: 1; min-height: 0; overflow: hidden; }
+    .slide-tag { padding: 5px 10px; border-radius: 2px; font-size: 10.5px; text-align: center; line-height: 1.3; }
+    .social-slide.dark  .slide-tag, .social-slide.navy .slide-tag { background: rgba(255,255,255,.16); }
+    .social-slide.gold  .slide-tag { background: rgba(255,255,255,.18); }
+    .social-slide.light .slide-tag { background: rgba(36,36,72,.1); }
+    .slide-tag.dark-bg  { background: #550000 !important; color: #fff !important; }
+    .slide-tag.gold-bg  { background: #a59065 !important; color: #fff !important; }
+    .slide-tag.navy-bg  { background: #242448 !important; color: #fff !important; }
+    .slide-logo-area    { margin-top: 10px; border-top: 1px solid rgba(255,255,255,.18); padding-top: 8px; display: flex; flex-direction: column; gap: 1px; }
+    .social-slide.light .slide-logo-area { border-top-color: rgba(36,36,72,.18); }
+    .slide-logo         { font-family: 'IBM Plex Mono', monospace; font-size: 8px; letter-spacing: .18em; opacity: .55; text-transform: uppercase; }
+    .slide-logo-sub     { font-family: 'IBM Plex Mono', monospace; font-size: 7px; letter-spacing: .22em; opacity: .38; text-transform: lowercase; }
+    /* Botão editar slide */
+    .slide-edit-btn { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,.35); border: none; border-radius: 2px; color: #fff; font-size: 9px; padding: 3px 7px; cursor: pointer; opacity: 0; transition: opacity .18s; font-family: var(--f-mono); letter-spacing: .05em; z-index: 2; }
+    .social-slide:hover .slide-edit-btn { opacity: 1; }
+    /* Modal edição de slide */
+    #slide-edit-modal { position:fixed; inset:0; background:rgba(6,14,26,.78); z-index:9000; display:none; align-items:center; justify-content:center; }
+    #slide-edit-modal.open { display:flex; }
+    .slide-edit-box { background:#1a0a0d; border:1px solid rgba(247,245,242,.12); border-radius:6px; padding:24px 28px; width:min(480px,92vw); display:flex; flex-direction:column; gap:14px; }
+    .slide-edit-box label { font-family:var(--f-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:rgba(247,245,242,.4); display:block; margin-bottom:4px; }
+    .slide-edit-box input, .slide-edit-box textarea { width:100%; background:rgba(247,245,242,.07); border:1px solid rgba(247,245,242,.14); border-radius:3px; color:rgba(247,245,242,.88); font-size:13px; padding:9px 12px; font-family:var(--f-body); outline:none; }
+    .slide-edit-box textarea { resize:vertical; min-height:70px; line-height:1.6; }
+    .slide-edit-actions { display:flex; gap:8px; justify-content:flex-end; }
+    /* Área texto LinkedIn */
+    .li-text-result { background:rgba(247,245,242,.06); border:1px solid rgba(247,245,242,.14); border-radius:4px; padding:18px 20px; color:rgba(247,245,242,.85); font-size:14px; line-height:1.8; white-space:pre-wrap; max-height:320px; overflow-y:auto; margin-top:16px; font-family:var(--f-body); }
+    /* Toggle modo LinkedIn */
+    .li-mode-row { display:flex; gap:6px; margin-bottom:14px; margin-top:4px; }
+    .li-mode-btn { flex:1; padding:8px; background:rgba(247,245,242,.06); border:1px solid rgba(247,245,242,.12); border-radius:2px; color:rgba(247,245,242,.45); font-family:var(--f-mono); font-size:9px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; transition:all .15s; }
+    .li-mode-btn.active { background:rgba(165,144,101,.2); border-color:#a59065; color:#a59065; }
+    /* Input texto personalizado */
+    .social-custom-wrap { margin-top:10px; }
+    .social-custom-toggle { background:none; border:none; color:rgba(247,245,242,.35); font-family:var(--f-mono); font-size:9px; letter-spacing:.08em; cursor:pointer; padding:0; text-decoration:underline; text-underline-offset:3px; }
+    .social-custom-toggle:hover { color:rgba(247,245,242,.6); }
+    .social-custom-textarea { width:100%; background:rgba(247,245,242,.06); border:1px solid rgba(247,245,242,.12); border-radius:3px; color:rgba(247,245,242,.85); font-size:12.5px; line-height:1.65; padding:10px 14px; resize:vertical; min-height:75px; margin-top:8px; font-family:var(--f-body); outline:none; display:none; }
+    .social-custom-textarea.open { display:block; }
+    .social-custom-textarea:focus { border-color:rgba(247,245,242,.28); }
+    .social-custom-textarea::placeholder { color:rgba(247,245,242,.28); }
+    /* Botão PPT */
+    .btn-ppt { background:rgba(165,144,101,.12); border:1px solid rgba(165,144,101,.55); color:#a59065; border-radius:2px; padding:9px 15px; font-family:var(--f-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:background .15s; white-space:nowrap; }
+    .btn-ppt:hover { background:rgba(165,144,101,.28); }
+    .btn-ppt:disabled { opacity:.35; cursor:not-allowed; }
     .social-copy-area { margin-top: 18px; }
     .social-caption-box { background: rgba(247,245,242,.05); border: 1px solid rgba(247,245,242,.12); border-radius: 4px; padding: 14px 16px; font-size: 13px; color: rgba(247,245,242,.75); line-height: 1.7; white-space: pre-wrap; max-height: 160px; overflow-y: auto; }
     .social-caption-label { font-family: var(--f-mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: rgba(247,245,242,.35); margin-bottom: 6px; }
-    .social-action-row { display: flex; gap: 10px; margin-top: 12px; align-items: center; }
-    .social-tabs-nav { display: flex; gap: 0; margin-bottom: 18px; border-radius: 2px; overflow: hidden; border: 1px solid rgba(247,245,242,.12); }
+    .social-action-row { display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+    .social-tabs-nav { display: flex; gap: 0; margin-bottom: 4px; border-radius: 2px; overflow: hidden; border: 1px solid rgba(247,245,242,.12); }
     .social-tab-btn { flex: 1; background: transparent; border: none; padding: 10px 14px; font-family: var(--f-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: rgba(247,245,242,.4); cursor: pointer; transition: background .15s, color .15s; }
     .social-tab-btn.active { background: var(--c-accent); color: #fff; }
 
@@ -855,16 +893,38 @@
               onkeydown="if(event.key==='Enter')fetchSocialSuggestions()" />
             <button type="button" class="btn-ai" id="social-suggest-btn" onclick="fetchSocialSuggestions()">Sugerir temas</button>
           </div>
+          <!-- Custom content toggle -->
+          <div style="margin-top:8px;">
+            <button type="button" class="btn-ai-ghost" style="font-size:11px;padding:5px 12px;" onclick="toggleSocialCustom()">+ Digitar conteúdo próprio</button>
+          </div>
+          <textarea id="social-custom-text" class="social-custom-textarea"
+            placeholder="Cole aqui o conteúdo que você quer transformar em slides (texto, tópicos, informações…)"></textarea>
+
           <div class="ai-suggestions" id="social-suggestions"></div>
           <div id="social-actions" hidden>
             <div class="social-tabs-nav" style="margin-top:16px">
               <button type="button" class="social-tab-btn active" id="tab-btn-ig" onclick="selectSocialPlatform('instagram')">📸 Instagram</button>
               <button type="button" class="social-tab-btn" id="tab-btn-li" onclick="selectSocialPlatform('linkedin')">💼 LinkedIn</button>
             </div>
+            <!-- LinkedIn mode toggle (only shown when LinkedIn is active) -->
+            <div class="li-mode-row" id="li-mode-row" style="display:none">
+              <button type="button" class="li-mode-btn active" id="li-mode-carousel" onclick="setLinkedInMode('carousel')">Carrossel (slides)</button>
+              <button type="button" class="li-mode-btn" id="li-mode-text" onclick="setLinkedInMode('text')">Só texto</button>
+            </div>
             <div class="social-platform-btns">
               <button type="button" class="btn-ai" id="social-generate-btn" onclick="generateSocialPost()">Gerar carrossel →</button>
               <span class="ai-status-msg" id="social-status"></span>
             </div>
+            <!-- LinkedIn text-only result -->
+            <div class="li-text-result" id="li-text-result" style="display:none">
+              <div class="social-caption-label" style="margin-bottom:8px;">Post LinkedIn</div>
+              <div class="social-caption-box" id="li-text-box" style="min-height:120px;white-space:pre-wrap;"></div>
+              <div class="social-action-row" style="margin-top:10px;">
+                <button type="button" class="btn-ai-ghost" onclick="copyLinkedInText()">Copiar post</button>
+                <span class="ai-status-msg" id="li-copy-status"></span>
+              </div>
+            </div>
+            <!-- Slides + caption result -->
             <div id="social-result" style="margin-top:18px;display:none">
               <div class="social-slides-wrap" id="social-slides"></div>
               <div class="social-copy-area">
@@ -873,10 +933,32 @@
                 <div class="social-action-row">
                   <button type="button" class="btn-ai-ghost" onclick="copySocialCaption()">Copiar legenda</button>
                   <button type="button" class="btn-ai-ghost" onclick="copySocialSlides()">Copiar slides (texto)</button>
+                  <button type="button" class="btn-ppt" onclick="exportToPPT()">⬇ Exportar PPT</button>
                   <span class="ai-status-msg" id="social-copy-status"></span>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide edit modal -->
+      <div id="slide-edit-modal" onclick="if(event.target===this)closeSlideEdit()">
+        <div class="slide-edit-box">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <span style="font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:rgba(247,245,242,.7);">Editar slide</span>
+            <button type="button" class="ai-toggle-btn" onclick="closeSlideEdit()">✕</button>
+          </div>
+          <label style="font-size:11px;color:rgba(247,245,242,.5);letter-spacing:.05em;">TÍTULO</label>
+          <input type="text" id="slide-edit-title" style="width:100%;background:rgba(247,245,242,.07);border:1px solid rgba(247,245,242,.15);color:#f4f3f2;border-radius:4px;padding:7px 10px;font-family:'Raleway','Sora',sans-serif;font-size:13px;margin:5px 0 12px;box-sizing:border-box;" />
+          <label style="font-size:11px;color:rgba(247,245,242,.5);letter-spacing:.05em;">SUBTÍTULO</label>
+          <input type="text" id="slide-edit-subtitle" style="width:100%;background:rgba(247,245,242,.07);border:1px solid rgba(247,245,242,.15);color:#f4f3f2;border-radius:4px;padding:7px 10px;font-family:'Raleway','Sora',sans-serif;font-size:12px;margin:5px 0 12px;box-sizing:border-box;" />
+          <label style="font-size:11px;color:rgba(247,245,242,.5);letter-spacing:.05em;">TÓPICOS (um por linha)</label>
+          <textarea id="slide-edit-items" rows="5" style="width:100%;background:rgba(247,245,242,.07);border:1px solid rgba(247,245,242,.15);color:#f4f3f2;border-radius:4px;padding:7px 10px;font-family:'Raleway','Sora',sans-serif;font-size:12px;margin:5px 0 14px;box-sizing:border-box;resize:vertical;"></textarea>
+          <input type="hidden" id="slide-edit-index" />
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button type="button" class="btn-ai-ghost" onclick="closeSlideEdit()">Cancelar</button>
+            <button type="button" class="btn-ai" onclick="saveSlideEdit()">Salvar</button>
           </div>
         </div>
       </div>
@@ -3329,7 +3411,8 @@ function toggleAiPanel() {
 /* ══════════════════════════════════════
    REDES SOCIAIS — IA
 ══════════════════════════════════════ */
-let socialSuggestions = [], socialSelected = null, socialPlatform = 'instagram', socialPanelVisible = true;
+let socialSuggestions = [], socialSelected = null, socialPlatform = 'instagram',
+    socialPanelVisible = true, linkedInMode = 'carousel', _socialSlides = [], _socialLegenda = '';
 
 function toggleSocialPanel() {
   socialPanelVisible = !socialPanelVisible;
@@ -3338,10 +3421,29 @@ function toggleSocialPanel() {
     socialPanelVisible ? 'ocultar ▲' : 'mostrar ▼';
 }
 
+function toggleSocialCustom() {
+  const ta = document.getElementById('social-custom-text');
+  ta.classList.toggle('open');
+  if (ta.classList.contains('open')) {
+    document.getElementById('social-actions').hidden = false;
+  }
+}
+
 function selectSocialPlatform(p) {
   socialPlatform = p;
   document.getElementById('tab-btn-ig').classList.toggle('active', p === 'instagram');
   document.getElementById('tab-btn-li').classList.toggle('active', p === 'linkedin');
+  document.getElementById('li-mode-row').style.display = p === 'linkedin' ? 'flex' : 'none';
+  const btn = document.getElementById('social-generate-btn');
+  btn.textContent = (p === 'linkedin' && linkedInMode === 'text') ? 'Gerar post →' : 'Gerar carrossel →';
+}
+
+function setLinkedInMode(mode) {
+  linkedInMode = mode;
+  document.getElementById('li-mode-carousel').classList.toggle('active', mode === 'carousel');
+  document.getElementById('li-mode-text').classList.toggle('active', mode === 'text');
+  document.getElementById('social-generate-btn').textContent =
+    mode === 'text' ? 'Gerar post →' : 'Gerar carrossel →';
 }
 
 async function fetchSocialSuggestions() {
@@ -3354,6 +3456,7 @@ async function fetchSocialSuggestions() {
   area.innerHTML = '';
   document.getElementById('social-actions').hidden = true;
   document.getElementById('social-result').style.display = 'none';
+  document.getElementById('li-text-result').style.display = 'none';
   socialSelected = null;
 
   try {
@@ -3384,27 +3487,52 @@ function selectSocialSuggestion(i) {
 }
 
 async function generateSocialPost() {
-  if (!socialSelected) return;
+  if (!socialSelected && !document.getElementById('social-custom-text').value.trim()) {
+    alert('Selecione um tema ou digite conteúdo próprio.'); return;
+  }
   const btn    = document.getElementById('social-generate-btn');
   const status = document.getElementById('social-status');
   btn.disabled = true;
+
+  if (socialPlatform === 'linkedin' && linkedInMode === 'text') {
+    btn.innerHTML = '<span class="ai-spinner"></span> Gerando…';
+    status.textContent = 'Criando post…';
+    document.getElementById('social-result').style.display = 'none';
+    document.getElementById('li-text-result').style.display = 'none';
+    await generateLinkedInText();
+    btn.disabled = false;
+    btn.textContent = 'Gerar post →';
+    return;
+  }
+
   btn.innerHTML = '<span class="ai-spinner"></span> Gerando…';
   status.textContent = 'Criando carrossel…';
   document.getElementById('social-result').style.display = 'none';
+  document.getElementById('li-text-result').style.display = 'none';
 
   const isPlatformIG = socialPlatform === 'instagram';
   const platformDesc = isPlatformIG
     ? 'Instagram (carrossel visual, tom direto, linguagem acessível, CTAs como "Salve este post" e "Comente")'
     : 'LinkedIn (carrossel profissional, tom especializado, linguagem executiva, CTAs como "Compartilhe" e "Siga para mais")';
 
+  const customText = document.getElementById('social-custom-text').value.trim();
+  const temaInfo = socialSelected
+    ? `"${socialSelected.titulo}" — ângulo: "${socialSelected.angulo}"`
+    : 'conteúdo fornecido abaixo';
+  const conteudoExtra = customText
+    ? `\n\nConteúdo fornecido pelo usuário para transformar em slides:\n"""\n${customText}\n"""`
+    : '';
+
   try {
     const raw = await callAI([
-      { role: 'system', content: 'Você é especialista em marketing jurídico para redes sociais. Cria carrosséis para o escritório Falaw Advogados. Responda SOMENTE com JSON válido, sem texto fora. Nunca use aspas duplas dentro de valores.' },
-      { role: 'user',   content: `Crie um carrossel de posts para ${platformDesc} sobre: "${socialSelected.titulo}" — ângulo: "${socialSelected.angulo}".\n\nPadrão visual Falaw: fundo vinho (#5C0A1A) ou dourado (#A0895A) ou claro (#F2F0EC), texto branco ou escuro conforme fundo, logo FALAW advogados no rodapé.\n\nRetorne exatamente este JSON:\n{"slides":[{"num":1,"tipo":"capa","cor":"dark","titulo":"Título chamativo da capa","subtitulo":"subtítulo curto complementar"},{"num":2,"tipo":"conteudo","cor":"light","titulo":"Segundo slide - ponto 1","items":["Item A","Item B","Item C"]},{"num":3,"tipo":"conteudo","cor":"dark","titulo":"Terceiro slide - ponto 2","items":["Item A","Item B","Item C"]},{"num":4,"tipo":"conteudo","cor":"gold","titulo":"Quarto slide - ponto 3","items":["Item A","Item B"]},{"num":5,"tipo":"conteudo","cor":"dark","titulo":"Quinto slide - ponto 4","items":["Item A","Item B","Item C"]},{"num":6,"tipo":"cta","cor":"dark","titulo":"Mensagem de encerramento","cta":"Texto do botão de ação para ${isPlatformIG ? 'Instagram' : 'LinkedIn'}","rodape":"Fale com a Falaw Advogados"}],"legenda":"Legenda completa para ${isPlatformIG ? 'Instagram' : 'LinkedIn'} com emojis, hashtags e CTA. Máximo 2200 caracteres."}` }
+      { role: 'system', content: 'Você é especialista em marketing jurídico para redes sociais. Cria carrosséis para o escritório Falaw Advogados. Responda SOMENTE com JSON válido, sem texto fora. Nunca use aspas duplas dentro de valores de string.' },
+      { role: 'user',   content: `Crie um carrossel de posts para ${platformDesc} sobre: ${temaInfo}.${conteudoExtra}\n\nPadrão visual Falaw: use as cores exatas — "dark" = fundo vinho #550000, "gold" = fundo dourado #a59065, "light" = fundo cinza claro #f4f3f2 (texto escuro), "navy" = fundo azul marinho #242448. Logo FALAW advogados no rodapé de todos os slides.\n\nRetorne exatamente este JSON:\n{"slides":[{"num":1,"tipo":"capa","cor":"dark","titulo":"Título chamativo da capa","subtitulo":"subtítulo curto complementar"},{"num":2,"tipo":"conteudo","cor":"light","titulo":"Segundo slide - ponto 1","items":["Item A","Item B","Item C"]},{"num":3,"tipo":"conteudo","cor":"dark","titulo":"Terceiro slide - ponto 2","items":["Item A","Item B","Item C"]},{"num":4,"tipo":"conteudo","cor":"gold","titulo":"Quarto slide - ponto 3","items":["Item A","Item B"]},{"num":5,"tipo":"conteudo","cor":"dark","titulo":"Quinto slide - ponto 4","items":["Item A","Item B","Item C"]},{"num":6,"tipo":"cta","cor":"dark","titulo":"Mensagem de encerramento","cta":"Texto do botão de ação para ${isPlatformIG ? 'Instagram' : 'LinkedIn'}","rodape":"Fale com a Falaw Advogados"}],"legenda":"Legenda completa para ${isPlatformIG ? 'Instagram' : 'LinkedIn'} com emojis, hashtags e CTA. Máximo 2200 caracteres."}` }
     ], 0.8);
 
     const data = parseJSON(raw);
-    renderSocialSlides(data.slides || [], data.legenda || '');
+    _socialSlides = data.slides || [];
+    _socialLegenda = data.legenda || '';
+    renderSocialSlides(_socialSlides, _socialLegenda);
     document.getElementById('social-result').style.display = 'block';
     status.textContent = '✓ Carrossel gerado!';
 
@@ -3413,33 +3541,63 @@ async function generateSocialPost() {
   }
 
   btn.disabled = false;
-  btn.textContent = 'Gerar carrossel →';
+  btn.textContent = isPlatformIG ? 'Gerar carrossel →' : (linkedInMode === 'text' ? 'Gerar post →' : 'Gerar carrossel →');
+}
+
+async function generateLinkedInText() {
+  const status = document.getElementById('social-status');
+  const customText = document.getElementById('social-custom-text').value.trim();
+  const temaInfo = socialSelected
+    ? `"${socialSelected.titulo}" — ângulo: "${socialSelected.angulo}"`
+    : 'conteúdo fornecido abaixo';
+  const conteudoExtra = customText
+    ? `\n\nConteúdo do usuário:\n"""\n${customText}\n"""`
+    : '';
+  try {
+    const raw = await callAI([
+      { role: 'system', content: 'Você escreve posts de LinkedIn para o escritório Falaw Advogados. Tom especializado, linguagem executiva, foco em valor jurídico. Sem markdown, texto limpo.' },
+      { role: 'user',   content: `Escreva um post de LinkedIn sobre: ${temaInfo}.${conteudoExtra}\n\nPost deve ter: gancho na primeira linha (sem emoji excessivo), desenvolvimento em parágrafos curtos, 3-5 pontos de valor, CTA claro ao final. Máximo 1300 caracteres. Inclua hashtags jurídicas relevantes no final.` }
+    ], 0.75);
+    document.getElementById('li-text-box').textContent = raw.trim();
+    document.getElementById('li-text-result').style.display = 'block';
+    status.textContent = '✓ Post gerado!';
+  } catch(e) {
+    status.textContent = 'Erro: ' + e.message;
+  }
 }
 
 function renderSocialSlides(slides, legenda) {
   const wrap = document.getElementById('social-slides');
-  wrap.innerHTML = slides.map(s => {
+  wrap.innerHTML = slides.map((s, idx) => {
     const corClass = s.cor === 'gold' ? 'gold' : s.cor === 'light' ? 'light' : s.cor === 'navy' ? 'navy' : 'dark';
     const tagBg    = corClass === 'light' ? 'gold-bg' : 'dark-bg';
+    const logoColor = corClass === 'light' ? '#550000' : '#f4f3f2';
+    const logoSubColor = corClass === 'light' ? '#a59065' : 'rgba(244,243,242,.65)';
+    const lineColor = corClass === 'light' ? 'rgba(85,0,0,.2)' : 'rgba(255,255,255,.18)';
     let inner = '';
     if (s.tipo === 'capa') {
       inner = `<div class="slide-num">Slide ${s.num}</div>
         <div class="slide-title">${escHtml(s.titulo)}</div>
-        ${s.subtitulo ? `<div class="slide-subtitle">${escHtml(s.subtitulo)}</div>` : ''}
-        <div class="slide-logo">FALAW advogados</div>`;
+        ${s.subtitulo ? `<div class="slide-subtitle">${escHtml(s.subtitulo)}</div>` : ''}`;
     } else if (s.tipo === 'cta') {
       inner = `<div class="slide-num">Slide ${s.num}</div>
         <div class="slide-title">${escHtml(s.titulo)}</div>
-        ${s.cta ? `<div class="slide-tags"><div class="slide-tag">${escHtml(s.cta)}</div></div>` : ''}
-        ${s.rodape ? `<div class="slide-logo">${escHtml(s.rodape)}</div>` : '<div class="slide-logo">FALAW advogados</div>'}`;
+        ${s.cta ? `<div class="slide-tags"><div class="slide-tag">${escHtml(s.cta)}</div></div>` : ''}`;
     } else {
       const items = (s.items || []).map(it => `<div class="slide-tag ${tagBg}">${escHtml(it)}</div>`).join('');
       inner = `<div class="slide-num">Slide ${s.num}</div>
         <div class="slide-title">${escHtml(s.titulo)}</div>
-        <div class="slide-tags">${items}</div>
-        <div class="slide-logo">FALAW advogados</div>`;
+        <div class="slide-tags">${items}</div>`;
     }
-    return `<div class="social-slide ${corClass}">${inner}</div>`;
+    const rodape = (s.tipo === 'cta' && s.rodape) ? escHtml(s.rodape) : 'Falaw Advogados';
+    return `<div class="social-slide ${corClass}" style="position:relative;">
+      <button class="slide-edit-btn" onclick="editSlide(${idx})" title="Editar slide">✏</button>
+      <div style="flex:1;display:flex;flex-direction:column;">${inner}</div>
+      <div class="slide-logo-area" style="border-top:1px solid ${lineColor};">
+        <div class="slide-logo" style="color:${logoColor};">FALAW</div>
+        <div class="slide-logo-sub" style="color:${logoSubColor};">${rodape}</div>
+      </div>
+    </div>`;
   }).join('');
   document.getElementById('social-caption').textContent = legenda;
 }
@@ -3453,23 +3611,155 @@ function copySocialCaption() {
   });
 }
 
+function copyLinkedInText() {
+  const text = document.getElementById('li-text-box').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const s = document.getElementById('li-copy-status');
+    s.textContent = '✓ Copiado!';
+    setTimeout(() => s.textContent = '', 2000);
+  });
+}
+
 function copySocialSlides() {
-  const slides = document.querySelectorAll('#social-slides .social-slide');
   let text = '';
-  slides.forEach((sl, i) => {
-    const title = sl.querySelector('.slide-title');
-    const sub   = sl.querySelector('.slide-subtitle');
-    const tags  = sl.querySelectorAll('.slide-tag');
+  _socialSlides.forEach((s, i) => {
     text += `--- Slide ${i+1} ---\n`;
-    if (title) text += title.textContent + '\n';
-    if (sub)   text += sub.textContent + '\n';
-    tags.forEach(t => { text += '• ' + t.textContent + '\n'; });
+    if (s.titulo) text += s.titulo + '\n';
+    if (s.subtitulo) text += s.subtitulo + '\n';
+    (s.items || []).forEach(it => { text += '• ' + it + '\n'; });
+    if (s.cta) text += '→ ' + s.cta + '\n';
     text += '\n';
   });
   navigator.clipboard.writeText(text.trim()).then(() => {
     const s = document.getElementById('social-copy-status');
     s.textContent = '✓ Texto copiado!';
     setTimeout(() => s.textContent = '', 2000);
+  });
+}
+
+function editSlide(idx) {
+  const s = _socialSlides[idx];
+  if (!s) return;
+  document.getElementById('slide-edit-index').value = idx;
+  document.getElementById('slide-edit-title').value = s.titulo || '';
+  document.getElementById('slide-edit-subtitle').value = s.subtitulo || s.cta || '';
+  document.getElementById('slide-edit-items').value = (s.items || []).join('\n');
+  document.getElementById('slide-edit-modal').classList.add('open');
+}
+
+function saveSlideEdit() {
+  const idx = parseInt(document.getElementById('slide-edit-index').value, 10);
+  if (isNaN(idx) || !_socialSlides[idx]) return;
+  const s = _socialSlides[idx];
+  s.titulo = document.getElementById('slide-edit-title').value.trim();
+  const subVal = document.getElementById('slide-edit-subtitle').value.trim();
+  if (s.tipo === 'cta') { s.cta = subVal; } else { s.subtitulo = subVal; }
+  const itemLines = document.getElementById('slide-edit-items').value.split('\n').map(l => l.trim()).filter(Boolean);
+  if (itemLines.length) s.items = itemLines;
+  closeSlideEdit();
+  renderSocialSlides(_socialSlides, _socialLegenda);
+}
+
+function closeSlideEdit() {
+  document.getElementById('slide-edit-modal').classList.remove('open');
+}
+
+function exportToPPT() {
+  if (!_socialSlides.length) return;
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_CUSTOM';
+  pptx.defineLayout({ name: 'SQUARE', width: 10, height: 10 });
+  pptx.layout = 'SQUARE';
+
+  const COLORS = {
+    dark:  { bg: '550000', text: 'F4F3F2', tagBg: 'FFFFFF', tagTxt: '550000', logoTxt: 'F4F3F2', logoSub: 'D4C9A8', line: 'FFFFFF' },
+    gold:  { bg: 'A59065', text: 'FFFFFF', tagBg: 'FFFFFF', tagTxt: '550000', logoTxt: 'FFFFFF', logoSub: 'F4F3F2', line: 'FFFFFF' },
+    light: { bg: 'F4F3F2', text: '242448', tagBg: 'A59065', tagTxt: 'FFFFFF', logoTxt: '550000', logoSub: 'A59065', line: '550000' },
+    navy:  { bg: '242448', text: 'F4F3F2', tagBg: 'FFFFFF', tagTxt: '242448', logoTxt: 'F4F3F2', logoSub: 'D4C9A8', line: 'FFFFFF' }
+  };
+
+  _socialSlides.forEach(s => {
+    const c = COLORS[s.cor] || COLORS.dark;
+    const slide = pptx.addSlide();
+    slide.background = { color: c.bg };
+
+    // Slide number tag
+    slide.addText(`Slide ${s.num}`, {
+      x: 0.35, y: 0.28, w: 1.4, h: 0.22,
+      fontSize: 7, color: c.logoSub, fontFace: 'Calibri', bold: false,
+      align: 'left', transparency: 40
+    });
+
+    // Title
+    slide.addText(s.titulo || '', {
+      x: 0.35, y: 0.65, w: 9.3, h: 2.4,
+      fontSize: 28, color: c.text, fontFace: 'Calibri', bold: true,
+      align: 'left', valign: 'top', wrap: true, charSpacing: 0.5
+    });
+
+    // Subtitle or CTA text
+    const subText = s.subtitulo || (s.tipo === 'cta' ? s.cta : '');
+    if (subText) {
+      slide.addText(subText, {
+        x: 0.35, y: 3.0, w: 9.3, h: 1.0,
+        fontSize: 15, color: c.text, fontFace: 'Calibri', bold: false,
+        align: 'left', wrap: true, transparency: 15
+      });
+    }
+
+    // Items as tags
+    if (s.items && s.items.length) {
+      let yOff = subText ? 4.0 : 3.1;
+      s.items.forEach(item => {
+        slide.addText('• ' + item, {
+          x: 0.35, y: yOff, w: 9.3, h: 0.5,
+          fontSize: 13, color: c.text, fontFace: 'Calibri',
+          align: 'left', wrap: true
+        });
+        yOff += 0.58;
+      });
+    }
+
+    // CTA rodape (for cta slides)
+    if (s.tipo === 'cta' && s.rodape) {
+      slide.addText(s.rodape, {
+        x: 0.35, y: 7.8, w: 9.3, h: 0.4,
+        fontSize: 11, color: c.logoSub, fontFace: 'Calibri', align: 'left'
+      });
+    }
+
+    // Separator line
+    slide.addShape(pptx.ShapeType.line, {
+      x: 0.35, y: 8.85, w: 9.3, h: 0,
+      line: { color: c.line, width: 0.5, transparency: 55 }
+    });
+
+    // Logo
+    slide.addText('FALAW', {
+      x: 0.35, y: 9.0, w: 4, h: 0.38,
+      fontSize: 12, color: c.logoTxt, fontFace: 'Calibri', bold: true,
+      align: 'left', charSpacing: 3
+    });
+    const rodapeText = (s.tipo === 'cta' && s.rodape) ? '' : 'a d v o g a d o s';
+    if (rodapeText) {
+      slide.addText(rodapeText, {
+        x: 0.35, y: 9.42, w: 4, h: 0.28,
+        fontSize: 8, color: c.logoSub, fontFace: 'Calibri',
+        align: 'left', charSpacing: 2, transparency: 20
+      });
+    }
+  });
+
+  const titulo = (socialSelected && socialSelected.titulo)
+    ? socialSelected.titulo.replace(/[^a-zA-Z0-9À-ú\s]/g, '').trim().substring(0, 40)
+    : 'falaw-slides';
+  pptx.writeFile({ fileName: `${titulo}.pptx` }).then(() => {
+    const s = document.getElementById('social-copy-status');
+    s.textContent = '✓ PPT exportado!';
+    setTimeout(() => s.textContent = '', 3000);
+  }).catch(err => {
+    const s = document.getElementById('social-copy-status');
+    s.textContent = 'Erro ao exportar: ' + err.message;
   });
 }
 
