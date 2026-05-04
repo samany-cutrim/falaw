@@ -4789,8 +4789,7 @@ async function ifoodLoadContent() {
 async function ifoodSaveContent() {
   const periodId = document.getElementById('ifood-cnt-period').value;
   const tabKey   = document.getElementById('ifood-cnt-tab').value;
-  const srcMode  = document.getElementById('ifood-cnt-source').style.display !== 'none';
-  const html     = srcMode
+  const html     = _richSourceMode
     ? document.getElementById('ifood-cnt-source').value
     : document.getElementById('ifood-cnt-editor').innerHTML;
   if (!periodId || !tabKey) { showToast('Selecione período e aba.'); return; }
@@ -4805,8 +4804,7 @@ async function ifoodSaveContent() {
 }
 
 function ifoodPreviewContent() {
-  const srcMode = document.getElementById('ifood-cnt-source').style.display !== 'none';
-  const raw = srcMode
+  const raw = _richSourceMode
     ? document.getElementById('ifood-cnt-source').value
     : document.getElementById('ifood-cnt-editor').innerHTML;
   const prev = document.getElementById('ifood-cnt-preview');
