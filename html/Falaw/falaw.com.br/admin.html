@@ -4565,33 +4565,33 @@ async function ifoodSaveComparativo() {
   const periodA = document.getElementById('ifood-comp-a').value;
   const periodB = document.getElementById('ifood-comp-b').value;
   const preview = document.getElementById('ifood-comp-preview');
-  if (!periodA || !periodB) { showAdminToast('Selecione os dois períodos.', 'error'); return; }
-  if (periodA === periodB) { showAdminToast('Os períodos precisam ser diferentes.', 'error'); return; }
+  if (!periodA || !periodB) { showToast('Selecione os dois períodos.', 'error'); return; }
+  if (periodA === periodB) { showToast('Os períodos precisam ser diferentes.', 'error'); return; }
   const id = `${periodB}-comparativo`;
   const { error } = await ifoodApi('/api/ifood/content', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, period_id: periodB, tab_key: 'comparativo', content_html: JSON.stringify({ compareWithId: periodA }) })
   });
-  if (error) { showAdminToast('Erro: ' + error.message, 'error'); return; }
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
   const pA = _ifoodPeriods.find(p => p.id === periodA);
   const pB = _ifoodPeriods.find(p => p.id === periodB);
   if (preview) { preview.style.display = ''; preview.textContent = `✓ Comparativo salvo: ${pB ? pB.label : periodB} vs ${pA ? pA.label : periodA}`; }
-  showAdminToast('Comparativo salvo!');
+  showToast('Comparativo salvo!');
   ifoodLoadComparativoList();
 }
 
 async function ifoodRemoveComparativoById(contentId) {
   if (!confirm('Remover este comparativo?')) return;
   const { error } = await ifoodApi(`/api/ifood/content/${encodeURIComponent(contentId)}`, { method: 'DELETE' });
-  if (error) { showAdminToast('Erro: ' + error.message, 'error'); return; }
-  showAdminToast('Comparativo removido.');
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  showToast('Comparativo removido.');
   ifoodLoadComparativoList();
 }
 
 async function ifoodRemoveComparativo() {
   const periodB = document.getElementById('ifood-comp-b').value;
-  if (!periodB) { showAdminToast('Selecione o Período B.', 'error'); return; }
+  if (!periodB) { showToast('Selecione o Período B.', 'error'); return; }
   await ifoodRemoveComparativoById(`${periodB}-comparativo`);
 }
 
@@ -4800,8 +4800,8 @@ async function ifoodSaveContent() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(row)
   });
-  if (error) { showToast('Erro: ' + error.message); return; }
-  showToast('Texto salvo.');
+  if (error) { showToast('Erro ao salvar: ' + error.message); return; }
+  showToast('✓ Texto salvo com sucesso.');
 }
 
 function ifoodPreviewContent() {
