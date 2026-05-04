@@ -16,6 +16,14 @@ const API_URL = (() => {
   process.exit(1);
 })();
 
+async function del(path) {
+  const res = await fetch(`${API_URL}${path}`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 404) {
+    const text = await res.text();
+    throw new Error(`DELETE ${path} → ${res.status}: ${text}`);
+  }
+}
+
 async function post(path, body) {
   const res = await fetch(`${API_URL}${path}`, {
     method: 'POST',
@@ -51,10 +59,26 @@ const kpis = [
   { tab_key: 'visao-geral', kpi_key: 'novas-acoes-2026',    label: 'Novas Ações 2026',            value: '4',     unit: '',   trend_pct: null,   sort_order: 5, chart_title: null, chart_data: null },
   { tab_key: 'visao-geral', kpi_key: 'taxa-fav-sentencas',  label: 'Taxa Fav. Sentenças',         value: '25,0',  unit: '%',  trend_pct: null,   sort_order: 6, chart_title: null, chart_data: null },
   { tab_key: 'visao-geral', kpi_key: 'taxa-fav-acordaos',   label: 'Taxa Fav. Acórdãos',          value: '54,3',  unit: '%',  trend_pct: null,   sort_order: 7,
-    chart_title: 'Causa Raiz',
+    chart_title: 'Distribuição por Causa Raiz',
     chart_data: JSON.stringify({
-      labels: ['Nuvem', 'Op. Logístico', 'Ex-Foodlover', 'Terceirização', 'Marketplace'],
-      values: [605, 530, 197, 41, 9],
+      type: 'doughnut',
+      data: {
+        labels: ['☁ Nuvem', '🚚 Op. Logístico', '👤 Ex-Foodlover', '🤝 Terceirização', '🏪 Marketplace'],
+        datasets: [{
+          data: [605, 530, 197, 41, 9],
+          backgroundColor: ['#1565C0', '#E65100', '#6A1B9A', '#2E7D32', '#00796B'],
+          borderWidth: 2,
+          borderColor: '#fff',
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10 } },
+          tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.raw} (${((ctx.raw/1383)*100).toFixed(1)}%)` } },
+        },
+      },
     }),
   },
 
@@ -311,8 +335,12 @@ async function seed() {
     }
   }
 
-  // 2. Bulk KPIs
-  console.log(`\n📊  Importando ${kpis.length} KPIs...`);
+  // 2. Limpar KPIs anteriores e reinserir
+  console.log(`\n📊  Limpando KPIs anteriores...`);
+  await del(`/api/ifood/kpis/by-period/${PERIOD_ID}`);
+  console.log(`   ✅  KPIs antigos removidos`);
+
+  console.log(`   Importando ${kpis.length} KPIs...`);
   const kpisPayload = kpis.map(k => ({ ...k, id: `${PERIOD_ID}-${k.tab_key}-${k.kpi_key}`, period_id: PERIOD_ID }));
   await post('/api/ifood/kpis/bulk', { rows: kpisPayload });
   console.log(`   ✅  ${kpis.length} KPIs importados`);
