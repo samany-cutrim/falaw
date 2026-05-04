@@ -651,6 +651,14 @@
     /* Botão editar slide */
     .slide-edit-btn { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,.35); border: none; border-radius: 2px; color: #fff; font-size: 9px; padding: 3px 7px; cursor: pointer; opacity: 0; transition: opacity .18s; font-family: var(--f-mono); letter-spacing: .05em; z-index: 2; }
     .social-slide:hover .slide-edit-btn { opacity: 1; }
+    /* Slide com foto de fundo */
+    .social-slide.has-image { background-size: cover; background-position: center; }
+    .slide-img-overlay { position: absolute; inset: 0; z-index: 0; border-radius: 6px; }
+    .social-slide.dark.has-image  .slide-img-overlay { background: rgba(85,0,0,.72); }
+    .social-slide.gold.has-image  .slide-img-overlay { background: rgba(165,144,101,.72); }
+    .social-slide.light.has-image .slide-img-overlay { background: rgba(244,243,242,.80); }
+    .social-slide.navy.has-image  .slide-img-overlay { background: rgba(36,36,72,.75); }
+    .social-slide.has-image > div:not(.slide-img-overlay) { position: relative; z-index: 1; }
     /* Modal edição de slide */
     #slide-edit-modal { position:fixed; inset:0; background:rgba(6,14,26,.78); z-index:9000; display:none; align-items:center; justify-content:center; }
     #slide-edit-modal.open { display:flex; }
@@ -955,6 +963,8 @@
           <input type="text" id="slide-edit-subtitle" style="width:100%;background:rgba(247,245,242,.07);border:1px solid rgba(247,245,242,.15);color:#f4f3f2;border-radius:4px;padding:7px 10px;font-family:'Raleway','Sora',sans-serif;font-size:12px;margin:5px 0 12px;box-sizing:border-box;" />
           <label style="font-size:11px;color:rgba(247,245,242,.5);letter-spacing:.05em;">TÓPICOS (um por linha)</label>
           <textarea id="slide-edit-items" rows="5" style="width:100%;background:rgba(247,245,242,.07);border:1px solid rgba(247,245,242,.15);color:#f4f3f2;border-radius:4px;padding:7px 10px;font-family:'Raleway','Sora',sans-serif;font-size:12px;margin:5px 0 14px;box-sizing:border-box;resize:vertical;"></textarea>
+          <label style="font-size:11px;color:rgba(247,245,242,.5);letter-spacing:.05em;">FOTO — URL da imagem (opcional)</label>
+          <input type="url" id="slide-edit-image" placeholder="https://..." style="width:100%;background:rgba(247,245,242,.07);border:1px solid rgba(247,245,242,.15);color:#f4f3f2;border-radius:4px;padding:7px 10px;font-family:'Raleway','Sora',sans-serif;font-size:12px;margin:5px 0 14px;box-sizing:border-box;" />
           <input type="hidden" id="slide-edit-index" />
           <div style="display:flex;gap:10px;justify-content:flex-end;">
             <button type="button" class="btn-ai-ghost" onclick="closeSlideEdit()">Cancelar</button>
@@ -3587,7 +3597,12 @@ function renderSocialSlides(slides, legenda) {
         <div class="slide-tags">${items}</div>`;
     }
     const rodape = (s.tipo === 'cta' && s.rodape) ? escHtml(s.rodape) : 'Falaw Advogados';
-    return `<div class="social-slide ${corClass}" style="position:relative;">
+    const hasImg = !!s.imageUrl;
+    const escapedUrl = hasImg ? s.imageUrl.replace(/"/g, '%22') : '';
+    const imgStyle = hasImg ? ` background-image:url("${escapedUrl}");` : '';
+    const imgOverlay = hasImg ? `<div class="slide-img-overlay"></div>` : '';
+    return `<div class="social-slide ${corClass}${hasImg ? ' has-image' : ''}" style="position:relative;${imgStyle}">
+      ${imgOverlay}
       <button class="slide-edit-btn" onclick="editSlide(${idx})" title="Editar slide">✏</button>
       <div style="flex:1;display:flex;flex-direction:column;">${inner}</div>
       <div class="slide-logo-area" style="border-top:1px solid ${lineColor};">
@@ -3641,6 +3656,7 @@ function editSlide(idx) {
   document.getElementById('slide-edit-title').value = s.titulo || '';
   document.getElementById('slide-edit-subtitle').value = s.subtitulo || s.cta || '';
   document.getElementById('slide-edit-items').value = (s.items || []).join('\n');
+  document.getElementById('slide-edit-image').value = s.imageUrl || '';
   document.getElementById('slide-edit-modal').classList.add('open');
 }
 
@@ -3653,6 +3669,8 @@ function saveSlideEdit() {
   if (s.tipo === 'cta') { s.cta = subVal; } else { s.subtitulo = subVal; }
   const itemLines = document.getElementById('slide-edit-items').value.split('\n').map(l => l.trim()).filter(Boolean);
   if (itemLines.length) s.items = itemLines;
+  const imgUrl = document.getElementById('slide-edit-image').value.trim();
+  s.imageUrl = imgUrl || undefined;
   closeSlideEdit();
   renderSocialSlides(_socialSlides, _socialLegenda);
 }
@@ -3678,6 +3696,16 @@ function exportToPPT() {
     const c = COLORS[s.cor] || COLORS.dark;
     const slide = pptx.addSlide();
     slide.background = { color: c.bg };
+
+    // Background photo + semi-transparent overlay
+    if (s.imageUrl) {
+      slide.addImage({ path: s.imageUrl, x: 0, y: 0, w: 10, h: 10 });
+      slide.addShape('rect', {
+        x: 0, y: 0, w: 10, h: 10,
+        fill: { color: c.bg, transparency: 28 },
+        line: { width: 0 }
+      });
+    }
 
     // Title
     slide.addText(s.titulo || '', {
