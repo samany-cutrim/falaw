@@ -4781,8 +4781,16 @@ async function ifoodLoadContent() {
   const { data, error } = await ifoodApi('/api/ifood/content?periodId=' + encodeURIComponent(periodId) + '&tabKey=' + encodeURIComponent(tabKey));
   const row = !error && Array.isArray(data) && data.length ? data[0] : null;
   const html = row ? (row.content_html || '') : '';
-  document.getElementById('ifood-cnt-editor').innerHTML = html;
-  document.getElementById('ifood-cnt-source').value = html;
+  // reset para modo visual ao carregar conteúdo
+  _richSourceMode = false;
+  const srcEl = document.getElementById('ifood-cnt-source');
+  const edEl  = document.getElementById('ifood-cnt-editor');
+  srcEl.style.display = 'none';
+  edEl.style.display  = 'block';
+  document.getElementById('tb-source-btn').style.background = '';
+  document.getElementById('tb-source-btn').style.color = '';
+  edEl.innerHTML = html;
+  srcEl.value = html;
   document.getElementById('ifood-cnt-preview').style.display = 'none';
 }
 
