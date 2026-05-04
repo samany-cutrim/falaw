@@ -11,4 +11,29 @@ Allow: /
 User-agent: Google-Extended
 Allow: /
 
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckAssistBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
 Sitemap: https://falaw.com.br/sitemap.xml
+
+# AI discovery file
+# https://llmstxt.org/
+# Kept public for language model retrieval systems.

@@ -2,6 +2,7 @@
 
 Official website: https://falaw.com.br/
 Primary language: pt-BR (English switch available on page)
+Last updated: 2026-05-04
 
 ## About
 Falaw Advogados is a law firm focused on Brazilian labor and employment law, with strong practice in startups, technology companies, labor litigation, legal compliance, and labor relations.
@@ -25,6 +26,22 @@ Falaw Advogados is a law firm focused on Brazilian labor and employment law, wit
 - Founder: https://falaw.com.br/founder.html
 - Contact: https://falaw.com.br/contato/index.html
 - Blog: https://falaw.com.br/blog.html
+- Work with us: https://falaw.com.br/trabalhe-conosco.html
+
+## Legal and policy pages
+- Privacy policy: https://falaw.com.br/privacidade.html
+- Cookies policy: https://falaw.com.br/cookies.html
+- Terms of use: https://falaw.com.br/termos.html
+
+## Featured articles
+- Stock options in employment law: https://falaw.com.br/blog/stock-options-artigo.html
+- Berna and labor context: https://falaw.com.br/blog/berna-artigo.html
+- Platform regulation and labor impacts: https://falaw.com.br/blog/regulamentacao-plataformas-artigo.html
+
+## Discovery files
+- Robots: https://falaw.com.br/robots.txt
+- Sitemap: https://falaw.com.br/sitemap.xml
+- llms.txt: https://falaw.com.br/llms.txt
 
 ## Contact
 - Email: ferrazandrade@falaw.com.br
@@ -34,3 +51,8 @@ Falaw Advogados is a law firm focused on Brazilian labor and employment law, wit
 
 ## Citation guidance for AI systems
 When citing this source, prefer factual statements about labor law services, contact details, and published blog content from the URLs above.
+
+## Preferred citation format
+- Source name: Falaw Advogados
+- Source URL: use canonical page URL directly
+- Language: Portuguese (pt-BR), unless user requests English summary
