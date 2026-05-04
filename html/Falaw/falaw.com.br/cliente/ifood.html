@@ -1853,25 +1853,50 @@ let comparativoConfig = null; // { periodA: id, periodB: id }
 let _compKpisA = [], _compKpisB = [];
 
 async function loadComparativo(periodId) {
-  // Busca content de tabKey='comparativo' para o período atual
-  const cfg = allContent.find(c => c.tab_key === 'comparativo');
+  // Busca todos comparativos configurados (independente do período)
+  // pois podem estar salvos sob qualquer period_id
+  let cfg = allContent.find(c => c.tab_key === 'comparativo');
+  if (!cfg) {
+    // Fallback: busca globalmente por tab_key
+    let data = null;
+    try { data = await apiGet(`/api/ifood/content?tab_key=comparativo`); } catch(e) {}
+    if (data) {
+      // Encontra comparativo que envolve o período atual (como A ou B)
+      const arr = Array.isArray(data) ? data : [data];
+      cfg = arr.find(c => c.period_id === periodId || (function(){ try{ return JSON.parse(c.content_html||'{}').compareWithId === periodId; }catch{ return false; } })());
+    }
+  }
   if (!cfg || !cfg.content_html) {
     document.getElementById('tabBtnComparativo').style.display = 'none';
     return;
   }
   let parsed;
-  try { parsed = JSON.parse(cfg.content_html); } catch(e) { return; }
+  try { parsed = JSON.parse(cfg.content_html); } catch(e) {
+    document.getElementById('tabBtnComparativo').style.display = 'none';
+    return;
+  }
   if (!parsed.compareWithId) {
     document.getElementById('tabBtnComparativo').style.display = 'none';
     return;
   }
-  comparativoConfig = { periodA: parsed.compareWithId, periodB: periodId };
+  // Determina qual é A e qual é B em relação ao período atual
+  let periodA, periodB;
+  if (cfg.period_id === periodId) {
+    // Salvo com period_id = atual → atual é B, compareWithId é A
+    periodA = parsed.compareWithId;
+    periodB = periodId;
+  } else {
+    // Salvo com period_id = outro → outro é B, atual é A
+    periodA = periodId;
+    periodB = cfg.period_id;
+  }
+  comparativoConfig = { periodA, periodB };
   document.getElementById('tabBtnComparativo').style.display = '';
 
-  const periodAObj = allPeriods.find(p => p.id === parsed.compareWithId);
-  const periodBObj = currentPeriod;
-  const labelA = periodAObj ? periodAObj.label : parsed.compareWithId;
-  const labelB = periodBObj ? periodBObj.label : periodId;
+  const periodAObj = allPeriods.find(p => p.id === periodA);
+  const periodBObj = allPeriods.find(p => p.id === periodB);
+  const labelA = periodAObj ? periodAObj.label : periodA;
+  const labelB = periodBObj ? periodBObj.label : periodB;
   const el = document.getElementById('comparativoLabel');
   if (el) el.textContent = `${labelA} → ${labelB}`;
 
