@@ -5488,7 +5488,7 @@ function _xlTooltipJrVtLines(jrVtMap, limit) {
     });
 }
 
-function _xlChartOutcomeByGroup(labels, favData, desfData, detailTitle, favDetails, desfDetails) {
+function _xlChartOutcomeByGroup(labels, favData, desfData, detailTitle, favDetails, desfDetails, judgeInfo) {
   return {
     type:'bar',
     data:{ labels, datasets:[
@@ -5506,7 +5506,8 @@ function _xlChartOutcomeByGroup(labels, favData, desfData, detailTitle, favDetai
     falaw_meta:{
       tooltip_mode:'trt_breakdown',
       detail_title: detailTitle || 'Detalhes',
-      details:{ Favorável: favDetails || {}, Desfavorável: desfDetails || {} }
+      details:{ Favorável: favDetails || {}, Desfavorável: desfDetails || {} },
+      judgeInfo: judgeInfo || {}
     }
   };
 }
@@ -5642,21 +5643,31 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
 
   // Julgadores — a partir da aba Decisões
   const decJFav = {}, decJDesf = {};
+  const decJInfo = {}; // { judge: { trt: Set, vt: Set } }
   decisoes.forEach(d => {
     const judge = String(d.juiz_relator || '').trim();
     if (!_isValidJulg(judge)) return;
     const cls = _xlClassifyDec(d.resultado);
     if (cls === 'F') decJFav[judge] = (decJFav[judge] || 0) + 1;
     if (cls === 'D') decJDesf[judge] = (decJDesf[judge] || 0) + 1;
+    // Coletar TRT e VT/Turma
+    if (!decJInfo[judge]) decJInfo[judge] = { trt: new Set(), vt: new Set() };
+    const trt = String(d.trt || '').trim(); if (trt && trt !== 'nan') decJInfo[judge].trt.add(trt);
+    const vt  = String(d.varaturma || d.vara || d.turma || d.vt || '').trim(); if (vt && vt !== 'nan') decJInfo[judge].vt.add(vt);
   });
   const julgTop = _xlTopKeysByTotal([decJFav, decJDesf], 10);
   if (julgTop.length) {
+    const judgeInfo = {};
+    julgTop.forEach(j => {
+      const inf = decJInfo[j] || { trt: new Set(), vt: new Set() };
+      judgeInfo[j] = { trt: [...inf.trt].join(', ') || '—', vt: [...inf.vt].slice(0,2).join(', ') || '—' };
+    });
     push('visao-geral','chart_julgadores','Top 10 Julgadores — Favoráveis vs Desfavoráveis','','',
       _xlChartOutcomeByGroup(
         julgTop,
         julgTop.map(j=>decJFav[j]||0),
         julgTop.map(j=>decJDesf[j]||0),
-        null, null, null
+        null, null, null, judgeInfo
       ), 'Top 10 Julgadores — Favoráveis × Desfavoráveis');
   }
 

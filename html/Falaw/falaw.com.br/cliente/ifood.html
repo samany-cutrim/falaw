@@ -906,10 +906,18 @@ function enhanceFalawChart(cfg) {
           return `${context.dataset.label}: ${value}`;
         },
         afterLabel(context) {
+          const out = [];
+          // TRT e VT/Turma por julgador
+          const info = (meta.judgeInfo || {})[context.label];
+          if (info) {
+            if (info.trt && info.trt !== '—') out.push(`TRT: ${info.trt}`);
+            if (info.vt  && info.vt  !== '—') out.push(`VT/Turma: ${info.vt}`);
+          }
+          // Linhas de detalhe adicionais (se existirem)
           const detailGroups = ((meta.details || {})[context.dataset.label] || {});
           const lines = detailGroups[context.label] || [];
-          if (!lines.length) return '';
-          return ['', `${meta.detail_title || 'Detalhes'}:`, ...lines];
+          if (lines.length) { out.push('', `${meta.detail_title || 'Detalhes'}:`); lines.forEach(l => out.push(l)); }
+          return out.length ? ['', ...out] : '';
         }
       }
     };
