@@ -3473,7 +3473,7 @@ function copySocialSlides() {
   });
 }
 
-(messages, temperature) {
+async function callClaude(messages, temperature) {
   const apiKey = localStorage.getItem('fa_claude_key') || '';
   const model  = localStorage.getItem('fa_claude_model') || 'claude-sonnet-4-5';
   if (!apiKey) throw new Error('Chave da API Anthropic não configurada — vá em Configurações e cole sua API key do Claude.');
