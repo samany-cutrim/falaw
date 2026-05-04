@@ -1459,6 +1459,7 @@ async function loadAndRenderPeriod(periodId) {
   ]);
   renderAllTabs();
   updatePeriodLabels();
+  await loadComparativo(periodId);
 }
 
 function renderAllTabs() {
@@ -1474,7 +1475,6 @@ function renderAllTabs() {
   });
   renderHighlights(allHighlights);
   renderContent('destaques', allContent);
-  await loadComparativo(periodId);
 }
 
 function updatePeriodLabels() {

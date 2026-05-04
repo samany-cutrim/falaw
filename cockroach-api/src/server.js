@@ -376,11 +376,11 @@ app.delete('/api/ifood/kpis/by-period/:periodId', async (req, res) => {
 app.get('/api/ifood/content', async (req, res) => {
   try {
     const periodId = String(req.query.periodId || '');
-    const tabKey = String(req.query.tabKey || '');
-    if (!periodId) return res.status(400).json({ error: 'periodId obrigatorio' });
+    const tabKey = String(req.query.tabKey || req.query.tab_key || '');
+    if (!periodId && !tabKey) return res.status(400).json({ error: 'periodId ou tabKey obrigatorio' });
     const data = await prisma.ifoodContent.findMany({
       where: {
-        periodId,
+        ...(periodId ? { periodId } : {}),
         ...(tabKey ? { tabKey } : {})
       }
     });
