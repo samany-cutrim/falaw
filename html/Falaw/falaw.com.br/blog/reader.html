@@ -8,6 +8,8 @@
   <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
   <link rel="stylesheet" href="../falaw-design.css" />
   <style>.article-back--spaced { margin-top: 40px; }</style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../sb-config.js"></script>
   <script src="articles-data.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
@@ -126,8 +128,8 @@
     renderArticle(art);
   } else {
     // Fallback: busca no Supabase
-    var sbUrl = localStorage.getItem('fa_supabase_url');
-    var sbKey = localStorage.getItem('fa_supabase_key');
+    var sbUrl = localStorage.getItem('fa_supabase_url') || (window.SB_URL || '');
+    var sbKey = localStorage.getItem('fa_supabase_key') || (window.SB_KEY || '');
     if (sbUrl && sbKey) {
       fetch(sbUrl + '/rest/v1/articles?id=eq.' + encodeURIComponent(id) + '&published=eq.true&limit=1', {
         headers: { 'apikey': sbKey, 'Authorization': 'Bearer ' + sbKey }

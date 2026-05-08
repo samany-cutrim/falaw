@@ -50,6 +50,7 @@
   <link rel="stylesheet" href="falaw-design.css" />
   <script src="blog/articles-data.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="sb-config.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
   <script src="falaw-main.js" defer></script>
@@ -197,8 +198,8 @@
   // Tenta buscar artigos do Supabase (mais atualizados que o arquivo estático)
   (function loadFromSupabase() {
     try {
-      var sbUrl = localStorage.getItem('fa_supabase_url');
-      var sbKey = localStorage.getItem('fa_supabase_key');
+      var sbUrl = localStorage.getItem('fa_supabase_url') || (window.SB_URL || '');
+      var sbKey = localStorage.getItem('fa_supabase_key') || (window.SB_KEY || '');
       if (!sbUrl || !sbKey || typeof supabase === 'undefined') return;
       var client = supabase.createClient(sbUrl, sbKey);
       client.from('articles').select('*').eq('published', true).order('id', { ascending: false })
