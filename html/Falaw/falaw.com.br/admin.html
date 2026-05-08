@@ -2531,10 +2531,9 @@ async function mergeGitHubArticlesIntoSupabase() {
     const sb = getSB();
     if (!sb) return;
     await Promise.all(missing.map(a => sbSaveArticle(a)));
-    // Adiciona ao array em memória e re-renderiza
+    // Adiciona ao array em memória (renderBlog será chamado pelo caller)
     ALL_ARTICLES = [...missing, ...ALL_ARTICLES];
     localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
-    renderBlog();
     showToast(`${missing.length} artigo(s) sincronizado(s) do GitHub para o Supabase.`);
   } catch(e) {
     console.warn('mergeGitHubArticlesIntoSupabase:', e.message);
@@ -2546,8 +2545,8 @@ async function loadArticlesFromGitHub() {
   const sbOk = await loadArticlesFromSupabase();
   if (sbOk) {
     document.getElementById('blog-no-token').hidden = true;
-    // Sincroniza em background artigos do GitHub que possam estar faltando no Supabase
-    mergeGitHubArticlesIntoSupabase();
+    // Sincroniza artigos do GitHub que possam estar faltando no Supabase (aguarda antes de retornar)
+    await mergeGitHubArticlesIntoSupabase();
     return;
   }
 
