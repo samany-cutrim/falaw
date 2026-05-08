@@ -2589,13 +2589,8 @@ function generateArticlesJS(articles) {
 async function mergeGitHubArticlesIntoSupabase() {
   // Upsert no Supabase artigos que estão no GitHub mas não no Supabase
   try {
-    const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_PATH}?t=${Date.now()}`;
-    const rawRes = await fetch(rawUrl);
-    if (!rawRes.ok) return;
-    const code = await rawRes.text();
-    const match = code.match(/FALAW_ARTICLES\s*=\s*(\[[\s\S]*\]);/);
-    if (!match) return;
-    const ghArticles = JSON.parse(match[1]) || [];
+    const ghArticles = await fetchGitHubArticles();
+    if (!ghArticles.length) return;
     const existingIds = new Set(ALL_ARTICLES.map(a => a.id));
     const missing = ghArticles.filter(a => !existingIds.has(a.id));
     if (!missing.length) return;
@@ -2609,14 +2604,28 @@ async function mergeGitHubArticlesIntoSupabase() {
 }
 
 async function fetchGitHubArticles() {
-  // Busca artigos do arquivo estático no GitHub (raw, sem token)
-  try {
-    const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_PATH}?t=${Date.now()}`;
-    const rawRes = await fetch(rawUrl);
-    if (!rawRes.ok) return [];
-    const code = await rawRes.text();
+  // Busca artigos do arquivo estático no GitHub (tenta raw primeiro, depois API com token)
+  async function parseArticlesCode(code) {
     const match = code.match(/FALAW_ARTICLES\s*=\s*(\[[\s\S]*\]);/);
     return match ? (JSON.parse(match[1]) || []) : [];
+  }
+  try {
+    const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_PATH}?t=${Date.now()}`;
+    const headers = {};
+    if (ghToken()) headers['Authorization'] = 'token ' + ghToken();
+    const rawRes = await fetch(rawUrl, { headers });
+    if (rawRes.ok) return parseArticlesCode(await rawRes.text());
+    // Fallback: GitHub API (funciona com repo privado)
+    if (ghToken()) {
+      const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`;
+      const apiRes = await fetch(apiUrl, { headers: ghHeaders() });
+      if (apiRes.ok) {
+        const json = await apiRes.json();
+        const code = atob(json.content.replace(/\n/g, ''));
+        return parseArticlesCode(code);
+      }
+    }
+    return [];
   } catch(e) {
     console.warn('fetchGitHubArticles:', e.message);
     return [];
