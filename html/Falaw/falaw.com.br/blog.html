@@ -204,7 +204,7 @@
       client.from('articles').select('*').eq('published', true).order('id', { ascending: false })
         .then(function(res) {
           if (res.error || !res.data || !res.data.length) return;
-          ALL = res.data.map(function(a) {
+          var sbArticles = res.data.map(function(a) {
             return {
               id:        a.id,
               title:     a.title     || '',
@@ -218,7 +218,11 @@
               photo:     a.photo     || ''
             };
           });
-          // Re-renderiza com dados frescos do Supabase
+          // Merge: inclui artigos do arquivo estático que ainda não estejam no Supabase
+          var sbIds = new Set(sbArticles.map(function(a) { return a.id; }));
+          var staticOnly = ALL.filter(function(a) { return !sbIds.has(a.id); });
+          ALL = staticOnly.concat(sbArticles);
+          // Re-renderiza com dados frescos
           category = 'Todos';
           query = '';
           renderFilters();

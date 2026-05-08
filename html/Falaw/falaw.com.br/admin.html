@@ -2515,10 +2515,41 @@ function generateArticlesJS(articles) {
   return 'var FALAW_ARTICLES = [\n  ' + lines.join(',\n  ') + '\n];\n';
 }
 
+async function mergeGitHubArticlesIntoSupabase() {
+  // Busca artigos do GitHub (raw) e upsert no Supabase os que estiverem faltando
+  try {
+    const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_PATH}?t=${Date.now()}`;
+    const rawRes = await fetch(rawUrl);
+    if (!rawRes.ok) return;
+    const code = await rawRes.text();
+    const match = code.match(/FALAW_ARTICLES\s*=\s*(\[[\s\S]*\]);/);
+    if (!match) return;
+    const ghArticles = JSON.parse(match[1]) || [];
+    const existingIds = new Set(ALL_ARTICLES.map(a => a.id));
+    const missing = ghArticles.filter(a => !existingIds.has(a.id));
+    if (!missing.length) return;
+    const sb = getSB();
+    if (!sb) return;
+    await Promise.all(missing.map(a => sbSaveArticle(a)));
+    // Adiciona ao array em memória e re-renderiza
+    ALL_ARTICLES = [...missing, ...ALL_ARTICLES];
+    localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
+    renderBlog();
+    showToast(`${missing.length} artigo(s) sincronizado(s) do GitHub para o Supabase.`);
+  } catch(e) {
+    console.warn('mergeGitHubArticlesIntoSupabase:', e.message);
+  }
+}
+
 async function loadArticlesFromGitHub() {
   // 1) Tenta Supabase primeiro (armazenamento primário)
   const sbOk = await loadArticlesFromSupabase();
-  if (sbOk) { document.getElementById('blog-no-token').hidden = true; return; }
+  if (sbOk) {
+    document.getElementById('blog-no-token').hidden = true;
+    // Sincroniza em background artigos do GitHub que possam estar faltando no Supabase
+    mergeGitHubArticlesIntoSupabase();
+    return;
+  }
 
   // 2) Supabase vazio/indisponível — tenta GitHub
   document.getElementById('blog-no-token').hidden = !!ghToken();
