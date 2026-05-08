@@ -1,5 +1,17 @@
 var FALAW_ARTICLES = [
   {
+    "id": "inss-empresa-afastamentos-empregadores-2026",
+    "title": "INSS Empresa: o novo sistema que muda a gestão de afastamentos nas empresas",
+    "category": "Direito Previdenciário",
+    "excerpt": "A partir de 15 de maio de 2026, o INSS Empresa substitui o Conadem e permite que empregadores consultem em tempo real os afastamentos de seus funcionários, com histórico desde 2019. Entenda os impactos jurídicos, as exigências de acesso e os cuidados com a LGPD.",
+    "date": "Maio de 2026",
+    "readTime": "7 min",
+    "url": "blog/inss-empresa-afastamentos-artigo.html",
+    "published": true,
+    "photo": "",
+    "content": ""
+  },
+  {
     "id": "regulamentacao-trabalho-plataformas-plp152-2025",
     "title": "O Brasil está prestes a regulamentar o trabalho em plataformas. Estive lá quando isso foi debatido — e preciso te contar o que eu vi",
     "category": "Direito do Trabalho",

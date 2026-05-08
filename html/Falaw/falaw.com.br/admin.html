@@ -6137,6 +6137,36 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     }
   }
 
+  // Gráfico de linha: distribuições em 2026 por mês
+  {
+    const _MONTHS_LABELS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const _parseYM = d => { const m=String(d||'').match(/(\d{4})[-\/](\d{1,2})/); return m?{y:m[1],mo:parseInt(m[2],10)}:null; };
+    const _byMonthAll  = {};
+    const _byMonthCR   = {};
+    records.forEach(r => {
+      const ym = _parseYM(r.data_distrib);
+      if(!ym || ym.y !== '2026') return;
+      const mo = ym.mo;
+      _byMonthAll[mo]  = (_byMonthAll[mo]||0) + 1;
+      _byMonthCR[r.causa_raiz] = _byMonthCR[r.causa_raiz] || {};
+      _byMonthCR[r.causa_raiz][mo] = (_byMonthCR[r.causa_raiz][mo]||0) + 1;
+    });
+    const _months = Object.keys(_byMonthAll).map(Number).sort((a,b)=>a-b);
+    if(_months.length >= 1) {
+      const _labels = _months.map(m => _MONTHS_LABELS[m-1]);
+      const _datasets2026 = [{ label:'Total', data:_months.map(m=>_byMonthAll[m]||0) }];
+      for(const { cr, label: crLabel } of _XL_CR_TABS) {
+        const moCounts = _byMonthCR[cr];
+        if(!moCounts) continue;
+        const monthsWithData = Object.keys(moCounts).map(Number).filter(m=>_months.includes(m));
+        if(monthsWithData.length < 1) continue;
+        _datasets2026.push({ label: crLabel, data:_months.map(m=>(moCounts[m]||0)) });
+      }
+      push('visao-geral','chart_dist_2026','Distribuídos em 2026 por Mês','','',
+        _xlChartLine(_labels, _datasets2026), 'Ações Distribuídas em 2026 por Mês');
+    }
+  }
+
   push('visao-geral','total_processos','Total de Processos',_xlFmtBr(total),'processos');
   push('visao-geral','ativos','Processos Ativos',_xlFmtBr(ativos),'ativos');
   push('visao-geral','encerrados','Processos Encerrados',_xlFmtBr(encerr),'encerrados');
