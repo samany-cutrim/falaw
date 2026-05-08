@@ -1006,6 +1006,16 @@
       </div>
       <div class="stats-bar" id="newsletter-stats"></div>
       <div class="item-list" id="newsletter-list"></div>
+
+      <!-- Digest -->
+      <div style="margin-top:32px;padding-top:28px;border-top:1px solid var(--c-divider);">
+        <h3 style="font-size:14px;font-weight:600;margin:0 0 6px;">Enviar Digest por E-mail</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin:0 0 16px;">Reúne automaticamente os artigos publicados no período e envia para todos os inscritos.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="openDigestModal('week')">Digest desta semana →</button>
+          <button class="btn btn-ghost" onclick="openDigestModal('month')">Digest deste mês →</button>
+        </div>
+      </div>
     </section>
 
     <!-- ── CONTATO ── -->
@@ -1759,6 +1769,41 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeMemberModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveMember()">Salvar membro</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MODAL — DIGEST NEWSLETTER
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="digest-modal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h3 id="digest-modal-title">Digest — Newsletter</h3>
+      <button class="modal-close" onclick="closeDigestModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label>Destinatários — Inscritos na Newsletter</label>
+        <div class="email-subscribers-list" id="digest-subscribers-list"></div>
+      </div>
+      <div class="form-field">
+        <label>Assunto do e-mail</label>
+        <input type="text" id="digest-subject" placeholder="Newsletter Falaw" />
+      </div>
+      <div class="form-field">
+        <label>Artigos incluídos</label>
+        <div id="digest-articles-list" style="font-size:12px;line-height:2;"></div>
+      </div>
+      <div class="form-field">
+        <label>Pré-visualização</label>
+        <div class="email-preview-frame" id="digest-preview-frame"></div>
+      </div>
+    </div>
+    <div class="modal-footer" style="flex-wrap:wrap;gap:10px;">
+      <button type="button" class="btn btn-ghost" onclick="closeDigestModal()">Fechar</button>
+      <button type="button" class="btn btn-ghost" onclick="copyDigestHTML()">Copiar HTML</button>
+      <button type="button" class="btn btn-primary" id="btn-send-digest" onclick="sendDigestViaN8N()">Enviar agora →</button>
     </div>
   </div>
 </div>
@@ -4355,6 +4400,166 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 const SITE_BASE = 'https://www.falaw.com.br/';
 let emailArticle = null;
 let emailMode = 'newsletter';
+
+/* ── DIGEST (semanal / mensal) ─────────────────────────── */
+let digestArticles = [];
+let digestPeriodLabel = '';
+
+const MONTHS_PT_LABEL = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+function openDigestModal(type) {
+  const now = new Date();
+  const curMonth = MONTHS_PT_LABEL[now.getMonth()];
+  const curYear  = now.getFullYear();
+
+  let filtered = [];
+  let label = '';
+
+  if (type === 'month') {
+    label = curMonth.charAt(0).toUpperCase() + curMonth.slice(1) + ' de ' + curYear;
+    filtered = (ALL_ARTICLES || []).filter(a => {
+      if (!a.published) return false;
+      const d = (a.date || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const m = MONTHS_PT_LABEL[now.getMonth()].normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      return d.includes(m) && d.includes(String(curYear));
+    });
+  } else {
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    filtered = (ALL_ARTICLES || []).filter(a => {
+      if (!a.published) return false;
+      if (a.created_at) return new Date(a.created_at) >= weekAgo;
+      // fallback: mesmo mês/ano
+      const d = (a.date || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const m = MONTHS_PT_LABEL[now.getMonth()].normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      return d.includes(m) && d.includes(String(curYear));
+    });
+    // formata período "01/05 a 08/05/2026"
+    const fmt = d => d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    label = 'Semana ' + fmt(weekAgo) + ' a ' + fmt(now) + '/' + curYear;
+  }
+
+  if (!filtered.length) {
+    alert('Nenhum artigo publicado no período selecionado.'); return;
+  }
+
+  digestArticles    = filtered;
+  digestPeriodLabel = label;
+
+  document.getElementById('digest-modal-title').textContent = 'Digest — ' + label;
+  document.getElementById('digest-subject').value = 'Digest Falaw · ' + label;
+
+  const subs = load(KEYS.newsletter) || [];
+  const subList = document.getElementById('digest-subscribers-list');
+  subList.innerHTML = subs.length
+    ? subs.map(s => `<span style="margin-right:12px;">${escHtml(s.email)}</span>`).join('')
+    : '<span style="color:var(--c-muted);font-size:12px;">Nenhum inscrito ainda.</span>';
+
+  document.getElementById('digest-articles-list').innerHTML =
+    filtered.map(a => `<div>• <strong>${escHtml(a.title)}</strong> <span style="color:var(--text-muted)">(${escHtml(a.date||'')})</span></div>`).join('');
+
+  const html = generateDigestEmailHTML(filtered, label);
+  const frame = document.getElementById('digest-preview-frame');
+  frame.innerHTML = '<iframe srcdoc="" style="width:100%;border:none;min-height:520px;" title="Pré-visualização"></iframe>';
+  frame.querySelector('iframe').srcdoc = html;
+
+  document.getElementById('digest-modal').classList.add('open');
+}
+
+function closeDigestModal() {
+  document.getElementById('digest-modal').classList.remove('open');
+}
+
+function generateDigestEmailHTML(articles, periodLabel) {
+  const base = SITE_BASE;
+  const articleCards = articles.map(a => {
+    const url = a.url ? (base + a.url) : base;
+    return `
+  <tr><td style="background:#ffffff;padding:32px 40px 0;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#0D2B5E;margin:0 0 10px 0;">${escHtml(a.category||'')}</p>
+    <h2 style="font-family:Georgia,serif;font-size:20px;font-weight:700;color:#060E1A;margin:0 0 10px 0;line-height:1.3;">${escHtml(a.title)}</h2>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#7A7672;margin:0 0 14px 0;">${escHtml(a.date||'')}</p>
+    <p style="font-family:Georgia,serif;font-size:15px;line-height:1.7;color:#1a1a1a;margin:0 0 18px 0;">${escHtml(a.excerpt||'')}</p>
+    <table cellpadding="0" cellspacing="0" style="margin-bottom:8px;"><tr>
+      <td style="background:#0D2B5E;border-radius:2px;">
+        <a href="${url}" style="display:inline-block;padding:12px 24px;font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#ffffff;text-decoration:none;">Ler artigo &rarr;</a>
+      </td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="background:#ffffff;padding:24px 40px 0;"><hr style="border:none;border-top:1px solid rgba(26,10,13,.08);margin:0;"></td></tr>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Digest Falaw &middot; ${escHtml(periodLabel)}</title></head>
+<body style="margin:0;padding:0;background:#f4f2ef;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+  <!-- Header -->
+  <tr><td style="background:#060E1A;padding:28px 40px;border-radius:4px 4px 0 0;">
+    <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" alt="Falaw Advogados" style="display:block;height:36px;width:auto;margin-bottom:14px;" />
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#4a90d9;margin:0 0 6px 0;">NEWSLETTER FALAW</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.35);margin:0;">${escHtml(periodLabel)}</p>
+  </td></tr>
+
+  <!-- Intro -->
+  <tr><td style="background:#ffffff;padding:32px 40px 24px;">
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.7;color:#060E1A;margin:0;">Confira os artigos publicados pela Falaw no período de <strong>${escHtml(periodLabel)}</strong>:</p>
+  </td></tr>
+  <tr><td style="background:#ffffff;padding:0 40px;"><hr style="border:none;border-top:1px solid rgba(26,10,13,.08);margin:0;"></td></tr>
+
+  ${articleCards}
+
+  <!-- Footer -->
+  <tr><td style="background:#f7f5f2;padding:24px 40px;border-radius:0 0 4px 4px;margin-top:8px;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;color:#7A7672;margin:0;">Av. Francisco Matarazzo, 1752 &middot; Salas 414 e 415 &middot; S&atilde;o Paulo / SP</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
+function copyDigestHTML() {
+  if (!digestArticles.length) return;
+  navigator.clipboard.writeText(generateDigestEmailHTML(digestArticles, digestPeriodLabel))
+    .then(() => showToast('HTML do digest copiado!'));
+}
+
+async function sendDigestViaN8N() {
+  const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
+  if (!n8nBase) { showToast('URL do n8n não configurada.'); return; }
+  if (!digestArticles.length) return;
+
+  const subject = document.getElementById('digest-subject').value.trim() || ('Digest Falaw · ' + digestPeriodLabel);
+  const html    = generateDigestEmailHTML(digestArticles, digestPeriodLabel);
+  const subs    = load(KEYS.newsletter) || [];
+  const subscribers = subs.map(s => s.email).filter(Boolean);
+
+  if (!subscribers.length) { showToast('Nenhum inscrito.'); return; }
+
+  const btn = document.getElementById('btn-send-digest');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+
+  try {
+    const res = await fetch(n8nBase + '/falaw-newsletter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, html, subscribers })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('✓ Digest enviado para ' + subscribers.length + ' inscrito(s)!');
+    closeDigestModal();
+  } catch(e) {
+    showToast('Erro ao enviar: ' + e.message);
+  }
+
+  btn.disabled = false; btn.textContent = 'Enviar agora →';
+}
 
 function openEmailModal(id) {
   emailArticle = ALL_ARTICLES.find(a => a.id === id);
