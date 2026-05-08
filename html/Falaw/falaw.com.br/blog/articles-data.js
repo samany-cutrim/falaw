@@ -1,5 +1,17 @@
 var FALAW_ARTICLES = [
   {
+    "id": "nr1-riscos-psicossociais-gro-2026",
+    "title": "NR-1 e Riscos Psicossociais: o que o MTE acabou de publicar — e o que isso muda para a sua empresa",
+    "category": "Direito do Trabalho",
+    "excerpt": "Com a vigência da NR-1 em 26 de maio, o Ministério do Trabalho publicou 22 perguntas e respostas sobre GRO e riscos psicossociais. Adequação sem assessoria jurídica não é adequação — é risco documentado.",
+    "date": "Maio de 2026",
+    "readTime": "8 min",
+    "url": "blog/nr1-riscos-psicossociais-gro-2026.html",
+    "published": true,
+    "photo": "",
+    "content": ""
+  },
+  {
     "id": "inss-empresa-afastamentos-empregadores-2026",
     "title": "INSS Empresa: o novo sistema que muda a gestão de afastamentos nas empresas",
     "category": "Direito Previdenciário",
