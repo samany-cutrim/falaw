@@ -52,7 +52,18 @@
   <script src="falaw-main.js" defer></script>
   <script src="team-data.js"></script>
   <script>
-  document.addEventListener('DOMContentLoaded', function () {
+  // Busca a versão mais recente do GitHub para evitar cache do CDN
+  (function() {
+    var raw = 'https://raw.githubusercontent.com/samany-cutrim/falaw/master/html/Falaw/falaw.com.br/team-data.js?t=' + Date.now();
+    fetch(raw).then(function(r){ return r.text(); }).then(function(txt){
+      try {
+        var m = txt.match(/FALAW_TEAM\s*=\s*(\[[\s\S]*?\]);\s*$/m);
+        if (m) { window.FALAW_TEAM = JSON.parse(m[1]); renderTeam(); }
+      } catch(e) {}
+    }).catch(function(){});
+  })();
+
+  function renderTeam() {
     if (typeof FALAW_TEAM === 'undefined' || !FALAW_TEAM.length) return;
     var emailIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>';
     var html = FALAW_TEAM.map(function (m) {
@@ -71,7 +82,8 @@
     }).join('');
     var container = document.getElementById('team-list-container');
     if (container) container.innerHTML = html;
-  });
+  }
+  document.addEventListener('DOMContentLoaded', renderTeam);
   </script>
 </head>
 <body>
