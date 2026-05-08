@@ -2516,7 +2516,7 @@ function generateArticlesJS(articles) {
 }
 
 async function mergeGitHubArticlesIntoSupabase() {
-  // Busca artigos do GitHub (raw) e upsert no Supabase os que estiverem faltando
+  // Upsert no Supabase artigos que estão no GitHub mas não no Supabase
   try {
     const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_PATH}?t=${Date.now()}`;
     const rawRes = await fetch(rawUrl);
@@ -2531,72 +2531,84 @@ async function mergeGitHubArticlesIntoSupabase() {
     const sb = getSB();
     if (!sb) return;
     await Promise.all(missing.map(a => sbSaveArticle(a)));
-    // Adiciona ao array em memória (renderBlog será chamado pelo caller)
-    ALL_ARTICLES = [...missing, ...ALL_ARTICLES];
-    localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
     showToast(`${missing.length} artigo(s) sincronizado(s) do GitHub para o Supabase.`);
   } catch(e) {
     console.warn('mergeGitHubArticlesIntoSupabase:', e.message);
   }
 }
 
-async function loadArticlesFromGitHub() {
-  // 1) Tenta Supabase primeiro (armazenamento primário)
-  const sbOk = await loadArticlesFromSupabase();
-  if (sbOk) {
-    document.getElementById('blog-no-token').hidden = true;
-    // Sincroniza artigos do GitHub que possam estar faltando no Supabase (aguarda antes de retornar)
-    await mergeGitHubArticlesIntoSupabase();
-    return;
-  }
-
-  // 2) Supabase vazio/indisponível — tenta GitHub
-  document.getElementById('blog-no-token').hidden = !!ghToken();
+async function fetchGitHubArticles() {
+  // Busca artigos do arquivo estático no GitHub (raw, sem token)
   try {
-    const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}?ref=${GITHUB_BRANCH}&t=${Date.now()}`;
-    const res = await fetch(url, { headers: ghHeaders() });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    GH_FILE_SHA = data.sha;
-    const code = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
-    // Regex greedy sem flag m — captura do primeiro [ até o último ] antes de ;
+    const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_PATH}?t=${Date.now()}`;
+    const rawRes = await fetch(rawUrl);
+    if (!rawRes.ok) return [];
+    const code = await rawRes.text();
     const match = code.match(/FALAW_ARTICLES\s*=\s*(\[[\s\S]*\]);/);
-    if (!match) throw new Error('Formato de artigos inválido');
-    ALL_ARTICLES = JSON.parse(match[1]) || [];
-    localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
-    // Sincroniza com Supabase (migração automática)
-    const sb = getSB();
-    if (sb && ALL_ARTICLES.length > 0) {
-      Promise.all(ALL_ARTICLES.map(a => sbSaveArticle(a)))
-        .then(() => showToast('Artigos sincronizados com Supabase.'))
+    return match ? (JSON.parse(match[1]) || []) : [];
+  } catch(e) {
+    console.warn('fetchGitHubArticles:', e.message);
+    return [];
+  }
+}
+
+async function loadArticlesFromGitHub() {
+  document.getElementById('blog-no-token').hidden = true;
+
+  // Busca Supabase e GitHub em paralelo, depois faz union por id
+  const [sbArticles, ghArticles] = await Promise.all([
+    (async () => {
+      const sb = getSB();
+      if (!sb) return null;
+      try {
+        const { data, error } = await sb.from('articles').select('*');
+        if (error || !data) return null;
+        return data.map(a => ({
+          id:        a.id,
+          title:     a.title     || '',
+          category:  a.category  || '',
+          excerpt:   a.excerpt   || '',
+          date:      a.date      || '',
+          readTime:  a.readtime  || '',
+          url:       a.url       || '',
+          published: a.published !== false,
+          content:   a.content   || '',
+          photo:     a.photo     || ''
+        }));
+      } catch(e) { console.warn('Supabase load:', e.message); return null; }
+    })(),
+    fetchGitHubArticles()
+  ]);
+
+  if (sbArticles !== null && sbArticles.length > 0) {
+    // Union: Supabase como base + artigos do GitHub ausentes no Supabase
+    const sbIds = new Set(sbArticles.map(a => a.id));
+    const ghOnly = ghArticles.filter(a => !sbIds.has(a.id));
+    ALL_ARTICLES = [...sbArticles, ...ghOnly];
+    // Salva artigos faltantes no Supabase em background
+    if (ghOnly.length) {
+      const sb = getSB();
+      if (sb) Promise.all(ghOnly.map(a => sbSaveArticle(a)))
+        .then(() => showToast(`${ghOnly.length} artigo(s) sincronizado(s) com Supabase.`))
         .catch(() => {});
     }
-  } catch (e) {
-    console.warn('GitHub API failed:', e.message);
-    // 3) Fallback: URL raw pública (sem token)
-    try {
-      const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_PATH}?t=${Date.now()}`;
-      const rawRes = await fetch(rawUrl);
-      if (!rawRes.ok) throw new Error('HTTP ' + rawRes.status);
-      const code = await rawRes.text();
-      const match = code.match(/FALAW_ARTICLES\s*=\s*(\[[\s\S]*\]);/);
-      if (!match) throw new Error('Formato inválido');
-      ALL_ARTICLES = JSON.parse(match[1]) || [];
-      localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
-      const sb = getSB();
-      if (sb && ALL_ARTICLES.length > 0) {
-        Promise.all(ALL_ARTICLES.map(a => sbSaveArticle(a)))
-          .then(() => showToast('Artigos sincronizados com Supabase.'))
-          .catch(() => {});
-      }
-    } catch (e2) {
-      console.warn('Raw URL failed:', e2.message);
-      // 4) Último recurso: cache local
-      const cached = localStorage.getItem('fa_blog_articles_cache');
-      ALL_ARTICLES = cached ? (JSON.parse(cached) || []) : [];
-      if (ALL_ARTICLES.length) showToast('⚠ GitHub indisponível — exibindo artigos em cache.');
-    }
+  } else if (ghArticles.length > 0) {
+    // Sem Supabase — usa só GitHub
+    ALL_ARTICLES = ghArticles;
+    document.getElementById('blog-no-token').hidden = !!ghToken();
+    const sb = getSB();
+    if (sb) Promise.all(ALL_ARTICLES.map(a => sbSaveArticle(a)))
+      .then(() => showToast('Artigos sincronizados com Supabase.'))
+      .catch(() => {});
+  } else {
+    // Último recurso: cache local
+    const cached = localStorage.getItem('fa_blog_articles_cache');
+    ALL_ARTICLES = cached ? (JSON.parse(cached) || []) : [];
+    if (ALL_ARTICLES.length) showToast('⚠ Usando artigos em cache local.');
+    document.getElementById('blog-no-token').hidden = !!ghToken();
   }
+
+  localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
 }
 
 async function pushArticlesToGitHub() {
