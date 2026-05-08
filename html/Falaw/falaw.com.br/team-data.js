@@ -1,14 +1,6 @@
 /* team-data.js — gerado pelo admin Ferraz Andrade. Não editar manualmente. */
 var FALAW_TEAM = [
   {
-    "id": "mn1yd8t23jh0",
-    "name": "Beatriz Domingues",
-    "role": "Advogada",
-    "status": "active",
-    "bio": "Graduada em Direito e pós-graduanda em Direito do Trabalho pela PUC-RS. Atua nas frentes trabalhista, consultiva e empresarial, com experiência em contencioso estratégico e advocacia preventiva. Especialista em Compliance Trabalhista e investigações corporativas, com foco em mitigação de riscos e prevenção de passivos.",
-    "email": "beatriz@falaw.com.br"
-  },
-  {
     "id": "mn3838edzhum",
     "name": "Camila Vasconcelos",
     "email": "ferrazandrade@falaw.com.br",
