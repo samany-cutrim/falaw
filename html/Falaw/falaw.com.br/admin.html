@@ -2209,7 +2209,7 @@ async function loadArticlesFromSupabase() {
   const sb = getSB();
   if (!sb) return false;
   try {
-    const { data, error } = await sb.from('articles').select('*').order('date', { ascending: false });
+    const { data, error } = await sb.from('articles').select('*').order('created_at', { ascending: false, nullsFirst: false });
     if (error) throw error;
     if (!data || data.length === 0) return false; // empty — fall back to GitHub
     ALL_ARTICLES = data.map(a => ({

@@ -222,7 +222,6 @@
           var sbIds = new Set(sbArticles.map(function(a) { return a.id; }));
           var staticOnly = ALL.filter(function(a) { return !sbIds.has(a.id); });
           ALL = staticOnly.concat(sbArticles);
-          // Re-renderiza com dados frescos
           category = 'Todos';
           query = '';
           renderFilters();
@@ -305,12 +304,16 @@
       return matchCat && matchQ;
     });
 
-    // Mais recentes primeiro: ordena pelo sufixo timestamp do id (base36)
-    filtered.sort(function (a, b) {
-      var tsA = (a.id || '').split('-').pop() || '';
-      var tsB = (b.id || '').split('-').pop() || '';
-      return tsB.localeCompare(tsA);
-    });
+    // Mais recentes primeiro: ordena por data ("Mês de AAAA" em pt-BR)
+    var MONTHS_PT = {janeiro:1,fevereiro:2,março:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+    function dateScore(d) {
+      if (!d) return 0;
+      var m = d.toLowerCase().match(/(\w+)\s+de\s+(\d{4})/);
+      if (!m) return 0;
+      var mon = MONTHS_PT[m[1].normalize('NFD').replace(/[\u0300-\u036f]/g,'')] || 0;
+      return parseInt(m[2], 10) * 100 + mon;
+    }
+    filtered.sort(function (a, b) { return dateScore(b.date) - dateScore(a.date); });
 
     if (query || category !== 'Todos') {
       countEl.textContent = window.FalawI18n ? window.FalawI18n.t('blog.results', filtered.length, true) : filtered.length + (filtered.length === 1 ? ' artigo encontrado' : ' artigos encontrados');
