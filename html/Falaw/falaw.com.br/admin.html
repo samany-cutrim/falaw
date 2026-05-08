@@ -1792,6 +1792,10 @@
         <input type="text" id="digest-subject" placeholder="Newsletter Falaw" />
       </div>
       <div class="form-field">
+        <label>Enviar também para (e-mails extras, separados por vírgula)</label>
+        <input type="text" id="digest-extra-emails" placeholder="ex: cliente@empresa.com, parceiro@escritorio.com" style="font-size:12px;" />
+      </div>
+      <div class="form-field">
         <label>Artigos incluídos</label>
         <div id="digest-articles-list" style="font-size:12px;line-height:2;"></div>
       </div>
@@ -4445,8 +4449,9 @@ function openDigestModal(type) {
   digestArticles    = filtered;
   digestPeriodLabel = label;
 
-  document.getElementById('digest-modal-title').textContent = 'Digest — ' + label;
-  document.getElementById('digest-subject').value = 'Digest Falaw · ' + label;
+  document.getElementById('digest-modal-title').textContent = 'Newsletter — ' + label;
+  document.getElementById('digest-subject').value = 'Newsletter Falaw · ' + label;
+  document.getElementById('digest-extra-emails').value = '';
 
   const subs = load(KEYS.newsletter) || [];
   const subList = document.getElementById('digest-subscribers-list');
@@ -4535,12 +4540,14 @@ async function sendDigestViaN8N() {
   if (!n8nBase) { showToast('URL do n8n não configurada.'); return; }
   if (!digestArticles.length) return;
 
-  const subject = document.getElementById('digest-subject').value.trim() || ('Digest Falaw · ' + digestPeriodLabel);
+  const subject = document.getElementById('digest-subject').value.trim() || ('Newsletter Falaw · ' + digestPeriodLabel);
   const html    = generateDigestEmailHTML(digestArticles, digestPeriodLabel);
   const subs    = load(KEYS.newsletter) || [];
-  const subscribers = subs.map(s => s.email).filter(Boolean);
+  const extraRaw = document.getElementById('digest-extra-emails').value || '';
+  const extraEmails = extraRaw.split(',').map(e => e.trim()).filter(e => e.includes('@'));
+  const subscribers = [...new Set([...subs.map(s => s.email).filter(Boolean), ...extraEmails])];
 
-  if (!subscribers.length) { showToast('Nenhum inscrito.'); return; }
+  if (!subscribers.length) { showToast('Nenhum destinatário definido.'); return; }
 
   const btn = document.getElementById('btn-send-digest');
   btn.disabled = true; btn.textContent = 'Enviando…';
