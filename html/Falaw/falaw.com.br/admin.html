@@ -2604,20 +2604,17 @@ async function mergeGitHubArticlesIntoSupabase() {
 }
 
 async function fetchGitHubArticles() {
-  // Busca artigos do arquivo estático no GitHub (tenta raw primeiro, depois API com token)
+  // Busca artigos do arquivo estático no GitHub
+  // Para repo privado: usa GitHub API (suporta CORS com token)
+  // Para repo público: tenta raw primeiro, depois API como fallback
   async function parseArticlesCode(code) {
     const match = code.match(/FALAW_ARTICLES\s*=\s*(\[[\s\S]*\]);/);
     return match ? (JSON.parse(match[1]) || []) : [];
   }
   try {
-    const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_PATH}?t=${Date.now()}`;
-    const headers = {};
-    if (ghToken()) headers['Authorization'] = 'token ' + ghToken();
-    const rawRes = await fetch(rawUrl, { headers });
-    if (rawRes.ok) return parseArticlesCode(await rawRes.text());
-    // Fallback: GitHub API (funciona com repo privado)
+    // Tenta GitHub API primeiro (funciona com repo privado e público)
     if (ghToken()) {
-      const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`;
+      const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}?ref=${GITHUB_BRANCH}&t=${Date.now()}`;
       const apiRes = await fetch(apiUrl, { headers: ghHeaders() });
       if (apiRes.ok) {
         const json = await apiRes.json();
@@ -2625,6 +2622,10 @@ async function fetchGitHubArticles() {
         return parseArticlesCode(code);
       }
     }
+    // Fallback: raw URL sem auth (funciona apenas para repo público)
+    const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_PATH}?t=${Date.now()}`;
+    const rawRes = await fetch(rawUrl);
+    if (rawRes.ok) return parseArticlesCode(await rawRes.text());
     return [];
   } catch(e) {
     console.warn('fetchGitHubArticles:', e.message);
