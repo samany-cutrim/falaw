@@ -341,6 +341,105 @@
     </div>
   </div>
 
+
+  <!-- COMENTÁRIOS -->
+  <section class="article-comments" id="comentarios">
+    <p class="article-comments__title">Comentários</p>
+    <div class="article-comments__list" id="comments-list--berna-artigo">
+      <!-- comentários aprovados carregados via JS -->
+    </div>
+    <form class="comment-form" id="comment-form--berna-artigo" onsubmit="submitComment(event, 'berna-artigo')">
+      <div class="comment-form__row">
+        <div class="comment-form__field">
+          <label for="comment-nome--berna-artigo">Nome *</label>
+          <input type="text" id="comment-nome--berna-artigo" name="nome" required maxlength="120" placeholder="Seu nome">
+        </div>
+        <div class="comment-form__field">
+          <label for="comment-email--berna-artigo">E-mail * <span style="font-size:9px;opacity:.6">(não publicado)</span></label>
+          <input type="email" id="comment-email--berna-artigo" name="email" required maxlength="200" placeholder="seu@email.com">
+        </div>
+      </div>
+      <div class="comment-form__field">
+        <label for="comment-msg--berna-artigo">Comentário *</label>
+        <textarea id="comment-msg--berna-artigo" name="mensagem" required maxlength="2000" placeholder="Escreva seu comentário..."></textarea>
+      </div>
+      <div>
+        <button type="submit" class="btn-primary comment-form__submit">Enviar comentário</button>
+        <p class="comment-form__msg" id="comment-msg-status--berna-artigo"></p>
+      </div>
+    </form>
+  </section>
+
+  <script>
+  (function() {
+    var SB_URL = "https://yleofidqkimeanpuothv.supabase.co";
+    var SB_KEY = "sb_publishable_Lz028EaqbPI-84U8wRLJhQ_zKHb9tKD";
+    var articleId = "berna-artigo";
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    function fmtDate(iso) {
+      var d = new Date(iso);
+      return d.toLocaleDateString("pt-BR", {day:"2-digit", month:"short", year:"numeric"});
+    }
+
+    function loadComments() {
+      var list = document.getElementById("comments-list--" + articleId);
+      if (!list) return;
+      fetch(SB_URL + "/rest/v1/comments?article_id=eq." + encodeURIComponent(articleId) + "&approved=eq.true&order=created_at.asc&select=nome,mensagem,created_at", {
+        headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (!data || !data.length) return;
+        list.innerHTML = data.map(function(c) {
+          return "<div class=\"comment-item\"><div class=\"comment-item__header\">"
+            + "<span class=\"comment-item__name\">" + escHtml(c.nome) + "</span>"
+            + "<span class=\"comment-item__date\">" + fmtDate(c.created_at) + "</span>"
+            + "</div><p class=\"comment-item__text\">" + escHtml(c.mensagem) + "</p></div>";
+        }).join("");
+      }).catch(function(e) { console.warn("comments load:", e); });
+    }
+
+    window.submitComment = function(e, aid) {
+      e.preventDefault();
+      var form = document.getElementById("comment-form--" + aid);
+      var statusEl = document.getElementById("comment-msg-status--" + aid);
+      var btn = form.querySelector("button[type=submit]");
+      var nome = form.querySelector("[name=nome]").value.trim();
+      var email = form.querySelector("[name=email]").value.trim();
+      var mensagem = form.querySelector("[name=mensagem]").value.trim();
+      if (!nome || !email || !mensagem) return;
+      btn.disabled = true;
+      btn.textContent = "Enviando...";
+      statusEl.className = "comment-form__msg";
+      statusEl.textContent = "";
+      fetch(SB_URL + "/rest/v1/comments", {
+        method: "POST",
+        headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ article_id: aid, nome: nome, email: email, mensagem: mensagem })
+      }).then(function(r) {
+        if (r.ok || r.status === 201) {
+          statusEl.textContent = "Comentário enviado! Ele aparecerá após moderação.";
+          statusEl.className = "comment-form__msg comment-form__msg--ok";
+          form.reset();
+        } else {
+          statusEl.textContent = "Erro ao enviar. Tente novamente.";
+          statusEl.className = "comment-form__msg comment-form__msg--error";
+        }
+        btn.disabled = false;
+        btn.textContent = "Enviar comentário";
+      }).catch(function() {
+        statusEl.textContent = "Erro ao enviar. Tente novamente.";
+        statusEl.className = "comment-form__msg comment-form__msg--error";
+        btn.disabled = false;
+        btn.textContent = "Enviar comentário";
+      });
+    };
+
+    loadComments();
+  })();
+  </script>
 </main>
 
 <footer class="footer">

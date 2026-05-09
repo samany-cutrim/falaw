@@ -74,6 +74,23 @@ ALTER TABLE articles   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clients    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_settings ENABLE ROW LEVEL SECURITY;
 
+-- 7. Comentários de artigos
+CREATE TABLE IF NOT EXISTS comments (
+  id         BIGSERIAL PRIMARY KEY,
+  article_id TEXT NOT NULL,
+  nome       TEXT NOT NULL,
+  email      TEXT NOT NULL,
+  mensagem   TEXT NOT NULL,
+  approved   BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+-- Anon pode inserir (postar comentário) e ler apenas aprovados
+DROP POLICY IF EXISTS "anon insert comments" ON comments;
+DROP POLICY IF EXISTS "anon read comments"   ON comments;
+CREATE POLICY "anon insert comments" ON comments FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anon read comments"   ON comments FOR SELECT TO anon USING (approved = true);
+
 -- Permite acesso total com a anon key
 DROP POLICY IF EXISTS "anon full access" ON newsletter;
 DROP POLICY IF EXISTS "anon full access" ON contato;
