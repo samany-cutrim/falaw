@@ -49,10 +49,6 @@
 
   <!-- CTA + fim -->
   <div id="article-footer" hidden>
-    <div class="article-cta" id="article-cta-block">
-      <p class="article-cta__text" id="article-cta-text">Tem dúvidas jurídicas sobre este tema?</p>
-      <!-- botão renderizado pelo JS acima das tags -->
-    </div>
     <div class="article-back article-back--spaced">
       <a href="../blog.html">← Voltar ao Blog</a>
     </div>
@@ -285,6 +281,7 @@
     // Article end
     html += '<div class="article-end">'
       + '<p class="article-end-meta">Falaw \u00b7 Blog Jur\u00eddico \u00b7 ' + esc(d.date || art.date || '') + '</p>'
+      + '<p class="article-cta__text">' + esc(d.cta || 'Tem d\u00favidas jur\u00eddicas sobre este tema?') + '</p>'
       + '<a href="../contato/index.html" class="btn-primary" id="article-cta-btn">Fale conosco</a>';
     if (d.tags && d.tags.length) {
       html += '<div class="article-tags">';
@@ -298,12 +295,6 @@
     // Show footer (CTA + back + comments)
     var footer = document.getElementById('article-footer');
     if (footer) footer.hidden = false;
-
-    // CTA text from article JSON if present
-    if (d.cta) {
-      var ctaEl = document.getElementById('article-cta-text');
-      if (ctaEl) ctaEl.textContent = d.cta;
-    }
 
     initComments(id);
   }
