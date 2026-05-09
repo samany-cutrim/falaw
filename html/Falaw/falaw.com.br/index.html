@@ -465,5 +465,43 @@
   <img loading="lazy" src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/whatsapp.webp" alt="WhatsApp" />
 </a>
 
+<!-- Modal de Privacidade (LGPD) -->
+<div class="privacy-modal" id="privacy-modal" aria-modal="true" role="dialog" aria-label="Aviso de privacidade">
+  <div class="privacy-modal__backdrop" id="privacy-modal-backdrop"></div>
+  <div class="privacy-modal__box">
+    <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png"
+         alt="Falaw Advogados" class="privacy-modal__logo" />
+    <p class="privacy-modal__title">Sua privacidade importa</p>
+    <p class="privacy-modal__text">
+      Utilizamos cookies e tecnologias semelhantes para melhorar sua experiência de navegação,
+      analisar o desempenho do site e personalizar conteúdo, em conformidade com a
+      <strong>Lei Geral de Proteção de Dados (LGPD)</strong>.<br><br>
+      Ao continuar navegando, você concorda com nossa
+      <a href="privacidade.html">Política de Privacidade</a> e
+      <a href="cookies.html">Política de Cookies</a>.
+    </p>
+    <div class="privacy-modal__actions">
+      <button class="privacy-modal__accept" id="privacy-accept">Aceitar e continuar</button>
+      <button class="privacy-modal__decline" id="privacy-decline">Somente essenciais</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var CONSENT_KEY = 'falaw_privacy_consent';
+  if (localStorage.getItem(CONSENT_KEY)) return;
+  var modal = document.getElementById('privacy-modal');
+  setTimeout(function () { modal.classList.add('is-open'); }, 600);
+  function close(val) {
+    modal.classList.remove('is-open');
+    localStorage.setItem(CONSENT_KEY, val);
+  }
+  document.getElementById('privacy-accept').addEventListener('click', function () { close('all'); });
+  document.getElementById('privacy-decline').addEventListener('click', function () { close('essential'); });
+  document.getElementById('privacy-modal-backdrop').addEventListener('click', function () { close('essential'); });
+})();
+</script>
+
 </body>
 </html>
