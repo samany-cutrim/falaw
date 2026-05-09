@@ -200,6 +200,20 @@
     .admin-dropdown-item:last-child { border-bottom: none; }
     .admin-dropdown-item:hover { color: var(--c-off); background: rgba(247,245,242,.04); }
     .admin-dropdown-item.active { color: var(--c-accent); }
+    .admin-dropdown-item { display: flex; align-items: center; justify-content: space-between; }
+    .notif-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 18px; height: 18px; padding: 0 5px;
+      background: #e05a5a; color: #fff;
+      border-radius: 9px; font-size: 10px; font-weight: 700;
+      font-family: var(--f-mono); letter-spacing: 0;
+      line-height: 1; flex-shrink: 0;
+    }
+    .admin-tab .notif-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #e05a5a; display: inline-block; margin-left: 5px;
+      flex-shrink: 0;
+    }
 
     .admin-logout {
       font-family: var(--f-mono);
@@ -888,13 +902,13 @@
     <div class="admin-tabs">
       <!-- Grupo Conteúdo -->
       <div class="admin-tab-group" id="group-conteudo">
-        <div class="admin-tab" onclick="toggleGroup('conteudo')">Conteúdo</div>
+        <div class="admin-tab" onclick="toggleGroup('conteudo')">Conteúdo<span id="dot-conteudo" class="notif-dot" style="display:none"></span></div>
         <div class="admin-dropdown">
-          <div class="admin-dropdown-item active" id="ditem-blog" onclick="switchTab('blog')">Blog</div>
-          <div class="admin-dropdown-item" id="ditem-newsletter" onclick="switchTab('newsletter')">Newsletter</div>
-          <div class="admin-dropdown-item" id="ditem-contato" onclick="switchTab('contato')">Contato</div>
-          <div class="admin-dropdown-item" id="ditem-curriculos" onclick="switchTab('curriculos')">Currículos</div>
-          <div class="admin-dropdown-item" id="ditem-comentarios" onclick="switchTab('comentarios')">Comentários</div>
+          <div class="admin-dropdown-item active" id="ditem-blog" onclick="switchTab('blog')"><span>Blog</span></div>
+          <div class="admin-dropdown-item" id="ditem-newsletter" onclick="switchTab('newsletter')"><span>Newsletter</span><span class="notif-badge" id="badge-newsletter" style="display:none"></span></div>
+          <div class="admin-dropdown-item" id="ditem-contato" onclick="switchTab('contato')"><span>Contato</span><span class="notif-badge" id="badge-contato" style="display:none"></span></div>
+          <div class="admin-dropdown-item" id="ditem-curriculos" onclick="switchTab('curriculos')"><span>Currículos</span><span class="notif-badge" id="badge-curriculos" style="display:none"></span></div>
+          <div class="admin-dropdown-item" id="ditem-comentarios" onclick="switchTab('comentarios')"><span>Comentários</span><span class="notif-badge" id="badge-comentarios" style="display:none"></span></div>
         </div>
       </div>
       <div class="admin-tab" id="tab-btn-equipe" onclick="switchTab('equipe')">Equipe</div>
@@ -2523,6 +2537,7 @@ async function doLogin() {
         loadNewsletterFromSupabase().then(renderNewsletter);
         loadContatoFromSupabase().then(renderContato);
         loadConfig();
+        loadNotifBadges();
         return;
       }
     } catch (e) {
@@ -2546,6 +2561,7 @@ async function doLogin() {
     loadNewsletterFromSupabase().then(renderNewsletter);
     loadContatoFromSupabase().then(renderContato);
     loadConfig();
+    loadNotifBadges();
   } else {
     const lock = _getLock();
     lock.attempts++;
@@ -2749,11 +2765,75 @@ function switchTab(name) {
   if (name === 'blog')          { loadArticlesFromGitHub().then(renderBlog); }
   if (name === 'equipe')        { loadTeamFromGitHub().then(renderEquipe); }
   if (name === 'clientes')      { loadPortalFromSupabase().then(renderClients); }
-  if (name === 'newsletter')    { loadNewsletterFromSupabase().then(renderNewsletter); }
-  if (name === 'contato')       { loadContatoFromSupabase().then(renderContato); }
-  if (name === 'curriculos')    { loadCurriculosFromSupabase().then(renderCurriculos); }
+  if (name === 'newsletter')    { clearBadge('newsletter'); loadNewsletterFromSupabase().then(renderNewsletter); }
+  if (name === 'contato')       { clearBadge('contato'); loadContatoFromSupabase().then(renderContato); }
+  if (name === 'curriculos')    { clearBadge('curriculos'); loadCurriculosFromSupabase().then(renderCurriculos); }
   if (name === 'ifood')         { loadIfoodAdmin(); }
-  if (name === 'comentarios')   { loadComentariosAdmin('all'); }
+  if (name === 'comentarios')   { clearBadge('comentarios'); loadComentariosAdmin('all'); }
+}
+
+/* ══════════════════════════════════════
+   NOTIFICAÇÕES / BADGES
+══════════════════════════════════════ */
+const BADGE_SEEN_KEY = 'fa_admin_seen_';
+
+function getBadgeSince(section) {
+  return localStorage.getItem(BADGE_SEEN_KEY + section) || '1970-01-01T00:00:00Z';
+}
+
+function clearBadge(section) {
+  localStorage.setItem(BADGE_SEEN_KEY + section, new Date().toISOString());
+  const badge = document.getElementById('badge-' + section);
+  if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+  updateConteudoDot();
+}
+
+function updateConteudoDot() {
+  const sections = ['newsletter','contato','curriculos','comentarios'];
+  const anyVisible = sections.some(s => {
+    const b = document.getElementById('badge-' + s);
+    return b && b.style.display !== 'none';
+  });
+  const dot = document.getElementById('dot-conteudo');
+  if (dot) dot.style.display = anyVisible ? 'inline-block' : 'none';
+}
+
+function showBadge(section, count) {
+  const badge = document.getElementById('badge-' + section);
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+  updateConteudoDot();
+}
+
+async function loadNotifBadges() {
+  const { sbUrl, sbKey } = getSbCreds();
+  if (!sbUrl || !sbKey) return;
+  const sections = [
+    { name: 'newsletter', table: 'newsletter' },
+    { name: 'contato',    table: 'contato' },
+    { name: 'curriculos', table: 'curriculos' },
+    { name: 'comentarios', table: 'comments', extra: '&approved=eq.false' },
+  ];
+  for (const s of sections) {
+    try {
+      const since = getBadgeSince(s.name);
+      const url = `${sbUrl}/rest/v1/${s.table}?select=id&created_at=gt.${encodeURIComponent(since)}${s.extra || ''}`;
+      const res = await fetch(url, {
+        headers: { apikey: sbKey, Authorization: 'Bearer ' + sbKey,
+                   'Accept': 'application/json', 'Prefer': 'count=exact', 'Range': '0-0' }
+      });
+      if (res.ok || res.status === 206) {
+        const cr = res.headers.get('content-range');
+        const total = cr ? parseInt(cr.split('/')[1], 10) : 0;
+        showBadge(s.name, isNaN(total) ? 0 : total);
+      }
+    } catch(e) { /* silently ignore */ }
+  }
 }
 
 /* ══════════════════════════════════════
