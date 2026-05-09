@@ -1163,58 +1163,6 @@
         </div>
       </div>
 
-      <!-- Report Upload Modal (global, usável de qualquer seção) -->
-      <div class="modal-overlay" id="reportModal" onclick="if(event.target===this)closeReportModal()">
-        <div class="modal" style="max-width:560px">
-          <div class="modal-header">
-            <h3>Enviar Relatório</h3>
-            <button type="button" class="modal-close" onclick="closeReportModal()">✕</button>
-          </div>
-          <div class="modal-body">
-            <input type="hidden" id="rep-client-id" />
-            <div class="form-field">
-              <label>Título do Relatório *</label>
-              <input id="rep-title" type="text" placeholder="Ex: Relatório de Passivo Trabalhista - Q1 2026" />
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-              <div class="form-field">
-                <label>Período</label>
-                <input id="rep-period" type="text" placeholder="Jan - Mar 2026" />
-              </div>
-              <div class="form-field">
-                <label>Arquivo *</label>
-                <input id="rep-file" type="file" accept=".xlsx,.xls,.csv,.pdf" style="padding:10px 14px" onchange="onRepFileChange(this)" />
-              </div>
-            </div>
-            <div class="form-field">
-              <label>Descrição (opcional)</label>
-              <textarea id="rep-desc" rows="2" placeholder="Breve descrição do conteúdo do relatório..."></textarea>
-            </div>
-            <!-- Opção de importar KPIs automaticamente -->
-            <div id="rep-kpi-import" style="display:none;padding:12px 14px;background:rgba(13,43,94,.06);border-radius:4px;margin-bottom:8px">
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-                <input type="checkbox" id="rep-auto-kpi" checked style="width:16px;height:16px" />
-                <span>Importar KPIs automaticamente para o Dashboard</span>
-              </label>
-              <div id="rep-kpi-preview" style="margin-top:10px;display:none"></div>
-            </div>
-            <!-- Preview automático dos dados extraídos do Excel -->
-            <div id="rep-stats-preview" style="display:none;margin-bottom:8px">
-              <label style="display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:10px">Dados extraídos da planilha</label>
-              <div id="rep-stats-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-            </div>
-            <div id="rep-stats-status" style="font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-bottom:8px;display:none"></div>
-            <div id="rep-upload-progress" style="display:none;margin-top:12px;margin-bottom:4px">
-              <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Processando arquivo…</div>
-              <div style="height:3px;background:var(--c-divider);border-radius:2px"><div id="rep-progress-bar" style="height:100%;width:0%;background:var(--c-accent);border-radius:2px;transition:width .3s"></div></div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-ghost" onclick="closeReportModal()">Cancelar</button>
-            <button type="button" class="btn btn-primary" id="repSaveBtn" onclick="saveReport()">Enviar Relatório</button>
-          </div>
-        </div>
-      </div>
     </section>
 
     <!-- ── DASHBOARD CLIENTES ── -->
@@ -8061,5 +8009,59 @@ async function ifoodSaveExcel() {
 }
 
 </script>
+
+  <!-- Report Upload Modal (global, fora de qualquer section) -->
+  <div class="modal-overlay" id="reportModal" onclick="if(event.target===this)closeReportModal()">
+    <div class="modal" style="max-width:560px">
+      <div class="modal-header">
+        <h3>Enviar Relatório</h3>
+        <button type="button" class="modal-close" onclick="closeReportModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="rep-client-id" />
+        <div class="form-field">
+          <label>Título do Relatório *</label>
+          <input id="rep-title" type="text" placeholder="Ex: Relatório de Passivo Trabalhista - Q1 2026" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-field">
+            <label>Período</label>
+            <input id="rep-period" type="text" placeholder="Jan - Mar 2026" />
+          </div>
+          <div class="form-field">
+            <label>Arquivo *</label>
+            <input id="rep-file" type="file" accept=".xlsx,.xls,.csv,.pdf" style="padding:10px 14px" onchange="onRepFileChange(this)" />
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Descrição (opcional)</label>
+          <textarea id="rep-desc" rows="2" placeholder="Breve descrição do conteúdo do relatório..."></textarea>
+        </div>
+        <!-- Opção de importar KPIs automaticamente -->
+        <div id="rep-kpi-import" style="display:none;padding:12px 14px;background:rgba(13,43,94,.06);border-radius:4px;margin-bottom:8px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="rep-auto-kpi" checked style="width:16px;height:16px" />
+            <span>Importar KPIs automaticamente para o Dashboard</span>
+          </label>
+          <div id="rep-kpi-preview" style="margin-top:10px;display:none"></div>
+        </div>
+        <!-- Preview automático dos dados extraídos do Excel -->
+        <div id="rep-stats-preview" style="display:none;margin-bottom:8px">
+          <label style="display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:10px">Dados extraídos da planilha</label>
+          <div id="rep-stats-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+        </div>
+        <div id="rep-stats-status" style="font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-bottom:8px;display:none"></div>
+        <div id="rep-upload-progress" style="display:none;margin-top:12px;margin-bottom:4px">
+          <div style="font-size:12px;color:var(--c-muted);margin-bottom:6px">Processando arquivo…</div>
+          <div style="height:3px;background:var(--c-divider);border-radius:2px"><div id="rep-progress-bar" style="height:100%;width:0%;background:var(--c-accent);border-radius:2px;transition:width .3s"></div></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeReportModal()">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="repSaveBtn" onclick="saveReport()">Enviar Relatório</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
