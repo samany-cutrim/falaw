@@ -203,8 +203,8 @@
       + '<h1>' + esc(art.title) + '</h1>'
       + '<div class="article-meta">'
       + '<span>' + esc(d.date || art.date || '') + '</span>'
-      + '<span class="sep">·</span><span>' + esc(art.category) + '</span>'
-      + (art.readTime ? '<span class="sep">·</span><span>' + esc(art.readTime) + ' de leitura</span>' : '')
+      + (art.category ? '<span class="sep">·</span><span>' + esc(art.category) + '</span>' : '')
+      + ((art.readTime || art.readtime || d.readTime) ? '<span class="sep">·</span><span>' + esc(art.readTime || art.readtime || d.readTime) + ' de leitura</span>' : '')
       + '</div>';
     if (d.lede) {
       html += '<p class="article-lede">\u201c' + esc(d.lede) + '\u201d';
@@ -301,13 +301,14 @@
 
   /* ── SVG COVER GENERATOR ── */
   function buildSVG(d, art) {
-    var kicker = (d.kicker || art.category || '').toUpperCase().substring(0, 42);
+    var rawKicker = (d.kicker || art.category || '').toUpperCase();
+    var kicker = rawKicker.length > 42 ? (rawKicker.lastIndexOf('|', 41) > 10 ? rawKicker.substring(0, rawKicker.lastIndexOf('|', 41)) : rawKicker.lastIndexOf('\u00b7', 41) > 10 ? rawKicker.substring(0, rawKicker.lastIndexOf('\u00b7', 41)) : rawKicker.substring(0, 42)) : rawKicker;
     var words = (art.title || '').split(' ');
     var mid = Math.ceil(words.length / 2);
     var line1 = words.slice(0, mid).join(' ').toUpperCase();
     var line2 = words.slice(mid).join(' ').toUpperCase();
-    if (line1.length > 16) line1 = line1.substring(0, 16) + '\u2026';
-    if (line2.length > 16) line2 = line2.substring(0, 16) + '\u2026';
+    if (line1.length > 22) line1 = line1.substring(0, 22) + '\u2026';
+    if (line2.length > 22) line2 = line2.substring(0, 22) + '\u2026';
     var fs = Math.min(68, Math.max(38, Math.floor(900 / Math.max(line1.length, line2.length, 1))));
     var y2 = 155 + fs + 12;
     var divY = y2 + fs + 10;
