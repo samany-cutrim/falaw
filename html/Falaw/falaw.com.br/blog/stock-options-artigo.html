@@ -367,35 +367,69 @@
     <a href="../blog.html">← Voltar ao Blog</a>
   </div>
 
-  <section class="article-comments" id="comentarios">
-    <p class="article-comments__title">Comentários</p>
+    <section class="article-comments" id="comentarios">
+    <div class="article-comments__header">
+      <p class="article-comments__title">Comentários</p>
+      <button class="btn-comment-open" id="btn-comment-open">+ Deixar comentário</button>
+    </div>
     <div class="article-comments__list" id="comments-list--stock-options-artigo">
       <!-- comentários aprovados carregados via JS -->
     </div>
-    <form class="comment-form" id="comment-form--stock-options-artigo" onsubmit="submitComment(event, 'stock-options-artigo')">
-      <div class="comment-form__row">
-        <div class="comment-form__field">
-          <label for="comment-nome--stock-options-artigo">Nome *</label>
-          <input type="text" id="comment-nome--stock-options-artigo" name="nome" required maxlength="120" placeholder="Seu nome">
-        </div>
-        <div class="comment-form__field">
-          <label for="comment-email--stock-options-artigo">E-mail * <span style="font-size:9px;opacity:.6">(não publicado)</span></label>
-          <input type="email" id="comment-email--stock-options-artigo" name="email" required maxlength="200" placeholder="seu@email.com">
-        </div>
-      </div>
-      <div class="comment-form__field">
-        <label for="comment-msg--stock-options-artigo">Comentário *</label>
-        <textarea id="comment-msg--stock-options-artigo" name="mensagem" required maxlength="2000" placeholder="Escreva seu comentário..."></textarea>
-      </div>
-      <div>
-        <button type="submit" class="btn-primary comment-form__submit">Enviar comentário</button>
-        <p class="comment-form__msg" id="comment-msg-status--stock-options-artigo"></p>
-      </div>
-    </form>
   </section>
+
+  <!-- Modal de comentário -->
+  <div class="comment-modal" id="comment-modal" aria-modal="true" role="dialog" aria-label="Deixar comentário">
+    <div class="comment-modal__backdrop" id="comment-modal-backdrop"></div>
+    <div class="comment-modal__box">
+      <div class="comment-modal__head">
+        <p class="comment-modal__title">Deixar comentário</p>
+        <button class="comment-modal__close" id="comment-modal-close" aria-label="Fechar">&#x2715;</button>
+      </div>
+      <form class="comment-form" id="comment-form--stock-options-artigo" onsubmit="submitComment(event, 'stock-options-artigo')">
+        <div class="comment-form__row">
+          <div class="comment-form__field">
+            <label for="comment-nome--stock-options-artigo">Nome *</label>
+            <input type="text" id="comment-nome--stock-options-artigo" name="nome" required maxlength="120" placeholder="Seu nome">
+          </div>
+          <div class="comment-form__field">
+            <label for="comment-email--stock-options-artigo">E-mail * <span style="font-size:9px;opacity:.5">(não publicado)</span></label>
+            <input type="email" id="comment-email--stock-options-artigo" name="email" required maxlength="200" placeholder="seu@email.com">
+          </div>
+        </div>
+        <div class="comment-form__field">
+          <label for="comment-msg--stock-options-artigo">Comentário *</label>
+          <textarea id="comment-msg--stock-options-artigo" name="mensagem" required maxlength="2000" placeholder="Escreva seu comentário..."></textarea>
+        </div>
+        <div class="comment-form__actions">
+          <button type="submit" class="btn-primary comment-form__submit">Enviar comentário</button>
+          <p class="comment-form__msg" id="comment-msg-status--stock-options-artigo"></p>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script>
   (function() {
+    function openCommentModal() {
+      document.getElementById("comment-modal").classList.add("is-open");
+      document.body.style.overflow = "hidden";
+    }
+    function closeCommentModal() {
+      document.getElementById("comment-modal").classList.remove("is-open");
+      document.body.style.overflow = "";
+    }
+    document.addEventListener("DOMContentLoaded", function() {
+      var btn = document.getElementById("btn-comment-open");
+      if (btn) btn.addEventListener("click", openCommentModal);
+      var backdrop = document.getElementById("comment-modal-backdrop");
+      if (backdrop) backdrop.addEventListener("click", closeCommentModal);
+      var closeBtn = document.getElementById("comment-modal-close");
+      if (closeBtn) closeBtn.addEventListener("click", closeCommentModal);
+      document.addEventListener("keydown", function(e) {
+        if (e.key === "Escape") closeCommentModal();
+      });
+    });
+
     var SB_URL = "https://yleofidqkimeanpuothv.supabase.co";
     var SB_KEY = "sb_publishable_Lz028EaqbPI-84U8wRLJhQ_zKHb9tKD";
     var articleId = "stock-options-artigo";
@@ -447,12 +481,13 @@
           statusEl.textContent = "Comentário enviado! Ele aparecerá após moderação.";
           statusEl.className = "comment-form__msg comment-form__msg--ok";
           form.reset();
+          setTimeout(function() { closeCommentModal(); loadComments(); }, 1800);
         } else {
           statusEl.textContent = "Erro ao enviar. Tente novamente.";
           statusEl.className = "comment-form__msg comment-form__msg--error";
+          btn.disabled = false;
+          btn.textContent = "Enviar comentário";
         }
-        btn.disabled = false;
-        btn.textContent = "Enviar comentário";
       }).catch(function() {
         statusEl.textContent = "Erro ao enviar. Tente novamente.";
         statusEl.className = "comment-form__msg comment-form__msg--error";

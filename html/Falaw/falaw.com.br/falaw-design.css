@@ -2524,19 +2524,43 @@ h3 {
   padding: 48px 48px 64px;
   border-top: 1px solid var(--c-divider);
 }
+.article-comments__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 32px;
+}
 .article-comments__title {
   font-family: var(--f-mono);
   font-size: 11px;
   letter-spacing: .16em;
   text-transform: uppercase;
   color: var(--c-muted);
-  margin-bottom: 32px;
+  margin-bottom: 0;
+}
+.btn-comment-open {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--c-accent);
+  background: transparent;
+  border: 1px solid var(--c-accent);
+  border-radius: 2px;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: background .18s, color .18s;
+  white-space: nowrap;
+}
+.btn-comment-open:hover {
+  background: var(--c-accent);
+  color: #fff;
 }
 .article-comments__list {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  margin-bottom: 40px;
 }
 .article-comments__list:empty { display: none; }
 .comment-item {
@@ -2569,10 +2593,77 @@ h3 {
   line-height: 1.65;
   color: var(--c-text);
 }
+
+/* ────────────────────────────────────────
+   COMMENT MODAL
+──────────────────────────────────────── */
+.comment-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.comment-modal.is-open {
+  display: flex;
+}
+.comment-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 15, 35, 0.6);
+  backdrop-filter: blur(3px);
+}
+.comment-modal__box {
+  position: relative;
+  z-index: 1;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 24px 72px rgba(0,0,0,0.22);
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 40px 40px 36px;
+  animation: modalIn .22s ease;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(16px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+.comment-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+.comment-modal__title {
+  font-family: var(--f-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--c-accent);
+  letter-spacing: -.01em;
+}
+.comment-modal__close {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--c-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 2px;
+  transition: color .15s, background .15s;
+}
+.comment-modal__close:hover {
+  color: var(--c-accent);
+  background: var(--c-off);
+}
 .comment-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 .comment-form__row {
   display: grid;
@@ -2596,7 +2687,7 @@ h3 {
   background: var(--c-off);
   border: 1px solid var(--c-divider);
   border-radius: 2px;
-  padding: 10px 14px;
+  padding: 11px 14px;
   font-family: var(--f-body);
   font-size: 14px;
   color: var(--c-text);
@@ -2608,15 +2699,20 @@ h3 {
 .comment-form__field textarea:focus {
   border-color: var(--c-accent);
 }
-.comment-form__field textarea { min-height: 100px; }
+.comment-form__field textarea { min-height: 110px; }
+.comment-form__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
 .comment-form__submit {
-  align-self: flex-start;
+  flex-shrink: 0;
 }
 .comment-form__msg {
   font-family: var(--f-mono);
   font-size: 11px;
   letter-spacing: .08em;
-  padding: 10px 0;
   display: none;
 }
 .comment-form__msg--ok    { color: #1a7a40; display: block; }
@@ -2624,10 +2720,13 @@ h3 {
 
 @media (max-width: 900px) {
   .article-comments { padding: 40px 28px 56px; }
+  .comment-modal__box { padding: 32px 28px 28px; }
 }
 @media (max-width: 600px) {
   .article-comments { padding: 36px 22px 48px; }
+  .comment-modal__box { padding: 28px 20px 24px; }
   .comment-form__row { grid-template-columns: 1fr; }
+  .article-comments__header { flex-direction: column; align-items: flex-start; gap: 12px; }
 }
 
 /* ────────────────────────────────────────
