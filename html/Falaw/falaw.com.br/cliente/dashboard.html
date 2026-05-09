@@ -10,6 +10,8 @@
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
   <script src="../sb-config.js" onerror="void 0"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap');
@@ -640,6 +642,128 @@ async function downloadReport(report) {
     alert('Arquivo não disponível.');
   }
 }
+
+async function downloadReportPDF(report) {
+  if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
+    alert('Biblioteca PDF ainda carregando. Tente novamente em instantes.'); return;
+  }
+  const { jsPDF } = window.jspdf || window;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const company = (window._clientData && window._clientData.company) || 'Cliente';
+  const W = doc.internal.pageSize.getWidth();
+  let y = 18;
+
+  // Header
+  doc.setFillColor(13, 43, 94);
+  doc.rect(0, 0, W, 28, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text('Falaw Advogados', 14, 12);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Relatório Jurídico', 14, 20);
+  y = 38;
+
+  doc.setTextColor(26, 10, 13);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text(report.title || 'Relatório', 14, y); y += 8;
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  if (report.period) { doc.text('Período: ' + report.period, 14, y); y += 6; }
+  doc.text('Cliente: ' + company, 14, y); y += 6;
+  doc.text('Data: ' + new Date(report.uploadedAt || Date.now()).toLocaleDateString('pt-BR'), 14, y); y += 10;
+
+  if (report.description) {
+    doc.setTextColor(26, 10, 13);
+    doc.setFontSize(10);
+    const lines = doc.splitTextToSize(report.description, W - 28);
+    doc.text(lines, 14, y); y += lines.length * 5 + 6;
+  }
+
+  // KPIs
+  const stats = report.stats;
+  if (stats && typeof stats === 'object') {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(13, 43, 94);
+    doc.text('Indicadores', 14, y); y += 7;
+    const KPI_LABELS = {
+      processos: 'Processos Ativos', favoraveis: 'Favoráveis', desfavoraveis: 'Desfavoráveis',
+      novas: 'Novas Ações', encerrados: 'Encerrados', andamento: 'Em Andamento'
+    };
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(26, 10, 13);
+    doc.setFontSize(10);
+    Object.entries(stats).forEach(([k, v]) => {
+      doc.text(`${KPI_LABELS[k] || k}: ${v}`, 20, y); y += 6;
+    });
+  }
+
+  // Footer
+  doc.setFontSize(8);
+  doc.setTextColor(160, 160, 160);
+  doc.text('Gerado por Falaw Advogados — falaw.com.br', 14, doc.internal.pageSize.getHeight() - 8);
+
+  doc.save((report.fileName || 'relatorio').replace(/\.[^.]+$/, '') + '.pdf');
+}
+
+async function downloadReportPPT(report) {
+  if (typeof PptxGenJS === 'undefined') {
+    alert('Biblioteca PPT ainda carregando. Tente novamente em instantes.'); return;
+  }
+  const pptx = new PptxGenJS();
+  const company = (window._clientData && window._clientData.company) || 'Cliente';
+  pptx.layout = 'LAYOUT_WIDE';
+
+  // Slide 1 — Capa
+  const slide1 = pptx.addSlide();
+  slide1.background = { color: '0D2B5E' };
+  slide1.addText('Falaw Advogados', { x: 0.5, y: 1.2, w: 12, h: 0.8, fontSize: 36, bold: true, color: 'FFFFFF', fontFace: 'Calibri' });
+  slide1.addText(report.title || 'Relatório Jurídico', { x: 0.5, y: 2.2, w: 12, h: 0.6, fontSize: 22, color: 'D4AD3A', fontFace: 'Calibri' });
+  slide1.addText('Cliente: ' + company, { x: 0.5, y: 3, w: 12, h: 0.4, fontSize: 14, color: 'CCCCCC' });
+  if (report.period) slide1.addText('Período: ' + report.period, { x: 0.5, y: 3.5, w: 12, h: 0.4, fontSize: 14, color: 'CCCCCC' });
+  slide1.addText('falaw.com.br', { x: 0.5, y: 6.8, w: 12, h: 0.3, fontSize: 10, color: '888888', align: 'right' });
+
+  // Slide 2 — KPIs
+  const stats = report.stats;
+  if (stats && typeof stats === 'object') {
+    const slide2 = pptx.addSlide();
+    slide2.background = { color: 'F4F2EF' };
+    slide2.addText('Indicadores', { x: 0.5, y: 0.3, w: 12, h: 0.5, fontSize: 20, bold: true, color: '0D2B5E' });
+    const KPI_LABELS = {
+      processos: 'Processos Ativos', favoraveis: 'Favoráveis', desfavoraveis: 'Desfavoráveis',
+      novas: 'Novas Ações', encerrados: 'Encerrados', andamento: 'Em Andamento'
+    };
+    const KPI_COLORS = { processos: 'D4AD3A', favoraveis: '2DD4A0', desfavoraveis: 'F87171', novas: '60A5FA', encerrados: 'A78BFA', andamento: 'FBBF24' };
+    const entries = Object.entries(stats);
+    const cols = 3;
+    const cardW = 4; const cardH = 1.5; const startX = 0.4; const startY = 1.0;
+    entries.forEach(([k, v], i) => {
+      const col = i % cols; const row = Math.floor(i / cols);
+      const x = startX + col * (cardW + 0.2);
+      const y = startY + row * (cardH + 0.2);
+      slide2.addShape(pptx.ShapeType.rect, { x, y, w: cardW, h: cardH, fill: { color: 'FFFFFF' }, line: { color: 'E5E7EB', width: 1 } });
+      slide2.addText(String(v), { x, y: y + 0.15, w: cardW, h: 0.7, fontSize: 28, bold: true, color: KPI_COLORS[k] || '0D2B5E', align: 'center' });
+      slide2.addText(KPI_LABELS[k] || k, { x, y: y + 0.85, w: cardW, h: 0.4, fontSize: 11, color: '666666', align: 'center' });
+    });
+  }
+
+  // Slide 3 — Descrição
+  if (report.description) {
+    const slide3 = pptx.addSlide();
+    slide3.background = { color: 'FFFFFF' };
+    slide3.addText('Observações', { x: 0.5, y: 0.3, w: 12, h: 0.5, fontSize: 20, bold: true, color: '0D2B5E' });
+    slide3.addText(report.description, { x: 0.5, y: 1.1, w: 12, h: 4.5, fontSize: 14, color: '333333', wrap: true, valign: 'top' });
+  }
+
+  const fileName = (report.fileName || 'relatorio').replace(/\.[^.]+$/, '') + '.pptx';
+  await pptx.writeFile({ fileName });
+}
+
 window._allReports = [];
 
 /* ─── ANALYTICS ─────────────────────────────────────── */
@@ -851,9 +975,17 @@ function renderReports(reports) {
         <span class="report-date">${formatDate(r.uploadedAt)}</span>
         <span class="report-size">${formatSize(r.fileSize)}</span>
       </div>
-      <button type="button" class="btn-download" onclick="downloadReport(window._allReports[${i}])">
-        ⬇ Baixar Relatório
-      </button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <button type="button" class="btn-download" onclick="downloadReport(window._allReports[${i}])" title="Baixar Excel/PDF original">
+          ⬇ Excel
+        </button>
+        <button type="button" class="btn-download" style="background:rgba(13,43,94,.07);border-color:rgba(13,43,94,.25);color:#0D2B5E" onclick="downloadReportPDF(window._allReports[${i}])" title="Exportar como PDF">
+          📄 PDF
+        </button>
+        <button type="button" class="btn-download" style="background:rgba(214,55,55,.07);border-color:rgba(214,55,55,.25);color:#d63737" onclick="downloadReportPPT(window._allReports[${i}])" title="Exportar como PowerPoint">
+          📊 PPT
+        </button>
+      </div>
     </div>`).join('');
 }
 
@@ -974,6 +1106,7 @@ async function init() {
   const displayCompany = (client.company || '').trim() || (session.company || '').trim() || (client.name || '').trim() || (session.name || '').trim() || '—';
   const displayEmail   = (client.email  || '').trim() || (session.email  || '').trim() || '—';
   const displayName    = (client.name   || '').trim() || (session.name   || '').trim() || displayCompany;
+  window._clientData = { ...client, company: displayCompany, email: displayEmail };
 
   /* Sort reports newest-first before injecting stats */
   let reports = [...(client.reports || [])].sort((a,b) => new Date(b.uploadedAt)-new Date(a.uploadedAt));

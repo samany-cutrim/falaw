@@ -919,7 +919,14 @@
           <div class="admin-dropdown-item" id="ditem-clientes" onclick="switchTab('clientes')"><span>Clientes</span></div>
         </div>
       </div>
-      <div class="admin-tab" id="tab-btn-ifood" onclick="switchTab('ifood')">iFood</div>
+      <!-- Grupo Dashboards -->
+      <div class="admin-tab-group" id="group-dashboards">
+        <div class="admin-tab" onclick="toggleGroup('dashboards')">Dashboards</div>
+        <div class="admin-dropdown">
+          <div class="admin-dropdown-item" id="ditem-ifood" onclick="switchTab('ifood')"><span>iFood</span></div>
+          <div class="admin-dropdown-item" id="ditem-cli-dash" onclick="switchTab('cli-dash')"><span>Clientes</span></div>
+        </div>
+      </div>
       <div class="admin-tab" id="tab-btn-config" onclick="switchTab('config')">Configurações</div>
     </div>
     <button class="admin-logout" onclick="doLogout()">Sair</button>
@@ -1156,7 +1163,7 @@
         </div>
       </div>
 
-      <!-- Report Upload Modal -->
+      <!-- Report Upload Modal (global, usável de qualquer seção) -->
       <div class="modal-overlay" id="reportModal" onclick="if(event.target===this)closeReportModal()">
         <div class="modal" style="max-width:560px">
           <div class="modal-header">
@@ -1183,6 +1190,14 @@
               <label>Descrição (opcional)</label>
               <textarea id="rep-desc" rows="2" placeholder="Breve descrição do conteúdo do relatório..."></textarea>
             </div>
+            <!-- Opção de importar KPIs automaticamente -->
+            <div id="rep-kpi-import" style="display:none;padding:12px 14px;background:rgba(13,43,94,.06);border-radius:4px;margin-bottom:8px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+                <input type="checkbox" id="rep-auto-kpi" checked style="width:16px;height:16px" />
+                <span>Importar KPIs automaticamente para o Dashboard</span>
+              </label>
+              <div id="rep-kpi-preview" style="margin-top:10px;display:none"></div>
+            </div>
             <!-- Preview automático dos dados extraídos do Excel -->
             <div id="rep-stats-preview" style="display:none;margin-bottom:8px">
               <label style="display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:10px">Dados extraídos da planilha</label>
@@ -1200,106 +1215,110 @@
           </div>
         </div>
       </div>
+    </section>
 
-      <!-- ── DASHBOARD POR CLIENTE ── -->
-      <div id="cli-dash-wrapper" style="display:none;margin-top:32px;border-top:1px solid var(--c-divider);padding-top:28px">
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:220px">
-            <label style="font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);white-space:nowrap">Cliente:</label>
-            <select id="cli-dash-select" onchange="cliDashSelectClient(this.value)"
-              style="flex:1;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
-              <option value="">— Selecione um cliente —</option>
-            </select>
-          </div>
-          <button type="button" class="btn btn-primary" id="cli-dash-new-period-btn" style="display:none" onclick="cliDashOpenPeriodModal()">+ Novo Período</button>
+    <!-- ── DASHBOARD CLIENTES ── -->
+    <section id="tab-cli-dash" class="admin-section">
+      <div class="section-header">
+        <h2>Dashboard — Clientes</h2>
+        <button type="button" class="btn btn-primary" id="cli-dash-new-period-btn" style="display:none" onclick="cliDashOpenPeriodModal()">+ Novo Período</button>
+      </div>
+
+      <!-- Seletor de cliente -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap">
+        <label style="font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);white-space:nowrap">Cliente:</label>
+        <select id="cli-dash-select" onchange="cliDashSelectClient(this.value)"
+          style="flex:1;max-width:420px;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+          <option value="">— Selecione um cliente —</option>
+        </select>
+        <button type="button" class="btn btn-secondary" id="cli-dash-upload-btn" style="display:none" onclick="cliDashOpenUpload()">📁 Enviar Relatório / Excel</button>
+      </div>
+
+      <div id="cli-dash-panel" style="display:none">
+        <!-- Sub-nav -->
+        <div style="display:flex;gap:4px;margin-bottom:28px;flex-wrap:wrap" id="cliDashSubNav">
+          <div class="ifood-sub-tab active" onclick="cliDashSubTab('periods')">📅 Períodos</div>
+          <div class="ifood-sub-tab"        onclick="cliDashSubTab('kpis')">📊 KPIs / Gráficos</div>
+          <div class="ifood-sub-tab"        onclick="cliDashSubTab('content')">✍️ Textos das Abas</div>
+          <div class="ifood-sub-tab"        onclick="cliDashSubTab('highlights')">⭐ Destaques do Mês</div>
         </div>
 
-        <div id="cli-dash-panel" style="display:none">
-          <!-- Sub-nav -->
-          <div style="display:flex;gap:4px;margin-bottom:28px;flex-wrap:wrap" id="cliDashSubNav">
-            <div class="ifood-sub-tab active" onclick="cliDashSubTab('periods')">📅 Períodos</div>
-            <div class="ifood-sub-tab"        onclick="cliDashSubTab('kpis')">📊 KPIs / Gráficos</div>
-            <div class="ifood-sub-tab"        onclick="cliDashSubTab('content')">✍️ Textos das Abas</div>
-            <div class="ifood-sub-tab"        onclick="cliDashSubTab('highlights')">⭐ Destaques do Mês</div>
-          </div>
+        <!-- Sub: Períodos -->
+        <div id="cli-dash-sub-periods">
+          <div id="cli-dash-periods-list"><div class="empty-state"><p>Carregando períodos…</p></div></div>
+        </div>
 
-          <!-- Sub: Períodos -->
-          <div id="cli-dash-sub-periods">
-            <div id="cli-dash-periods-list"><div class="empty-state"><p>Carregando períodos…</p></div></div>
-          </div>
-
-          <!-- Sub: KPIs -->
-          <div id="cli-dash-sub-kpis" style="display:none">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-              <div class="form-field" style="margin:0">
-                <label>Período</label>
-                <select id="cli-kpi-period" onchange="cliDashLoadKpis()"
-                  style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
-                  <option value="">— Selecione —</option>
-                </select>
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Categoria</label>
-                <select id="cli-kpi-tab" onchange="cliDashLoadKpis()"
-                  style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
-                  <option value="">Todas</option>
-                  <option value="ex_empregados">Ações de Ex-empregados</option>
-                  <option value="terceirizacao">Terceirização / Subsidiária</option>
-                </select>
-              </div>
-            </div>
-            <button type="button" class="btn btn-primary" style="margin-bottom:20px" onclick="cliDashOpenKpiModal()">+ Adicionar KPI</button>
-            <div id="cli-dash-kpis-list"></div>
-          </div>
-
-          <!-- Sub: Textos -->
-          <div id="cli-dash-sub-content" style="display:none">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-              <div class="form-field" style="margin:0">
-                <label>Período</label>
-                <select id="cli-cnt-period" onchange="cliDashLoadContent()"
-                  style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
-                  <option value="">— Selecione —</option>
-                </select>
-              </div>
-              <div class="form-field" style="margin:0">
-                <label>Categoria</label>
-                <select id="cli-cnt-tab" onchange="cliDashLoadContent()"
-                  style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
-                  <option value="ex_empregados">Ações de Ex-empregados</option>
-                  <option value="terceirizacao">Terceirização / Subsidiária</option>
-                </select>
-              </div>
-            </div>
-            <div class="rich-editor-toolbar" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-              <button type="button" class="btn btn-ghost btn-sm" onclick="document.execCommand('bold')"><strong>B</strong></button>
-              <button type="button" class="btn btn-ghost btn-sm" onclick="document.execCommand('italic')"><em>I</em></button>
-              <button type="button" class="btn btn-ghost btn-sm" onclick="document.execCommand('insertUnorderedList')">• Lista</button>
-              <button type="button" class="btn btn-ghost btn-sm" onclick="document.execCommand('insertOrderedList')">1. Lista</button>
-            </div>
-            <div id="cli-cnt-editor" class="rich-editor" contenteditable="true"
-              style="min-height:180px;border:1px solid var(--c-divider);border-radius:2px;padding:14px;font-family:var(--f-body);font-size:14px;line-height:1.6;color:var(--c-dark);background:#fafaf8;outline:none"
-              oninput="document.getElementById('cli-cnt-source').value=this.innerHTML"></div>
-            <textarea id="cli-cnt-source" rows="5" placeholder="Código HTML fonte…"
-              style="display:none;width:100%;margin-top:8px;border:1px solid var(--c-divider);padding:10px 14px;font-family:var(--f-mono);font-size:12px;color:var(--c-dark);background:#fafaf8;border-radius:2px;resize:vertical"
-              oninput="document.getElementById('cli-cnt-editor').innerHTML=this.value"></textarea>
-            <div style="display:flex;gap:8px;margin-top:12px">
-              <button type="button" class="btn btn-primary" onclick="cliDashSaveContent()">Salvar Texto</button>
-            </div>
-          </div>
-
-          <!-- Sub: Destaques -->
-          <div id="cli-dash-sub-highlights" style="display:none">
-            <div class="form-field" style="margin-bottom:20px">
+        <!-- Sub: KPIs -->
+        <div id="cli-dash-sub-kpis" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+            <div class="form-field" style="margin:0">
               <label>Período</label>
-              <select id="cli-hl-period" onchange="cliDashLoadHighlights()"
-                style="width:100%;max-width:360px;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+              <select id="cli-kpi-period" onchange="cliDashLoadKpis()"
+                style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
                 <option value="">— Selecione —</option>
               </select>
             </div>
-            <button type="button" class="btn btn-primary" style="margin-bottom:20px" onclick="cliDashOpenHlModal()">+ Adicionar Destaque</button>
-            <div id="cli-dash-highlights-list"></div>
+            <div class="form-field" style="margin:0">
+              <label>Categoria</label>
+              <select id="cli-kpi-tab" onchange="cliDashLoadKpis()"
+                style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                <option value="">Todas</option>
+                <option value="ex_empregados">Ações de Ex-empregados</option>
+                <option value="terceirizacao">Terceirização / Subsidiária</option>
+              </select>
+            </div>
           </div>
+          <button type="button" class="btn btn-primary" style="margin-bottom:20px" onclick="cliDashOpenKpiModal()">+ Adicionar KPI</button>
+          <div id="cli-dash-kpis-list"></div>
+        </div>
+
+        <!-- Sub: Textos -->
+        <div id="cli-dash-sub-content" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+            <div class="form-field" style="margin:0">
+              <label>Período</label>
+              <select id="cli-cnt-period" onchange="cliDashLoadContent()"
+                style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                <option value="">— Selecione —</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0">
+              <label>Categoria</label>
+              <select id="cli-cnt-tab" onchange="cliDashLoadContent()"
+                style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                <option value="ex_empregados">Ações de Ex-empregados</option>
+                <option value="terceirizacao">Terceirização / Subsidiária</option>
+              </select>
+            </div>
+          </div>
+          <div class="rich-editor-toolbar" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="document.execCommand('bold')"><strong>B</strong></button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="document.execCommand('italic')"><em>I</em></button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="document.execCommand('insertUnorderedList')">• Lista</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="document.execCommand('insertOrderedList')">1. Lista</button>
+          </div>
+          <div id="cli-cnt-editor" class="rich-editor" contenteditable="true"
+            style="min-height:180px;border:1px solid var(--c-divider);border-radius:2px;padding:14px;font-family:var(--f-body);font-size:14px;line-height:1.6;color:var(--c-dark);background:#fafaf8;outline:none"
+            oninput="document.getElementById('cli-cnt-source').value=this.innerHTML"></div>
+          <textarea id="cli-cnt-source" rows="5" placeholder="Código HTML fonte…"
+            style="display:none;width:100%;margin-top:8px;border:1px solid var(--c-divider);padding:10px 14px;font-family:var(--f-mono);font-size:12px;color:var(--c-dark);background:#fafaf8;border-radius:2px;resize:vertical"
+            oninput="document.getElementById('cli-cnt-editor').innerHTML=this.value"></textarea>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button type="button" class="btn btn-primary" onclick="cliDashSaveContent()">Salvar Texto</button>
+          </div>
+        </div>
+
+        <!-- Sub: Destaques -->
+        <div id="cli-dash-sub-highlights" style="display:none">
+          <div class="form-field" style="margin-bottom:20px">
+            <label>Período</label>
+            <select id="cli-hl-period" onchange="cliDashLoadHighlights()"
+              style="width:100%;max-width:360px;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+              <option value="">— Selecione —</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" style="margin-bottom:20px" onclick="cliDashOpenHlModal()">+ Adicionar Destaque</button>
+          <div id="cli-dash-highlights-list"></div>
         </div>
       </div>
 
@@ -2919,9 +2938,10 @@ function getSbCreds() {
   return { sbUrl, sbKey };
 }
 
-const CONTEUDO_TABS = ['blog','newsletter','contato','curriculos','comentarios'];
-const GESTAO_TABS   = ['equipe','clientes'];
-const STANDALONE_TABS = ['ifood','config'];
+const CONTEUDO_TABS   = ['blog','newsletter','contato','curriculos','comentarios'];
+const GESTAO_TABS     = ['equipe','clientes'];
+const DASH_TABS       = ['ifood','cli-dash'];
+const STANDALONE_TABS = ['config'];
 
 function toggleGroup(group) {
   const el = document.getElementById('group-' + group);
@@ -2954,6 +2974,11 @@ function switchTab(name) {
     const el = document.getElementById('ditem-' + t);
     if (el) el.classList.toggle('active', t === name);
   });
+  // Update dropdown items — Dashboards
+  DASH_TABS.forEach(t => {
+    const el = document.getElementById('ditem-' + t);
+    if (el) el.classList.toggle('active', t === name);
+  });
   // Mark groups as active
   const groupC = document.getElementById('group-conteudo');
   groupC.querySelector('.admin-tab').classList.toggle('active', CONTEUDO_TABS.includes(name));
@@ -2961,6 +2986,9 @@ function switchTab(name) {
   const groupG = document.getElementById('group-gestao');
   groupG.querySelector('.admin-tab').classList.toggle('active', GESTAO_TABS.includes(name));
   groupG.classList.remove('open');
+  const groupD = document.getElementById('group-dashboards');
+  groupD.querySelector('.admin-tab').classList.toggle('active', DASH_TABS.includes(name));
+  groupD.classList.remove('open');
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'blog')          { loadArticlesFromGitHub().then(renderBlog); }
@@ -2970,6 +2998,7 @@ function switchTab(name) {
   if (name === 'contato')       { clearBadge('contato'); loadContatoFromSupabase().then(renderContato); }
   if (name === 'curriculos')    { clearBadge('curriculos'); loadCurriculosFromSupabase().then(renderCurriculos); }
   if (name === 'ifood')         { loadIfoodAdmin(); }
+  if (name === 'cli-dash')      { loadPortalFromSupabase().then(cliDashTabInit); }
   if (name === 'comentarios')   { clearBadge('comentarios'); loadComentariosAdmin('all'); }
 }
 
@@ -5503,6 +5532,12 @@ function saveReport() {
       notifyClientByEmail({ ...clients[idx], notifyAddr }, report).catch(() => {});
     }
 
+    // Auto-importar KPIs se Excel e checkbox marcado
+    const autoKpi = document.getElementById('rep-auto-kpi');
+    if (report.stats && autoKpi && autoKpi.checked) {
+      cliDashAutoSaveKpis(clientId, period || report.title, report.stats).catch(e => console.warn('KPI auto-import:', e));
+    }
+
     setTimeout(() => {
       closeReportModal();
       renderClients();
@@ -5621,7 +5656,8 @@ function onRepFileChange(input) {
   status.style.display  = 'none';
 
   if (!file) return;
-  const ext = file.name.split('.').pop().toLowerCase();
+  const kpiImport = document.getElementById('rep-kpi-import');
+  if (kpiImport) kpiImport.style.display = 'none';
   if (!['xlsx','xls','csv'].includes(ext)) return; // PDF: sem extração
 
   status.style.display = 'block';
@@ -5659,6 +5695,9 @@ function onRepFileChange(input) {
       preview.style.display = 'block';
       status.textContent = '✓ ' + Object.keys(stats).length + ' indicadores extraídos automaticamente';
       status.style.color = '#2DD4A0';
+      // Mostrar opção de importar KPIs
+      const kpiImport = document.getElementById('rep-kpi-import');
+      if (kpiImport) kpiImport.style.display = 'block';
     } catch(err) {
       status.textContent = '❌ Erro ao ler planilha: ' + err.message;
       status.style.color = '#F87171';
@@ -5920,13 +5959,69 @@ async function cliDashApi(path, opts = {}) {
   } catch (e) { return { data: null, error: { message: e.message || String(e) } }; }
 }
 
-// Popula dropdown de clientes e mostra painel
-function cliDashInit() {
+// Auto-salvar KPIs extraídos do Excel no Dashboard do cliente
+async function cliDashAutoSaveKpis(clientId, periodLabel, stats) {
+  if (!clientId || !stats) return;
+  // 1. Encontrar ou criar o período
+  const { data: periods } = await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods`);
+  let period = (periods || []).find(p => p.label === periodLabel || p.month_year === periodLabel);
+  if (!period) {
+    // Tenta derivar month_year a partir da label (ex: "Janeiro 2026" → 2026-01)
+    const now = new Date();
+    const monthYear = now.toISOString().slice(0, 7);
+    const { data: created } = await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods`, {
+      method: 'POST',
+      body: { id: cliDashId(), label: periodLabel, month_year: monthYear, is_active: true }
+    });
+    period = created;
+  }
+  if (!period) return;
+
+  // 2. Ativar esse período
+  await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods/${period.id}/activate`, { method: 'POST' });
+
+  // 3. Mapear stats → KPIs (salvo nas duas categorias)
+  const KPI_MAP = [
+    { key: 'processos',      label: 'Total de Processos',    unit: 'processos' },
+    { key: 'favoraveis',     label: 'Decisões Favoráveis',   unit: 'processos' },
+    { key: 'desfavoraveis',  label: 'Decisões Desfavoráveis',unit: 'processos' },
+    { key: 'novas',          label: 'Novas Ações',           unit: 'processos' },
+    { key: 'encerrados',     label: 'Encerrados',            unit: 'processos' },
+    { key: 'andamento',      label: 'Em Andamento',          unit: 'processos' }
+  ];
+  const tabKeys = ['ex_empregados', 'terceirizacao'];
+  let sortOrder = 0;
+  for (const tabKey of tabKeys) {
+    for (const m of KPI_MAP) {
+      if (!(m.key in stats)) continue;
+      await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/kpis`, {
+        method: 'POST',
+        body: {
+          id: cliDashId(),
+          client_id: clientId,
+          period_id: period.id,
+          tab_key: tabKey,
+          kpi_key: m.key,
+          label: m.label,
+          value: String(stats[m.key]),
+          unit: m.unit,
+          trend_pct: null,
+          sort_order: sortOrder++,
+          chart_title: null,
+          chart_data: null
+        }
+      });
+    }
+    sortOrder = 0;
+  }
+  showToast('✓ KPIs importados automaticamente para o Dashboard.');
+}
+
+// Inicializa aba tab-cli-dash com lista de clientes
+function cliDashTabInit(clients) {
+  if (clients) window._clients = clients;
   const sel = document.getElementById('cli-dash-select');
-  const wrapper = document.getElementById('cli-dash-wrapper');
-  if (!sel || !wrapper) return;
-  wrapper.style.display = 'block';
-  // Populate with current clients list
+  if (!sel) return;
   const opts = (window._clients || []).map(c =>
     `<option value="${escHtml(c.id)}">${escHtml(c.company)}</option>`).join('');
   sel.innerHTML = '<option value="">— Selecione um cliente —</option>' + opts;
@@ -5934,13 +6029,31 @@ function cliDashInit() {
   if (_cliDashClientId) cliDashSelectClient(_cliDashClientId);
 }
 
+// Botão "Enviar Relatório / Excel" no tab-cli-dash
+function cliDashOpenUpload() {
+  if (!_cliDashClientId) { alert('Selecione um cliente primeiro.'); return; }
+  openReportModal(_cliDashClientId);
+}
+
+// Popula dropdown de clientes (legado: usado em renderClients)
+function cliDashInit() {
+  // sem-op: inicialização agora feita via cliDashTabInit ao abrir o tab
+}
+
 async function cliDashSelectClient(clientId) {
   _cliDashClientId = clientId;
   const panel = document.getElementById('cli-dash-panel');
   const btn   = document.getElementById('cli-dash-new-period-btn');
-  if (!clientId) { panel.style.display = 'none'; btn.style.display = 'none'; return; }
+  const upBtn = document.getElementById('cli-dash-upload-btn');
+  if (!clientId) {
+    panel.style.display = 'none';
+    if (btn) btn.style.display = 'none';
+    if (upBtn) upBtn.style.display = 'none';
+    return;
+  }
   panel.style.display = 'block';
-  btn.style.display   = 'inline-flex';
+  if (btn) btn.style.display = 'inline-flex';
+  if (upBtn) upBtn.style.display = 'inline-flex';
   const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods`);
   _cliDashPeriods = error ? [] : (data || []);
   cliDashRenderPeriods();
