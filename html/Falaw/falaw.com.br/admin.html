@@ -1200,6 +1200,197 @@
           </div>
         </div>
       </div>
+
+      <!-- ── DASHBOARD POR CLIENTE ── -->
+      <div id="cli-dash-wrapper" style="display:none;margin-top:32px;border-top:1px solid var(--c-divider);padding-top:28px">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:220px">
+            <label style="font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);white-space:nowrap">Cliente:</label>
+            <select id="cli-dash-select" onchange="cliDashSelectClient(this.value)"
+              style="flex:1;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+              <option value="">— Selecione um cliente —</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" id="cli-dash-new-period-btn" style="display:none" onclick="cliDashOpenPeriodModal()">+ Novo Período</button>
+        </div>
+
+        <div id="cli-dash-panel" style="display:none">
+          <!-- Sub-nav -->
+          <div style="display:flex;gap:4px;margin-bottom:28px;flex-wrap:wrap" id="cliDashSubNav">
+            <div class="ifood-sub-tab active" onclick="cliDashSubTab('periods')">📅 Períodos</div>
+            <div class="ifood-sub-tab"        onclick="cliDashSubTab('kpis')">📊 KPIs / Gráficos</div>
+            <div class="ifood-sub-tab"        onclick="cliDashSubTab('content')">✍️ Textos das Abas</div>
+            <div class="ifood-sub-tab"        onclick="cliDashSubTab('highlights')">⭐ Destaques do Mês</div>
+          </div>
+
+          <!-- Sub: Períodos -->
+          <div id="cli-dash-sub-periods">
+            <div id="cli-dash-periods-list"><div class="empty-state"><p>Carregando períodos…</p></div></div>
+          </div>
+
+          <!-- Sub: KPIs -->
+          <div id="cli-dash-sub-kpis" style="display:none">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+              <div class="form-field" style="margin:0">
+                <label>Período</label>
+                <select id="cli-kpi-period" onchange="cliDashLoadKpis()"
+                  style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                  <option value="">— Selecione —</option>
+                </select>
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Categoria</label>
+                <select id="cli-kpi-tab" onchange="cliDashLoadKpis()"
+                  style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                  <option value="">Todas</option>
+                  <option value="ex_empregados">Ações de Ex-empregados</option>
+                  <option value="terceirizacao">Terceirização / Subsidiária</option>
+                </select>
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" style="margin-bottom:20px" onclick="cliDashOpenKpiModal()">+ Adicionar KPI</button>
+            <div id="cli-dash-kpis-list"></div>
+          </div>
+
+          <!-- Sub: Textos -->
+          <div id="cli-dash-sub-content" style="display:none">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+              <div class="form-field" style="margin:0">
+                <label>Período</label>
+                <select id="cli-cnt-period" onchange="cliDashLoadContent()"
+                  style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                  <option value="">— Selecione —</option>
+                </select>
+              </div>
+              <div class="form-field" style="margin:0">
+                <label>Categoria</label>
+                <select id="cli-cnt-tab" onchange="cliDashLoadContent()"
+                  style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                  <option value="ex_empregados">Ações de Ex-empregados</option>
+                  <option value="terceirizacao">Terceirização / Subsidiária</option>
+                </select>
+              </div>
+            </div>
+            <div class="rich-editor-toolbar" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.execCommand('bold')"><strong>B</strong></button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.execCommand('italic')"><em>I</em></button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.execCommand('insertUnorderedList')">• Lista</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.execCommand('insertOrderedList')">1. Lista</button>
+            </div>
+            <div id="cli-cnt-editor" class="rich-editor" contenteditable="true"
+              style="min-height:180px;border:1px solid var(--c-divider);border-radius:2px;padding:14px;font-family:var(--f-body);font-size:14px;line-height:1.6;color:var(--c-dark);background:#fafaf8;outline:none"
+              oninput="document.getElementById('cli-cnt-source').value=this.innerHTML"></div>
+            <textarea id="cli-cnt-source" rows="5" placeholder="Código HTML fonte…"
+              style="display:none;width:100%;margin-top:8px;border:1px solid var(--c-divider);padding:10px 14px;font-family:var(--f-mono);font-size:12px;color:var(--c-dark);background:#fafaf8;border-radius:2px;resize:vertical"
+              oninput="document.getElementById('cli-cnt-editor').innerHTML=this.value"></textarea>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button type="button" class="btn btn-primary" onclick="cliDashSaveContent()">Salvar Texto</button>
+            </div>
+          </div>
+
+          <!-- Sub: Destaques -->
+          <div id="cli-dash-sub-highlights" style="display:none">
+            <div class="form-field" style="margin-bottom:20px">
+              <label>Período</label>
+              <select id="cli-hl-period" onchange="cliDashLoadHighlights()"
+                style="width:100%;max-width:360px;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                <option value="">— Selecione —</option>
+              </select>
+            </div>
+            <button type="button" class="btn btn-primary" style="margin-bottom:20px" onclick="cliDashOpenHlModal()">+ Adicionar Destaque</button>
+            <div id="cli-dash-highlights-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: Período do cliente -->
+      <div class="modal-overlay" id="cliDashPeriodModal" onclick="if(event.target===this)cliDashClosePeriodModal()">
+        <div class="modal" style="max-width:440px">
+          <div class="modal-header">
+            <h3>Novo Período</h3>
+            <button class="modal-close" onclick="cliDashClosePeriodModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-field"><label>Rótulo *</label><input id="cdp-label" type="text" placeholder="Ex: Janeiro 2026" /></div>
+            <div class="form-field"><label>Mês/Ano (YYYY-MM) *</label><input id="cdp-monthyear" type="text" placeholder="2026-01" /></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="cliDashClosePeriodModal()">Cancelar</button>
+            <button class="btn btn-primary" onclick="cliDashSavePeriod()">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: KPI do cliente -->
+      <div class="modal-overlay" id="cliDashKpiModal" onclick="if(event.target===this)cliDashCloseKpiModal()">
+        <div class="modal" style="max-width:540px">
+          <div class="modal-header">
+            <h3>Adicionar KPI</h3>
+            <button class="modal-close" onclick="cliDashCloseKpiModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="cdk-id" />
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="form-field">
+                <label>Período *</label>
+                <select id="cdk-period" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                  <option value="">— Selecione —</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Categoria *</label>
+                <select id="cdk-tab" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                  <option value="ex_empregados">Ações de Ex-empregados</option>
+                  <option value="terceirizacao">Terceirização / Subsidiária</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="form-field"><label>Chave *</label><input id="cdk-key" type="text" placeholder="processos_ativos" /></div>
+              <div class="form-field"><label>Rótulo *</label><input id="cdk-label" type="text" placeholder="Processos Ativos" /></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+              <div class="form-field"><label>Valor *</label><input id="cdk-value" type="text" placeholder="142" /></div>
+              <div class="form-field"><label>Unidade</label><input id="cdk-unit" type="text" placeholder="processos" /></div>
+              <div class="form-field"><label>Tendência (%)</label><input id="cdk-trend" type="number" step="0.1" placeholder="-5.2" /></div>
+            </div>
+            <div class="form-field"><label>Ordem</label><input id="cdk-order" type="number" value="0" /></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="cliDashCloseKpiModal()">Cancelar</button>
+            <button class="btn btn-primary" onclick="cliDashSaveKpi()">Salvar KPI</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: Destaque do cliente -->
+      <div class="modal-overlay" id="cliDashHlModal" onclick="if(event.target===this)cliDashCloseHlModal()">
+        <div class="modal" style="max-width:480px">
+          <div class="modal-header">
+            <h3>Destaque do Mês</h3>
+            <button class="modal-close" onclick="cliDashCloseHlModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="cdh-id" />
+            <div class="form-field">
+              <label>Período *</label>
+              <select id="cdh-period" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                <option value="">— Selecione —</option>
+              </select>
+            </div>
+            <div style="display:grid;grid-template-columns:80px 1fr;gap:16px">
+              <div class="form-field"><label>Ícone</label><input id="cdh-icon" type="text" placeholder="⚡" /></div>
+              <div class="form-field"><label>Título *</label><input id="cdh-title" type="text" placeholder="Título do destaque" /></div>
+            </div>
+            <div class="form-field"><label>Descrição</label><textarea id="cdh-body" rows="3" placeholder="Detalhes do destaque…"></textarea></div>
+            <div class="form-field"><label>Ordem</label><input id="cdh-order" type="number" value="0" /></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="cliDashCloseHlModal()">Cancelar</button>
+            <button class="btn btn-primary" onclick="cliDashSaveHighlight()">Salvar</button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ── CURRÍCULOS ── -->
@@ -5547,6 +5738,9 @@ function renderClients() {
         </div>
       </div>`;
   }).join('');
+  // Expose clients globally so cliDashInit can populate the dropdown
+  window._clients = clients;
+  cliDashInit();
 }
 
 /* ══════════════════════════════════════════
@@ -5694,6 +5888,262 @@ async function ifoodApi(path, options) {
   } catch (e) {
     return { data: null, error: { message: e.message || String(e) } };
   }
+}
+
+/* ══════════════════════════════════════
+   CLIENT DASHBOARD  (ex-empregados + terceirização)
+══════════════════════════════════════ */
+let _cliDashClientId = null;
+let _cliDashPeriods  = [];
+const CLI_DASH_SUBS  = ['periods','kpis','content','highlights'];
+const CLI_DASH_TABS  = [
+  { key: 'ex_empregados', label: 'Ações de Ex-empregados' },
+  { key: 'terceirizacao', label: 'Terceirização / Subsidiária' }
+];
+
+function cliDashId() {
+  return 'cd_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+async function cliDashApi(path, opts = {}) {
+  const base = backendApiBase();
+  if (!base) return { data: null, error: { message: 'Configure a URL da Cockroach API em Configurações.' } };
+  try {
+    const res = await fetch(base + path, {
+      method: opts.method || 'GET',
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    });
+    let data; try { data = await res.json(); } catch { data = null; }
+    if (!res.ok) return { data: null, error: { message: data?.error || 'HTTP ' + res.status } };
+    return { data, error: null };
+  } catch (e) { return { data: null, error: { message: e.message || String(e) } }; }
+}
+
+// Popula dropdown de clientes e mostra painel
+function cliDashInit() {
+  const sel = document.getElementById('cli-dash-select');
+  const wrapper = document.getElementById('cli-dash-wrapper');
+  if (!sel || !wrapper) return;
+  wrapper.style.display = 'block';
+  // Populate with current clients list
+  const opts = (window._clients || []).map(c =>
+    `<option value="${escHtml(c.id)}">${escHtml(c.company)}</option>`).join('');
+  sel.innerHTML = '<option value="">— Selecione um cliente —</option>' + opts;
+  sel.value = _cliDashClientId || '';
+  if (_cliDashClientId) cliDashSelectClient(_cliDashClientId);
+}
+
+async function cliDashSelectClient(clientId) {
+  _cliDashClientId = clientId;
+  const panel = document.getElementById('cli-dash-panel');
+  const btn   = document.getElementById('cli-dash-new-period-btn');
+  if (!clientId) { panel.style.display = 'none'; btn.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  btn.style.display   = 'inline-flex';
+  const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods`);
+  _cliDashPeriods = error ? [] : (data || []);
+  cliDashRenderPeriods();
+  cliDashPopulateSelects();
+  cliDashSubTab('periods');
+}
+
+function cliDashSubTab(name) {
+  const nav = document.getElementById('cliDashSubNav');
+  nav.querySelectorAll('.ifood-sub-tab').forEach((t, i) => t.classList.toggle('active', CLI_DASH_SUBS[i] === name));
+  CLI_DASH_SUBS.forEach(s => {
+    const el = document.getElementById('cli-dash-sub-' + s);
+    if (el) el.style.display = s === name ? 'block' : 'none';
+  });
+}
+
+function cliDashPopulateSelects() {
+  const opts = _cliDashPeriods.map(p => `<option value="${escHtml(p.id)}">${escHtml(p.label)}</option>`).join('');
+  ['cli-kpi-period','cli-cnt-period','cli-hl-period','cdk-period','cdh-period'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">— Selecione —</option>' + opts;
+  });
+}
+
+// ── Periods ──────────────────────────────────────────────────────
+function cliDashRenderPeriods() {
+  const el = document.getElementById('cli-dash-periods-list');
+  if (!el) return;
+  if (!_cliDashPeriods.length) { el.innerHTML = '<div class="empty-state"><p>Nenhum período cadastrado.</p></div>'; return; }
+  el.innerHTML = _cliDashPeriods.map(p => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--c-divider);border-radius:6px;margin-bottom:8px;gap:12px;flex-wrap:wrap">
+      <div>
+        <strong style="font-size:15px">${escHtml(p.label)}</strong>
+        <span style="font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-left:10px">${escHtml(p.month_year)}</span>
+        ${p.is_active ? '<span style="margin-left:8px;background:#0a7a3e;color:#fff;font-size:10px;padding:2px 8px;border-radius:20px;font-family:var(--f-mono)">ATIVO</span>' : ''}
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        ${!p.is_active ? `<button class="btn btn-ghost btn-sm" onclick="cliDashActivatePeriod('${escHtml(p.id)}')">Ativar</button>` : ''}
+        <button class="btn btn-ghost btn-sm" style="color:#e05a5a" onclick="cliDashDeletePeriod('${escHtml(p.id)}','${escHtml(p.label)}')">Excluir</button>
+      </div>
+    </div>`).join('');
+}
+
+function cliDashOpenPeriodModal() {
+  document.getElementById('cdp-label').value = '';
+  document.getElementById('cdp-monthyear').value = '';
+  document.getElementById('cliDashPeriodModal').style.display = 'flex';
+}
+function cliDashClosePeriodModal() { document.getElementById('cliDashPeriodModal').style.display = 'none'; }
+
+async function cliDashSavePeriod() {
+  const label = document.getElementById('cdp-label').value.trim();
+  const my    = document.getElementById('cdp-monthyear').value.trim();
+  if (!label || !my) { showToast('Preencha rótulo e mês/ano.', 'error'); return; }
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/periods`, {
+    method: 'POST', body: { id: cliDashId(), label, month_year: my }
+  });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  cliDashClosePeriodModal();
+  await cliDashSelectClient(_cliDashClientId);
+}
+
+async function cliDashActivatePeriod(id) {
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/periods/${id}/activate`, { method: 'POST' });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  await cliDashSelectClient(_cliDashClientId);
+}
+
+async function cliDashDeletePeriod(id, label) {
+  if (!confirm(`Excluir período "${label}" e todos os dados? Esta ação não pode ser desfeita.`)) return;
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/periods/${id}`, { method: 'DELETE' });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  await cliDashSelectClient(_cliDashClientId);
+}
+
+// ── KPIs ─────────────────────────────────────────────────────────
+async function cliDashLoadKpis() {
+  const periodId = document.getElementById('cli-kpi-period').value;
+  const tabKey   = document.getElementById('cli-kpi-tab').value;
+  const el = document.getElementById('cli-dash-kpis-list');
+  if (!periodId) { el.innerHTML = '<p style="color:var(--c-muted);font-size:13px">Selecione um período.</p>'; return; }
+  const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/kpis?periodId=${encodeURIComponent(periodId)}${tabKey ? '&tabKey='+encodeURIComponent(tabKey) : ''}`);
+  if (error) { el.innerHTML = `<p style="color:#e05a5a">Erro: ${escHtml(error.message)}</p>`; return; }
+  const rows = data || [];
+  const tabLabel = (k) => CLI_DASH_TABS.find(t => t.key === k)?.label || k;
+  el.innerHTML = rows.length ? rows.map(r => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--c-divider);border-radius:6px;margin-bottom:6px;gap:12px;flex-wrap:wrap">
+      <div>
+        <strong>${escHtml(r.label)}</strong>
+        <span style="font-family:var(--f-mono);font-size:12px;color:var(--c-muted);margin-left:8px">${escHtml(r.value)}${r.unit ? ' ' + escHtml(r.unit) : ''}</span>
+        ${r.trend_pct != null ? `<span style="font-size:11px;color:${r.trend_pct >= 0 ? '#0a7a3e' : '#e05a5a'};margin-left:6px">${r.trend_pct >= 0 ? '▲' : '▼'} ${Math.abs(r.trend_pct)}%</span>` : ''}
+        <span style="font-size:10px;font-family:var(--f-mono);color:var(--c-muted);margin-left:8px">[${escHtml(tabLabel(r.tab_key))}]</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="color:#e05a5a" onclick="cliDashDeleteKpi('${escHtml(r.id)}')">×</button>
+    </div>`).join('')
+  : '<div class="empty-state"><p>Nenhum KPI cadastrado.</p></div>';
+}
+
+function cliDashOpenKpiModal() {
+  ['cdk-id','cdk-key','cdk-label','cdk-value','cdk-unit','cdk-trend'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  document.getElementById('cdk-order').value = '0';
+  document.getElementById('cdk-period').value = document.getElementById('cli-kpi-period').value;
+  document.getElementById('cdk-tab').value    = document.getElementById('cli-kpi-tab').value || 'ex_empregados';
+  document.getElementById('cliDashKpiModal').style.display = 'flex';
+}
+function cliDashCloseKpiModal() { document.getElementById('cliDashKpiModal').style.display = 'none'; }
+
+async function cliDashSaveKpi() {
+  const period_id = document.getElementById('cdk-period').value;
+  const tab_key   = document.getElementById('cdk-tab').value;
+  const kpi_key   = document.getElementById('cdk-key').value.trim();
+  const label     = document.getElementById('cdk-label').value.trim();
+  const value     = document.getElementById('cdk-value').value.trim();
+  if (!period_id || !kpi_key || !label || !value) { showToast('Preencha os campos obrigatórios.', 'error'); return; }
+  const trend_pct = document.getElementById('cdk-trend').value !== '' ? Number(document.getElementById('cdk-trend').value) : null;
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/kpis`, {
+    method: 'POST',
+    body: { id: cliDashId(), period_id, tab_key, kpi_key, label, value,
+            unit: document.getElementById('cdk-unit').value.trim() || null,
+            trend_pct, sort_order: Number(document.getElementById('cdk-order').value) || 0 }
+  });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  cliDashCloseKpiModal();
+  cliDashLoadKpis();
+  showToast('KPI salvo.');
+}
+
+async function cliDashDeleteKpi(id) {
+  if (!confirm('Excluir este KPI?')) return;
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/kpis/${id}`, { method: 'DELETE' });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  cliDashLoadKpis();
+}
+
+// ── Content ───────────────────────────────────────────────────────
+async function cliDashLoadContent() {
+  const periodId = document.getElementById('cli-cnt-period').value;
+  const tabKey   = document.getElementById('cli-cnt-tab').value;
+  const editor   = document.getElementById('cli-cnt-editor');
+  const source   = document.getElementById('cli-cnt-source');
+  if (!periodId) { editor.innerHTML = ''; source.value = ''; return; }
+  const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/content?periodId=${encodeURIComponent(periodId)}&tabKey=${encodeURIComponent(tabKey)}`);
+  const html = (data && data[0]) ? data[0].content_html : '';
+  editor.innerHTML = html; source.value = html;
+}
+
+async function cliDashSaveContent() {
+  const periodId = document.getElementById('cli-cnt-period').value;
+  const tabKey   = document.getElementById('cli-cnt-tab').value;
+  const html     = document.getElementById('cli-cnt-editor').innerHTML;
+  if (!periodId) { showToast('Selecione um período.', 'error'); return; }
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/content`, {
+    method: 'POST', body: { id: cliDashId(), period_id: periodId, tab_key: tabKey, content_html: html }
+  });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  showToast('Texto salvo.');
+}
+
+// ── Highlights ────────────────────────────────────────────────────
+async function cliDashLoadHighlights() {
+  const periodId = document.getElementById('cli-hl-period').value;
+  const el = document.getElementById('cli-dash-highlights-list');
+  if (!periodId) { el.innerHTML = ''; return; }
+  const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/highlights?periodId=${encodeURIComponent(periodId)}`);
+  const rows = data || [];
+  el.innerHTML = rows.length ? rows.map(r => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--c-divider);border-radius:6px;margin-bottom:6px;gap:12px">
+      <div>${r.icon ? `<span style="font-size:18px;margin-right:8px">${escHtml(r.icon)}</span>` : ''}<strong>${escHtml(r.title)}</strong>${r.body ? `<span style="color:var(--c-muted);font-size:13px;margin-left:8px">${escHtml(r.body)}</span>` : ''}</div>
+      <button class="btn btn-ghost btn-sm" style="color:#e05a5a" onclick="cliDashDeleteHighlight('${escHtml(r.id)}')">×</button>
+    </div>`).join('')
+  : '<div class="empty-state"><p>Nenhum destaque.</p></div>';
+}
+
+function cliDashOpenHlModal() {
+  ['cdh-id','cdh-icon','cdh-title','cdh-body'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  document.getElementById('cdh-order').value = '0';
+  document.getElementById('cdh-period').value = document.getElementById('cli-hl-period').value;
+  document.getElementById('cliDashHlModal').style.display = 'flex';
+}
+function cliDashCloseHlModal() { document.getElementById('cliDashHlModal').style.display = 'none'; }
+
+async function cliDashSaveHighlight() {
+  const period_id = document.getElementById('cdh-period').value;
+  const title     = document.getElementById('cdh-title').value.trim();
+  if (!period_id || !title) { showToast('Preencha os campos obrigatórios.', 'error'); return; }
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/highlights`, {
+    method: 'POST',
+    body: { id: cliDashId(), period_id, title,
+            icon: document.getElementById('cdh-icon').value.trim() || null,
+            body: document.getElementById('cdh-body').value.trim() || null,
+            sort_order: Number(document.getElementById('cdh-order').value) || 0 }
+  });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  cliDashCloseHlModal();
+  cliDashLoadHighlights();
+  showToast('Destaque salvo.');
+}
+
+async function cliDashDeleteHighlight(id) {
+  if (!confirm('Excluir este destaque?')) return;
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/highlights/${id}`, { method: 'DELETE' });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  cliDashLoadHighlights();
 }
 
 function ifoodId() {
