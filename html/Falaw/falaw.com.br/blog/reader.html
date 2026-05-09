@@ -51,7 +51,7 @@
   <div id="article-footer" hidden>
     <div class="article-cta" id="article-cta-block">
       <p class="article-cta__text" id="article-cta-text">Tem dúvidas jurídicas sobre este tema?</p>
-      <a href="../contato/index.html" class="btn-primary">Fale com a Falaw →</a>
+      <!-- botão renderizado pelo JS acima das tags -->
     </div>
     <div class="article-back article-back--spaced">
       <a href="../blog.html">← Voltar ao Blog</a>
@@ -284,7 +284,8 @@
 
     // Article end
     html += '<div class="article-end">'
-      + '<p class="article-end-meta">Falaw \u00b7 Blog Jur\u00eddico \u00b7 ' + esc(d.date || art.date || '') + '</p>';
+      + '<p class="article-end-meta">Falaw \u00b7 Blog Jur\u00eddico \u00b7 ' + esc(d.date || art.date || '') + '</p>'
+      + '<a href="../contato/index.html" class="btn-primary" id="article-cta-btn">Fale conosco</a>';
     if (d.tags && d.tags.length) {
       html += '<div class="article-tags">';
       d.tags.forEach(function(t) { html += '<span class="article-tag">' + esc(t) + '</span>'; });
