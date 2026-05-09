@@ -487,16 +487,38 @@
   </div>
 </div>
 
+<!-- Badge de privacidade (após consentimento) -->
+<a href="privacidade.html" class="privacy-badge" id="privacy-badge" aria-label="Política de Privacidade aceita">
+  <svg class="privacy-badge__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    <polyline points="9 12 11 14 15 10"/>
+  </svg>
+  <span class="privacy-badge__label">Privacidade</span>
+</a>
+
 <script>
 (function () {
   var CONSENT_KEY = 'falaw_privacy_consent';
-  if (localStorage.getItem(CONSENT_KEY)) return;
+  var badge = document.getElementById('privacy-badge');
+
+  function showBadge() {
+    setTimeout(function () { badge.classList.add('is-visible'); }, 400);
+  }
+
+  if (localStorage.getItem(CONSENT_KEY)) {
+    showBadge();
+    return;
+  }
+
   var modal = document.getElementById('privacy-modal');
   setTimeout(function () { modal.classList.add('is-open'); }, 600);
+
   function close(val) {
     modal.classList.remove('is-open');
     localStorage.setItem(CONSENT_KEY, val);
+    showBadge();
   }
+
   document.getElementById('privacy-accept').addEventListener('click', function () { close('all'); });
   document.getElementById('privacy-decline').addEventListener('click', function () { close('essential'); });
   document.getElementById('privacy-modal-backdrop').addEventListener('click', function () { close('essential'); });

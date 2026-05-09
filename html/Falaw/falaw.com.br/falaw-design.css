@@ -2945,3 +2945,53 @@ h3 {
   .privacy-modal__actions { flex-direction: column; }
   .privacy-modal__accept, .privacy-modal__decline { width: 100%; }
 }
+
+/* Privacy badge (after consent) */
+.privacy-badge {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 8000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(13,43,94,0.12);
+  border-radius: 999px;
+  padding: 7px 14px 7px 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+  cursor: pointer;
+  text-decoration: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .35s, transform .35s, box-shadow .2s;
+  pointer-events: none;
+}
+.privacy-badge.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.privacy-badge:hover {
+  box-shadow: 0 4px 20px rgba(13,43,94,0.18);
+}
+.privacy-badge__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--c-accent);
+}
+.privacy-badge__label {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  color: var(--c-accent);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .privacy-badge { bottom: 80px; left: 12px; }
+}
