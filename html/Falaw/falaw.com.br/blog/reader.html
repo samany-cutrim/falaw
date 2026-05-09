@@ -41,11 +41,63 @@
 
 <main class="article-page">
 
-  <div class="article-back">
+  <div class="article-back article-back--top">
     <a href="../blog.html">← Voltar ao Blog</a>
   </div>
 
   <div id="article-content"></div>
+
+  <!-- CTA + fim -->
+  <div id="article-footer" hidden>
+    <div class="article-cta" id="article-cta-block">
+      <p class="article-cta__text" id="article-cta-text">Tem dúvidas jurídicas sobre este tema?</p>
+      <a href="../contato/index.html" class="btn-primary">Fale com a Falaw →</a>
+    </div>
+    <div class="article-back article-back--spaced">
+      <a href="../blog.html">← Voltar ao Blog</a>
+    </div>
+    <!-- Comentários -->
+    <section class="article-comments" id="comentarios">
+      <div class="article-comments__header">
+        <p class="article-comments__title">Comentários</p>
+        <button class="btn-comment-open" id="btn-comment-open">+ Deixar comentário</button>
+      </div>
+      <div class="article-comments__list" id="comments-list-reader">
+        <!-- comentários aprovados carregados via JS -->
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal de comentário -->
+  <div class="comment-modal" id="comment-modal" aria-modal="true" role="dialog" aria-label="Deixar comentário">
+    <div class="comment-modal__backdrop" id="comment-modal-backdrop"></div>
+    <div class="comment-modal__box">
+      <div class="comment-modal__head">
+        <p class="comment-modal__title">Deixar comentário</p>
+        <button class="comment-modal__close" id="comment-modal-close" aria-label="Fechar">&#x2715;</button>
+      </div>
+      <form class="comment-form" id="comment-form-reader" onsubmit="submitComment(event)">
+        <div class="comment-form__row">
+          <div class="comment-form__field">
+            <label for="comment-nome-reader">Nome *</label>
+            <input type="text" id="comment-nome-reader" name="nome" required maxlength="120" placeholder="Seu nome">
+          </div>
+          <div class="comment-form__field">
+            <label for="comment-email-reader">E-mail * <span style="font-size:9px;opacity:.5">(não publicado)</span></label>
+            <input type="email" id="comment-email-reader" name="email" required maxlength="200" placeholder="seu@email.com">
+          </div>
+        </div>
+        <div class="comment-form__field">
+          <label for="comment-msg-reader">Comentário *</label>
+          <textarea id="comment-msg-reader" name="mensagem" required maxlength="2000" placeholder="Escreva seu comentário..."></textarea>
+        </div>
+        <div class="comment-form__actions">
+          <button type="submit" class="btn-primary comment-form__submit">Enviar comentário</button>
+          <p class="comment-form__msg" id="comment-msg-status-reader"></p>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <div id="article-not-found" hidden>
     <header class="article-header">
@@ -241,6 +293,18 @@
     html += '</div>';
 
     document.getElementById('article-content').innerHTML = html;
+
+    // Show footer (CTA + back + comments)
+    var footer = document.getElementById('article-footer');
+    if (footer) footer.hidden = false;
+
+    // CTA text from article JSON if present
+    if (d.cta) {
+      var ctaEl = document.getElementById('article-cta-text');
+      if (ctaEl) ctaEl.textContent = d.cta;
+    }
+
+    initComments(id);
   }
 
   /* ── SVG COVER GENERATOR ── */
@@ -315,6 +379,10 @@
       + '</header>'
       + coverHtml
       + '<div class="article-body">' + renderPlainContent(art.content || '') + '</div>';
+
+    var footer = document.getElementById('article-footer');
+    if (footer) footer.hidden = false;
+    initComments(art.id);
   }
 
   function renderPlainContent(text) {
@@ -330,6 +398,100 @@
 
   function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function escSVG(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  /* ── COMMENTS ── */
+  var _commentArticleId = null;
+
+  function initComments(articleId) {
+    _commentArticleId = articleId;
+
+    var btnOpen = document.getElementById('btn-comment-open');
+    if (btnOpen) btnOpen.addEventListener('click', openCommentModal);
+    var backdrop = document.getElementById('comment-modal-backdrop');
+    if (backdrop) backdrop.addEventListener('click', closeCommentModal);
+    var closeBtn = document.getElementById('comment-modal-close');
+    if (closeBtn) closeBtn.addEventListener('click', closeCommentModal);
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeCommentModal();
+    });
+
+    loadComments(articleId);
+  }
+
+  function openCommentModal() {
+    document.getElementById('comment-modal').classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeCommentModal() {
+    document.getElementById('comment-modal').classList.remove('is-open');
+    document.body.style.overflow = '';
+  }
+
+  function loadComments(articleId) {
+    var sbUrl = localStorage.getItem('fa_supabase_url') || (window.SB_URL || '');
+    var sbKey = localStorage.getItem('fa_supabase_key') || (window.SB_KEY || '');
+    if (!sbUrl || !sbKey) return;
+    var list = document.getElementById('comments-list-reader');
+    if (!list) return;
+    fetch(sbUrl + '/rest/v1/comments?article_id=eq.' + encodeURIComponent(articleId) + '&approved=eq.true&order=created_at.asc&select=nome,mensagem,created_at', {
+      headers: { 'apikey': sbKey, 'Authorization': 'Bearer ' + sbKey }
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (!data || !data.length) return;
+      list.innerHTML = data.map(function(c) {
+        return '<div class="comment-item"><div class="comment-item__header">'
+          + '<span class="comment-item__name">' + esc(c.nome) + '</span>'
+          + '<span class="comment-item__date">' + fmtDate(c.created_at) + '</span>'
+          + '</div><p class="comment-item__text">' + esc(c.mensagem) + '</p></div>';
+      }).join('');
+    }).catch(function(e) { console.warn('comments load:', e); });
+  }
+
+  function fmtDate(iso) {
+    var d = new Date(iso);
+    return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'short', year:'numeric'});
+  }
+
+  window.submitComment = function(e) {
+    e.preventDefault();
+    var sbUrl = localStorage.getItem('fa_supabase_url') || (window.SB_URL || '');
+    var sbKey = localStorage.getItem('fa_supabase_key') || (window.SB_KEY || '');
+    if (!sbUrl || !sbKey || !_commentArticleId) return;
+    var form = document.getElementById('comment-form-reader');
+    var statusEl = document.getElementById('comment-msg-status-reader');
+    var btn = form.querySelector('button[type=submit]');
+    var nome = form.querySelector('[name=nome]').value.trim();
+    var email = form.querySelector('[name=email]').value.trim();
+    var mensagem = form.querySelector('[name=mensagem]').value.trim();
+    if (!nome || !email || !mensagem) return;
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+    statusEl.className = 'comment-form__msg';
+    statusEl.textContent = '';
+    fetch(sbUrl + '/rest/v1/comments', {
+      method: 'POST',
+      headers: { 'apikey': sbKey, 'Authorization': 'Bearer ' + sbKey, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ article_id: _commentArticleId, nome: nome, email: email, mensagem: mensagem })
+    }).then(function(r) {
+      if (r.ok || r.status === 201) {
+        statusEl.textContent = 'Comentário enviado! Ele aparecerá após moderação.';
+        statusEl.className = 'comment-form__msg comment-form__msg--ok';
+        form.reset();
+        setTimeout(function() { closeCommentModal(); loadComments(_commentArticleId); }, 1800);
+      } else {
+        statusEl.textContent = 'Erro ao enviar. Tente novamente.';
+        statusEl.className = 'comment-form__msg comment-form__msg--error';
+        btn.disabled = false;
+        btn.textContent = 'Enviar comentário';
+      }
+    }).catch(function() {
+      statusEl.textContent = 'Erro ao enviar. Tente novamente.';
+      statusEl.className = 'comment-form__msg comment-form__msg--error';
+      btn.disabled = false;
+      btn.textContent = 'Enviar comentário';
+    });
+  };
+
 })();
 </script>
 </body>
