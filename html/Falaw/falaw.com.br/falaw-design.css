@@ -2426,6 +2426,7 @@ h3 {
 }
 
 /* ── BACK LINK ── */
+.article-back {
   max-width: 840px;
   margin: 0 auto;
   padding: 24px 48px 0;
@@ -2444,6 +2445,42 @@ h3 {
 }
 .article-back a:hover { color: var(--c-accent); }
 
+/* Topo — com borda inferior separando do header */
+.article-back--top {
+  border-bottom: 1px solid var(--c-divider);
+  padding: 20px 48px;
+  margin-bottom: 0;
+}
+.article-back--top a {
+  font-size: 10px;
+  color: var(--c-muted);
+  border: 1px solid var(--c-divider);
+  border-radius: 2px;
+  padding: 6px 14px;
+  transition: border-color .2s, color .2s;
+}
+.article-back--top a:hover {
+  color: var(--c-accent);
+  border-color: var(--c-accent);
+}
+
+/* Fim — espaçamento generoso */
+.article-back--spaced {
+  padding: 32px 48px 0;
+}
+.article-back--spaced a {
+  font-size: 10px;
+  color: var(--c-accent);
+  border: 1px solid var(--c-accent);
+  border-radius: 2px;
+  padding: 8px 18px;
+  transition: background .2s, color .2s;
+}
+.article-back--spaced a:hover {
+  background: var(--c-accent);
+  color: var(--c-white);
+}
+
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
   .blog-header { padding: 48px 32px 0; }
@@ -2455,6 +2492,8 @@ h3 {
   .article-body { padding: 0 28px 64px; }
   .article-end { padding: 28px 28px 48px; }
   .article-back { padding: 20px 28px 0; }
+  .article-back--top { padding: 16px 28px; }
+  .article-back--spaced { padding: 28px 28px 0; }
   .article-tags { padding: 0 28px 28px; }
   .article-cta { padding: 28px 28px; }
 }
@@ -2470,6 +2509,8 @@ h3 {
   .article-end { flex-direction: column; }
   .article-header, .article-cover, .article-body { padding-left: 22px; padding-right: 22px; }
   .article-back { padding-left: 22px; padding-right: 22px; }
+  .article-back--top { padding-left: 22px; padding-right: 22px; }
+  .article-back--spaced { padding-left: 22px; padding-right: 22px; }
   .article-tags { padding-left: 22px; padding-right: 22px; }
   .article-cta { padding-left: 22px; padding-right: 22px; }
 }
