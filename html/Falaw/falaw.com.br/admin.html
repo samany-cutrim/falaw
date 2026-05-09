@@ -2618,7 +2618,7 @@ async function fetchGitHubArticles() {
       const apiRes = await fetch(apiUrl, { headers: ghHeaders() });
       if (apiRes.ok) {
         const json = await apiRes.json();
-        const code = atob(json.content.replace(/\n/g, ''));
+        const code = decodeURIComponent(escape(atob(json.content.replace(/\n/g, ''))));
         return parseArticlesCode(code);
       }
     }
