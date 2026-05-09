@@ -911,8 +911,14 @@
           <div class="admin-dropdown-item" id="ditem-comentarios" onclick="switchTab('comentarios')"><span>Comentários</span><span class="notif-badge" id="badge-comentarios" style="display:none"></span></div>
         </div>
       </div>
-      <div class="admin-tab" id="tab-btn-equipe" onclick="switchTab('equipe')">Equipe</div>
-      <div class="admin-tab" id="tab-btn-clientes" onclick="switchTab('clientes')">Clientes</div>
+      <!-- Grupo Gestão -->
+      <div class="admin-tab-group" id="group-gestao">
+        <div class="admin-tab" onclick="toggleGroup('gestao')">Gestão</div>
+        <div class="admin-dropdown">
+          <div class="admin-dropdown-item" id="ditem-equipe" onclick="switchTab('equipe')"><span>Equipe</span></div>
+          <div class="admin-dropdown-item" id="ditem-clientes" onclick="switchTab('clientes')"><span>Clientes</span></div>
+        </div>
+      </div>
       <div class="admin-tab" id="tab-btn-ifood" onclick="switchTab('ifood')">iFood</div>
       <div class="admin-tab" id="tab-btn-config" onclick="switchTab('config')">Configurações</div>
     </div>
@@ -2723,7 +2729,8 @@ function getSbCreds() {
 }
 
 const CONTEUDO_TABS = ['blog','newsletter','contato','curriculos','comentarios'];
-const STANDALONE_TABS = ['equipe','clientes','ifood','config'];
+const GESTAO_TABS   = ['equipe','clientes'];
+const STANDALONE_TABS = ['ifood','config'];
 
 function toggleGroup(group) {
   const el = document.getElementById('group-' + group);
@@ -2746,20 +2753,23 @@ function switchTab(name) {
     const el = document.getElementById('tab-btn-' + t);
     if (el) el.classList.toggle('active', t === name);
   });
-  // Update dropdown items
+  // Update dropdown items — Conteúdo
   CONTEUDO_TABS.forEach(t => {
     const el = document.getElementById('ditem-' + t);
     if (el) el.classList.toggle('active', t === name);
   });
-  // Mark group as active if a conteudo tab is selected
-  const group = document.getElementById('group-conteudo');
-  if (CONTEUDO_TABS.includes(name)) {
-    group.querySelector('.admin-tab').classList.add('active');
-    group.classList.remove('open');
-  } else {
-    group.querySelector('.admin-tab').classList.remove('active');
-    group.classList.remove('open');
-  }
+  // Update dropdown items — Gestão
+  GESTAO_TABS.forEach(t => {
+    const el = document.getElementById('ditem-' + t);
+    if (el) el.classList.toggle('active', t === name);
+  });
+  // Mark groups as active
+  const groupC = document.getElementById('group-conteudo');
+  groupC.querySelector('.admin-tab').classList.toggle('active', CONTEUDO_TABS.includes(name));
+  groupC.classList.remove('open');
+  const groupG = document.getElementById('group-gestao');
+  groupG.querySelector('.admin-tab').classList.toggle('active', GESTAO_TABS.includes(name));
+  groupG.classList.remove('open');
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'blog')          { loadArticlesFromGitHub().then(renderBlog); }
