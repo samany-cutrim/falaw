@@ -1,0 +1,5902 @@
+
+/* ══════════════════════════════════════
+   CONSTANTS
+══════════════════════════════════════ */
+const ADMIN_PASSWORD_DEFAULT = 'falaw2026';
+const _PWD_SALT = 'falaw_adv_2026';
+const GITHUB_OWNER  = 'samany-cutrim';
+const GITHUB_REPO   = 'falaw';
+const GITHUB_BRANCH = 'master';
+const GITHUB_PATH            = 'html/Falaw/falaw.com.br/blog/articles-data.js';
+const GITHUB_PATH_TEAM       = 'html/Falaw/falaw.com.br/team-data.js';
+const GITHUB_PATH_PORTAL     = 'html/Falaw/falaw.com.br/cliente/portal-data.js';
+const GITHUB_PATH_NEWSLETTER = 'html/Falaw/falaw.com.br/newsletter-data.js';
+const GITHUB_PATH_CONTATO    = 'html/Falaw/falaw.com.br/contato-data.js';
+const GITHUB_PATH_CURRICULOS = 'html/Falaw/falaw.com.br/curriculos-data.js';
+const AUTH_EMAIL_KEY = 'fa_admin_auth_email';
+const BACKEND_API_URL_KEY = 'fa_backend_api_url';
+const SB_ADMIN_SETTINGS_TABLE = 'admin_settings';
+const SB_ADMIN_PASSWORD_ID = 'admin_password';
+const KEYS = { adminPwdHash: 'fa_admin_pwd_h', githubToken: 'fa_github_token', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions', curriculos: 'fa_curriculos' };
+const _LOCK_KEY = 'fa_admin_lock';
+
+let ALL_ARTICLES       = [];
+let GH_FILE_SHA        = '';
+let GH_TEAM_SHA        = '';
+let GH_PORTAL_SHA      = '';
+let GH_NEWSLETTER_SHA  = '';
+let GH_CONTATO_SHA     = '';
+let GH_CURRICULOS_SHA  = '';
+
+/* ══════════════════════════════════════
+   SUPABASE — helpers
+══════════════════════════════════════ */
+function sbUrl() { return localStorage.getItem('fa_supabase_url') || window.SB_URL || ''; }
+function sbKey() { return localStorage.getItem('fa_supabase_key') || window.SB_KEY || ''; }
+let _sbClient = null;
+function getSB() {
+  const url = sbUrl(), key = sbKey();
+  if (!url || !key) return null;
+  if (!_sbClient) _sbClient = supabase.createClient(url, key);
+  return _sbClient;
+}
+function sbReset() { _sbClient = null; }
+
+function backendApiBase() {
+  return (localStorage.getItem(BACKEND_API_URL_KEY) || '').replace(/\/$/, '');
+}
+
+async function apiUploadFile(kind, ownerId, fileName, dataUrl) {
+  const base = backendApiBase();
+  if (!base) return null;
+  try {
+    const res = await fetch(base + '/api/files', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind, ownerId, fileName, dataUrl })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    return data && data.url ? data.url : null;
+  } catch (e) {
+    console.warn('Cockroach API upload:', e.message);
+    return null;
+  }
+}
+
+function apiExtractFileId(fileUrl) {
+  if (!fileUrl) return null;
+  try {
+    const m = fileUrl.match(/\/api\/files\/([^?#/]+)/);
+    return m ? decodeURIComponent(m[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function apiDeleteFile(fileUrl) {
+  const base = backendApiBase();
+  const id = apiExtractFileId(fileUrl);
+  if (!base || !id) return false;
+  try {
+    const res = await fetch(base + '/api/files/' + encodeURIComponent(id), { method: 'DELETE' });
+    return res.ok;
+  } catch (e) {
+    console.warn('Cockroach API delete:', e.message);
+    return false;
+  }
+}
+
+async function apiListReportsForClient(clientId) {
+  const base = backendApiBase();
+  if (!base || !clientId) return [];
+  try {
+    const res = await fetch(base + '/api/reports/' + encodeURIComponent(clientId));
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('Cockroach API reports list:', e.message);
+    return [];
+  }
+}
+
+async function apiSaveReportMeta(report) {
+  const base = backendApiBase();
+  if (!base) return false;
+  try {
+    const res = await fetch(base + '/api/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(report)
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn('Cockroach API report save:', e.message);
+    return false;
+  }
+}
+
+async function apiDeleteReportMeta(reportId) {
+  const base = backendApiBase();
+  if (!base || !reportId) return false;
+  try {
+    const res = await fetch(base + '/api/reports/' + encodeURIComponent(reportId), { method: 'DELETE' });
+    return res.ok;
+  } catch (e) {
+    console.warn('Cockroach API report delete:', e.message);
+    return false;
+  }
+}
+
+async function apiDeleteReportsByClient(clientId) {
+  const base = backendApiBase();
+  if (!base || !clientId) return false;
+  try {
+    const res = await fetch(base + '/api/reports/by-client/' + encodeURIComponent(clientId), { method: 'DELETE' });
+    return res.ok;
+  } catch (e) {
+    console.warn('Cockroach API reports by client delete:', e.message);
+    return false;
+  }
+}
+
+async function sbReadAdminPasswordHash() {
+  const sb = getSB();
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb
+      .from(SB_ADMIN_SETTINGS_TABLE)
+      .select('password_hash')
+      .eq('id', SB_ADMIN_PASSWORD_ID)
+      .maybeSingle();
+    if (error) {
+      console.warn('SB admin hash read:', error.message);
+      return null;
+    }
+    return data && data.password_hash ? data.password_hash : null;
+  } catch (e) {
+    console.warn('SB admin hash read err:', e.message);
+    return null;
+  }
+}
+
+async function sbWriteAdminPasswordHash(hash) {
+  const sb = getSB();
+  if (!sb || !hash) return false;
+  try {
+    const { error } = await sb
+      .from(SB_ADMIN_SETTINGS_TABLE)
+      .upsert({
+        id: SB_ADMIN_PASSWORD_ID,
+        password_hash: hash,
+        updated_at: new Date().toISOString()
+      });
+    if (error) {
+      console.warn('SB admin hash write:', error.message);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.warn('SB admin hash write err:', e.message);
+    return false;
+  }
+}
+
+/* ── Newsletter ── */
+async function loadNewsletterFromSupabase() {
+  const sb = getSB();
+  if (!sb) { return loadNewsletterFromGitHub(); }
+  const { data, error } = await sb.from('newsletter').select('*').order('date', { ascending: false });
+  if (error) { console.warn('SB newsletter:', error.message); return loadNewsletterFromGitHub(); }
+  if (data && data.length) save(KEYS.newsletter, data.map(r => ({ id: r.id, email: r.email, date: r.date })));
+}
+
+async function sbDeleteNewsletter(id) {
+  const sb = getSB();
+  if (!sb) { pushNewsletterToGitHub(); return; }
+  const { error } = await sb.from('newsletter').delete().eq('id', id);
+  if (error) console.warn('SB delete newsletter:', error.message);
+}
+
+/* ── Contato ── */
+async function loadContatoFromSupabase() {
+  const sb = getSB();
+  if (!sb) { return loadContatoFromGitHub(); }
+  const { data, error } = await sb.from('contato').select('*').order('date', { ascending: false });
+  if (error) { console.warn('SB contato:', error.message); return loadContatoFromGitHub(); }
+  if (data) save(KEYS.contato, data.map(r => ({ id: r.id, nome: r.nome, empresa: r.empresa, email: r.email, telefone: r.telefone, mensagem: r.mensagem, date: r.date, read: r.read })));
+}
+
+async function sbDeleteContato(id) {
+  const sb = getSB();
+  if (!sb) { pushContatoToGitHub(); return; }
+  const { error } = await sb.from('contato').delete().eq('id', id);
+  if (error) console.warn('SB delete contato:', error.message);
+}
+
+async function sbMarkReadContato(id) {
+  const sb = getSB();
+  if (!sb) return;
+  await sb.from('contato').update({ read: true }).eq('id', id);
+}
+
+/* ── Currículos ── */
+async function loadCurriculosFromSupabase() {
+  const sb = getSB();
+  if (!sb) { return loadCurriculosFromGitHub(); }
+  const { data, error } = await sb.from('curriculos').select('*').order('submitted_at', { ascending: false });
+  if (error) { console.warn('SB curriculos:', error.message); return loadCurriculosFromGitHub(); }
+  if (data) {
+    const local = load(KEYS.curriculos) || [];
+    save(KEYS.curriculos, data.map(r => {
+      const lc = local.find(l => l.id === r.id);
+      return { id: r.id, nome: r.nome, email: r.email, telefone: r.telefone, linkedin: r.linkedin, apresentacao: r.apresentacao, cvFileName: r.cv_file_name, cvUrl: r.cv_url, submittedAt: r.submitted_at, source: r.source, cvData: lc ? lc.cvData : null };
+    }));
+  }
+}
+
+async function sbDeleteCurriculo(id) {
+  const sb = getSB();
+  if (!sb) { pushCurriculosToGitHub(); return; }
+  const { error } = await sb.from('curriculos').delete().eq('id', id);
+  if (error) console.warn('SB delete curriculo:', error.message);
+}
+
+async function sbInsertCurriculo(entry) {
+  const sb = getSB();
+  if (!sb) { pushCurriculosToGitHub(); return; }
+  const { error } = await sb.from('curriculos').insert({ id: entry.id, nome: entry.nome, email: entry.email, telefone: entry.telefone, linkedin: entry.linkedin, apresentacao: entry.apresentacao, cv_file_name: entry.cvFileName, cv_url: entry.cvUrl, submitted_at: entry.submittedAt, source: entry.source });
+  if (error) console.warn('SB insert curriculo:', error.message);
+}
+
+async function sbUploadCV(cvId, fileName, dataUrl) {
+  const apiUrl = await apiUploadFile('curriculo', cvId, fileName, dataUrl);
+  if (apiUrl) return apiUrl;
+
+  const sb = getSB();
+  if (!sb) return pushCurriculoFileToGitHub(cvId, fileName, dataUrl);
+  try {
+    const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+    const byteStr = atob(base64);
+    const arr = new Uint8Array(byteStr.length);
+    for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+    const ext = fileName.split('.').pop().toLowerCase();
+    const ct = ext === 'pdf' ? 'application/pdf' : 'application/octet-stream';
+    const path = cvId + '_' + fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const { error } = await sb.storage.from('curriculos').upload(path, arr, { contentType: ct, upsert: true });
+    if (error) { console.warn('SB CV upload:', error.message); return null; }
+    return sb.storage.from('curriculos').getPublicUrl(path).data.publicUrl;
+  } catch(e) { console.warn('SB CV upload err:', e.message); return null; }
+}
+
+/* ── Portal / Clients ── */
+async function loadPortalFromSupabase() {
+  const sb = getSB();
+  if (!sb) { showToast('⚠️ Configure o Supabase nas Configurações para gerenciar clientes.'); return; }
+  const { data, error } = await sb.from('clients').select('*').order('created_at', { ascending: true });
+  if (error) { showToast('⚠️ Erro ao carregar clientes do Supabase: ' + error.message); console.warn('SB portal:', error.message); return; }
+
+  if (!data || data.length === 0) {
+    // Supabase vazio — migra localStorage para Supabase (primeira vez)
+    const local = getClients();
+    if (local.length > 0) {
+      const ok = await sbSaveClients(local);
+      if (ok) showToast('✓ Clientes migrados para o Supabase.');
+    }
+    return;
+  }
+
+  // Supabase é a fonte de verdade — só preserva fileData do localStorage (binários para download offline)
+  const local = getClients();
+  const reportsByClient = await Promise.all(data.map(r => apiListReportsForClient(r.id)));
+  const clients = data.map((r, idx) => {
+    const lc = local.find(l => l.id === r.id);
+    const apiReports = reportsByClient[idx] || [];
+    return {
+      id: r.id,
+      name: (r.name || '').trim() || (r.company || '').trim(),
+      company: (r.company || '').trim(),
+      email: r.email,
+      code: r.code,
+      createdAt: r.created_at,
+      reports: apiReports.map(rep => {
+        const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
+        return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
+      })
+    };
+  });
+  localStorage.setItem(CLI_KEY, JSON.stringify(clients));
+}
+
+async function sbSaveClients(list) {
+  const sb = getSB();
+  if (!sb) { showToast('⚠️ Supabase não configurado. Configure nas Configurações.'); return false; }
+  const stripped = list.map(c => ({ id: c.id, name: c.name, company: c.company, email: c.email, code: c.code, created_at: c.createdAt || new Date().toISOString() }));
+  const { error } = await sb.from('clients').upsert(stripped);
+  if (error) {
+    console.warn('SB clients upsert:', error.message);
+    showToast('⚠️ Erro ao salvar no Supabase: ' + error.message);
+    return false;
+  }
+  return true;
+}
+
+async function sbDeleteClientRecord(id) {
+  const sb = getSB();
+  if (!sb) return { error: { message: 'Supabase não configurado.' } };
+  await apiDeleteReportsByClient(id);
+  const { error } = await sb.from('clients').delete().eq('id', id);
+  if (error) console.warn('SB delete client:', error.message);
+  return { error };
+}
+
+async function sbUploadReport(reportId, fileName, dataUrl) {
+  const apiUrl = await apiUploadFile('report', reportId, fileName, dataUrl);
+  if (apiUrl) return apiUrl;
+
+  const sb = getSB();
+  if (!sb) return pushReportFileToGitHub(reportId, fileName, dataUrl);
+  try {
+    const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+    const byteStr = atob(base64);
+    const arr = new Uint8Array(byteStr.length);
+    for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+    const ext = fileName.split('.').pop().toLowerCase();
+    const ct = ext === 'pdf' ? 'application/pdf' : (ext === 'xlsx' || ext === 'xls') ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/octet-stream';
+    const path = reportId + '_' + fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const { error } = await sb.storage.from('reports').upload(path, arr, { contentType: ct, upsert: true });
+    if (error) { console.warn('SB report upload:', error.message); return null; }
+    return sb.storage.from('reports').getPublicUrl(path).data.publicUrl;
+  } catch(e) { console.warn('SB report upload err:', e.message); return null; }
+}
+
+async function sbDeleteReport(fileUrl) {
+  const deletedByApi = await apiDeleteFile(fileUrl);
+  if (deletedByApi) return;
+
+  const sb = getSB();
+  if (!sb) { deleteReportFileFromGitHub(fileUrl); return; }
+  const m = fileUrl.match(/\/object\/public\/reports\/(.+)$/);
+  if (m) {
+    const { error } = await sb.storage.from('reports').remove([m[1]]);
+    if (error) console.warn('SB delete report:', error.message);
+  } else { deleteReportFileFromGitHub(fileUrl); }
+}
+
+async function syncAllToSupabase() {
+  const sb = getSB();
+  if (!sb) { showToast('⚠️ Configure as credenciais do Supabase primeiro.'); return; }
+  showToast('Sincronizando…');
+  const errors = [];
+
+  const clients = getClients();
+  if (clients.length) {
+    const ok = await sbSaveClients(clients);
+    if (!ok) errors.push('clientes');
+  }
+
+  const newsletter = JSON.parse(localStorage.getItem(KEYS.newsletter) || '[]');
+  if (newsletter.length) {
+    const rows = newsletter.map(e => ({ id: e.id, email: e.email, date: e.date }));
+    const { error } = await sb.from('newsletter').upsert(rows);
+    if (error) { console.warn('SB newsletter:', error.message); errors.push('newsletter'); }
+  }
+
+  const contato = JSON.parse(localStorage.getItem(KEYS.contato) || '[]');
+  if (contato.length) {
+    const rows = contato.map(e => ({ id: e.id, nome: e.nome, empresa: e.empresa||'', email: e.email, telefone: e.telefone||'', mensagem: e.mensagem||'', date: e.date||new Date().toISOString().slice(0,10), read: e.read||false }));
+    const { error } = await sb.from('contato').upsert(rows);
+    if (error) { console.warn('SB contato:', error.message); errors.push('contato'); }
+  }
+
+  const curriculos = JSON.parse(localStorage.getItem(KEYS.curriculos) || '[]');
+  if (curriculos.length) {
+    const rows = curriculos.map(e => ({ id: e.id, nome: e.nome, email: e.email, telefone: e.telefone||'', linkedin: e.linkedin||'', apresentacao: e.apresentacao||'', cv_file_name: e.cvFileName||'', cv_url: e.cvUrl||'', submitted_at: e.submittedAt||new Date().toISOString(), source: e.source||'site' }));
+    const { error } = await sb.from('curriculos').upsert(rows);
+    if (error) { console.warn('SB curriculos:', error.message); errors.push('currículo'); }
+  }
+
+  if (errors.length) showToast('⚠️ Erro ao sincronizar: ' + errors.join(', '));
+  else showToast('✓ Tudo sincronizado com Supabase!');
+}
+
+async function testSupabase() {
+  const box = document.getElementById('sb-test-result');
+  box.style.display = 'block';
+  box.textContent = 'Testando…';
+  const sb = getSB();
+  if (!sb) { box.textContent = '❌ URL e Anon Key não configurados. Salve as credenciais primeiro.'; return; }
+  const { error } = await sb.from('newsletter').select('id', { count: 'exact', head: true });
+  box.textContent = error ? '❌ Erro: ' + error.message : '✅ Conectado ao Supabase com sucesso!';
+}
+
+/* ── Articles (Blog) ── */
+async function loadArticlesFromSupabase() {
+  const sb = getSB();
+  if (!sb) return false;
+  try {
+    const { data, error } = await sb.from('articles').select('*').order('created_at', { ascending: false, nullsFirst: false });
+    if (error) throw error;
+    if (!data || data.length === 0) return false; // empty — fall back to GitHub
+    ALL_ARTICLES = data.map(a => ({
+      id:        a.id,
+      title:     a.title     || '',
+      category:  a.category  || '',
+      excerpt:   a.excerpt   || '',
+      date:      a.date      || '',
+      readTime:  a.readtime  || '',
+      url:       a.url       || '',
+      published: a.published !== false,
+      content:   a.content   || '',
+      photo:     a.photo     || ''
+    }));
+    localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
+    return true;
+  } catch(e) {
+    console.warn('Supabase articles load failed:', e.message);
+    return false;
+  }
+}
+
+async function sbSaveArticle(article) {
+  const sb = getSB();
+  if (!sb || !article) return false;
+  try {
+    const { error } = await sb.from('articles').upsert({
+      id:        article.id,
+      title:     article.title     || '',
+      category:  article.category  || '',
+      excerpt:   article.excerpt   || '',
+      date:      article.date      || '',
+      readtime:  article.readTime  || '',
+      url:       article.url       || '',
+      published: article.published !== false,
+      content:   article.content   || '',
+      photo:     article.photo     || ''
+    });
+    if (error) throw error;
+    return true;
+  } catch(e) {
+    console.warn('Supabase save article failed:', e.message);
+    return false;
+  }
+}
+
+async function sbDeleteArticle(id) {
+  const sb = getSB();
+  if (!sb) return;
+  try {
+    const { error } = await sb.from('articles').delete().eq('id', id);
+    if (error) console.warn('Supabase delete article:', error.message);
+  } catch(e) { console.warn('sbDeleteArticle:', e.message); }
+}
+
+/* ══════════════════════════════════════
+   STORAGE HELPERS
+══════════════════════════════════════ */
+const load  = key => JSON.parse(localStorage.getItem(key) || 'null');
+const save  = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+const uid   = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+/* ══════════════════════════════════════
+   DEFAULT DATA (first run)
+══════════════════════════════════════ */
+function seedData() {
+  if (!load(KEYS.members)) {
+    save(KEYS.members, [
+      { id: uid(), name: 'Beatriz Domingues', role: 'Advogada', status: 'active', bio: 'Graduada em Direito e pós-graduanda em Direito do Trabalho pela PUC-RS. Atua nas frentes trabalhista, consultiva e empresarial, com experiência em contencioso estratégico e advocacia preventiva. Especialista em Compliance Trabalhista e investigações corporativas, com foco em mitigação de riscos e prevenção de passivos.' },
+      { id: uid(), name: 'Camilla Martinez', role: 'Advogada', status: 'active', bio: 'Graduada em Direito e pós-graduanda em Direito e Processo do Trabalho pela PUC-RS. Atua no contencioso trabalhista com experiência em acompanhamento processual, suporte à litigância e organização de rotinas jurídicas. Integra o Comitê de Inteligência Artificial do escritório.' },
+      { id: uid(), name: 'Fernando Trevisan Jr.', role: 'Advogado', status: 'active', bio: 'Graduado em Direito e pós-graduado em Prática Trabalhista Avançada pelo Damasio Educacional. Advogado Pleno com atuação voltada à defesa de reclamadas. Experiência consolidada em contencioso, consultivo e acompanhamento processual na esfera trabalhista.' },
+      { id: uid(), name: 'Indyara Brito', role: 'Advogada', status: 'active', bio: 'Graduada em Direito pelas Faculdades Metropolitanas Unidas (FMU) e pós-graduada em Direito Processual Civil pela Escola Paulista de Direito (EPD). Extensões em Direito Digital e Proteção de Dados pela PUC-SP e em Compliance Empresarial pela EPD. Atua com foco em conformidade regulatória, segurança da informação e riscos jurídicos no ambiente digital.' },
+      { id: uid(), name: 'Letícia Silva', role: 'Advogada Controller', status: 'active', bio: 'Formada em Direito pela Universidade Paulista (UNIP), pós-graduada em Direito Processual do Trabalho pela Universidade Anhembi Morumbi e pós-graduanda em Legal Operations pela PUC-SP. Atua como Controller Jurídica com especialização em gestão de operações jurídicas e indicadores de performance.' },
+      { id: uid(), name: 'Lilian Matsumoto', role: 'Advogada', status: 'active', bio: 'Graduada em Direito pela Universidade Presbiteriana Mackenzie e pós-graduada em Direito e Processo do Trabalho pela PUC-RS. Com mais de uma década de experiência na área trabalhista, combina sólida base acadêmica ao domínio técnico das normas e ritos processuais.' },
+      { id: uid(), name: 'Natany Valentim', role: 'Advogada', status: 'active', bio: 'Graduada em Direito pela UNICASTELO e pós-graduada em Direito e Processo do Trabalho pela Universidade Legale. Atua na defesa de reclamantes e reclamadas, com experiência em audiências, sustentações orais e gestão de prazos.' },
+      { id: uid(), name: 'Pollyanna Dias', role: 'Advogada', status: 'active', bio: 'Formada em Direito pela Universidade Cruzeiro do Sul com láurea acadêmica. Pós-graduada em Direito Empresarial e Tributário pela UniCidade e em Direito do Trabalho e Previdenciário pelo Mackenzie. Certificada em Labor 4.0. Fluente em inglês e francês.' },
+      { id: uid(), name: 'Samany Cutrim', role: 'Advogada', status: 'active', bio: 'Graduada em Direito pela UNICID e pós-graduada em Direito e Processo do Trabalho pelo Damasio Educacional. Graduanda em Inteligência Artificial pela FMU. Atua no contencioso e na controladoria do escritório.' },
+      { id: uid(), name: 'Zanilda Monteiro', role: 'Advogada', status: 'active', bio: 'Bacharela em Direito pela Universidade Paulista, pós-graduanda em Direito e Processo do Trabalho e em Legal Ops & Controladoria Jurídica. Responsável pela Controladoria Jurídica do escritório, com atuação em gestão de prazos e monitoramento de indicadores.' },
+      { id: uid(), name: 'Stefhane Félix de Almeida', role: 'In Memoriam', status: 'memoriam', bio: 'Graduada em Direito pela Universidade Paulista (2014) e especialista em Direito e Processo do Trabalho pela Escola Superior de Advocacia Paulista (2018). Advogada do Falaw Advogados, cuja dedicação e contribuição permanecem vivas no espírito do escritório.' },
+    ]);
+  }
+  if (!load(KEYS.newsletter)) save(KEYS.newsletter, []);
+  if (!load(KEYS.contato)) save(KEYS.contato, []);
+  if (!load(KEYS.config)) {
+    save(KEYS.config, {
+      tel: '+55 11 2936-0076',
+      wa: '+55 11 91001-1551',
+      email: 'ferrazandrade@falaw.com.br',
+      address: 'Av. Francisco Matarazzo, 1752 — Salas 414 e 415, Água Branca, São Paulo/SP',
+      instagram: '@falaw_adv',
+      linkedin: 'https://www.linkedin.com/company/ferraz-andrade-adogados',
+    });
+  }
+}
+
+/* ══════════════════════════════════════
+   AUTH — SHA-256 + Brute-force lockout
+══════════════════════════════════════ */
+const _MAX_ATTEMPTS = 5;
+const _LOCKOUT_MS   = 15 * 60 * 1000; // 15 min
+const _SESSION_MS   = 30 * 60 * 1000; // 30 min inatividade
+
+async function _sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str + _PWD_SALT));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function _getStoredHash() {
+  const localHash = localStorage.getItem(KEYS.adminPwdHash);
+  const sbHash = await sbReadAdminPasswordHash();
+
+  // Supabase é a fonte de verdade para senha quando disponível.
+  if (sbHash) {
+    if (localHash !== sbHash) localStorage.setItem(KEYS.adminPwdHash, sbHash);
+    localStorage.removeItem('fa_admin_pwd');
+    return sbHash;
+  }
+
+  if (localHash) {
+    await sbWriteAdminPasswordHash(localHash);
+    localStorage.removeItem('fa_admin_pwd');
+    return localHash;
+  }
+
+  // Migração: hash do padrão e armazena (remove plaintext antigo)
+  const h = await _sha256(ADMIN_PASSWORD_DEFAULT);
+  localStorage.setItem(KEYS.adminPwdHash, h);
+  localStorage.removeItem('fa_admin_pwd'); // remove versão plaintext legada
+  await sbWriteAdminPasswordHash(h);
+  return h;
+}
+
+function _getLock() {
+  try { return JSON.parse(sessionStorage.getItem(_LOCK_KEY)) || { attempts: 0, lockedUntil: 0 }; }
+  catch { return { attempts: 0, lockedUntil: 0 }; }
+}
+function _setLock(data) { sessionStorage.setItem(_LOCK_KEY, JSON.stringify(data)); }
+
+function _checkLock() {
+  const lock = _getLock();
+  if (lock.lockedUntil > Date.now()) {
+    const mins = Math.ceil((lock.lockedUntil - Date.now()) / 60000);
+    return `Acesso bloqueado. Tente novamente em ${mins} minuto(s).`;
+  }
+  return null;
+}
+
+async function doLogin() {
+  const errEl = document.getElementById('login-error');
+  const lockMsg = _checkLock();
+  if (lockMsg) { errEl.textContent = lockMsg; errEl.style.display = 'block'; return; }
+
+  const emailInput = (document.getElementById('login-email').value || '').trim();
+  const pwd = document.getElementById('login-pwd').value;
+  if (!pwd) return;
+
+  const authEmail = emailInput || (localStorage.getItem(AUTH_EMAIL_KEY) || '').trim();
+  const sb = getSB();
+  if (sb && authEmail) {
+    try {
+      const { error } = await sb.auth.signInWithPassword({ email: authEmail, password: pwd });
+      if (!error) {
+        localStorage.setItem(AUTH_EMAIL_KEY, authEmail);
+        _setLock({ attempts: 0, lockedUntil: 0 });
+        sessionStorage.setItem('fa_admin_session', String(Date.now()));
+        sessionStorage.setItem('fa_admin_supabase_auth', '1');
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('admin-shell').style.display = 'block';
+        errEl.style.display = 'none';
+        seedData();
+        loadArticlesFromGitHub().then(renderBlog);
+        renderEquipe();
+        loadNewsletterFromSupabase().then(renderNewsletter);
+        loadContatoFromSupabase().then(renderContato);
+        loadConfig();
+        loadNotifBadges();
+        return;
+      }
+    } catch (e) {
+      console.warn('Supabase auth login:', e.message);
+    }
+  }
+
+  const inputHash  = await _sha256(pwd);
+  const storedHash = await _getStoredHash();
+
+  if (inputHash === storedHash) {
+    _setLock({ attempts: 0, lockedUntil: 0 });
+    sessionStorage.setItem('fa_admin_session', String(Date.now()));
+    sessionStorage.removeItem('fa_admin_supabase_auth');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-shell').style.display = 'block';
+    errEl.style.display = 'none';
+    seedData();
+    loadArticlesFromGitHub().then(renderBlog);
+    renderEquipe();
+    loadNewsletterFromSupabase().then(renderNewsletter);
+    loadContatoFromSupabase().then(renderContato);
+    loadConfig();
+    loadNotifBadges();
+  } else {
+    const lock = _getLock();
+    lock.attempts++;
+    if (lock.attempts >= _MAX_ATTEMPTS) {
+      lock.lockedUntil = Date.now() + _LOCKOUT_MS;
+      lock.attempts = 0;
+      errEl.textContent = 'Muitas tentativas. Acesso bloqueado por 15 minutos.';
+    } else {
+      errEl.textContent = `Senha incorreta. ${_MAX_ATTEMPTS - lock.attempts} tentativa(s) restante(s).`;
+    }
+    _setLock(lock);
+    errEl.style.display = 'block';
+    document.getElementById('login-pwd').value = '';
+  }
+}
+
+document.getElementById('login-pwd').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('login-email').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('login-email').value = localStorage.getItem(AUTH_EMAIL_KEY) || '';
+
+// Timeout de sessão: 30 min de inatividade
+let _adminTimer;
+function _resetAdminTimer() {
+  clearTimeout(_adminTimer);
+  _adminTimer = setTimeout(() => {
+    if (document.getElementById('admin-shell').style.display !== 'none') doLogout();
+  }, _SESSION_MS);
+}
+['click','keydown','mousemove','touchstart'].forEach(ev =>
+  document.addEventListener(ev, _resetAdminTimer, { passive: true })
+);
+
+function doLogout() {
+  const sb = getSB();
+  if (sb && sessionStorage.getItem('fa_admin_supabase_auth') === '1') {
+    sb.auth.signOut().catch(() => {});
+  }
+  sessionStorage.removeItem('fa_admin_session');
+  sessionStorage.removeItem('fa_admin_supabase_auth');
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('admin-shell').style.display = 'none';
+  document.getElementById('login-pwd').value = '';
+  document.getElementById('login-error').style.display = 'none';
+}
+
+/* ══════════════════════════════════════
+   TABS
+══════════════════════════════════════ */
+/* ══════════════════════════════════════
+   COMENTÁRIOS DO BLOG
+══════════════════════════════════════ */
+let _cmtFilter = 'all';
+
+async function loadComentariosAdmin(filter) {
+  _cmtFilter = filter || 'all';
+  ['all','pending','approved'].forEach(f => {
+    const btn = document.getElementById('cmtf-' + f);
+    if (btn) btn.classList.toggle('btn-primary', f === _cmtFilter);
+  });
+
+  const { sbUrl, sbKey } = getSbCreds();
+  if (!sbUrl || !sbKey) { showToast('Configure as credenciais Supabase em Configurações.', 'error'); return; }
+
+  const list  = document.getElementById('comentarios-list');
+  const stats = document.getElementById('comentarios-stats');
+  list.innerHTML = '<p style="color:var(--c-muted);font-size:13px;">Carregando…</p>';
+
+  let endpoint = `${sbUrl}/rest/v1/comments?order=created_at.desc`;
+  if (_cmtFilter === 'pending')  endpoint += '&approved=eq.false';
+  if (_cmtFilter === 'approved') endpoint += '&approved=eq.true';
+
+  try {
+    const res = await fetch(endpoint, { headers: { apikey: sbKey, Authorization: 'Bearer ' + sbKey, 'Content-Type': 'application/json' } });
+    if (!res.ok) throw new Error(await res.text());
+    const rows = await res.json();
+
+    const total    = rows.length;
+    const approved = rows.filter(r => r.approved).length;
+    const pending  = total - approved;
+    stats.innerHTML = `
+      <div class="stats-card"><div class="stats-label">Total</div><div class="stats-val">${total}</div></div>
+      <div class="stats-card"><div class="stats-label">Aprovados</div><div class="stats-val">${approved}</div></div>
+      <div class="stats-card"><div class="stats-label">Aguardando</div><div class="stats-val">${pending}</div></div>`;
+
+    if (!rows.length) { list.innerHTML = '<div class="empty-state"><p>Nenhum comentário encontrado.</p></div>'; return; }
+
+    list.innerHTML = rows.map(r => {
+      const dt = new Date(r.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const badge = r.approved
+        ? `<span style="background:#d1fae5;color:#065f46;font-size:10px;padding:2px 8px;border-radius:99px;font-family:var(--f-mono);">aprovado</span>`
+        : `<span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 8px;border-radius:99px;font-family:var(--f-mono);">aguardando</span>`;
+      const articleLink = r.article_id ? `<a href="reader.html?id=${encodeURIComponent(r.article_id)}" target="_blank" style="color:var(--c-accent);font-size:11px;font-family:var(--f-mono);">${r.article_id}</a>` : '—';
+      return `
+        <div class="item-card" id="cmt-${r.id}" style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <strong style="font-size:14px;">${escHtml(r.nome)}</strong>
+              ${badge}
+            </div>
+            <span style="font-size:11px;color:var(--c-muted);font-family:var(--f-mono);">${dt}</span>
+          </div>
+          <div style="font-size:12px;color:var(--c-muted);display:flex;gap:20px;flex-wrap:wrap;">
+            <span>✉️ <a href="mailto:${escHtml(r.email)}" style="color:var(--c-accent);">${escHtml(r.email)}</a></span>
+            <span>📄 ${articleLink}</span>
+          </div>
+          <p style="margin:4px 0 0;font-size:13px;color:var(--c-dark);border-left:3px solid var(--c-divider);padding-left:10px;">${escHtml(r.mensagem)}</p>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            ${!r.approved ? `<button class="btn btn-primary" style="font-size:12px;padding:5px 14px;" onclick="aprovarComentario(${r.id})">✓ Aprovar</button>` : `<button class="btn btn-ghost" style="font-size:12px;padding:5px 14px;" onclick="reprovarComentario(${r.id})">✗ Revogar aprovação</button>`}
+            <button class="btn btn-ghost" style="font-size:12px;padding:5px 14px;color:#dc2626;border-color:#dc2626;" onclick="deletarComentario(${r.id})">Excluir</button>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = `<div class="empty-state"><p style="color:#dc2626;">Erro: ${escHtml(e.message)}</p></div>`;
+  }
+}
+
+async function aprovarComentario(id) {
+  const { sbUrl, sbKey } = getSbCreds();
+  await fetch(`${sbUrl}/rest/v1/comments?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { apikey: sbKey, Authorization: 'Bearer ' + sbKey, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify({ approved: true })
+  });
+  showToast('Comentário aprovado!');
+  loadComentariosAdmin(_cmtFilter);
+}
+
+async function reprovarComentario(id) {
+  const { sbUrl, sbKey } = getSbCreds();
+  await fetch(`${sbUrl}/rest/v1/comments?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { apikey: sbKey, Authorization: 'Bearer ' + sbKey, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify({ approved: false })
+  });
+  showToast('Aprovação revogada.');
+  loadComentariosAdmin(_cmtFilter);
+}
+
+async function deletarComentario(id) {
+  if (!confirm('Excluir este comentário permanentemente?')) return;
+  const { sbUrl, sbKey } = getSbCreds();
+  await fetch(`${sbUrl}/rest/v1/comments?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { apikey: sbKey, Authorization: 'Bearer ' + sbKey }
+  });
+  showToast('Comentário excluído.');
+  loadComentariosAdmin(_cmtFilter);
+}
+
+function getSbCreds() {
+  const sbUrl = localStorage.getItem('fa_supabase_url') || '';
+  const sbKey = localStorage.getItem('fa_supabase_key') || '';
+  return { sbUrl, sbKey };
+}
+
+const CONTEUDO_TABS   = ['blog','newsletter','contato','curriculos','comentarios'];
+const GESTAO_TABS     = ['equipe','clientes'];
+const DASH_TABS       = ['ifood','cli-dash'];
+const STANDALONE_TABS = ['config'];
+
+function toggleGroup(group) {
+  const el = document.getElementById('group-' + group);
+  const isOpen = el.classList.contains('open');
+  // close all groups
+  document.querySelectorAll('.admin-tab-group').forEach(g => g.classList.remove('open'));
+  if (!isOpen) el.classList.add('open');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.admin-tab-group')) {
+    document.querySelectorAll('.admin-tab-group').forEach(g => g.classList.remove('open'));
+  }
+});
+
+function switchTab(name) {
+  // Update standalone tab active states
+  STANDALONE_TABS.forEach(t => {
+    const el = document.getElementById('tab-btn-' + t);
+    if (el) el.classList.toggle('active', t === name);
+  });
+  // Update dropdown items — Conteúdo
+  CONTEUDO_TABS.forEach(t => {
+    const el = document.getElementById('ditem-' + t);
+    if (el) el.classList.toggle('active', t === name);
+  });
+  // Update dropdown items — Gestão
+  GESTAO_TABS.forEach(t => {
+    const el = document.getElementById('ditem-' + t);
+    if (el) el.classList.toggle('active', t === name);
+  });
+  // Update dropdown items — Dashboards
+  DASH_TABS.forEach(t => {
+    const el = document.getElementById('ditem-' + t);
+    if (el) el.classList.toggle('active', t === name);
+  });
+  // Mark groups as active
+  const groupC = document.getElementById('group-conteudo');
+  groupC.querySelector('.admin-tab').classList.toggle('active', CONTEUDO_TABS.includes(name));
+  groupC.classList.remove('open');
+  const groupG = document.getElementById('group-gestao');
+  groupG.querySelector('.admin-tab').classList.toggle('active', GESTAO_TABS.includes(name));
+  groupG.classList.remove('open');
+  const groupD = document.getElementById('group-dashboards');
+  groupD.querySelector('.admin-tab').classList.toggle('active', DASH_TABS.includes(name));
+  groupD.classList.remove('open');
+  document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'blog')          { loadArticlesFromGitHub().then(renderBlog); }
+  if (name === 'equipe')        { loadTeamFromGitHub().then(renderEquipe); }
+  if (name === 'clientes')      { loadPortalFromSupabase().then(renderClients); }
+  if (name === 'newsletter')    { clearBadge('newsletter'); loadNewsletterFromSupabase().then(renderNewsletter); }
+  if (name === 'contato')       { clearBadge('contato'); loadContatoFromSupabase().then(renderContato); }
+  if (name === 'curriculos')    { clearBadge('curriculos'); loadCurriculosFromSupabase().then(renderCurriculos); }
+  if (name === 'ifood')         { loadIfoodAdmin(); }
+  if (name === 'cli-dash')      { loadPortalFromSupabase().then(cliDashTabInit); }
+  if (name === 'comentarios')   { clearBadge('comentarios'); loadComentariosAdmin('all'); }
+}
+
+/* ══════════════════════════════════════
+   NOTIFICAÇÕES / BADGES
+══════════════════════════════════════ */
+const BADGE_SEEN_KEY = 'fa_admin_seen_';
+
+function getBadgeSince(section) {
+  return localStorage.getItem(BADGE_SEEN_KEY + section) || '1970-01-01T00:00:00Z';
+}
+
+function clearBadge(section) {
+  localStorage.setItem(BADGE_SEEN_KEY + section, new Date().toISOString());
+  const badge = document.getElementById('badge-' + section);
+  if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+  updateConteudoDot();
+}
+
+function updateConteudoDot() {
+  const sections = ['newsletter','contato','curriculos','comentarios'];
+  const anyVisible = sections.some(s => {
+    const b = document.getElementById('badge-' + s);
+    return b && b.style.display !== 'none';
+  });
+  const dot = document.getElementById('dot-conteudo');
+  if (dot) dot.style.display = anyVisible ? 'inline-block' : 'none';
+}
+
+function showBadge(section, count) {
+  const badge = document.getElementById('badge-' + section);
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+  updateConteudoDot();
+}
+
+async function loadNotifBadges() {
+  const { sbUrl, sbKey } = getSbCreds();
+  if (!sbUrl || !sbKey) return;
+  const sections = [
+    { name: 'newsletter', table: 'newsletter' },
+    { name: 'contato',    table: 'contato' },
+    { name: 'curriculos', table: 'curriculos' },
+    { name: 'comentarios', table: 'comments', extra: '&approved=eq.false' },
+  ];
+  for (const s of sections) {
+    try {
+      const since = getBadgeSince(s.name);
+      const url = `${sbUrl}/rest/v1/${s.table}?select=id&created_at=gt.${encodeURIComponent(since)}${s.extra || ''}`;
+      const res = await fetch(url, {
+        headers: { apikey: sbKey, Authorization: 'Bearer ' + sbKey,
+                   'Accept': 'application/json', 'Prefer': 'count=exact', 'Range': '0-0' }
+      });
+      if (res.ok || res.status === 206) {
+        const cr = res.headers.get('content-range');
+        const total = cr ? parseInt(cr.split('/')[1], 10) : 0;
+        showBadge(s.name, isNaN(total) ? 0 : total);
+      }
+    } catch(e) { /* silently ignore */ }
+  }
+}
+
+/* ══════════════════════════════════════
+   TOAST
+══════════════════════════════════════ */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ══════════════════════════════════════
+   GITHUB API
+══════════════════════════════════════ */
+function ghToken() { return localStorage.getItem(KEYS.githubToken) || ''; }
+
+function ghHeaders() {
+  const h = { 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
+  if (ghToken()) h['Authorization'] = 'token ' + ghToken();
+  return h;
+}
+
+function generateArticlesJS(articles) {
+  // Gera JSON-válido com chaves entre aspas para que JSON.parse funcione na leitura
+  const lines = articles.map(a => JSON.stringify({
+    id:        a.id        || '',
+    title:     a.title     || '',
+    category:  a.category  || '',
+    excerpt:   a.excerpt   || '',
+    date:      a.date      || '',
+    readTime:  a.readTime  || '',
+    url:       a.url       || '',
+    published: a.published !== false,
+    content:   a.content   || '',
+    photo:     a.photo     || ''
+  }, null, 2).split('\n').map((l, i) => i === 0 ? l : '  ' + l).join('\n'));
+  return 'var FALAW_ARTICLES = [\n  ' + lines.join(',\n  ') + '\n];\n';
+}
+
+async function mergeGitHubArticlesIntoSupabase() {
+  // Upsert no Supabase artigos que estão no GitHub mas não no Supabase
+  try {
+    const ghArticles = await fetchGitHubArticles();
+    if (!ghArticles.length) return;
+    const existingIds = new Set(ALL_ARTICLES.map(a => a.id));
+    const missing = ghArticles.filter(a => !existingIds.has(a.id));
+    if (!missing.length) return;
+    const sb = getSB();
+    if (!sb) return;
+    await Promise.all(missing.map(a => sbSaveArticle(a)));
+    showToast(`${missing.length} artigo(s) sincronizado(s) do GitHub para o Supabase.`);
+  } catch(e) {
+    console.warn('mergeGitHubArticlesIntoSupabase:', e.message);
+  }
+}
+
+async function fetchGitHubArticles() {
+  // Busca artigos do arquivo estático no GitHub
+  // Para repo privado: usa GitHub API (suporta CORS com token)
+  // Para repo público: tenta raw primeiro, depois API como fallback
+  async function parseArticlesCode(code) {
+    const match = code.match(/FALAW_ARTICLES\s*=\s*(\[[\s\S]*\]);/);
+    return match ? (JSON.parse(match[1]) || []) : [];
+  }
+  try {
+    // Tenta GitHub API primeiro (funciona com repo privado e público)
+    if (ghToken()) {
+      const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}?ref=${GITHUB_BRANCH}&t=${Date.now()}`;
+      const apiRes = await fetch(apiUrl, { headers: ghHeaders() });
+      if (apiRes.ok) {
+        const json = await apiRes.json();
+        const code = decodeURIComponent(escape(atob(json.content.replace(/\n/g, ''))));
+        return parseArticlesCode(code);
+      }
+    }
+    // Fallback: raw URL sem auth (funciona apenas para repo público)
+    const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_PATH}?t=${Date.now()}`;
+    const rawRes = await fetch(rawUrl);
+    if (rawRes.ok) return parseArticlesCode(await rawRes.text());
+    return [];
+  } catch(e) {
+    console.warn('fetchGitHubArticles:', e.message);
+    return [];
+  }
+}
+
+async function loadArticlesFromGitHub() {
+  document.getElementById('blog-no-token').hidden = true;
+
+  // Busca Supabase e GitHub em paralelo, depois faz union por id
+  const [sbArticles, ghArticles] = await Promise.all([
+    (async () => {
+      const sb = getSB();
+      if (!sb) return null;
+      try {
+        const { data, error } = await sb.from('articles').select('*');
+        if (error || !data) return null;
+        return data.map(a => ({
+          id:        a.id,
+          title:     a.title     || '',
+          category:  a.category  || '',
+          excerpt:   a.excerpt   || '',
+          date:      a.date      || '',
+          readTime:  a.readtime  || '',
+          url:       a.url       || '',
+          published: a.published !== false,
+          content:   a.content   || '',
+          photo:     a.photo     || ''
+        }));
+      } catch(e) { console.warn('Supabase load:', e.message); return null; }
+    })(),
+    fetchGitHubArticles()
+  ]);
+
+  if (sbArticles !== null && sbArticles.length > 0) {
+    // Union: Supabase como base + artigos do GitHub ausentes no Supabase
+    const sbIds = new Set(sbArticles.map(a => a.id));
+    const ghOnly = ghArticles.filter(a => !sbIds.has(a.id));
+    ALL_ARTICLES = [...sbArticles, ...ghOnly];
+    // Salva artigos faltantes no Supabase em background
+    if (ghOnly.length) {
+      const sb = getSB();
+      if (sb) Promise.all(ghOnly.map(a => sbSaveArticle(a)))
+        .then(() => showToast(`${ghOnly.length} artigo(s) sincronizado(s) com Supabase.`))
+        .catch(() => {});
+    }
+  } else if (ghArticles.length > 0) {
+    // Sem Supabase — usa só GitHub
+    ALL_ARTICLES = ghArticles;
+    document.getElementById('blog-no-token').hidden = !!ghToken();
+    const sb = getSB();
+    if (sb) Promise.all(ALL_ARTICLES.map(a => sbSaveArticle(a)))
+      .then(() => showToast('Artigos sincronizados com Supabase.'))
+      .catch(() => {});
+  } else {
+    // Último recurso: cache local
+    const cached = localStorage.getItem('fa_blog_articles_cache');
+    ALL_ARTICLES = cached ? (JSON.parse(cached) || []) : [];
+    if (ALL_ARTICLES.length) showToast('⚠ Usando artigos em cache local.');
+    document.getElementById('blog-no-token').hidden = !!ghToken();
+  }
+
+  localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
+}
+
+async function pushArticlesToGitHub() {
+  if (!ghToken()) { showToast('⚠ Token do GitHub não configurado.'); return false; }
+  try {
+    const content = btoa(unescape(encodeURIComponent(generateArticlesJS(ALL_ARTICLES))));
+    const res = await fetch(
+      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`,
+      {
+        method: 'PUT',
+        headers: ghHeaders(),
+        body: JSON.stringify({ message: 'Admin: update blog articles', content, sha: GH_FILE_SHA, branch: GITHUB_BRANCH })
+      }
+    );
+    if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'HTTP ' + res.status); }
+    const data = await res.json();
+    GH_FILE_SHA = data.content.sha;
+    localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
+    return true;
+  } catch (e) {
+    showToast('Erro GitHub: ' + e.message);
+    return false;
+  }
+}
+
+function generateTeamJS(members) {
+  return '/* team-data.js — gerado pelo admin Ferraz Andrade. Não editar manualmente. */\nvar FALAW_TEAM = ' + JSON.stringify(members, null, 2) + ';\n';
+}
+
+async function loadTeamFromGitHub() {
+  const r = await _ghLoad(GITHUB_PATH_TEAM);
+  if (!r) return;
+  GH_TEAM_SHA = r.sha;
+  try {
+    const match = r.text.match(/FALAW_TEAM\s*=\s*(\[[\s\S]*?\]);\s*$/m);
+    if (!match) return;
+    const ghMembers = JSON.parse(match[1]) || [];
+    if (ghMembers.length) save(KEYS.members, ghMembers);
+  } catch { /* formato inválido */ }
+}
+
+async function pushTeamToGitHub() {
+  const token = localStorage.getItem('fa_github_token') || '';
+  if (!token) { showToast('Token GitHub não configurado.'); return false; }
+  try {
+    // busca SHA atual se não tiver
+    if (!GH_TEAM_SHA) {
+      const r = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH_TEAM}?ref=${GITHUB_BRANCH}&t=${Date.now()}`,
+        { headers: { 'Authorization': 'token ' + token } });
+      if (r.ok) { const d = await r.json(); GH_TEAM_SHA = d.sha; }
+    }
+    const members = load(KEYS.members) || [];
+    const content = btoa(unescape(encodeURIComponent(generateTeamJS(members))));
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH_TEAM}`,
+      { method: 'PUT', headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Admin: update team members', content, sha: GH_TEAM_SHA, branch: GITHUB_BRANCH }) });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'HTTP ' + res.status); }
+    const data = await res.json();
+    GH_TEAM_SHA = data.content.sha;
+    return true;
+  } catch (e) {
+    showToast('Erro GitHub: ' + e.message);
+    return false;
+  }
+}
+
+/* ══════════════════════════════════════
+   GITHUB — helpers genéricos
+══════════════════════════════════════ */
+async function _ghLoad(path) {
+  if (!ghToken()) return null;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}&t=${Date.now()}`, { headers: ghHeaders() });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const text = data.content
+      ? decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))))
+      : await (await fetch(data.download_url + '?t=' + Date.now())).text();
+    return { sha: data.sha, text };
+  } catch { return null; }
+}
+
+async function _ghPush(path, content, sha, message) {
+  if (!ghToken()) return null;
+  try {
+    if (!sha) {
+      const r = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}&t=${Date.now()}`, { headers: ghHeaders() });
+      if (r.ok) sha = (await r.json()).sha;
+    }
+    const body = { message, content: btoa(unescape(encodeURIComponent(content))), branch: GITHUB_BRANCH };
+    if (sha) body.sha = sha;
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`,
+      { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
+    return (await res.json()).content.sha;
+  } catch (e) { console.warn('GitHub push failed:', e.message); return null; }
+}
+
+/* ══════════════════════════════════════
+   NEWSLETTER — GitHub sync
+══════════════════════════════════════ */
+async function loadNewsletterFromGitHub() {
+  const r = await _ghLoad(GITHUB_PATH_NEWSLETTER);
+  if (!r) return;
+  GH_NEWSLETTER_SHA = r.sha;
+  const match = r.text.match(/FALAW_NEWSLETTER\s*=\s*(\[[\s\S]*?\]);\s*$/m);
+  if (!match) return;
+  const ghList = JSON.parse(match[1]) || [];
+  if (!ghList.length) return;
+  const local = load(KEYS.newsletter) || [];
+  const merged = [...ghList];
+  local.forEach(l => { if (!merged.find(g => g.id === l.id)) merged.unshift(l); });
+  save(KEYS.newsletter, merged);
+}
+
+async function pushNewsletterToGitHub() {
+  const list = load(KEYS.newsletter) || [];
+  const js = '/* newsletter-data.js */\nvar FALAW_NEWSLETTER = ' + JSON.stringify(list, null, 2) + ';\n';
+  const sha = await _ghPush(GITHUB_PATH_NEWSLETTER, js, GH_NEWSLETTER_SHA, 'Admin: update newsletter');
+  if (sha) GH_NEWSLETTER_SHA = sha;
+}
+
+/* ══════════════════════════════════════
+   CONTATO — GitHub sync
+══════════════════════════════════════ */
+async function loadContatoFromGitHub() {
+  const r = await _ghLoad(GITHUB_PATH_CONTATO);
+  if (!r) return;
+  GH_CONTATO_SHA = r.sha;
+  const match = r.text.match(/FALAW_CONTATO\s*=\s*(\[[\s\S]*?\]);\s*$/m);
+  if (!match) return;
+  const ghList = JSON.parse(match[1]) || [];
+  if (!ghList.length) return;
+  const local = load(KEYS.contato) || [];
+  const merged = [...ghList];
+  local.forEach(l => { if (!merged.find(g => g.id === l.id)) merged.unshift(l); });
+  save(KEYS.contato, merged);
+}
+
+async function pushContatoToGitHub() {
+  const list = load(KEYS.contato) || [];
+  const js = '/* contato-data.js */\nvar FALAW_CONTATO = ' + JSON.stringify(list, null, 2) + ';\n';
+  const sha = await _ghPush(GITHUB_PATH_CONTATO, js, GH_CONTATO_SHA, 'Admin: update contato');
+  if (sha) GH_CONTATO_SHA = sha;
+}
+
+/* ══════════════════════════════════════
+   CURRÍCULOS — GitHub sync
+══════════════════════════════════════ */
+async function loadCurriculosFromGitHub() {
+  const r = await _ghLoad(GITHUB_PATH_CURRICULOS);
+  if (!r) return;
+  GH_CURRICULOS_SHA = r.sha;
+  const match = r.text.match(/FALAW_CURRICULOS\s*=\s*(\[[\s\S]*?\]);\s*$/m);
+  if (!match) return;
+  const ghList = JSON.parse(match[1]) || [];
+  if (!ghList.length) return;
+  const local = load(KEYS.curriculos) || [];
+  const merged = [...ghList];
+  local.forEach(l => { if (!merged.find(g => g.id === l.id)) merged.unshift(l); });
+  // Restaura cvData local (cache binário)
+  merged.forEach(g => {
+    const lc = local.find(l => l.id === g.id);
+    if (lc && lc.cvData) g.cvData = lc.cvData;
+  });
+  save(KEYS.curriculos, merged);
+}
+
+async function pushCurriculosToGitHub() {
+  const list = load(KEYS.curriculos) || [];
+  // Remove dados binários (cvData) antes de enviar ao GitHub
+  const stripped = list.map(({ cvData, ...rest }) => rest);
+  const js = '/* curriculos-data.js */\nvar FALAW_CURRICULOS = ' + JSON.stringify(stripped, null, 2) + ';\n';
+  const sha = await _ghPush(GITHUB_PATH_CURRICULOS, js, GH_CURRICULOS_SHA, 'Admin: update curriculos');
+  if (sha) GH_CURRICULOS_SHA = sha;
+}
+
+async function pushCurriculoFileToGitHub(cvId, fileName, cvDataUrl) {
+  if (!ghToken()) return null;
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `html/Falaw/falaw.com.br/curriculos/${cvId}_${safeName}`;
+  const base64 = cvDataUrl.includes(',') ? cvDataUrl.split(',')[1] : cvDataUrl;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`,
+      { method: 'PUT', headers: ghHeaders(), body: JSON.stringify({ message: `Admin: upload CV ${safeName}`, content: base64, branch: GITHUB_BRANCH }) });
+    if (!res.ok) return null;
+    return `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${path}`;
+  } catch { return null; }
+}
+
+/* ══════════════════════════════════════
+   PORTAL — GitHub sync
+══════════════════════════════════════ */
+function generatePortalJS(clients) {
+  // Remove fileData (binário grande) antes de enviar ao GitHub
+  // O fileUrl (raw GitHub URL) é mantido para download
+  const stripped = clients.map(c => ({
+    ...c,
+    reports: (c.reports || []).map(({ fileData, ...rest }) => rest)
+  }));
+  return '/* portal-data.js — gerado pelo admin Falaw. Não editar manualmente. */\nvar FALAW_PORTAL = ' + JSON.stringify(stripped, null, 2) + ';\n';
+}
+
+async function loadPortalFromGitHub() {
+  if (!ghToken()) return;
+  try {
+    const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH_PORTAL}?ref=${GITHUB_BRANCH}&t=${Date.now()}`;
+    const res = await fetch(url, { headers: ghHeaders() });
+    if (!res.ok) { if (res.status === 404) return; throw new Error('HTTP ' + res.status); }
+    const data = await res.json();
+    GH_PORTAL_SHA = data.sha;
+    let code;
+    if (data.content) {
+      code = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
+    } else {
+      // Arquivo muito grande: usa download_url
+      const r2 = await fetch(data.download_url + '?t=' + Date.now());
+      code = await r2.text();
+    }
+    const match = code.match(/FALAW_PORTAL\s*=\s*(\[[\s\S]*?\]);\s*$/m);
+    if (!match) return;
+    const ghClients = JSON.parse(match[1]) || [];
+    // Mescla: mantém fileData local nos relatórios que já existem
+    const local = JSON.parse(localStorage.getItem(CLI_KEY) || '[]');
+    const merged = ghClients.map(ghc => {
+      const lc = local.find(l => l.id === ghc.id);
+      if (!lc) return ghc;
+      return {
+        ...ghc,
+        reports: (ghc.reports || []).map(r => {
+          const lr = (lc.reports || []).find(l => l.id === r.id);
+          return lr && lr.fileData ? { ...r, fileData: lr.fileData } : r;
+        })
+      };
+    });
+    localStorage.setItem(CLI_KEY, JSON.stringify(merged));
+  } catch (e) { console.warn('Portal load failed:', e.message); }
+}
+
+async function pushPortalToGitHub() {
+  if (!ghToken()) { showToast('⚠ Token GitHub não configurado — dados salvos localmente.'); return false; }
+  try {
+    // Busca SHA atual se não tiver
+    if (!GH_PORTAL_SHA) {
+      const r = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH_PORTAL}?ref=${GITHUB_BRANCH}&t=${Date.now()}`, { headers: ghHeaders() });
+      if (r.ok) { const d = await r.json(); GH_PORTAL_SHA = d.sha; }
+    }
+    const clients = getClients();
+    const content = btoa(unescape(encodeURIComponent(generatePortalJS(clients))));
+    const body = { message: 'Admin: update client portal', content, branch: GITHUB_BRANCH };
+    if (GH_PORTAL_SHA) body.sha = GH_PORTAL_SHA;
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH_PORTAL}`,
+      { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'HTTP ' + res.status); }
+    const data = await res.json();
+    GH_PORTAL_SHA = data.content.sha;
+    return true;
+  } catch (e) { showToast('Erro GitHub: ' + e.message); return false; }
+}
+
+// Envia o arquivo do relatório para o GitHub e retorna a URL raw pública
+async function pushReportFileToGitHub(reportId, fileName, fileDataUrl) {
+  if (!ghToken()) return null;
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `html/Falaw/falaw.com.br/cliente/reports/${reportId}_${safeName}`;
+  const base64 = fileDataUrl.includes(',') ? fileDataUrl.split(',')[1] : fileDataUrl;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`,
+      { method: 'PUT', headers: ghHeaders(),
+        body: JSON.stringify({ message: `Admin: upload report ${safeName}`, content: base64, branch: GITHUB_BRANCH }) });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'HTTP ' + res.status); }
+    return `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${path}`;
+  } catch (e) { console.warn('Report file push failed:', e.message); return null; }
+}
+
+// Remove o arquivo do relatório do GitHub
+async function deleteReportFileFromGitHub(fileUrl) {
+  if (!ghToken() || !fileUrl) return;
+  const prefix = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/`;
+  if (!fileUrl.startsWith(prefix)) return;
+  const path = fileUrl.slice(prefix.length);
+  try {
+    const r = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`, { headers: ghHeaders() });
+    if (!r.ok) return;
+    const d = await r.json();
+    await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`,
+      { method: 'DELETE', headers: ghHeaders(),
+        body: JSON.stringify({ message: `Admin: delete report ${path}`, sha: d.sha, branch: GITHUB_BRANCH }) });
+  } catch (e) { console.warn('Report file delete failed:', e.message); }
+}
+
+/* ══════════════════════════════════════
+   BLOG — render
+══════════════════════════════════════ */
+function renderBlog() {
+  const published = ALL_ARTICLES.filter(a => a.published !== false).length;
+  const drafts    = ALL_ARTICLES.filter(a => a.published === false).length;
+
+  document.getElementById('blog-stats').innerHTML = `
+    <div class="stat-pill"><div class="stat-pill-num">${ALL_ARTICLES.length}</div><div class="stat-pill-label">Total</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${published}</div><div class="stat-pill-label">Publicados</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${drafts}</div><div class="stat-pill-label">Rascunhos</div></div>
+  `;
+
+  document.getElementById('blog-empty').hidden = ALL_ARTICLES.length > 0;
+
+  document.getElementById('blog-list').innerHTML = ALL_ARTICLES.map(a => `
+    <div class="item-card">
+      <div class="item-card-body">
+        <div class="item-card-title">
+          ${escHtml(a.title)}
+          ${a.published !== false ? '<span class="post-tag">Publicado</span>' : '<span class="post-tag" style="background:#888">Rascunho</span>'}
+        </div>
+        <div class="item-card-meta">${escHtml(a.category)}${a.date ? ' · ' + escHtml(a.date) : ''}${a.readTime ? ' · ' + escHtml(a.readTime) : ''}</div>
+        <div class="item-card-preview">${escHtml(a.excerpt)}</div>
+      </div>
+      <div class="item-card-actions">
+        ${a.url ? `<a href="${escHtml(a.url)}" target="_blank" class="btn btn-ghost btn-sm">Ver</a>` : ''}
+        <button type="button" class="btn btn-ghost btn-sm" onclick="openEmailModal('${escHtml(a.id)}')">✉ Enviar</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="editPost('${escHtml(a.id)}')">Editar</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="deletePost('${escHtml(a.id)}')">Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+let editingPostId = null;
+
+function openPostModal(id) {
+  editingPostId = id || null;
+  document.getElementById('post-modal-title').textContent = id ? 'Editar Artigo' : 'Novo Artigo';
+
+  if (id) {
+    const art = ALL_ARTICLES.find(a => a.id === id);
+    if (art) {
+      document.getElementById('post-id').value        = art.id;
+      document.getElementById('post-title').value     = art.title;
+      document.getElementById('post-category').value  = art.category;
+      document.getElementById('post-excerpt').value   = art.excerpt;
+      document.getElementById('post-content').value   = art.content || '';
+      setPostPhotoPreview(art.photo || '');
+      document.getElementById('post-date').value      = art.date || '';
+      document.getElementById('post-readtime').value  = art.readTime || '';
+      document.getElementById('post-status').value    = String(art.published !== false);
+    }
+  } else {
+    document.getElementById('post-id').value       = '';
+    document.getElementById('post-title').value    = '';
+    document.getElementById('post-excerpt').value  = '';
+    document.getElementById('post-content').value  = '';
+    removePostPhoto();
+    document.getElementById('post-date').value     = '';
+    document.getElementById('post-readtime').value = '';
+    document.getElementById('post-status').value   = 'false';
+  }
+  document.getElementById('post-modal').classList.add('open');
+}
+
+function closePostModal() {
+  document.getElementById('post-modal').classList.remove('open');
+}
+
+function editPost(id) { openPostModal(id); }
+
+async function savePost() {
+  const title     = document.getElementById('post-title').value.trim();
+  const category  = document.getElementById('post-category').value;
+  const excerpt   = document.getElementById('post-excerpt').value.trim();
+  const content   = document.getElementById('post-content').value.trim();
+  const photo     = document.getElementById('post-photo').value.trim();
+  const date      = document.getElementById('post-date').value.trim();
+  const readTime  = document.getElementById('post-readtime').value.trim();
+  const published = document.getElementById('post-status').value === 'true';
+
+  if (!title) { alert('Por favor, preencha o título.'); return; }
+
+  const snapshot = ALL_ARTICLES.slice(); // backup para reverter se falhar
+  const id  = editingPostId || (title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now().toString(36));
+  const existing = editingPostId ? ALL_ARTICLES.find(a => a.id === editingPostId) : null;
+  const url = (existing && existing.url) || ('blog/reader.html?id=' + encodeURIComponent(id));
+
+  if (editingPostId) {
+    const idx = ALL_ARTICLES.findIndex(a => a.id === editingPostId);
+    if (idx !== -1) ALL_ARTICLES[idx] = { ...ALL_ARTICLES[idx], title, category, excerpt, content, url, photo, date, readTime, published };
+  } else {
+    ALL_ARTICLES.unshift({ id, title, category, excerpt, content, url, photo, date, readTime, published });
+  }
+
+  closePostModal();
+  showToast('Salvando…');
+  const articleData = ALL_ARTICLES.find(a => a.id === id);
+  const sbOk = await sbSaveArticle(articleData);
+  const ghOk = await pushArticlesToGitHub();
+  if (sbOk || ghOk) {
+    renderBlog();
+    showToast(editingPostId ? 'Artigo atualizado.' : 'Artigo publicado.');
+  } else {
+    ALL_ARTICLES = snapshot; // reverte — nada foi salvo
+    renderBlog();
+  }
+}
+
+async function deletePost(id) {
+  if (!confirm('Excluir este artigo? Esta ação não pode ser desfeita.')) return;
+  const snapshot = ALL_ARTICLES.slice();
+  ALL_ARTICLES = ALL_ARTICLES.filter(a => a.id !== id);
+  showToast('Excluindo…');
+  await sbDeleteArticle(id);
+  const ok = await pushArticlesToGitHub();
+  if (ok || getSB()) {
+    renderBlog();
+    showToast('Artigo excluído.');
+  } else {
+    ALL_ARTICLES = snapshot;
+    renderBlog();
+  }
+}
+
+/* ══════════════════════════════════════
+   EQUIPE
+══════════════════════════════════════ */
+function renderEquipe() {
+  const members = load(KEYS.members) || [];
+  const stats   = document.getElementById('equipe-stats');
+  const list    = document.getElementById('equipe-list');
+
+  const active   = members.filter(m => m.status === 'active').length;
+  const memoriam = members.filter(m => m.status === 'memoriam').length;
+
+  stats.innerHTML = `
+    <div class="stat-pill"><div class="stat-pill-num">${members.length}</div><div class="stat-pill-label">Total</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${active}</div><div class="stat-pill-label">Ativos</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${memoriam}</div><div class="stat-pill-label">In Memoriam</div></div>
+  `;
+
+  if (!members.length) {
+    list.innerHTML = `<div class="empty-state"><p>Nenhum membro cadastrado.</p></div>`;
+    return;
+  }
+
+  const sorted = [...members].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+  list.innerHTML = sorted.map(m => `
+    <div class="item-card">
+      <div class="item-card-body">
+        <div class="item-card-title">
+          ${escHtml(m.name)}
+          <span class="role-badge">${escHtml(m.role)}</span>
+          ${m.status === 'memoriam' ? '<span class="post-tag" style="background:#555">In Memoriam</span>' : ''}
+        </div>
+        ${m.email ? `<div class="item-card-meta">${escHtml(m.email)}</div>` : ''}
+        <div class="item-card-preview">${escHtml(m.bio)}</div>
+      </div>
+      <div class="item-card-actions">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="editMember('${m.id}')">Editar</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteMember('${m.id}')">Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+let editingMemberId = null;
+
+function openMemberModal(id) {
+  editingMemberId = id || null;
+  document.getElementById('member-modal-title').textContent = id ? 'Editar Membro' : 'Novo Membro';
+
+  if (id) {
+    const m = (load(KEYS.members) || []).find(m => m.id === id);
+    if (m) {
+      document.getElementById('member-id').value     = m.id;
+      document.getElementById('member-name').value   = m.name;
+      document.getElementById('member-email').value  = m.email || '';
+      document.getElementById('member-role').value   = m.role;
+      document.getElementById('member-bio').value    = m.bio;
+      document.getElementById('member-status').value = m.status;
+    }
+  } else {
+    document.getElementById('member-id').value     = '';
+    document.getElementById('member-name').value   = '';
+    document.getElementById('member-email').value  = '';
+    document.getElementById('member-role').value   = 'Advogada';
+    document.getElementById('member-bio').value    = '';
+    document.getElementById('member-status').value = 'active';
+  }
+  document.getElementById('member-modal').classList.add('open');
+}
+
+function closeMemberModal() {
+  document.getElementById('member-modal').classList.remove('open');
+}
+
+function editMember(id) { openMemberModal(id); }
+
+function saveMember() {
+  const name   = document.getElementById('member-name').value.trim();
+  const email  = document.getElementById('member-email').value.trim();
+  const role   = document.getElementById('member-role').value.trim();
+  const bio    = document.getElementById('member-bio').value.trim();
+  const status = document.getElementById('member-status').value;
+
+  if (!name) { alert('Por favor, preencha o nome.'); return; }
+
+  const members = load(KEYS.members) || [];
+  const id      = editingMemberId;
+
+  if (id) {
+    const idx = members.findIndex(m => m.id === id);
+    if (idx !== -1) members[idx] = { ...members[idx], name, email, role, bio, status };
+  } else {
+    members.push({ id: uid(), name, email, role, bio, status });
+  }
+
+  members.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  save(KEYS.members, members);
+  closeMemberModal();
+  renderEquipe();
+  showToast('Salvando no GitHub…');
+  pushTeamToGitHub().then(ok => showToast(ok ? (id ? 'Membro atualizado.' : 'Membro adicionado.') : 'Salvo localmente, mas falhou no GitHub.'));
+}
+
+async function deleteMember(id) {
+  if (!confirm('Excluir este membro? Esta ação não pode ser desfeita.')) return;
+  const members = (load(KEYS.members) || []).filter(m => m.id !== id);
+  save(KEYS.members, members);
+  renderEquipe();
+  showToast('Salvando no GitHub…');
+  const ok = await pushTeamToGitHub();
+  showToast(ok ? 'Membro excluído.' : 'Excluído localmente, mas falhou no GitHub.');
+}
+
+/* ══════════════════════════════════════
+   NEWSLETTER
+══════════════════════════════════════ */
+function renderNewsletter() {
+  const emails = load(KEYS.newsletter) || [];
+  const stats  = document.getElementById('newsletter-stats');
+  const list   = document.getElementById('newsletter-list');
+
+  stats.innerHTML = `
+    <div class="stat-pill"><div class="stat-pill-num">${emails.length}</div><div class="stat-pill-label">Inscrições</div></div>
+  `;
+
+  if (!emails.length) {
+    list.innerHTML = `<div class="empty-state"><p>Nenhuma inscrição de newsletter ainda.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = emails.map(e => `
+    <div class="item-card">
+      <div class="item-card-body">
+        <div class="item-card-title">${escHtml(e.email)}</div>
+        <div class="item-card-meta">${formatDate(e.date)}</div>
+      </div>
+      <div class="item-card-actions">
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteNewsletter('${e.id}')">Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function deleteNewsletter(id) {
+  if (!confirm('Excluir este e-mail?')) return;
+  save(KEYS.newsletter, (load(KEYS.newsletter) || []).filter(e => e.id !== id));
+  sbDeleteNewsletter(id);
+  renderNewsletter();
+  showToast('E-mail excluído.');
+}
+
+function exportNewsletter() {
+  const emails = load(KEYS.newsletter) || [];
+  if (!emails.length) { alert('Nenhuma inscrição para exportar.'); return; }
+  const csv = 'E-mail,Data\n' + emails.map(e => `"${e.email}","${e.date}"`).join('\n');
+  downloadCSV(csv, 'newsletter.csv');
+}
+
+/* ══════════════════════════════════════
+   CONTATO
+══════════════════════════════════════ */
+function renderContato() {
+  const items = load(KEYS.contato) || [];
+  const stats = document.getElementById('contato-stats');
+  const list  = document.getElementById('contato-list');
+
+  stats.innerHTML = `
+    <div class="stat-pill"><div class="stat-pill-num">${items.length}</div><div class="stat-pill-label">Solicitações</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${items.filter(i => !i.read).length}</div><div class="stat-pill-label">Não lidas</div></div>
+  `;
+
+  if (!items.length) {
+    list.innerHTML = `<div class="empty-state"><p>Nenhuma solicitação de contato ainda.</p></div>`;
+    return;
+  }
+
+  const sorted = [...items].sort((a, b) => b.date.localeCompare(a.date));
+  list.innerHTML = sorted.map(c => `
+    <div class="item-card" style="${!c.read ? 'border-left:3px solid var(--c-accent)' : ''}">
+      <div class="item-card-body">
+        <div class="item-card-title">
+          ${escHtml(c.nome)}
+          ${!c.read ? '<span class="post-tag">Novo</span>' : ''}
+        </div>
+        <div class="item-card-meta">${escHtml(c.email)}${c.telefone ? ' · ' + escHtml(c.telefone) : ''}${c.empresa ? ' · ' + escHtml(c.empresa) : ''} · ${formatDate(c.date)}</div>
+        <div class="item-card-preview">${escHtml(c.mensagem)}</div>
+      </div>
+      <div class="item-card-actions">
+        ${!c.read ? `<button type="button" class="btn btn-ghost btn-sm" onclick="markRead('${c.id}')">Marcar lida</button>` : ''}
+        <a href="mailto:${escHtml(c.email)}?subject=Re: Contato Falaw Advogados" class="btn btn-ghost btn-sm">Responder</a>
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteContato('${c.id}')">Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function markRead(id) {
+  const items = load(KEYS.contato) || [];
+  const idx = items.findIndex(c => c.id === id);
+  if (idx !== -1) { items[idx].read = true; save(KEYS.contato, items); sbMarkReadContato(id); renderContato(); }
+}
+
+function deleteContato(id) {
+  if (!confirm('Excluir esta solicitação?')) return;
+  save(KEYS.contato, (load(KEYS.contato) || []).filter(c => c.id !== id));
+  sbDeleteContato(id);
+  renderContato();
+  showToast('Solicitação excluída.');
+}
+
+function exportContato() {
+  const items = load(KEYS.contato) || [];
+  if (!items.length) { alert('Nenhuma solicitação para exportar.'); return; }
+  const csv = 'Nome,Empresa,E-mail,Telefone,Mensagem,Data\n' +
+    items.map(c => `"${c.nome}","${c.empresa||''}","${c.email}","${c.telefone||''}","${(c.mensagem||'').replace(/"/g,'""')}","${c.date}"`).join('\n');
+  downloadCSV(csv, 'contato.csv');
+}
+
+function downloadCSV(csv, filename) {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+/* ══════════════════════════════════════
+   CONFIG
+══════════════════════════════════════ */
+function loadConfig() {
+  const cfg = load(KEYS.config) || {};
+  document.getElementById('cfg-tel').value          = cfg.tel       || '';
+  document.getElementById('cfg-wa').value           = cfg.wa        || '';
+  document.getElementById('cfg-email').value        = cfg.email     || '';
+  document.getElementById('cfg-address').value      = cfg.address   || '';
+  document.getElementById('cfg-instagram').value    = cfg.instagram || '';
+  document.getElementById('cfg-linkedin').value     = cfg.linkedin  || '';
+  document.getElementById('cfg-github-token').value = ghToken();
+  document.getElementById('cfg-n8n-url').value = localStorage.getItem('fa_n8n_url') || window.SB_N8N_URL || '';
+  document.getElementById('cfg-claude-key').value = localStorage.getItem('fa_claude_key') || '';
+  document.getElementById('cfg-gemini-key').value = localStorage.getItem('fa_gemini_key') || '';
+  document.getElementById('cfg-supabase-url').value = sbUrl();
+  document.getElementById('cfg-supabase-key').value = sbKey();
+  document.getElementById('cfg-admin-email').value = localStorage.getItem(AUTH_EMAIL_KEY) || window.SB_ADMIN_EMAIL || '';
+  document.getElementById('cfg-backend-api-url').value = localStorage.getItem(BACKEND_API_URL_KEY) || window.BACKEND_API_URL || '';
+}
+
+async function testAPIs() {
+  const box = document.getElementById('api-test-result');
+  box.style.display = 'block';
+  box.innerHTML = 'Testando…';
+  const lines = [];
+
+  // Test Claude direto
+  const claudeKey = localStorage.getItem('fa_claude_key') || '';
+  if (!claudeKey) {
+    lines.push('⚠️ Claude: chave não configurada');
+  } else {
+    try {
+      const txt = await callClaude([{ role: 'user', content: 'Responda apenas: ok' }], 0.1);
+      lines.push('✅ Claude: ' + txt.slice(0, 80));
+    } catch(e) { lines.push('❌ Claude: ' + e.message); }
+  }
+
+  // Test Gemini direto
+  const geminiKey = localStorage.getItem('fa_gemini_key') || '';
+  if (!geminiKey) {
+    lines.push('⚠️ Gemini: chave não configurada');
+  } else {
+    try {
+      const txt = await callGemini([{ role: 'user', content: 'Responda apenas: ok' }], 0.1);
+      lines.push('✅ Gemini: ' + txt.slice(0, 80));
+    } catch(e) { lines.push('❌ Gemini: ' + e.message); }
+  }
+
+  // Test n8n (legado)
+  const n8nUrl = localStorage.getItem('fa_n8n_url') || '';
+  if (n8nUrl) {
+    lines.push('🔗 n8n URL (legado): ' + n8nUrl);
+    try {
+      const r = await fetch(n8nUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'gemini', model: 'gemini-2.0-flash', messages: [{ role: 'user', content: 'Responda apenas: ok' }], temperature: 0.1 })
+      });
+      const txt = await r.text();
+      lines.push((r.ok ? '✅' : '❌') + ' n8n HTTP ' + r.status + ' — ' + txt.slice(0, 120));
+    } catch(e) { lines.push('❌ n8n erro: ' + e.message); }
+  }
+
+  if (!claudeKey && !geminiKey && !n8nUrl) {
+    lines.push('⚠️ Nenhuma chave ou URL configurada. Vá em Configurações e adicione a chave do Claude ou Gemini.');
+  }
+
+  box.innerHTML = lines.join('<br>');
+}
+
+function saveConfig() {
+  save(KEYS.config, {
+    tel:       document.getElementById('cfg-tel').value.trim(),
+    wa:        document.getElementById('cfg-wa').value.trim(),
+    email:     document.getElementById('cfg-email').value.trim(),
+    address:   document.getElementById('cfg-address').value.trim(),
+    instagram: document.getElementById('cfg-instagram').value.trim(),
+    linkedin:  document.getElementById('cfg-linkedin').value.trim(),
+  });
+  const token = document.getElementById('cfg-github-token').value.trim();
+  if (token) localStorage.setItem(KEYS.githubToken, token);
+  else localStorage.removeItem(KEYS.githubToken);
+  const n8nUrl = document.getElementById('cfg-n8n-url').value.trim();
+  if (n8nUrl) localStorage.setItem('fa_n8n_url', n8nUrl); else localStorage.removeItem('fa_n8n_url');
+  const claudeKey = document.getElementById('cfg-claude-key').value.trim();
+  if (claudeKey) localStorage.setItem('fa_claude_key', claudeKey); else localStorage.removeItem('fa_claude_key');
+  const geminiKey = document.getElementById('cfg-gemini-key').value.trim();
+  if (geminiKey) localStorage.setItem('fa_gemini_key', geminiKey); else localStorage.removeItem('fa_gemini_key');
+  const sbUrlVal = document.getElementById('cfg-supabase-url').value.trim();
+  const sbKeyVal = document.getElementById('cfg-supabase-key').value.trim();
+  const authEmail = document.getElementById('cfg-admin-email').value.trim();
+  const backendApi = document.getElementById('cfg-backend-api-url').value.trim().replace(/\/$/, '');
+  if (sbUrlVal) localStorage.setItem('fa_supabase_url', sbUrlVal); else localStorage.removeItem('fa_supabase_url');
+  if (sbKeyVal) localStorage.setItem('fa_supabase_key', sbKeyVal); else localStorage.removeItem('fa_supabase_key');
+  if (authEmail) localStorage.setItem(AUTH_EMAIL_KEY, authEmail); else localStorage.removeItem(AUTH_EMAIL_KEY);
+  if (backendApi) localStorage.setItem(BACKEND_API_URL_KEY, backendApi); else localStorage.removeItem(BACKEND_API_URL_KEY);
+  sbReset(); // reseta o cliente para usar novas credenciais
+  document.getElementById('blog-no-token').hidden = !!token;
+  // Se Supabase + GitHub configurados, atualiza sb-config.js no repositório
+  if (sbUrlVal && sbKeyVal && token) {
+    const escCfg = (v) => String(v || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const sbCfg = `/* sb-config.js — gerado pelo admin Falaw. */\nwindow.SB_URL='${escCfg(sbUrlVal)}';\nwindow.SB_KEY='${escCfg(sbKeyVal)}';\nwindow.BACKEND_API_URL='${escCfg(backendApi)}';\nwindow.SB_N8N_URL='${escCfg(n8nUrl)}';\nwindow.SB_ADMIN_EMAIL='${escCfg(authEmail)}';\n`;
+    _ghPush('html/Falaw/falaw.com.br/sb-config.js', sbCfg, null, 'Admin: update Supabase config')
+      .then(sha => { if (sha) showToast('✓ Configurações salvas e sb-config.js publicado.'); else showToast('Configurações salvas.'); });
+  } else {
+    showToast('Configurações salvas.');
+  }
+}
+
+function exportConfigBookmarklet() {
+  const keys = [
+    'fa_supabase_url','fa_supabase_key','fa_backend_api_url','fa_n8n_url',
+    'fa_admin_auth_email','fa_github_token','fa_claude_key','fa_gemini_key','fa_claude_model'
+  ];
+  const data = {};
+  keys.forEach(k => { const v = localStorage.getItem(k); if (v) data[k] = v; });
+  const json = JSON.stringify(data);
+  document.getElementById('cfg-export-json').value = json;
+
+  // Gera bookmarklet
+  const script = `(function(){var d=${json};Object.keys(d).forEach(function(k){localStorage.setItem(k,d[k]);});alert('\u2705 Configura\u00e7\u00f5es Falaw restauradas!');})();`;
+  const bm = 'javascript:' + encodeURIComponent(script);
+  const link = document.getElementById('cfg-bookmarklet-link');
+  link.href = bm;
+
+  document.getElementById('cfg-export-area').style.display = 'block';
+  document.getElementById('cfg-import-area').style.display = 'none';
+}
+
+function importConfigJSON() {
+  document.getElementById('cfg-import-area').style.display = 'block';
+  document.getElementById('cfg-export-area').style.display = 'none';
+}
+
+function applyConfigJSON() {
+  const raw = document.getElementById('cfg-import-json').value.trim();
+  try {
+    const data = JSON.parse(raw);
+    Object.keys(data).forEach(k => { if (data[k]) localStorage.setItem(k, data[k]); });
+    showToast('\u2705 Configura\u00e7\u00f5es restauradas! Recarregando…');
+    setTimeout(() => location.reload(), 1200);
+  } catch(e) {
+    showToast('\u26a0\ufe0f JSON inv\u00e1lido.');
+  }
+}
+
+async function changePassword() {
+  const np = document.getElementById('cfg-new-pwd').value;
+  const cp = document.getElementById('cfg-confirm-pwd').value;
+  if (!np) { showToast('⚠ Digite a nova senha.'); return; }
+  if (np !== cp) { showToast('⚠ As senhas não coincidem.'); return; }
+  if (np.length < 8) { showToast('⚠ A senha deve ter pelo menos 8 caracteres.'); return; }
+
+  const sb = getSB();
+  if (sb) {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session) {
+        const { error } = await sb.auth.updateUser({ password: np });
+        if (!error) {
+          document.getElementById('cfg-new-pwd').value = '';
+          document.getElementById('cfg-confirm-pwd').value = '';
+          showToast('Senha alterada via Supabase Auth com sucesso.');
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase auth change password:', e.message);
+    }
+  }
+
+  const h = await _sha256(np);
+  localStorage.setItem(KEYS.adminPwdHash, h);
+  localStorage.removeItem('fa_admin_pwd'); // remove plaintext legado se existir
+  const synced = await sbWriteAdminPasswordHash(h);
+  document.getElementById('cfg-new-pwd').value    = '';
+  document.getElementById('cfg-confirm-pwd').value = '';
+  showToast(synced ? 'Senha alterada e sincronizada no Supabase.' : 'Senha alterada neste navegador. Configure o Supabase para sincronizar entre navegadores.');
+}
+
+/* ══════════════════════════════════════
+   UTILS
+══════════════════════════════════════ */
+function escHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+/* ══════════════════════════════════════
+   PHOTO UPLOAD
+══════════════════════════════════════ */
+document.getElementById('post-photo-file').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  document.getElementById('photo-upload-name').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    document.getElementById('post-photo').value = dataUrl;
+    const preview = document.getElementById('post-photo-preview');
+    document.getElementById('post-photo-preview-img').src = dataUrl;
+    preview.classList.remove('photo-preview-hidden');
+  };
+  reader.readAsDataURL(file);
+});
+
+function removePostPhoto() {
+  document.getElementById('post-photo').value = '';
+  document.getElementById('post-photo-file').value = '';
+  document.getElementById('photo-upload-name').textContent = 'Nenhuma imagem';
+  const preview = document.getElementById('post-photo-preview');
+  preview.classList.add('photo-preview-hidden');
+  document.getElementById('post-photo-preview-img').src = '';
+}
+
+function setPostPhotoPreview(src) {
+  if (src) {
+    document.getElementById('post-photo').value = src;
+    document.getElementById('post-photo-preview-img').src = src;
+    document.getElementById('post-photo-preview').classList.remove('photo-preview-hidden');
+    document.getElementById('photo-upload-name').textContent = 'Imagem carregada';
+  } else {
+    removePostPhoto();
+  }
+}
+
+/* ══════════════════════════════════════
+   AI — ASSISTENTE DE ARTIGOS
+══════════════════════════════════════ */
+let aiPanelVisible = true;
+let aiSuggestions  = [];
+let aiSelected     = null;
+
+function toggleAiPanel() {
+  aiPanelVisible = !aiPanelVisible;
+  document.getElementById('ai-panel-body').hidden = !aiPanelVisible;
+  document.querySelector('#ai-panel .ai-toggle-btn').textContent =
+    aiPanelVisible ? 'ocultar ▲' : 'mostrar ▼';
+}
+
+/* ══════════════════════════════════════
+   REDES SOCIAIS — IA
+══════════════════════════════════════ */
+let socialSuggestions = [], socialSelected = null, socialPlatform = 'instagram',
+    socialPanelVisible = true, linkedInMode = 'carousel', _socialSlides = [], _socialLegenda = '',
+    _slideEditImageData = null;
+
+function loadSlideImageFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    _slideEditImageData = e.target.result;
+    document.getElementById('slide-edit-image-name').textContent = file.name;
+    document.getElementById('slide-edit-image-clear').style.display = '';
+    const prev = document.getElementById('slide-edit-image-preview');
+    prev.src = e.target.result;
+    prev.style.display = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearSlideImage() {
+  _slideEditImageData = null;
+  document.getElementById('slide-edit-image-file').value = '';
+  document.getElementById('slide-edit-image-name').textContent = 'nenhuma';
+  document.getElementById('slide-edit-image-clear').style.display = 'none';
+  const prev = document.getElementById('slide-edit-image-preview');
+  prev.style.display = 'none';
+  prev.src = '';
+}
+
+function toggleSocialPanel() {
+  socialPanelVisible = !socialPanelVisible;
+  document.getElementById('social-panel-body').hidden = !socialPanelVisible;
+  document.querySelector('#social-panel .ai-toggle-btn').textContent =
+    socialPanelVisible ? 'ocultar ▲' : 'mostrar ▼';
+}
+
+function toggleSocialCustom() {
+  const ta = document.getElementById('social-custom-text');
+  ta.classList.toggle('open');
+  if (ta.classList.contains('open')) {
+    document.getElementById('social-actions').hidden = false;
+  }
+}
+
+function selectSocialPlatform(p) {
+  socialPlatform = p;
+  document.getElementById('tab-btn-ig').classList.toggle('active', p === 'instagram');
+  document.getElementById('tab-btn-li').classList.toggle('active', p === 'linkedin');
+  document.getElementById('li-mode-row').style.display = p === 'linkedin' ? 'flex' : 'none';
+  const btn = document.getElementById('social-generate-btn');
+  btn.textContent = (p === 'linkedin' && linkedInMode === 'text') ? 'Gerar post →' : 'Gerar carrossel →';
+}
+
+function setLinkedInMode(mode) {
+  linkedInMode = mode;
+  document.getElementById('li-mode-carousel').classList.toggle('active', mode === 'carousel');
+  document.getElementById('li-mode-text').classList.toggle('active', mode === 'text');
+  document.getElementById('social-generate-btn').textContent =
+    mode === 'text' ? 'Gerar post →' : 'Gerar carrossel →';
+}
+
+async function fetchSocialSuggestions() {
+  const topic = document.getElementById('social-topic').value.trim();
+  if (!topic) { alert('Digite um tema.'); return; }
+  const btn  = document.getElementById('social-suggest-btn');
+  const area = document.getElementById('social-suggestions');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="ai-spinner"></span> Buscando…';
+  area.innerHTML = '';
+  document.getElementById('social-actions').hidden = true;
+  document.getElementById('social-result').style.display = 'none';
+  document.getElementById('li-text-result').style.display = 'none';
+  socialSelected = null;
+
+  try {
+    const raw = await callAI([
+      { role: 'system', content: 'Você cria conteúdo jurídico para redes sociais do escritório Falaw Advogados (São Paulo). Responda SEMPRE em JSON válido sem texto fora do JSON.' },
+      { role: 'user',   content: `Sugira 5 temas de posts carrossel para redes sociais sobre: "${topic}"\n\nFormato (somente JSON):\n{"sugestoes":[{"titulo":"...","angulo":"gancho em até 15 palavras","categoria":"Direito Trabalhista|Compliance|Novidades Jurídicas|Dicas para Empresas|RH & Gestão"}]}` }
+    ]);
+    const data = parseJSON(raw);
+    socialSuggestions = data.sugestoes || [];
+    area.innerHTML = socialSuggestions.map((s, i) => `
+      <div class="ai-card" onclick="selectSocialSuggestion(${i})" id="soc-card-${i}">
+        <div class="ai-card-title">${escHtml(s.titulo)}</div>
+        <div class="ai-card-meta">${escHtml(s.categoria)} &nbsp;·&nbsp; ${escHtml(s.angulo)}</div>
+      </div>`).join('');
+  } catch(e) {
+    area.innerHTML = `<p class="ai-error-msg">Erro: ${escHtml(e.message)}</p>`;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Sugerir temas';
+}
+
+function selectSocialSuggestion(i) {
+  document.querySelectorAll('#social-suggestions .ai-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('soc-card-' + i).classList.add('selected');
+  socialSelected = socialSuggestions[i];
+  document.getElementById('social-actions').hidden = false;
+  document.getElementById('social-status').textContent = '';
+}
+
+async function generateSocialPost() {
+  if (!socialSelected && !document.getElementById('social-custom-text').value.trim()) {
+    alert('Selecione um tema ou digite conteúdo próprio.'); return;
+  }
+  const btn    = document.getElementById('social-generate-btn');
+  const status = document.getElementById('social-status');
+  btn.disabled = true;
+
+  if (socialPlatform === 'linkedin' && linkedInMode === 'text') {
+    btn.innerHTML = '<span class="ai-spinner"></span> Gerando…';
+    status.textContent = 'Criando post…';
+    document.getElementById('social-result').style.display = 'none';
+    document.getElementById('li-text-result').style.display = 'none';
+    await generateLinkedInText();
+    btn.disabled = false;
+    btn.textContent = 'Gerar post →';
+    return;
+  }
+
+  btn.innerHTML = '<span class="ai-spinner"></span> Gerando…';
+  status.textContent = 'Criando carrossel…';
+  document.getElementById('social-result').style.display = 'none';
+  document.getElementById('li-text-result').style.display = 'none';
+
+  const isPlatformIG = socialPlatform === 'instagram';
+  const platformDesc = isPlatformIG
+    ? 'Instagram (carrossel visual, tom direto, linguagem acessível, CTAs como "Salve este post" e "Comente")'
+    : 'LinkedIn (carrossel profissional, tom especializado, linguagem executiva, CTAs como "Compartilhe" e "Siga para mais")';
+
+  const customText = document.getElementById('social-custom-text').value.trim();
+  const temaInfo = socialSelected
+    ? `"${socialSelected.titulo}" — ângulo: "${socialSelected.angulo}"`
+    : 'conteúdo fornecido abaixo';
+  const conteudoExtra = customText
+    ? `\n\nConteúdo fornecido pelo usuário para transformar em slides:\n"""\n${customText}\n"""`
+    : '';
+
+  try {
+    const raw = await callAI([
+      { role: 'system', content: 'Você é especialista em marketing jurídico para redes sociais. Cria carrosséis para o escritório Falaw Advogados. Responda SOMENTE com JSON válido, sem texto fora. Nunca use aspas duplas dentro de valores de string.' },
+      { role: 'user',   content: `Crie um carrossel de posts para ${platformDesc} sobre: ${temaInfo}.${conteudoExtra}\n\nPadrão visual Falaw: use as cores exatas — "dark" = fundo vinho #550000, "gold" = fundo dourado #a59065, "light" = fundo cinza claro #f4f3f2 (texto escuro), "navy" = fundo azul marinho #242448. Logo FALAW advogados no rodapé de todos os slides.\n\nRetorne exatamente este JSON:\n{"slides":[{"num":1,"tipo":"capa","cor":"dark","titulo":"Título chamativo da capa","subtitulo":"subtítulo curto complementar"},{"num":2,"tipo":"conteudo","cor":"light","titulo":"Segundo slide - ponto 1","items":["Item A","Item B","Item C"]},{"num":3,"tipo":"conteudo","cor":"dark","titulo":"Terceiro slide - ponto 2","items":["Item A","Item B","Item C"]},{"num":4,"tipo":"conteudo","cor":"gold","titulo":"Quarto slide - ponto 3","items":["Item A","Item B"]},{"num":5,"tipo":"conteudo","cor":"dark","titulo":"Quinto slide - ponto 4","items":["Item A","Item B","Item C"]},{"num":6,"tipo":"cta","cor":"dark","titulo":"Mensagem de encerramento","cta":"Texto do botão de ação para ${isPlatformIG ? 'Instagram' : 'LinkedIn'}","rodape":"Fale com a Falaw Advogados"}],"legenda":"Legenda completa para ${isPlatformIG ? 'Instagram' : 'LinkedIn'} com emojis, hashtags e CTA. Máximo 2200 caracteres."}` }
+    ], 0.8);
+
+    const data = parseJSON(raw);
+    _socialSlides = data.slides || [];
+    _socialLegenda = data.legenda || '';
+    renderSocialSlides(_socialSlides, _socialLegenda);
+    document.getElementById('social-result').style.display = 'block';
+    status.textContent = '✓ Carrossel gerado!';
+
+  } catch(e) {
+    status.textContent = 'Erro: ' + e.message;
+  }
+
+  btn.disabled = false;
+  btn.textContent = isPlatformIG ? 'Gerar carrossel →' : (linkedInMode === 'text' ? 'Gerar post →' : 'Gerar carrossel →');
+}
+
+async function generateLinkedInText() {
+  const status = document.getElementById('social-status');
+  const customText = document.getElementById('social-custom-text').value.trim();
+  const temaInfo = socialSelected
+    ? `"${socialSelected.titulo}" — ângulo: "${socialSelected.angulo}"`
+    : 'conteúdo fornecido abaixo';
+  const conteudoExtra = customText
+    ? `\n\nConteúdo do usuário:\n"""\n${customText}\n"""`
+    : '';
+  try {
+    const raw = await callAI([
+      { role: 'system', content: 'Você escreve posts de LinkedIn para o escritório Falaw Advogados. Tom especializado, linguagem executiva, foco em valor jurídico. Sem markdown, texto limpo.' },
+      { role: 'user',   content: `Escreva um post de LinkedIn sobre: ${temaInfo}.${conteudoExtra}\n\nPost deve ter: gancho na primeira linha (sem emoji excessivo), desenvolvimento em parágrafos curtos, 3-5 pontos de valor, CTA claro ao final. Máximo 1300 caracteres. Inclua hashtags jurídicas relevantes no final.` }
+    ], 0.75);
+    document.getElementById('li-text-box').textContent = raw.trim();
+    document.getElementById('li-text-result').style.display = 'block';
+    status.textContent = '✓ Post gerado!';
+  } catch(e) {
+    status.textContent = 'Erro: ' + e.message;
+  }
+}
+
+function renderSocialSlides(slides, legenda) {
+  const wrap = document.getElementById('social-slides');
+  wrap.innerHTML = slides.map((s, idx) => {
+    const corClass = s.cor === 'gold' ? 'gold' : s.cor === 'light' ? 'light' : s.cor === 'navy' ? 'navy' : 'dark';
+    const tagBg    = corClass === 'light' ? 'gold-bg' : 'dark-bg';
+    const logoColor = corClass === 'light' ? '#550000' : '#f4f3f2';
+    const logoSubColor = corClass === 'light' ? '#a59065' : 'rgba(244,243,242,.65)';
+    const lineColor = corClass === 'light' ? 'rgba(85,0,0,.2)' : 'rgba(255,255,255,.18)';
+    let inner = '';
+    if (s.tipo === 'capa') {
+      inner = `<div class="slide-title">${escHtml(s.titulo)}</div>
+        ${s.subtitulo ? `<div class="slide-subtitle">${escHtml(s.subtitulo)}</div>` : ''}`;
+    } else if (s.tipo === 'cta') {
+      inner = `<div class="slide-title">${escHtml(s.titulo)}</div>
+        ${s.cta ? `<div class="slide-tags"><div class="slide-tag">${escHtml(s.cta)}</div></div>` : ''}`;
+    } else {
+      const items = (s.items || []).map(it => `<div class="slide-tag ${tagBg}">${escHtml(it)}</div>`).join('');
+      inner = `<div class="slide-title">${escHtml(s.titulo)}</div>
+        <div class="slide-tags">${items}</div>`;
+    }
+    const rodape = (s.tipo === 'cta' && s.rodape) ? escHtml(s.rodape) : 'Falaw Advogados';
+    const hasImg = !!s.imageUrl;
+    const escapedUrl = hasImg ? s.imageUrl.replace(/"/g, '%22') : '';
+    const imgStyle = hasImg ? ` background-image:url("${escapedUrl}");` : '';
+    const imgOverlay = hasImg ? `<div class="slide-img-overlay"></div>` : '';
+    return `<div class="social-slide ${corClass}${hasImg ? ' has-image' : ''}" style="position:relative;${imgStyle}">
+      ${imgOverlay}
+      <button class="slide-edit-btn" onclick="editSlide(${idx})" title="Editar slide">✏</button>
+      <div style="flex:1;display:flex;flex-direction:column;">${inner}</div>
+      <div class="slide-logo-area" style="border-top:1px solid ${lineColor};">
+        <div class="slide-logo" style="color:${logoColor};">FALAW</div>
+        <div class="slide-logo-sub" style="color:${logoSubColor};">${rodape}</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('social-caption').textContent = legenda;
+}
+
+function copySocialCaption() {
+  const text = document.getElementById('social-caption').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const s = document.getElementById('social-copy-status');
+    s.textContent = '✓ Copiado!';
+    setTimeout(() => s.textContent = '', 2000);
+  });
+}
+
+function copyLinkedInText() {
+  const text = document.getElementById('li-text-box').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const s = document.getElementById('li-copy-status');
+    s.textContent = '✓ Copiado!';
+    setTimeout(() => s.textContent = '', 2000);
+  });
+}
+
+function copySocialSlides() {
+  let text = '';
+  _socialSlides.forEach((s, i) => {
+    text += `--- Slide ${i+1} ---\n`;
+    if (s.titulo) text += s.titulo + '\n';
+    if (s.subtitulo) text += s.subtitulo + '\n';
+    (s.items || []).forEach(it => { text += '• ' + it + '\n'; });
+    if (s.cta) text += '→ ' + s.cta + '\n';
+    text += '\n';
+  });
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    const s = document.getElementById('social-copy-status');
+    s.textContent = '✓ Texto copiado!';
+    setTimeout(() => s.textContent = '', 2000);
+  });
+}
+
+function editSlide(idx) {
+  const s = _socialSlides[idx];
+  if (!s) return;
+  document.getElementById('slide-edit-index').value = idx;
+  document.getElementById('slide-edit-title').value = s.titulo || '';
+  document.getElementById('slide-edit-subtitle').value = s.subtitulo || s.cta || '';
+  document.getElementById('slide-edit-items').value = (s.items || []).join('\n');
+  _slideEditImageData = s.imageUrl || null;
+  const hasImg = !!s.imageUrl;
+  document.getElementById('slide-edit-image-name').textContent = hasImg ? 'foto carregada' : 'nenhuma';
+  document.getElementById('slide-edit-image-clear').style.display = hasImg ? '' : 'none';
+  const prev = document.getElementById('slide-edit-image-preview');
+  if (hasImg) { prev.src = s.imageUrl; prev.style.display = ''; } else { prev.style.display = 'none'; prev.src = ''; }
+  document.getElementById('slide-edit-image-file').value = '';
+  document.getElementById('slide-edit-modal').classList.add('open');
+}
+
+function saveSlideEdit() {
+  const idx = parseInt(document.getElementById('slide-edit-index').value, 10);
+  if (isNaN(idx) || !_socialSlides[idx]) return;
+  const s = _socialSlides[idx];
+  s.titulo = document.getElementById('slide-edit-title').value.trim();
+  const subVal = document.getElementById('slide-edit-subtitle').value.trim();
+  if (s.tipo === 'cta') { s.cta = subVal; } else { s.subtitulo = subVal; }
+  const itemLines = document.getElementById('slide-edit-items').value.split('\n').map(l => l.trim()).filter(Boolean);
+  if (itemLines.length) s.items = itemLines;
+  s.imageUrl = _slideEditImageData || undefined;
+  closeSlideEdit();
+  renderSocialSlides(_socialSlides, _socialLegenda);
+}
+
+function closeSlideEdit() {
+  document.getElementById('slide-edit-modal').classList.remove('open');
+}
+
+function exportToPPT() {
+  if (!_socialSlides.length) return;
+  const pptx = new PptxGenJS();
+  pptx.defineLayout({ name: 'SQUARE', width: 10, height: 10 });
+  pptx.layout = 'SQUARE';
+
+  const COLORS = {
+    dark:  { bg: '550000', text: 'F4F3F2', tagBg: 'FFFFFF', tagTxt: '550000', logoTxt: 'F4F3F2', logoSub: 'D4C9A8', line: 'FFFFFF' },
+    gold:  { bg: 'A59065', text: 'FFFFFF', tagBg: 'FFFFFF', tagTxt: '550000', logoTxt: 'FFFFFF', logoSub: 'F4F3F2', line: 'FFFFFF' },
+    light: { bg: 'F4F3F2', text: '242448', tagBg: 'A59065', tagTxt: 'FFFFFF', logoTxt: '550000', logoSub: 'A59065', line: '550000' },
+    navy:  { bg: '242448', text: 'F4F3F2', tagBg: 'FFFFFF', tagTxt: '242448', logoTxt: 'F4F3F2', logoSub: 'D4C9A8', line: 'FFFFFF' }
+  };
+
+  _socialSlides.forEach(s => {
+    const c = COLORS[s.cor] || COLORS.dark;
+    const slide = pptx.addSlide();
+    slide.background = { color: c.bg };
+
+    // Background photo + semi-transparent overlay
+    if (s.imageUrl) {
+      const imgParam = s.imageUrl.startsWith('data:')
+        ? { data: s.imageUrl }
+        : { path: s.imageUrl };
+      slide.addImage({ ...imgParam, x: 0, y: 0, w: 10, h: 10 });
+      slide.addShape('rect', {
+        x: 0, y: 0, w: 10, h: 10,
+        fill: { color: c.bg, transparency: 28 },
+        line: { width: 0 }
+      });
+    }
+
+    // Title
+    slide.addText(s.titulo || '', {
+      x: 0.35, y: 0.5, w: 9.3, h: 2.8,
+      fontSize: 28, color: c.text, fontFace: 'Calibri', bold: true,
+      align: 'left', valign: 'top', wrap: true, charSpacing: 0.5
+    });
+
+    // Subtitle or CTA text
+    const subText = s.subtitulo || (s.tipo === 'cta' ? s.cta : '');
+    if (subText) {
+      slide.addText(subText, {
+        x: 0.35, y: 3.0, w: 9.3, h: 1.0,
+        fontSize: 15, color: c.text, fontFace: 'Calibri', bold: false,
+        align: 'left', wrap: true, transparency: 15
+      });
+    }
+
+    // Items as tags
+    if (s.items && s.items.length) {
+      let yOff = subText ? 4.0 : 3.1;
+      s.items.forEach(item => {
+        slide.addText('• ' + item, {
+          x: 0.35, y: yOff, w: 9.3, h: 0.5,
+          fontSize: 13, color: c.text, fontFace: 'Calibri',
+          align: 'left', wrap: true
+        });
+        yOff += 0.58;
+      });
+    }
+
+    // CTA rodape (for cta slides)
+    if (s.tipo === 'cta' && s.rodape) {
+      slide.addText(s.rodape, {
+        x: 0.35, y: 7.8, w: 9.3, h: 0.4,
+        fontSize: 11, color: c.logoSub, fontFace: 'Calibri', align: 'left'
+      });
+    }
+
+    // Separator — thin rect (PptxGenJS line shape not reliable in browser bundle)
+    slide.addShape('rect', {
+      x: 0.35, y: 8.82, w: 9.3, h: 0.04,
+      fill: { color: c.line, transparency: 55 },
+      line: { width: 0 }
+    });
+
+    // Logo
+    slide.addText('FALAW', {
+      x: 0.35, y: 9.0, w: 4, h: 0.38,
+      fontSize: 12, color: c.logoTxt, fontFace: 'Calibri', bold: true,
+      align: 'left', charSpacing: 3
+    });
+    const rodapeText = (s.tipo === 'cta' && s.rodape) ? '' : 'a d v o g a d o s';
+    if (rodapeText) {
+      slide.addText(rodapeText, {
+        x: 0.35, y: 9.42, w: 4, h: 0.28,
+        fontSize: 8, color: c.logoSub, fontFace: 'Calibri',
+        align: 'left', charSpacing: 2, transparency: 20
+      });
+    }
+  });
+
+  const titulo = (socialSelected && socialSelected.titulo)
+    ? socialSelected.titulo.replace(/[^a-zA-Z0-9À-ú\s]/g, '').trim().substring(0, 40)
+    : 'falaw-slides';
+  pptx.writeFile({ fileName: `${titulo}.pptx` }).then(() => {
+    const s = document.getElementById('social-copy-status');
+    s.textContent = '✓ PPT exportado!';
+    setTimeout(() => s.textContent = '', 3000);
+  }).catch(err => {
+    const s = document.getElementById('social-copy-status');
+    s.textContent = 'Erro ao exportar: ' + err.message;
+  });
+}
+
+async function callClaude(messages, temperature) {
+  const apiKey = localStorage.getItem('fa_claude_key') || '';
+  const model  = localStorage.getItem('fa_claude_model') || 'claude-sonnet-4-5';
+  if (!apiKey) throw new Error('Chave da API Anthropic não configurada — vá em Configurações e cole sua API key do Claude.');
+  const system  = messages.find(m => m.role === 'system');
+  const userMsg = messages.filter(m => m.role !== 'system');
+  const body = {
+    model,
+    max_tokens: 4096,
+    temperature: temperature || 0.7,
+    messages: userMsg,
+    ...(system ? { system: system.content } : {})
+  };
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-api-access': 'true'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    const msg = e.error?.message || e.error || '';
+    if (res.status === 401 || res.status === 403) throw new Error('Chave da API Claude inválida. Verifique a chave em Configurações.');
+    if (res.status === 404) throw new Error('Modelo "' + model + '" não encontrado. Verifique o nome em Configurações.');
+    throw new Error(msg || 'HTTP ' + res.status);
+  }
+  const data = await res.json();
+  return data.content?.[0]?.text || '';
+}
+
+async function callGemini(messages, temperature) {
+  const apiKey = localStorage.getItem('fa_gemini_key') || '';
+  if (!apiKey) throw new Error('Chave da API Gemini não configurada — vá em Configurações e cole sua API key do Google AI Studio.');
+  // Converte messages para formato Gemini
+  const contents = [];
+  let systemInstruction = null;
+  for (const m of messages) {
+    if (m.role === 'system') { systemInstruction = m.content; continue; }
+    contents.push({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] });
+  }
+  const body = {
+    contents,
+    generationConfig: { temperature: temperature || 0.7, maxOutputTokens: 4096 },
+    ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction }] } } : {})
+  };
+  const model = 'gemini-2.0-flash';
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    const msg = e.error?.message || '';
+    if (res.status === 400 && msg.includes('API_KEY')) throw new Error('Chave da API Gemini inválida. Verifique a chave em Configurações.');
+    throw new Error(msg || 'HTTP ' + res.status);
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+async function callAI(messages, temperature) {
+  return callN8N(messages, temperature);
+}
+
+async function callN8N(messages, temperature, extraBody) {
+  const url = localStorage.getItem('fa_n8n_url') || '';
+  if (!url) throw new Error('n8n Webhook URL não configurada — vá em Configurações e cole a URL do webhook.');
+  const payload = Object.assign({ model: 'gpt-4o', messages, temperature: temperature || 0.7 }, extraBody || {});
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const rawText = await res.text().catch(() => '');
+  if (!res.ok) {
+    throw new Error('n8n HTTP ' + res.status + (rawText ? ': ' + rawText.slice(0, 120) : ''));
+  }
+  if (!rawText || !rawText.trim()) {
+    throw new Error('n8n retornou resposta vazia — verifique se o token GitHub está configurado no nó "Configurar Chaves" do workflow e se o workflow está ativo.');
+  }
+  let data;
+  try { data = JSON.parse(rawText); }
+  catch(e) {
+    if (rawText.length > 10) return rawText.trim();
+    throw new Error('n8n resposta inválida: ' + rawText.slice(0, 120));
+  }
+  const item = Array.isArray(data) ? data[0] : data;
+  return item?.text || item?.output || item?.json?.text || item?.message || JSON.stringify(item);
+}
+
+function parseJSON(text) {
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('Resposta inválida da IA — JSON não encontrado.');
+  let raw = m[0];
+  // Tenta parse direto
+  try { return JSON.parse(raw); } catch(e) {}
+  // Corrige quebras de linha reais dentro de strings
+  try {
+    const fixed = raw.replace(/"(?:[^"\\]|\\.)*"/g, s =>
+      s.replace(/\n/g,'\\n').replace(/\r/g,'\\r').replace(/\t/g,'\\t')
+    );
+    return JSON.parse(fixed);
+  } catch(e) {}
+  // Corrige trailing commas + quebras
+  try {
+    const fixed2 = raw
+      .replace(/"(?:[^"\\]|\\.)*"/g, s => s.replace(/\n/g,'\\n').replace(/\r/g,'\\r'))
+      .replace(/,\s*([}\]])/g,'$1');
+    return JSON.parse(fixed2);
+  } catch(e) {
+    throw new Error('JSON da IA com erro de sintaxe. Tente gerar novamente.');
+  }
+}
+
+async function fetchAISuggestions() {
+  const topic = document.getElementById('ai-topic').value.trim();
+  if (!topic) { alert('Digite um tema para pesquisar.'); return; }
+
+  const btn  = document.getElementById('ai-suggest-btn');
+  const area = document.getElementById('ai-suggestions');
+  const acts = document.getElementById('ai-actions');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="ai-spinner"></span> Buscando…';
+  area.innerHTML = '';
+  acts.hidden = true;
+  aiSelected = null;
+
+  try {
+    const raw = await callAI([
+      { role: 'system', content: 'Você é especialista em Direito do Trabalho e inovação jurídica no Brasil. Cria conteúdo para o blog do escritório Falaw Advogados (São Paulo). Responda SEMPRE em JSON válido, sem texto fora do JSON.' },
+      { role: 'user',   content: `Sugira 5 temas de artigos jurídicos sobre: "${topic}"\n\nFormato de resposta (somente JSON):\n{"sugestoes":[{"titulo":"...","angulo":"frase curta com o diferencial editorial","categoria":"Direito Trabalhista|Inovação Jurídica|Startups & Tecnologia|Compliance|Relações Sindicais"}]}` }
+    ]);
+
+    const data = parseJSON(raw);
+    aiSuggestions = data.sugestoes || [];
+
+    area.innerHTML = aiSuggestions.map((s, i) => `
+      <div class="ai-card" onclick="selectAISuggestion(${i})" id="ai-card-${i}">
+        <div class="ai-card-title">${escHtml(s.titulo)}</div>
+        <div class="ai-card-meta">${escHtml(s.categoria)} &nbsp;·&nbsp; ${escHtml(s.angulo)}</div>
+      </div>`).join('');
+
+  } catch(e) {
+    area.innerHTML = `<p class="ai-error-msg">Erro: ${escHtml(e.message)}</p>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Sugerir temas';
+}
+
+function selectAISuggestion(i) {
+  document.querySelectorAll('.ai-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('ai-card-' + i).classList.add('selected');
+  aiSelected = aiSuggestions[i];
+  document.getElementById('ai-actions').hidden = false;
+  document.getElementById('ai-status').textContent = '';
+}
+
+async function generateAIArticle() {
+  if (!aiSelected) return;
+  const btn    = document.getElementById('ai-generate-btn');
+  const status = document.getElementById('ai-status');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="ai-spinner"></span> Gerando…';
+  status.textContent = '';
+
+  const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const now = new Date();
+  const dateStr = months[now.getMonth()] + ' de ' + now.getFullYear();
+
+  const sysPrompt = 'Você é redator jurídico sênior do blog Falaw Advogados. Escreva em português brasileiro. REGRAS CRÍTICAS DE JSON: (1) Nunca use aspas duplas dentro de valores — use aspas simples ou reescreva. (2) Nunca inclua quebras de linha reais dentro de strings — cada parágrafo é uma string separada no array. (3) Retorne SOMENTE o objeto JSON, sem texto antes ou depois, sem markdown.';
+  const userPrompt = `Artigo sobre: "${aiSelected.titulo}" — ângulo: "${aiSelected.angulo}" — categoria: "${aiSelected.categoria}".
+
+Retorne exatamente este JSON (substitua os exemplos pelo conteúdo real):
+{"title":"${aiSelected.titulo}","category":"${aiSelected.categoria}","kicker":"${aiSelected.categoria} · ${now.getFullYear()}","excerpt":"resumo do artigo em até 200 caracteres","lede":"frase de impacto de abertura sem aspas duplas","ledeCite":"— Fonte se for citação real","date":"${dateStr}","readTime":"7 min","tags":["tag1","tag2","tag3","tag4"],"stats":[{"num":"80","suffix":"M","label":"processos ativos no Brasil"},{"num":"39","suffix":"M","label":"novas demandas por ano"},{"num":"3","suffix":"x","label":"crescimento em 5 anos"}],"sections":[{"label":"01 · O que é","title":"Título desta seção","paragraphs":["Primeiro parágrafo completo sem aspas duplas.","Segundo parágrafo completo."],"quote":{"text":"citação sem aspas duplas internas","cite":"— Autor, cargo"},"featureBox":{"title":"Como funciona","items":["Item um","Item dois","Item três"]}},{"label":"02 · Contexto","title":"Título da seção 2","paragraphs":["Parágrafo 1.","Parágrafo 2.","Parágrafo 3."]},{"label":"03 · Impacto","title":"Título da seção 3","paragraphs":["Parágrafo 1.","Parágrafo 2."],"highlight":"Texto de destaque especial desta seção sem aspas duplas."},{"label":"04 · Análise","title":"Título da seção 4","paragraphs":["Parágrafo 1.","Parágrafo 2."],"featureBox":{"title":"Pontos de atenção","items":["Ponto um","Ponto dois","Ponto três"]}},{"label":"05 · Conclusão","title":"Título da seção 5","paragraphs":["Parágrafo 1.","Parágrafo 2.","Parágrafo 3."]}]}`;
+
+  try {
+    const messages = [{ role: 'system', content: sysPrompt }, { role: 'user', content: userPrompt }];
+    let raw, art, lastErr;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      status.textContent = attempt === 1 ? 'Escrevendo artigo…' : `Tentativa ${attempt}/3…`;
+      try {
+        raw = await callAI(messages, 0.7);
+        art = parseJSON(raw);
+        break;
+      } catch(err) { lastErr = err; }
+    }
+    if (!art) throw lastErr;
+
+    openArticlePreview(art, aiSelected, dateStr);
+    status.textContent = '';
+
+  } catch(e) {
+    status.textContent = 'Erro: ' + e.message;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Gerar artigo →';
+}
+
+/* ══════════════════════════════════════
+   PRÉVIA DO ARTIGO
+══════════════════════════════════════ */
+let _previewArtData = null;
+
+function openArticlePreview(artJSON, aiSelected, dateStr) {
+  _previewArtData = { artJSON, aiSelected, dateStr };
+  const html = buildPreviewHTML(artJSON);
+  document.getElementById('preview-article-content').innerHTML = html;
+  document.getElementById('article-preview-modal').classList.add('open');
+  document.getElementById('article-preview-modal').scrollTop = 0;
+}
+
+function closeArticlePreview() {
+  document.getElementById('article-preview-modal').classList.remove('open');
+  _previewArtData = null;
+}
+
+function openEditArticlePanel() {
+  const panel = document.getElementById('edit-article-panel');
+  const btn   = document.getElementById('btn-edit-article');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'flex';
+  btn.textContent = isOpen ? '✏ Editar' : '✕ Fechar edição';
+}
+
+async function applyAIEdit() {
+  if (!_previewArtData) return;
+  const instructions = document.getElementById('edit-instructions-input').value.trim();
+  if (!instructions) { alert('Descreva o que deseja alterar no artigo.'); return; }
+
+  const btn    = document.getElementById('btn-apply-edit');
+  const status = document.getElementById('edit-panel-status');
+  btn.disabled = true;
+  btn.textContent = 'Processando…';
+  status.textContent = 'Enviando para a IA…';
+
+  try {
+    const articleText = JSON.stringify(_previewArtData.artJSON);
+    const url = localStorage.getItem('fa_n8n_url') || '';
+    if (!url) throw new Error('n8n Webhook URL não configurada.');
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        edit_instructions: instructions,
+        article: articleText
+      })
+    });
+    const rawText = await res.text().catch(() => '');
+    if (!res.ok) throw new Error('n8n HTTP ' + res.status);
+    if (!rawText || !rawText.trim()) throw new Error('n8n retornou resposta vazia.');
+
+    let data;
+    try { data = JSON.parse(rawText); } catch(e) { data = null; }
+    const item = Array.isArray(data) ? data[0] : data;
+    const revised = item?.text || item?.json?.text || rawText.trim();
+
+    // Tenta reparsar como JSON de artigo; senão guarda como texto
+    let newArt;
+    try { newArt = parseJSON(revised); } catch(e) { newArt = Object.assign({}, _previewArtData.artJSON, { _rawEdited: revised }); }
+
+    _previewArtData.artJSON = newArt;
+    document.getElementById('preview-article-content').innerHTML = buildPreviewHTML(newArt);
+    document.getElementById('edit-instructions-input').value = '';
+    status.textContent = '✓ Artigo atualizado com sucesso.';
+    document.getElementById('edit-article-panel').style.display = 'none';
+    document.getElementById('btn-edit-article').textContent = '✏ Editar';
+  } catch(e) {
+    status.textContent = 'Erro: ' + e.message;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Aplicar IA';
+}
+
+function applyManualEdit() {
+  if (!_previewArtData) return;
+  const instructions = document.getElementById('edit-instructions-input').value.trim();
+  if (!instructions) { alert('Digite o texto ou as alterações manuais no campo acima.'); return; }
+  // Guarda como nota de edição manual no campo excerpt
+  _previewArtData.artJSON = Object.assign({}, _previewArtData.artJSON, {
+    excerpt: instructions
+  });
+  document.getElementById('edit-panel-status').textContent = '✓ Alteração salva. Será publicada junto ao artigo.';
+  document.getElementById('edit-instructions-input').value = '';
+}
+
+async function publishPreviewArticle() {
+  if (!_previewArtData) return;
+  const { artJSON, aiSelected, dateStr } = _previewArtData;
+  const title    = artJSON.title    || aiSelected.titulo;
+  const category = artJSON.category || aiSelected.categoria;
+  const excerpt  = artJSON.excerpt  || '';
+  const content  = JSON.stringify(artJSON);
+  const date     = artJSON.date     || dateStr;
+  const readTime = artJSON.readTime || '5 min';
+  const id = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Date.now().toString(36);
+  const url = 'blog/reader.html?id=' + encodeURIComponent(id);
+
+  const sendNewsletter = document.getElementById('chk-send-newsletter')?.checked;
+  closeArticlePreview();
+  const snapshot = ALL_ARTICLES.slice();
+  const newArticle = { id, title, category, excerpt, content, url, photo: '', date, readTime, published: true };
+  ALL_ARTICLES.unshift(newArticle);
+  showToast('Publicando…');
+  const sbOk = await sbSaveArticle(newArticle);
+  const ok = await pushArticlesToGitHub();
+  if (ok || sbOk) {
+    renderBlog();
+    if (!ok && sbOk) {
+      showToast('⚠ Salvo no Supabase, mas falhou no GitHub. Verifique o token do GitHub nas configurações.');
+    } else if (ok) {
+      if (sendNewsletter) {
+        showToast('✓ Artigo publicado no site! Abrindo newsletter…');
+        setTimeout(() => openEmailModal(id), 600);
+      } else {
+        showToast('✓ Artigo publicado no site!');
+      }
+    }
+  } else {
+    ALL_ARTICLES = snapshot;
+    renderBlog();
+    showToast('⚠ Falha ao publicar. Verifique o token do GitHub e a conexão.');
+  }
+}
+
+function buildPreviewHTML(d) {
+  const e = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const eSVG = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let h = '';
+
+  // Header
+  h += '<header class="article-header">'
+    + '<div class="article-kicker">' + e(d.kicker || d.category) + '</div>'
+    + '<h1>' + e(d.title) + '</h1>'
+    + '<div class="article-meta"><span>' + e(d.date||'') + '</span><span class="sep">·</span><span>' + e(d.category) + '</span>'
+    + (d.readTime ? '<span class="sep">·</span><span>' + e(d.readTime) + ' de leitura</span>' : '')
+    + '</div>';
+  if (d.lede) {
+    h += '<p class="article-lede">\u201c' + e(d.lede) + '\u201d';
+    if (d.ledeCite) h += '<br>' + e(d.ledeCite);
+    h += '</p>';
+  }
+  h += '</header>';
+
+  // SVG cover
+  const kicker = (d.kicker || d.category || '').toUpperCase().substring(0,42);
+  const words = (d.title||'').split(' ');
+  const mid = Math.ceil(words.length/2);
+  let l1 = words.slice(0,mid).join(' ').toUpperCase();
+  let l2 = words.slice(mid).join(' ').toUpperCase();
+  if (l1.length>16) l1=l1.substring(0,16)+'\u2026';
+  if (l2.length>16) l2=l2.substring(0,16)+'\u2026';
+  const fs = Math.min(68,Math.max(38,Math.floor(900/Math.max(l1.length,l2.length,1))));
+  const y2 = 155+fs+12, divY = y2+fs+10;
+  const svg = '<svg width="100%" viewBox="0 0 680 420" xmlns="http://www.w3.org/2000/svg">'
+    +'<defs><linearGradient id="p-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0b1e38"/><stop offset="100%" stop-color="#0d2a4a"/></linearGradient>'
+    +'<radialGradient id="p-glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#1a5fa8" stop-opacity="0.35"/><stop offset="100%" stop-color="#0b1e38" stop-opacity="0"/></radialGradient>'
+    +'<linearGradient id="p-div" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#0D2B5E" stop-opacity="0"/><stop offset="20%" stop-color="#0D2B5E" stop-opacity="1"/><stop offset="80%" stop-color="#0D2B5E" stop-opacity="1"/><stop offset="100%" stop-color="#0D2B5E" stop-opacity="0"/></linearGradient>'
+    +'<clipPath id="p-clip"><rect x="0" y="0" width="680" height="420"/></clipPath></defs>'
+    +'<rect x="0" y="0" width="680" height="420" fill="url(#p-bg)"/>'
+    +'<rect x="0" y="0" width="680" height="420" fill="url(#p-glow)"/>'
+    +'<g opacity="0.12" clip-path="url(#p-clip)"><circle cx="580" cy="200" r="180" fill="none" stroke="#4a90d9" stroke-width="0.8"/><circle cx="580" cy="200" r="130" fill="none" stroke="#4a90d9" stroke-width="0.6"/><circle cx="580" cy="200" r="80" fill="none" stroke="#4a90d9" stroke-width="0.5"/></g>'
+    +'<circle cx="580" cy="200" r="22" fill="#1a5fa8" opacity="0.5"/><circle cx="580" cy="200" r="14" fill="#2a7fce" opacity="0.6"/><circle cx="580" cy="200" r="6" fill="#4a9fe8"/>'
+    +'<rect x="40" y="40" width="4" height="340" rx="2" fill="#0D2B5E" opacity="0.9"/>'
+    +'<rect x="56" y="44" width="210" height="22" rx="3" fill="#0D2B5E" opacity="0.18"/>'
+    +'<text x="68" y="59" font-family="\'IBM Plex Mono\',monospace" font-size="10" fill="#e87060" letter-spacing="2">'+eSVG(kicker)+'</text>'
+    +'<text x="56" y="155" font-family="\'Sora\',sans-serif" font-size="'+fs+'" font-weight="700" fill="#f0ece0" letter-spacing="-2" opacity="0.97">'+eSVG(l1)+'</text>'
+    +(l2?'<text x="56" y="'+y2+'" font-family="\'Sora\',sans-serif" font-size="'+fs+'" font-weight="700" fill="#f0ece0" letter-spacing="-2" opacity="0.85">'+eSVG(l2)+'</text>':'')
+    +'<rect x="56" y="'+divY+'" width="320" height="2" rx="1" fill="url(#p-div)"/>'
+    +'<text x="44" y="412" font-family="\'IBM Plex Mono\',monospace" font-size="9" fill="#5a7a9a" letter-spacing="1.5">'+eSVG(kicker)+'</text>'
+    +'<text x="636" y="412" text-anchor="end" font-family="\'IBM Plex Mono\',monospace" font-size="9" fill="#5a7a9a" letter-spacing="1">FALAW BLOG</text>'
+    +'</svg>';
+  h += '<div class="article-cover">' + svg + '<p class="article-cover-caption">' + e(d.title) + ' · Falaw Blog · ' + e(d.date||'') + '</p></div>';
+
+  // Stats
+  if (d.stats && d.stats.length) {
+    h += '<div class="article-stats" role="region">';
+    d.stats.forEach(s => { h += '<div class="article-stat-cell"><div class="article-stat-num">'+e(s.num)+'<span>'+e(s.suffix||'')+'</span></div><div class="article-stat-label">'+e(s.label||'').replace(/\n/g,'<br>')+'</div></div>'; });
+    h += '</div>';
+  }
+
+  // Sections
+  h += '<div class="article-body">';
+  (d.sections||[]).forEach((sec, i) => {
+    h += '<div class="article-section">';
+    if (sec.label) h += '<div class="article-section-label">'+e(sec.label)+'</div>';
+    if (sec.title) h += '<h2>'+e(sec.title)+'</h2>';
+    if (sec.quote) h += '<blockquote class="article-pull-quote"><p>\u201c'+e(sec.quote.text)+'\u201d</p>'+(sec.quote.cite?'<cite>'+e(sec.quote.cite)+'</cite>':'')+'</blockquote>';
+    const ps = sec.paragraphs||[], half = Math.ceil(ps.length/2);
+    ps.slice(0,half).forEach(p => { h += '<p>'+e(p)+'</p>'; });
+    if (sec.featureBox) { h += '<div class="article-feature-box"><h3>'+e(sec.featureBox.title||'')+'</h3><ul>'; (sec.featureBox.items||[]).forEach(item => { h += '<li>'+e(item)+'</li>'; }); h += '</ul></div>'; }
+    ps.slice(half).forEach(p => { h += '<p>'+e(p)+'</p>'; });
+    if (sec.highlight) h += '<div class="article-highlight"><p>'+e(sec.highlight)+'</p></div>';
+    if (sec.timeline) { h += '<div class="article-timeline">'; sec.timeline.forEach(t => { h += '<div class="article-timeline-item"><div class="article-timeline-year">'+e(t.year)+'</div><h4>'+e(t.title)+'</h4><p>'+e(t.text)+'</p></div>'; }); h += '</div>'; }
+    h += '</div>';
+    if (i < (d.sections||[]).length-1) h += '<div class="article-ornament" aria-hidden="true">\u2726 \u2726 \u2726</div>';
+  });
+  h += '</div>';
+
+  // End
+  h += '<div class="article-end"><p class="article-end-meta">Falaw · Blog Jurídico · '+e(d.date||'')+'</p>';
+  if (d.tags && d.tags.length) { h += '<div class="article-tags">'; d.tags.forEach(t => { h += '<span class="article-tag">'+e(t)+'</span>'; }); h += '</div>'; }
+  h += '</div>';
+  return h;
+}
+
+/* Close modals on overlay click */
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) {
+      closePostModal();
+      closeMemberModal();
+      closeEmailModal();
+    }
+  });
+});
+
+/* ══════════════════════════════════════
+   E-MAIL
+══════════════════════════════════════ */
+const SITE_BASE = 'https://www.falaw.com.br/';
+let emailArticle = null;
+let emailMode = 'newsletter';
+
+/* ── DIGEST (semanal / mensal) ─────────────────────────── */
+let digestArticles = [];
+let digestPeriodLabel = '';
+
+const MONTHS_PT_LABEL = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+function openDigestModal(type) {
+  const now = new Date();
+  const curMonth = MONTHS_PT_LABEL[now.getMonth()];
+  const curYear  = now.getFullYear();
+
+  let filtered = [];
+  let label = '';
+
+  if (type === 'month') {
+    label = curMonth.charAt(0).toUpperCase() + curMonth.slice(1) + ' de ' + curYear;
+    filtered = (ALL_ARTICLES || []).filter(a => {
+      if (!a.published) return false;
+      const d = (a.date || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const m = MONTHS_PT_LABEL[now.getMonth()].normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      return d.includes(m) && d.includes(String(curYear));
+    });
+  } else {
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    filtered = (ALL_ARTICLES || []).filter(a => {
+      if (!a.published) return false;
+      if (a.created_at) return new Date(a.created_at) >= weekAgo;
+      // fallback: mesmo mês/ano
+      const d = (a.date || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const m = MONTHS_PT_LABEL[now.getMonth()].normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      return d.includes(m) && d.includes(String(curYear));
+    });
+    // formata período "01/05 a 08/05/2026"
+    const fmt = d => d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    label = 'Semana ' + fmt(weekAgo) + ' a ' + fmt(now) + '/' + curYear;
+  }
+
+  if (!filtered.length) {
+    alert('Nenhum artigo publicado no período selecionado.'); return;
+  }
+
+  digestArticles    = filtered;
+  digestPeriodLabel = label;
+
+  document.getElementById('digest-modal-title').textContent = 'Newsletter — ' + label;
+  document.getElementById('digest-subject').value = 'Newsletter Falaw · ' + label;
+  document.getElementById('digest-extra-emails').value = '';
+
+  const subs = load(KEYS.newsletter) || [];
+  const subList = document.getElementById('digest-subscribers-list');
+  subList.innerHTML = subs.length
+    ? subs.map(s => `<span style="margin-right:12px;">${escHtml(s.email)}</span>`).join('')
+    : '<span style="color:var(--c-muted);font-size:12px;">Nenhum inscrito ainda.</span>';
+
+  document.getElementById('digest-articles-list').innerHTML =
+    filtered.map(a => `<div>• <strong>${escHtml(a.title)}</strong> <span style="color:var(--text-muted)">(${escHtml(a.date||'')})</span></div>`).join('');
+
+  const html = generateDigestEmailHTML(filtered, label);
+  const frame = document.getElementById('digest-preview-frame');
+  frame.innerHTML = '<iframe srcdoc="" style="width:100%;border:none;min-height:520px;" title="Pré-visualização"></iframe>';
+  frame.querySelector('iframe').srcdoc = html;
+
+  document.getElementById('digest-modal').classList.add('open');
+}
+
+function closeDigestModal() {
+  document.getElementById('digest-modal').classList.remove('open');
+}
+
+function generateDigestEmailHTML(articles, periodLabel) {
+  const base = SITE_BASE;
+  const articleCards = articles.map(a => {
+    const url = a.url ? (base + a.url) : base;
+    return `
+  <tr><td style="background:#ffffff;padding:32px 40px 0;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#0D2B5E;margin:0 0 10px 0;">${escHtml(a.category||'')}</p>
+    <h2 style="font-family:Georgia,serif;font-size:20px;font-weight:700;color:#060E1A;margin:0 0 10px 0;line-height:1.3;">${escHtml(a.title)}</h2>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#7A7672;margin:0 0 14px 0;">${escHtml(a.date||'')}</p>
+    <p style="font-family:Georgia,serif;font-size:15px;line-height:1.7;color:#1a1a1a;margin:0 0 18px 0;">${escHtml(a.excerpt||'')}</p>
+    <table cellpadding="0" cellspacing="0" style="margin-bottom:8px;"><tr>
+      <td style="background:#0D2B5E;border-radius:2px;">
+        <a href="${url}" style="display:inline-block;padding:12px 24px;font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#ffffff;text-decoration:none;">Ler artigo &rarr;</a>
+      </td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="background:#ffffff;padding:24px 40px 0;"><hr style="border:none;border-top:1px solid rgba(26,10,13,.08);margin:0;"></td></tr>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Digest Falaw &middot; ${escHtml(periodLabel)}</title></head>
+<body style="margin:0;padding:0;background:#f4f2ef;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+  <!-- Header -->
+  <tr><td style="background:#060E1A;padding:28px 40px;border-radius:4px 4px 0 0;">
+    <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" alt="Falaw Advogados" style="display:block;height:36px;width:auto;margin-bottom:14px;" />
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#4a90d9;margin:0 0 6px 0;">NEWSLETTER FALAW</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.35);margin:0;">${escHtml(periodLabel)}</p>
+  </td></tr>
+
+  <!-- Intro -->
+  <tr><td style="background:#ffffff;padding:32px 40px 24px;">
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.7;color:#060E1A;margin:0;">Confira os artigos publicados pela Falaw no período de <strong>${escHtml(periodLabel)}</strong>:</p>
+  </td></tr>
+  <tr><td style="background:#ffffff;padding:0 40px;"><hr style="border:none;border-top:1px solid rgba(26,10,13,.08);margin:0;"></td></tr>
+
+  ${articleCards}
+
+  <!-- Footer -->
+  <tr><td style="background:#f7f5f2;padding:24px 40px;border-radius:0 0 4px 4px;margin-top:8px;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;color:#7A7672;margin:0;">Av. Francisco Matarazzo, 1752 &middot; Salas 414 e 415 &middot; S&atilde;o Paulo / SP</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
+function copyDigestHTML() {
+  if (!digestArticles.length) return;
+  navigator.clipboard.writeText(generateDigestEmailHTML(digestArticles, digestPeriodLabel))
+    .then(() => showToast('HTML do digest copiado!'));
+}
+
+async function sendDigestViaN8N() {
+  const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
+  if (!n8nBase) { showToast('URL do n8n não configurada.'); return; }
+  if (!digestArticles.length) return;
+
+  const subject = document.getElementById('digest-subject').value.trim() || ('Newsletter Falaw · ' + digestPeriodLabel);
+  const html    = generateDigestEmailHTML(digestArticles, digestPeriodLabel);
+  const subs    = load(KEYS.newsletter) || [];
+  const extraRaw = document.getElementById('digest-extra-emails').value || '';
+  const extraEmails = extraRaw.split(',').map(e => e.trim()).filter(e => e.includes('@'));
+  const subscribers = [...new Set([...subs.map(s => s.email).filter(Boolean), ...extraEmails])];
+
+  if (!subscribers.length) { showToast('Nenhum destinatário definido.'); return; }
+
+  const btn = document.getElementById('btn-send-digest');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+
+  try {
+    const res = await fetch(n8nBase + '/falaw-newsletter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, html, subscribers })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('✓ Digest enviado para ' + subscribers.length + ' inscrito(s)!');
+    closeDigestModal();
+  } catch(e) {
+    showToast('Erro ao enviar: ' + e.message);
+  }
+
+  btn.disabled = false; btn.textContent = 'Enviar agora →';
+}
+
+function openEmailModal(id) {
+  emailArticle = ALL_ARTICLES.find(a => a.id === id);
+  if (!emailArticle) return;
+
+  // Subject
+  document.getElementById('email-subject').value =
+    'Newsletter Falaw · ' + emailArticle.title;
+
+  // Subscribers list
+  const subs = load(KEYS.newsletter) || [];
+  const subList = document.getElementById('email-subscribers-list');
+  if (subs.length) {
+    subList.innerHTML = subs.map(s => `<span style="margin-right:12px;">${escHtml(s.email)}</span>`).join('');
+  } else {
+    subList.innerHTML = '<span style="color:var(--c-muted);font-size:12px;">Nenhum inscrito ainda.</span>';
+  }
+
+  setEmailMode('newsletter');
+  renderEmailPreview();
+  document.getElementById('email-modal').classList.add('open');
+}
+
+function closeEmailModal() {
+  document.getElementById('email-modal').classList.remove('open');
+}
+
+function setEmailMode(mode) {
+  emailMode = mode;
+  document.getElementById('email-mode-newsletter').hidden = mode !== 'newsletter';
+  document.getElementById('email-mode-custom').hidden     = mode !== 'custom';
+  document.getElementById('tab-newsletter-btn').classList.toggle('active', mode === 'newsletter');
+  document.getElementById('tab-custom-btn').classList.toggle('active', mode === 'custom');
+}
+
+function renderEmailPreview() {
+  const html = generateEmailHTML(emailArticle);
+  const frame = document.getElementById('email-preview-frame');
+  // Use srcdoc iframe for isolated preview
+  frame.innerHTML = '<iframe srcdoc="" style="width:100%;border:none;min-height:420px;" title="Pré-visualização do e-mail"></iframe>';
+  frame.querySelector('iframe').srcdoc = html;
+}
+
+function generateEmailHTML(a) {
+  const base = SITE_BASE;
+  const articleUrl = a.url ? (base + a.url) : base;
+  const preview = a.excerpt || '';
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escHtml(a.title)}</title></head>
+<body style="margin:0;padding:0;background:#f4f2ef;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+  <!-- Header -->
+  <tr><td style="background:#060E1A;padding:28px 40px;border-radius:4px 4px 0 0;">
+    <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" alt="Falaw Advogados" style="display:block;height:36px;width:auto;margin-bottom:14px;" />
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#4a90d9;margin:0 0 6px 0;">NEWSLETTER FALAW</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.35);margin:0;">${escHtml(a.category)}</p>
+  </td></tr>
+
+  <!-- Body -->
+  <tr><td style="background:#ffffff;padding:40px;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#0D2B5E;margin:0 0 16px 0;">${escHtml(a.category)}</p>
+    <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:700;color:#060E1A;margin:0 0 14px 0;line-height:1.25;">${escHtml(a.title)}</h1>
+    <p style="font-family:monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#7A7672;margin:0 0 28px 0;">${escHtml(a.date || '')}${a.date && a.readTime ? ' &nbsp;·&nbsp; ' : ''}${escHtml(a.readTime || '')}${a.readTime ? ' de leitura' : ''}</p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.75;color:#060E1A;margin:0 0 32px 0;">${escHtml(preview)}</p>
+    <table cellpadding="0" cellspacing="0"><tr>
+      <td style="background:#0D2B5E;border-radius:2px;">
+        <a href="${articleUrl}" style="display:inline-block;padding:14px 28px;font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#ffffff;text-decoration:none;">Ler artigo completo &rarr;</a>
+      </td>
+    </tr></table>
+  </td></tr>
+
+  <!-- Divider -->
+  <tr><td style="background:#ffffff;padding:0 40px;"><hr style="border:none;border-top:1px solid rgba(26,10,13,.08);margin:0;"></td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background:#f7f5f2;padding:24px 40px;border-radius:0 0 4px 4px;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;color:#7A7672;margin:0;">Av. Francisco Matarazzo, 1752 &middot; Salas 414 e 415 &middot; São Paulo / SP</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
+function copyEmailHTML() {
+  if (!emailArticle) return;
+  navigator.clipboard.writeText(generateEmailHTML(emailArticle)).then(() => {
+    const msg = document.getElementById('copy-success-msg');
+    msg.classList.add('show');
+    setTimeout(() => msg.classList.remove('show'), 2500);
+  });
+}
+
+async function sendNewsletterViaN8N() {
+  const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
+  if (!n8nBase) { showToast('URL do n8n não configurada.'); return; }
+  const url = n8nBase + '/falaw-newsletter';
+
+  if (!emailArticle) return;
+  const subject = document.getElementById('email-subject').value.trim() || ('Newsletter Falaw · ' + emailArticle.title);
+  const html = generateEmailHTML(emailArticle);
+
+  let subscribers = [];
+  if (emailMode === 'newsletter') {
+    const subs = load(KEYS.newsletter) || [];
+    subscribers = subs.map(s => s.email).filter(Boolean);
+  } else {
+    const raw = document.getElementById('email-custom-to').value.trim();
+    subscribers = raw.split(/[,;\s]+/).filter(Boolean);
+  }
+
+  if (!subscribers.length) { showToast('Nenhum destinatário.'); return; }
+
+  const btn = document.getElementById('btn-send-newsletter');
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, html, subscribers })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    showToast('✓ Newsletter enviada para ' + subscribers.length + ' inscrito(s)!');
+    closeEmailModal();
+  } catch(e) {
+    showToast('Erro ao enviar: ' + e.message);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Enviar agora →';
+}
+
+function sendEmailViaMailto() {
+  if (!emailArticle) return;
+  const subject = encodeURIComponent(document.getElementById('email-subject').value.trim() || ('Newsletter Falaw · ' + emailArticle.title));
+
+  let to = '';
+  if (emailMode === 'newsletter') {
+    const subs = load(KEYS.newsletter) || [];
+    to = subs.map(s => s.email).join(',');
+  } else {
+    to = document.getElementById('email-custom-to').value.trim();
+  }
+
+  // Gmail não suporta HTML no body via URL — envia o HTML para a área de transferência
+  // e abre o Gmail em modo compose para o usuário colar.
+  const htmlContent = generateEmailHTML(emailArticle);
+  navigator.clipboard.writeText(htmlContent).then(() => {
+    showToast('HTML copiado! Cole (Ctrl+V) no corpo do e-mail no Gmail.');
+  }).catch(() => {});
+
+  const gmailUrl = 'https://mail.google.com/mail/?view=cm'
+    + '&to=' + encodeURIComponent(to)
+    + '&su=' + subject;
+
+  window.open(gmailUrl, '_blank', 'noopener,noreferrer');
+}
+
+/* ══════════════════════════════════════════
+   ÁREA DO CLIENTE
+══════════════════════════════════════════ */
+const CLI_KEY = 'falaw_portal';
+
+function getClients()           { try { return JSON.parse(localStorage.getItem(CLI_KEY)) || []; } catch { return []; } }
+async function saveClients(list) {
+  localStorage.setItem(CLI_KEY, JSON.stringify(list)); // cache local imediato
+  return sbSaveClients(list);                          // salva no Supabase (aguarda)
+}
+function cliUID()           { return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+
+function genCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'FALAW-';
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  document.getElementById('cli-code').value = code;
+}
+
+function openClientModal(clientId) {
+  document.getElementById('clientModal').classList.add('open');
+  if (clientId) {
+    const c = getClients().find(x => x.id === clientId);
+    if (!c) return;
+    document.getElementById('clientModalTitle').textContent = 'Editar Cliente';
+    document.getElementById('cli-id').value      = c.id;
+    document.getElementById('cli-company').value      = c.company || c.name || '';
+    document.getElementById('cli-email').value         = c.email;
+    document.getElementById('cli-notify-email').value  = c.notifyEmail || '';
+    document.getElementById('cli-code').value          = c.code;
+  } else {
+    document.getElementById('clientModalTitle').textContent = 'Novo Cliente';
+    document.getElementById('cli-id').value             = '';
+    document.getElementById('cli-company').value        = '';
+    document.getElementById('cli-email').value          = '';
+    document.getElementById('cli-notify-email').value   = '';
+    document.getElementById('cli-code').value           = '';
+    genCode();
+  }
+}
+
+function closeClientModal() { document.getElementById('clientModal').classList.remove('open'); }
+
+async function saveClient() {
+  const company     = document.getElementById('cli-company').value.trim();
+  const email       = document.getElementById('cli-email').value.trim().toLowerCase();
+  const notifyEmail = document.getElementById('cli-notify-email').value.trim().toLowerCase();
+  const code        = document.getElementById('cli-code').value.trim();
+  const id          = document.getElementById('cli-id').value;
+
+  if (!company || !email || !code) { alert('Preencha empresa, e-mail e código de acesso.'); return; }
+
+  const clients = getClients();
+
+  if (id) {
+    const idx = clients.findIndex(c => c.id === id);
+    if (idx >= 0) clients[idx] = { ...clients[idx], name: company, company, email, notifyEmail, code };
+  } else {
+    clients.push({ id: cliUID(), name: company, company, email, notifyEmail, code, createdAt: new Date().toISOString(), reports: [] });
+  }
+
+  const ok = await saveClients(clients);
+  if (ok) {
+    closeClientModal();
+    renderClients();
+    showToast('✓ Cliente salvo no Supabase.');
+  }
+}
+
+async function deleteClient(id) {
+  if (!confirm('Excluir este cliente e todos os seus relatórios?')) return;
+  const existing = getClients().find(c => c.id === id);
+  (existing?.reports || []).forEach(r => {
+    if (r.fileUrl) sbDeleteReport(r.fileUrl);
+  });
+  const { error } = await sbDeleteClientRecord(id);
+  if (error) { showToast('⚠️ Erro ao excluir: ' + error.message); return; }
+  const clients = getClients().filter(c => c.id !== id);
+  localStorage.setItem(CLI_KEY, JSON.stringify(clients));
+  renderClients();
+  showToast('✓ Cliente excluído.');
+}
+
+function toggleClientBody(id) {
+  const el = document.getElementById('cbody-' + id);
+  el.classList.toggle('open');
+}
+
+/* Reports */
+let _repClientId = null;
+
+function openReportModal(clientId) {
+  _repClientId = clientId;
+  document.getElementById('rep-client-id').value = clientId;
+  document.getElementById('rep-title').value  = '';
+  document.getElementById('rep-period').value = '';
+  document.getElementById('rep-desc').value = '';
+  document.getElementById('rep-file').value = '';
+  document.getElementById('rep-stats-preview').style.display = 'none';
+  document.getElementById('rep-stats-status').style.display  = 'none';
+  document.getElementById('rep-stats-grid').innerHTML = '';
+  window._repExtractedStats = null;
+  document.getElementById('rep-upload-progress').style.display = 'none';
+  document.getElementById('repSaveBtn').disabled = false;
+  document.getElementById('reportModal').classList.add('open');
+}
+
+function closeReportModal() { document.getElementById('reportModal').classList.remove('open'); }
+
+async function notifyClientByEmail(client, report) {
+  const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
+  if (!n8nBase) return;
+
+  const portalUrl = 'https://falaw.com.br/cliente/index.html';
+  const clientName = client.name || client.company || 'Cliente';
+  const periodLabel = report.period || '';
+  const subject = `RELATÓRIO MENSAL - ${clientName.toUpperCase()} - ${periodLabel || 'SEM PERÍODO'}`;
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>${escHtml(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f4f2ef;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+  <!-- Cabeçalho -->
+  <tr><td style="background:#060E1A;padding:32px 40px;border-radius:4px 4px 0 0;">
+    <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" alt="Falaw Advogados" style="display:block;height:36px;width:auto;margin-bottom:14px;" />
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#4a90d9;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.4);margin:0;">Portal do Cliente</p>
+  </td></tr>
+
+  <!-- Corpo -->
+  <tr><td style="background:#ffffff;padding:44px 40px 36px;">
+    <p style="font-family:Georgia,serif;font-size:18px;color:#060E1A;margin:0 0 24px 0;line-height:1.4;">
+      Olá, <strong>${escHtml(clientName)}</strong>,
+    </p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 12px 0;">
+      Seu relatório${periodLabel ? ` referente ao mês de <strong>${escHtml(periodLabel)}</strong>` : ''} já está disponível em nosso portal.
+    </p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 32px 0;">
+      Para acessá-lo, clique no botão abaixo e informe suas credenciais de acesso.
+    </p>
+
+    <!-- Botão -->
+    <table cellpadding="0" cellspacing="0" style="margin-bottom:36px;"><tr>
+      <td style="background:#0D2B5E;border-radius:3px;">
+        <a href="${portalUrl}" style="display:inline-block;padding:16px 32px;font-family:monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#ffffff;text-decoration:none;">
+          Acessar portal &rarr;
+        </a>
+      </td>
+    </tr></table>
+
+    <!-- Credenciais -->
+    <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e8e4df;border-radius:3px;margin-bottom:8px;">
+      <tr><td colspan="2" style="padding:14px 20px 10px;border-bottom:1px solid #e8e4df;">
+        <p style="font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#7A7672;margin:0;">Suas credenciais de acesso</p>
+      </td></tr>
+      <tr>
+        <td style="padding:12px 20px;font-family:monospace;font-size:11px;color:#7A7672;width:40%;border-bottom:1px solid #f0ede8;">E-mail</td>
+        <td style="padding:12px 20px;font-family:monospace;font-size:12px;color:#060E1A;font-weight:600;border-bottom:1px solid #f0ede8;">${escHtml(client.email || '')}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 20px;font-family:monospace;font-size:11px;color:#7A7672;">Código de acesso</td>
+        <td style="padding:12px 20px;font-family:monospace;font-size:12px;color:#060E1A;font-weight:600;">${escHtml(client.code || '')}</td>
+      </tr>
+    </table>
+
+    <p style="font-family:monospace;font-size:10px;color:#b0aba5;margin:20px 0 0 0;">
+      Em caso de dúvidas, entre em contato conosco respondendo este e-mail.
+    </p>
+  </td></tr>
+
+  <!-- Rodapé -->
+  <tr><td style="background:#f7f5f2;padding:24px 40px;border-radius:0 0 4px 4px;border-top:1px solid #e8e4df;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;color:#b0aba5;margin:0;">Av. Francisco Matarazzo, 1752 &middot; Salas 414 e 415 &middot; São Paulo / SP</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`;
+
+  await fetch(n8nBase + '/falaw-newsletter', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subject, html, subscribers: [client.notifyAddr || client.email] })
+  });
+}
+
+function saveReport() {
+  const clientId = document.getElementById('rep-client-id').value;
+  const title    = document.getElementById('rep-title').value.trim();
+  const period   = document.getElementById('rep-period').value.trim();
+  const desc     = document.getElementById('rep-desc').value.trim();
+  const fileEl   = document.getElementById('rep-file');
+  const file     = fileEl.files[0];
+
+  if (!title)  { alert('Informe o título do relatório.'); return; }
+  if (!file)   { alert('Selecione um arquivo.'); return; }
+
+  const btn = document.getElementById('repSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+  document.getElementById('rep-upload-progress').style.display = 'block';
+  document.getElementById('rep-progress-bar').style.width = '0%';
+
+  const reader = new FileReader();
+  reader.onprogress = e => {
+    if (e.lengthComputable) {
+      document.getElementById('rep-progress-bar').style.width = Math.round(e.loaded / e.total * 90) + '%';
+    }
+  };
+  reader.onload = async () => {
+    document.getElementById('rep-progress-bar').style.width = '100%';
+    const clients = getClients();
+    const idx = clients.findIndex(c => c.id === clientId);
+    if (idx < 0) { alert('Cliente não encontrado.'); return; }
+
+    const reportId = cliUID();
+    // Envia arquivo para Cockroach API (ou fallback legado)
+    let fileUrl = null;
+    if (getSB() || ghToken()) {
+      btn.textContent = 'Enviando arquivo…';
+      fileUrl = await sbUploadReport(reportId, file.name, reader.result);
+    }
+
+    const report = {
+      id: reportId,
+      title,
+      period,
+      description: desc,
+      fileName: file.name,
+      fileData: reader.result, // mantém local para download offline
+      fileUrl,                 // URL do GitHub para download em outros dispositivos
+      fileSize: file.size,
+      uploadedAt: new Date().toISOString(),
+      stats: window._repExtractedStats || null
+    };
+
+    clients[idx].reports = clients[idx].reports || [];
+    clients[idx].reports.push(report);
+
+    btn.textContent = 'Salvando metadados…';
+    const reportMetaSaved = await apiSaveReportMeta({
+      id: report.id,
+      clientId,
+      title: report.title,
+      period: report.period,
+      description: report.description,
+      fileName: report.fileName,
+      fileUrl: report.fileUrl,
+      fileSize: report.fileSize,
+      uploadedAt: report.uploadedAt,
+      stats: report.stats || null
+    });
+    const ok = await saveClients(clients);
+
+    // Notificação por email ao cliente
+    const notifyAddr = clients[idx].notifyEmail || clients[idx].email;
+    if (ok && notifyAddr) {
+      // Mantém o email de acesso (clients[idx].email) no template; apenas envia para notifyAddr
+      notifyClientByEmail({ ...clients[idx], notifyAddr }, report).catch(() => {});
+    }
+
+    // Auto-importar KPIs se Excel e checkbox marcado
+    const autoKpi = document.getElementById('rep-auto-kpi');
+    if (report.stats && autoKpi && autoKpi.checked) {
+      cliDashAutoSaveKpis(clientId, period || report.title, report.stats).catch(e => console.warn('KPI auto-import:', e));
+    }
+
+    setTimeout(() => {
+      closeReportModal();
+      renderClients();
+      if (ok && reportMetaSaved && fileUrl) showToast('✓ Relatório salvo e e-mail enviado ao cliente.');
+      else if (ok && reportMetaSaved)       showToast('✓ Relatório salvo no Cockroach (sem arquivo na nuvem).');
+      else if (ok)                          showToast('⚠️ Cliente salvo, mas falhou salvar relatório no Cockroach.');
+      else                                  showToast('⚠️ Erro ao salvar cliente no Supabase.');
+    }, 200);
+  };
+  reader.onerror = () => { alert('Erro ao ler o arquivo.'); btn.disabled = false; btn.textContent = 'Enviar Relatório'; };
+  reader.readAsDataURL(file);
+}
+
+/* ── EXTRAÇÃO AUTOMÁTICA DE STATS DO EXCEL ────────────────── */
+const _STAT_ALIASES = {
+  // ── Totais gerais ────────────────────────────────────────────
+  processos:          ['total de processos','total processos','quantidade de processos','qtd processos','num processos','numero de processos','nº de processos','processos'],
+  ativos:             ['processos ativos','ativos','em andamento','andamento','em curso','pendentes'],
+  favoraveis:         ['decisoes favoraveis','decisões favoráveis','favoraveis','favoráveis','ganhos','procedente','procedentes','vitórias','vitorias','favoravel','resultado favoravel','resultado favorável'],
+  desfavoraveis:      ['decisoes desfavoraveis','decisões desfavoráveis','desfavoraveis','desfavoráveis','perdas','improcedente','improcedentes','desfavoravel','resultado desfavoravel','resultado desfavorável'],
+  novas:              ['novas acoes','novas ações','novos processos','distribuidos','distribuídos','novas acoes no periodo','ingressos','novas'],
+  encerrados:         ['processos encerrados','encerrados','arquivados','finalizados','extintos','baixados','encerrado'],
+  // ── Por modalidade: ex-empregados ───────────────────────────
+  mod_exemp:          ['ex-empregado','ex empregado','ex-empregados','ex empregados','exempregados','empregado','reclamante empregado'],
+  mod_exemp_fav:      ['favoravel ex-empregado','favorável ex-empregado','fav ex-emp','favoraveis ex-empregados','favoráveis ex-empregados','ex-emp favoravel','ex-emp favorável'],
+  mod_exemp_desf:     ['desfavoravel ex-empregado','desfavorável ex-empregado','desf ex-emp','desfavoraveis ex-empregados','desfavoráveis ex-empregados','ex-emp desfavoravel'],
+  // ── Por modalidade: subsidiária / terceirização ─────────────
+  mod_terc:           ['terceirizacao','terceirização','subsidiaria','subsidiária','tomador','prestadora','terceirizado','terceirizados','empresa terceirizada'],
+  mod_terc_fav:       ['favoravel subsidiaria','favorável subsidiária','fav subsidiaria','favoraveis subsidiaria','favoráveis subsidiária','fav terceirizacao','favoravel terceirizacao','favorável terceirização'],
+  mod_terc_desf:      ['desfavoravel subsidiaria','desfavorável subsidiária','desf subsidiaria','desfavoraveis subsidiaria','desf terceirizacao','desfavoravel terceirizacao'],
+  // ── Processos suspensos ──────────────────────────────────────
+  suspensos:          ['suspensos','suspenso','processos suspensos','sobrestados','sobrestado','aguardando','sobrestamento'],
+  // ── Perícias ────────────────────────────────────────────────
+  pericias:           ['pericias','perícias','processos com pericia','processos com perícia','com pericia','tem pericia'],
+  pericias_fav:       ['perito favoravel','perito favorável','peritos favoraveis','peritos favoráveis','laudo favoravel','laudo favorável','pericia favoravel','perícia favorável'],
+  pericias_desf:      ['perito desfavoravel','perito desfavorável','peritos desfavoraveis','peritos desfavoráveis','laudo desfavoravel','laudo desfavorável','pericia desfavoravel','perícia desfavorável'],
+  // ── Juízes / Relatores ───────────────────────────────────────
+  juiz_fav:           ['juiz favoravel','juiz favorável','juizes favoraveis','juízes favoráveis','relator favoravel','relator favorável','magistrado favoravel','magistrado favorável'],
+  juiz_desf:          ['juiz desfavoravel','juiz desfavorável','juizes desfavoraveis','juízes desfavoráveis','relator desfavoravel','relator desfavorável','magistrado desfavoravel','magistrado desfavorável'],
+};
+
+// Aliases para rankings textuais (top-N)
+const _RANKING_ALIASES = {
+  perito_top:     ['principal perito','perito principal','perito mais frequente','perito recorrente','tipo de pericia mais frequente','tipo perícia mais frequente','modalidade de pericia','tipo de perícia','tipo pericia'],
+  suspensao_tema: ['tema da suspensao','tema da suspensão','motivo da suspensao','motivo suspensão','tese suspensao','tese suspensão','tese de suspensao','irdr','tema repetitivo','recurso repetitivo'],
+  polo_empresa:   ['empresa no polo','empresa polo passivo','tomadora','empresa terceirizante','outra empresa','contratante','empresa contratante','polo passivo empresa'],
+};
+
+function _norm(s) {
+  return String(s||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+function _parseNum(v) {
+  if (v === null || v === undefined || v === '') return null;
+  // Remove separadores de milhar e converte vírgula decimal
+  const s = String(v).replace(/\./g,'').replace(',','.').replace(/[^\d.-]/g,'');
+  const n = parseFloat(s);
+  // Ignora valores muito grandes (provavelmente monetários) e negativos
+  if (isNaN(n) || n < 0 || n > 99999) return null;
+  return Math.round(n);
+}
+
+function _extractStatsFromWorkbook(wb) {
+  const stats   = {};   // numéricos
+  const rankings = {};  // textuais: top-N listas
+
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    if (!ws['!ref']) continue;
+
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    const data  = XLSX.utils.sheet_to_json(ws, { header:1, defval: null });
+
+    /* ── ESTRATÉGIA 1: varredura célula a célula ─────────────────
+       Procura rótulo → valor numérico à direita ou abaixo.     */
+    for (let R = range.s.r; R <= range.e.r; R++) {
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const cell = ws[XLSX.utils.encode_cell({r:R, c:C})];
+        if (!cell || cell.v === undefined) continue;
+        const txt = _norm(String(cell.v));
+
+        // --- Numéricos ---
+        for (const [key, aliases] of Object.entries(_STAT_ALIASES)) {
+          if (stats[key] !== undefined) continue;
+          if (!aliases.some(a => txt === _norm(a) || txt.includes(_norm(a)))) continue;
+          const candidates = [
+            ws[XLSX.utils.encode_cell({r:R,   c:C+1})],
+            ws[XLSX.utils.encode_cell({r:R+1, c:C})],
+            ws[XLSX.utils.encode_cell({r:R,   c:C+2})],
+            ws[XLSX.utils.encode_cell({r:R+2, c:C})],
+          ];
+          for (const nc of candidates) {
+            if (!nc || nc.v === undefined) continue;
+            const n = _parseNum(nc.v);
+            if (n !== null) { stats[key] = n; break; }
+          }
+        }
+
+        // --- Textuais / rankings ---
+        for (const [key, aliases] of Object.entries(_RANKING_ALIASES)) {
+          if (rankings[key] !== undefined) continue;
+          if (!aliases.some(a => txt === _norm(a) || txt.includes(_norm(a)))) continue;
+          const candidates = [
+            ws[XLSX.utils.encode_cell({r:R,   c:C+1})],
+            ws[XLSX.utils.encode_cell({r:R+1, c:C})],
+            ws[XLSX.utils.encode_cell({r:R,   c:C+2})],
+          ];
+          for (const nc of candidates) {
+            if (!nc || nc.v === undefined) continue;
+            const val = String(nc.v).trim();
+            if (val.length > 0 && val.length < 200) { rankings[key] = val; break; }
+          }
+        }
+      }
+    }
+
+    /* ── ESTRATÉGIA 2: linha de cabeçalho + linha de valores ─────
+       Para tabelas com 1ª linha de rótulos e 2ª de valores.    */
+    if (!Object.keys(stats).length) {
+      for (let ri = 0; ri < Math.min(20, data.length - 1); ri++) {
+        const hdr  = data[ri].map(c => _norm(String(c||'')));
+        const vals = data[ri + 1];
+        let matched = 0;
+        const rowStats = {};
+        for (let ci = 0; ci < hdr.length; ci++) {
+          for (const [key, aliases] of Object.entries(_STAT_ALIASES)) {
+            if (rowStats[key] !== undefined) continue;
+            if (aliases.some(a => hdr[ci] === _norm(a) || hdr[ci].includes(_norm(a)))) {
+              const n = _parseNum(vals[ci]);
+              if (n !== null) { rowStats[key] = n; matched++; }
+            }
+          }
+          for (const [key, aliases] of Object.entries(_RANKING_ALIASES)) {
+            if (rankings[key] !== undefined) continue;
+            if (aliases.some(a => hdr[ci] === _norm(a) || hdr[ci].includes(_norm(a)))) {
+              const val = vals[ci] ? String(vals[ci]).trim() : null;
+              if (val && val.length > 0 && val.length < 200) rankings[key] = val;
+            }
+          }
+        }
+        if (matched >= 2) { Object.assign(stats, rowStats); break; }
+      }
+    }
+
+    /* ── ESTRATÉGIA 3: tabela de ranking (coluna nome + coluna qtd)
+       Detecta colunas "juiz","perito","empresa" + "qtd"/"total"
+       e monta top-3 automático.                                 */
+    _extractRankingColumns(data, stats, rankings);
+  }
+
+  // Normaliza: ativos → processos se necessário
+  if (stats.ativos !== undefined && stats.processos === undefined) stats.processos = stats.ativos;
+  delete stats.ativos;
+
+  // Merge rankings into stats as serialized strings
+  for (const [k, v] of Object.entries(rankings)) {
+    stats['_' + k] = v; // prefixo _ indica texto
+  }
+
+  return Object.keys(stats).length ? stats : null;
+}
+
+// Detecta tabelas de ranking em formato coluna-nome + coluna-qtd
+function _extractRankingColumns(data, stats, rankings) {
+  const RANK_COLS = {
+    juiz:        { aliases: ['juiz','juíz','relator','magistrado','vara','juizo','juízo'], out_fav: 'juiz_fav', out_desf: 'juiz_desf', ranking: '_juiz_ranking' },
+    perito:      { aliases: ['perito','expert','perita','peritos'], out_count: 'pericias', ranking: '_perito_ranking' },
+    empresa:     { aliases: ['empresa','tomador','tomadora','polo passivo','contratante','filial'], ranking: '_polo_empresa_ranking' },
+    suspensao:   { aliases: ['tema','motivo','tese','irdr','tema suspensao','tema suspensão'], ranking: '_suspensao_tema_ranking' },
+  };
+  const QTD_ALIASES = ['qtd','quantidade','total','processos','nº','num','count','n.'];
+  const RES_ALIASES = ['resultado','decisao','decisão','favoravel','favorável','desfavoravel','desfavorável'];
+
+  for (let ri = 0; ri < Math.min(50, data.length); ri++) {
+    const row = data[ri];
+    if (!row) continue;
+    const hdr = row.map(c => _norm(String(c||'')));
+
+    for (const [tipo, cfg] of Object.entries(RANK_COLS)) {
+      // Encontrar coluna de nome
+      const nameCol = hdr.findIndex(h => cfg.aliases.some(a => h.includes(_norm(a))));
+      if (nameCol < 0) continue;
+      // Encontrar coluna de quantidade
+      const qtdCol  = hdr.findIndex((h,i) => i !== nameCol && QTD_ALIASES.some(a => h.includes(a)));
+      if (qtdCol < 0) continue;
+      // Encontrar coluna de resultado (opcional)
+      const resCol  = hdr.findIndex((h,i) => i !== nameCol && i !== qtdCol && RES_ALIASES.some(a => h.includes(a)));
+
+      // Ler linhas de dados
+      const entries = [];
+      for (let di = ri + 1; di < Math.min(ri + 51, data.length); di++) {
+        const drow = data[di];
+        if (!drow || drow[nameCol] === null) continue;
+        const nome = String(drow[nameCol] || '').trim();
+        if (!nome || nome.length < 2) continue;
+        const qtd  = _parseNum(drow[qtdCol]);
+        if (qtd === null) continue;
+        const res  = resCol >= 0 ? _norm(String(drow[resCol] || '')) : null;
+        entries.push({ nome, qtd, res });
+      }
+      if (entries.length < 2) continue;
+
+      // Soma de favoráveis/desfavoráveis por juiz
+      if (tipo === 'juiz' && resCol >= 0) {
+        let fav = 0, desf = 0;
+        const favMap = {}, desfMap = {};
+        entries.forEach(e => {
+          if (['fav','favoravel','favorável','procedente'].some(a => e.res && e.res.includes(a))) {
+            fav += e.qtd; favMap[e.nome] = (favMap[e.nome]||0) + e.qtd;
+          } else if (['desf','desfavoravel','desfavorável','improcedente'].some(a => e.res && e.res.includes(a))) {
+            desf += e.qtd; desfMap[e.nome] = (desfMap[e.nome]||0) + e.qtd;
+          }
+        });
+        if (fav  > 0 && stats.juiz_fav  === undefined) stats.juiz_fav  = fav;
+        if (desf > 0 && stats.juiz_desf === undefined) stats.juiz_desf = desf;
+        // Top 3 por resultado
+        const topFav  = Object.entries(favMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n,q])=>`${n} (${q})`).join(', ');
+        const topDesf = Object.entries(desfMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n,q])=>`${n} (${q})`).join(', ');
+        if (topFav  && !rankings['juiz_fav_top'])  rankings['juiz_fav_top']  = topFav;
+        if (topDesf && !rankings['juiz_desf_top']) rankings['juiz_desf_top'] = topDesf;
+      }
+
+      // Top-3 geral por quantidade
+      const top3 = entries.sort((a,b)=>b.qtd-a.qtd).slice(0,3).map(e=>`${e.nome} (${e.qtd})`).join(', ');
+      const rkey = cfg.ranking;
+      if (rkey && !rankings[rkey.replace('_','')]) rankings[rkey.slice(1)] = top3;
+
+      // Pericias: soma total se não encontrado antes
+      if (tipo === 'perito' && stats.pericias === undefined) {
+        stats.pericias = entries.reduce((s,e)=>s+e.qtd, 0);
+        // Tipo mais frequente = primeiro do ranking
+        if (entries.length && !rankings['perito_top']) rankings['perito_top'] = entries[0].nome;
+      }
+
+      // Suspensos: soma total
+      if (tipo === 'suspensao' && stats.suspensos === undefined) {
+        const total = entries.reduce((s,e)=>s+e.qtd, 0);
+        if (total > 0) stats.suspensos = total;
+      }
+    }
+  }
+}
+
+function onRepFileChange(input) {
+  const file = input.files[0];
+  const status  = document.getElementById('rep-stats-status');
+  const preview = document.getElementById('rep-stats-preview');
+  const grid    = document.getElementById('rep-stats-grid');
+  window._repExtractedStats = null;
+  preview.style.display = 'none';
+  status.style.display  = 'none';
+
+  if (!file) return;
+  const kpiImport = document.getElementById('rep-kpi-import');
+  if (kpiImport) kpiImport.style.display = 'none';
+  if (!['xlsx','xls','csv'].includes(ext)) return; // PDF: sem extração
+
+  status.style.display = 'block';
+  status.style.color = 'var(--c-muted)';
+  status.textContent = '⏳ Analisando planilha…';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
+      const stats = _extractStatsFromWorkbook(wb);
+      if (!stats) {
+        status.textContent = '⚠️ Não foi possível identificar os dados. Verifique os nomes das colunas.';
+        status.style.color = '#F59E0B';
+        return;
+      }
+      window._repExtractedStats = stats;
+
+      // Mapa de labels e cores para exibição agrupada
+      const KPI_META = {
+        processos:       { label:'Total de Processos',        color:'#D4AD3A', group:'Geral' },
+        favoraveis:      { label:'Favoráveis (geral)',         color:'#2DD4A0', group:'Geral' },
+        desfavoraveis:   { label:'Desfavoráveis (geral)',      color:'#F87171', group:'Geral' },
+        novas:           { label:'Novas Ações',                color:'#60A5FA', group:'Geral' },
+        encerrados:      { label:'Encerrados',                 color:'#A78BFA', group:'Geral' },
+        andamento:       { label:'Em Andamento',               color:'#FBBF24', group:'Geral' },
+        mod_exemp:       { label:'Ex-empregados',              color:'#D4AD3A', group:'Modalidade' },
+        mod_exemp_fav:   { label:'Fav. Ex-empregados',         color:'#2DD4A0', group:'Modalidade' },
+        mod_exemp_desf:  { label:'Desf. Ex-empregados',        color:'#F87171', group:'Modalidade' },
+        mod_terc:        { label:'Subsidiária/Terceirização',  color:'#60A5FA', group:'Modalidade' },
+        mod_terc_fav:    { label:'Fav. Terceirização',         color:'#34D399', group:'Modalidade' },
+        mod_terc_desf:   { label:'Desf. Terceirização',        color:'#FB923C', group:'Modalidade' },
+        suspensos:       { label:'Suspensos',                  color:'#94A3B8', group:'Suspensões' },
+        pericias:        { label:'Com Perícia',                color:'#C084FC', group:'Perícias' },
+        pericias_fav:    { label:'Perito Favorável',           color:'#2DD4A0', group:'Perícias' },
+        pericias_desf:   { label:'Perito Desfavorável',        color:'#F87171', group:'Perícias' },
+        juiz_fav:        { label:'Juíz/Relator Favorável',     color:'#2DD4A0', group:'Juízes' },
+        juiz_desf:       { label:'Juíz/Relator Desfavorável',  color:'#F87171', group:'Juízes' },
+      };
+      const TEXT_META = {
+        perito_top:          'Tipo de Perícia Mais Frequente',
+        suspensao_tema:      'Tema das Suspensões',
+        polo_empresa:        'Empresa no Polo',
+        juiz_fav_top:        'Top Juízes Favoráveis',
+        juiz_desf_top:       'Top Juízes Desfavoráveis',
+        perito_ranking:      'Ranking de Peritos',
+        polo_empresa_ranking:'Ranking Empresas Polo',
+        suspensao_tema_ranking:'Ranking Temas Suspensos',
+        juiz_ranking:        'Ranking Juízes',
+      };
+
+      // Separar numéricos e textuais
+      const numEntries  = Object.entries(stats).filter(([k]) => !k.startsWith('_'));
+      const textEntries = Object.entries(stats).filter(([k]) => k.startsWith('_')).map(([k,v]) => [k.slice(1), v]);
+
+      // Agrupar numéricos
+      const groups = {};
+      numEntries.forEach(([k, v]) => {
+        const meta  = KPI_META[k] || { label: k, color: '#fff', group: 'Outros' };
+        if (!groups[meta.group]) groups[meta.group] = [];
+        groups[meta.group].push({ k, v, meta });
+      });
+
+      let html = '';
+      for (const [grp, items] of Object.entries(groups)) {
+        html += `<div style="margin-bottom:12px">
+          <div style="font-family:var(--f-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:6px">${grp}</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px">`;
+        items.forEach(({ k, v, meta }) => {
+          html += `<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:8px 10px">
+            <div style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted);margin-bottom:3px">${meta.label}</div>
+            <div style="font-family:var(--f-display);font-size:18px;font-weight:700;color:${meta.color}">${v}</div>
+          </div>`;
+        });
+        html += `</div></div>`;
+      }
+
+      // Textuais
+      if (textEntries.length) {
+        html += `<div style="margin-top:8px">
+          <div style="font-family:var(--f-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:6px">Rankings / Detalhes</div>`;
+        textEntries.forEach(([k, v]) => {
+          const lbl = TEXT_META[k] || k;
+          html += `<div style="padding:7px 10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:5px;margin-bottom:5px;font-size:12px">
+            <span style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted);margin-right:8px">${lbl}:</span>
+            <span style="color:var(--c-dark)">${v}</span>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+
+      grid.innerHTML = html;
+
+      preview.style.display = 'block';
+      status.textContent = '✓ ' + Object.keys(stats).length + ' indicadores extraídos automaticamente';
+      status.style.color = '#2DD4A0';
+      // Mostrar opção de importar KPIs
+      const kpiImport = document.getElementById('rep-kpi-import');
+      if (kpiImport) kpiImport.style.display = 'block';
+    } catch(err) {
+      status.textContent = '❌ Erro ao ler planilha: ' + err.message;
+      status.style.color = '#F87171';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function deleteReport(clientId, reportId) {
+  if (!confirm('Excluir este relatório?')) return;
+  const clients = getClients();
+  const idx = clients.findIndex(c => c.id === clientId);
+  if (idx < 0) return;
+  const report = (clients[idx].reports || []).find(r => r.id === reportId);
+  if (report && report.fileUrl) sbDeleteReport(report.fileUrl); // async em background
+  apiDeleteReportMeta(reportId);
+  clients[idx].reports = (clients[idx].reports || []).filter(r => r.id !== reportId);
+  saveClients(clients);
+  renderClients();
+}
+
+function formatDateAdmin(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function formatSizeAdmin(b) {
+  if (!b) return '';
+  if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB';
+  return (b / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function renderClients() {
+  const clients = getClients().slice().sort((a, b) => (a.company || a.name || '').localeCompare(b.company || b.name || '', 'pt-BR', { sensitivity: 'base' }));
+  const totalReports = clients.reduce((s, c) => s + (c.reports || []).length, 0);
+  document.getElementById('cli-stat-total').textContent   = clients.length;
+  document.getElementById('cli-stat-reports').textContent = totalReports;
+
+  const list = document.getElementById('clientList');
+  if (!list) return;
+
+  if (clients.length === 0) {
+    list.innerHTML = '<div class="cli-empty">Nenhum cliente cadastrado. Clique em <strong>+ Novo Cliente</strong> para começar.</div>';
+    return;
+  }
+
+  list.innerHTML = clients.map(c => {
+    const reports = c.reports || [];
+    const reportsHtml = reports.length === 0
+      ? '<div style="padding:14px 0;color:var(--c-muted);font-size:13px">Nenhum relatório enviado ainda.</div>'
+      : reports.map(r => `
+          <div class="report-item">
+            <div class="report-item-info">
+              <div class="report-item-title">📊 ${r.title}</div>
+              <div class="report-item-meta">${r.period ? r.period + ' · ' : ''}${formatDateAdmin(r.uploadedAt)} · ${formatSizeAdmin(r.fileSize)} · ${r.fileName}</div>
+            </div>
+            <button class="btn-icon" onclick="deleteReport('${c.id}','${r.id}')" title="Excluir relatório">🗑</button>
+          </div>`).join('');
+
+    return `
+      <div class="client-row">
+        <div class="client-header" onclick="toggleClientBody('${c.id}')">
+          <div class="client-info">
+            <div class="client-name">${c.company || c.name}</div>
+            <div class="client-meta">${c.email} · Cadastrado em ${formatDateAdmin(c.createdAt)}</div>
+          </div>
+          <div class="client-actions">
+            <span class="client-reports-count">${reports.length} relatório${reports.length !== 1 ? 's' : ''}</span>
+            <span class="client-code-badge">${c.code}</span>
+            <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="event.stopPropagation();openReportModal('${c.id}')">+ Relatório</button>
+            <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="event.stopPropagation();openClientModal('${c.id}')">Editar</button>
+            <button class="btn-icon" onclick="event.stopPropagation();deleteClient('${c.id}')" title="Excluir cliente">🗑</button>
+          </div>
+        </div>
+        <div class="client-body" id="cbody-${c.id}">
+          ${reportsHtml}
+        </div>
+      </div>`;
+  }).join('');
+  // Expose clients globally so cliDashInit can populate the dropdown
+  window._clients = clients;
+  cliDashInit();
+}
+
+/* ══════════════════════════════════════════
+   CURRÍCULOS
+══════════════════════════════════════════ */
+function getCurriculos()      { try { return JSON.parse(localStorage.getItem(KEYS.curriculos)) || []; } catch { return []; } }
+function saveCurriculosLocal(list) { localStorage.setItem(KEYS.curriculos, JSON.stringify(list)); }
+
+function openCurriculoModal() {
+  ['cv-nome','cv-email','cv-telefone','cv-linkedin','cv-apresentacao'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('cv-file').value = '';
+  document.getElementById('curriculoModal').classList.add('open');
+}
+function closeCurriculoModal() { document.getElementById('curriculoModal').classList.remove('open'); }
+
+async function saveCurriculo() {
+  const nome  = document.getElementById('cv-nome').value.trim();
+  const email = document.getElementById('cv-email').value.trim();
+  if (!nome || !email) { showToast('⚠ Nome e e-mail são obrigatórios.'); return; }
+
+  const btn = document.getElementById('cvSaveBtn');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+
+  const fileEl = document.getElementById('cv-file');
+  const file   = fileEl.files[0];
+  const id     = 'cv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,6);
+
+  let cvUrl  = null;
+  let cvData = null;
+
+  if (file) {
+    cvData = await new Promise(res => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.readAsDataURL(file);
+    });
+    cvUrl = await sbUploadCV(id, file.name, cvData); // Supabase ou GitHub como fallback
+  }
+
+  const entry = {
+    id, nome, email,
+    telefone:    document.getElementById('cv-telefone').value.trim(),
+    linkedin:    document.getElementById('cv-linkedin').value.trim(),
+    apresentacao:document.getElementById('cv-apresentacao').value.trim(),
+    cvFileName:  file ? file.name : null,
+    cvUrl,
+    cvData,       // cache local
+    submittedAt: new Date().toISOString(),
+    source:      'admin'
+  };
+
+  const list = getCurriculos();
+  list.unshift(entry);
+  saveCurriculosLocal(list);
+  sbInsertCurriculo(entry); // Supabase (ou GitHub como fallback)
+
+  btn.disabled = false; btn.textContent = 'Salvar';
+  closeCurriculoModal();
+  renderCurriculos();
+  showToast('✓ Candidato registrado.');
+}
+
+function deleteCurriculo(id) {
+  if (!confirm('Excluir este currículo?')) return;
+  const all = getCurriculos();
+  const row = all.find(c => c.id === id);
+  saveCurriculosLocal(all.filter(c => c.id !== id));
+  if (row && row.cvUrl) apiDeleteFile(row.cvUrl);
+  sbDeleteCurriculo(id);
+  renderCurriculos();
+  showToast('Currículo excluído.');
+}
+
+async function downloadCV(cv) {
+  if (cv.cvData) {
+    const a = document.createElement('a'); a.href = cv.cvData;
+    a.download = cv.cvFileName || 'curriculo'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  } else if (cv.cvUrl) {
+    try {
+      const res = await fetch(cv.cvUrl + '?v=' + Date.now());
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a'); a.href = url;
+      a.download = cv.cvFileName || 'curriculo'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch { showToast('Erro ao baixar CV.'); }
+  } else { showToast('Arquivo não disponível.'); }
+}
+
+function renderCurriculos() {
+  const list  = getCurriculos();
+  const stats = document.getElementById('curriculos-stats');
+  const el    = document.getElementById('curriculos-list');
+
+  stats.innerHTML = `
+    <div class="stat-pill"><div class="stat-pill-num">${list.length}</div><div class="stat-pill-label">Candidaturas</div></div>
+    <div class="stat-pill"><div class="stat-pill-num">${list.filter(c => c.source !== 'admin').length}</div><div class="stat-pill-label">Do site</div></div>
+  `;
+
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state"><p>Nenhuma candidatura registrada.<br/>Os currículos enviados pelo site aparecem aqui automaticamente.</p></div>';
+    return;
+  }
+
+  el.innerHTML = list.map(c => `
+    <div class="item-card" style="${c.source !== 'admin' ? 'border-left:3px solid var(--c-accent)' : ''}">
+      <div class="item-card-body">
+        <div class="item-card-title">${escHtml(c.nome)} ${c.source !== 'admin' ? '<span class="post-tag">Site</span>' : ''}</div>
+        <div class="item-card-meta">${escHtml(c.email)}${c.telefone ? ' · ' + escHtml(c.telefone) : ''} · ${formatDate(c.submittedAt || '')}</div>
+        ${c.linkedin ? `<div class="item-card-preview"><a href="${escHtml(c.linkedin)}" target="_blank" rel="noopener" style="color:var(--c-accent)">${escHtml(c.linkedin)}</a></div>` : ''}
+        ${c.apresentacao ? `<div class="item-card-preview">${escHtml(c.apresentacao)}</div>` : ''}
+      </div>
+      <div class="item-card-actions">
+        ${(c.cvUrl || c.cvData) ? `<button type="button" class="btn btn-ghost btn-sm" onclick="downloadCV(getCurriculos().find(x=>x.id==='${c.id}'))">⬇ CV</button>` : ''}
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteCurriculo('${c.id}')">Excluir</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ══════════════════════════════════════
+   IFOOD ADMIN
+══════════════════════════════════════ */
+
+// ── helpers ──────────────────────────
+function ifoodApiBase() {
+  return backendApiBase();
+}
+
+async function ifoodApi(path, options) {
+  const base = ifoodApiBase();
+  if (!base) return { data: null, error: { message: 'Configure a URL da Cockroach API em Configurações.' } };
+  try {
+    const res = await fetch(base + path, options || {});
+    const text = await res.text();
+    let data = null;
+    if (text) {
+      try { data = JSON.parse(text); } catch { data = text; }
+    }
+    if (!res.ok) {
+      return { data: null, error: { message: (data && data.error) ? data.error : ('HTTP ' + res.status) } };
+    }
+    return { data, error: null };
+  } catch (e) {
+    return { data: null, error: { message: e.message || String(e) } };
+  }
+}
+
+/* ══════════════════════════════════════
+   CLIENT DASHBOARD  (ex-empregados + terceirização)
+══════════════════════════════════════ */
+let _cliDashClientId = null;
+let _cliDashPeriods  = [];
+const CLI_DASH_SUBS  = ['periods','kpis','content','highlights'];
+const CLI_DASH_TABS  = [
+  { key: 'ex_empregados', label: 'Ações de Ex-empregados' },
+  { key: 'terceirizacao', label: 'Terceirização / Subsidiária' }
+];
+
+function cliDashId() {
+  return 'cd_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+async function cliDashApi(path, opts = {}) {
+  const base = backendApiBase();
+  if (!base) return { data: null, error: { message: 'Configure a URL da Cockroach API em Configurações.' } };
+  try {
+    const res = await fetch(base + path, {
+      method: opts.method || 'GET',
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    });
+    let data; try { data = await res.json(); } catch { data = null; }
+    if (!res.ok) return { data: null, error: { message: data?.error || 'HTTP ' + res.status } };
+    return { data, error: null };
+  } catch (e) { return { data: null, error: { message: e.message || String(e) } }; }
+}
+
+// Auto-salvar KPIs extraídos do Excel no Dashboard do cliente
+async function cliDashAutoSaveKpis(clientId, periodLabel, stats) {
+  if (!clientId || !stats) return;
+  // 1. Encontrar ou criar o período
+  const { data: periods } = await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods`);
+  let period = (periods || []).find(p => p.label === periodLabel || p.month_year === periodLabel);
+  if (!period) {
+    const now = new Date();
+    const monthYear = now.toISOString().slice(0, 7);
+    const { data: created } = await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods`, {
+      method: 'POST',
+      body: { id: cliDashId(), label: periodLabel, month_year: monthYear, is_active: true }
+    });
+    period = created;
+  }
+  if (!period) return;
+
+  // 2. Ativar esse período
+  await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods/${period.id}/activate`, { method: 'POST' });
+
+  // 3. KPIs numéricos mapeados por tab_key
+  // Chaves comuns a ambas as abas
+  const KPI_COMMON = [
+    { key: 'processos',     label: 'Total de Processos',          unit: 'processos' },
+    { key: 'favoraveis',    label: 'Decisões Favoráveis',         unit: 'processos' },
+    { key: 'desfavoraveis', label: 'Decisões Desfavoráveis',      unit: 'processos' },
+    { key: 'novas',         label: 'Novas Ações',                 unit: 'processos' },
+    { key: 'encerrados',    label: 'Encerrados',                  unit: 'processos' },
+    { key: 'andamento',     label: 'Em Andamento',                unit: 'processos' },
+    { key: 'suspensos',     label: 'Processos Suspensos',         unit: 'processos' },
+    { key: 'juiz_fav',      label: 'Juízes/Relatores Favoráveis', unit: 'processos' },
+    { key: 'juiz_desf',     label: 'Juízes/Relatores Desfavoráveis', unit: 'processos' },
+  ];
+  // Chaves específicas de ex-empregados
+  const KPI_EXEMP = [
+    { key: 'mod_exemp',      label: 'Processos Ex-empregados',         unit: 'processos' },
+    { key: 'mod_exemp_fav',  label: 'Favoráveis — Ex-empregados',      unit: 'processos' },
+    { key: 'mod_exemp_desf', label: 'Desfavoráveis — Ex-empregados',   unit: 'processos' },
+    { key: 'pericias',       label: 'Processos com Perícia',           unit: 'processos' },
+    { key: 'pericias_fav',   label: 'Perito Favorável',                unit: 'processos' },
+    { key: 'pericias_desf',  label: 'Perito Desfavorável',             unit: 'processos' },
+  ];
+  // Chaves específicas de terceirização
+  const KPI_TERC = [
+    { key: 'mod_terc',      label: 'Processos Terceirização/Subsidiária', unit: 'processos' },
+    { key: 'mod_terc_fav',  label: 'Favoráveis — Terceirização',          unit: 'processos' },
+    { key: 'mod_terc_desf', label: 'Desfavoráveis — Terceirização',       unit: 'processos' },
+  ];
+
+  // Textuais: chart_data conterá o texto
+  const KPI_TEXT = [
+    { key: '_perito_top',             tab: 'ex_empregados', label: 'Tipo de Perícia Mais Frequente' },
+    { key: '_perito_ranking',         tab: 'ex_empregados', label: 'Ranking de Peritos' },
+    { key: '_suspensao_tema',         tab: 'ex_empregados', label: 'Tema Principal das Suspensões' },
+    { key: '_suspensao_tema_ranking', tab: 'ex_empregados', label: 'Ranking Temas Suspensos' },
+    { key: '_juiz_fav_top',           tab: 'ex_empregados', label: 'Top Juízes/Relatores Favoráveis' },
+    { key: '_juiz_desf_top',          tab: 'ex_empregados', label: 'Top Juízes/Relatores Desfavoráveis' },
+    { key: '_polo_empresa',           tab: 'terceirizacao', label: 'Empresa no Polo Passivo' },
+    { key: '_polo_empresa_ranking',   tab: 'terceirizacao', label: 'Ranking Empresas no Polo' },
+  ];
+
+  const save = async (tab_key, kpi_key, label, value, unit, sort_order, chart_data) => {
+    await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/kpis`, {
+      method: 'POST',
+      body: {
+        id: cliDashId(),
+        client_id: clientId,
+        period_id: period.id,
+        tab_key,
+        kpi_key,
+        label,
+        value: String(value),
+        unit: unit || '',
+        trend_pct: null,
+        sort_order,
+        chart_title: null,
+        chart_data: chart_data || null
+      }
+    });
+  };
+
+  let order = 0;
+  // Comuns em ambas as abas
+  for (const tab of ['ex_empregados', 'terceirizacao']) {
+    order = 0;
+    for (const m of KPI_COMMON) {
+      if (m.key in stats) await save(tab, m.key, m.label, stats[m.key], m.unit, order++);
+    }
+  }
+  // Ex-empregados específicos
+  order = 20;
+  for (const m of KPI_EXEMP) {
+    if (m.key in stats) await save('ex_empregados', m.key, m.label, stats[m.key], m.unit, order++);
+  }
+  // Terceirização específicos
+  order = 20;
+  for (const m of KPI_TERC) {
+    if (m.key in stats) await save('terceirizacao', m.key, m.label, stats[m.key], m.unit, order++);
+  }
+  // Textuais
+  order = 50;
+  for (const t of KPI_TEXT) {
+    if (t.key in stats) await save(t.tab, t.key.replace('_',''), t.label, '—', '', order++, stats[t.key]);
+  }
+
+  showToast('✓ KPIs importados automaticamente para o Dashboard.');
+}
+
+// Inicializa aba tab-cli-dash com lista de clientes
+function cliDashTabInit(clients) {
+  if (clients) window._clients = clients;
+  const sel = document.getElementById('cli-dash-select');
+  if (!sel) return;
+  const opts = (window._clients || []).map(c =>
+    `<option value="${escHtml(c.id)}">${escHtml(c.company)}</option>`).join('');
+  sel.innerHTML = '<option value="">— Selecione um cliente —</option>' + opts;
+  sel.value = _cliDashClientId || '';
+  if (_cliDashClientId) cliDashSelectClient(_cliDashClientId);
+}
+
+// Botão "Enviar Relatório / Excel" no tab-cli-dash
+function cliDashOpenUpload() {
+  if (!_cliDashClientId) { alert('Selecione um cliente primeiro.'); return; }
+  openReportModal(_cliDashClientId);
+}
+
+// Popula dropdown de clientes (legado: usado em renderClients)
+function cliDashInit() {
+  // sem-op: inicialização agora feita via cliDashTabInit ao abrir o tab
+}
+
+async function cliDashSelectClient(clientId) {
+  _cliDashClientId = clientId;
+  const panel = document.getElementById('cli-dash-panel');
+  const btn   = document.getElementById('cli-dash-new-period-btn');
+  const upBtn = document.getElementById('cli-dash-upload-btn');
+  if (!clientId) {
+    panel.style.display = 'none';
+    if (btn) btn.style.display = 'none';
+    if (upBtn) upBtn.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'block';
+  if (btn) btn.style.display = 'inline-flex';
+  if (upBtn) upBtn.style.display = 'inline-flex';
+  const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods`);
+  _cliDashPeriods = error ? [] : (data || []);
+  cliDashRenderPeriods();
+  cliDashPopulateSelects();
+  cliDashSubTab('periods');
+}
+
+function cliDashSubTab(name) {
+  const nav = document.getElementById('cliDashSubNav');
+  nav.querySelectorAll('.ifood-sub-tab').forEach((t, i) => t.classList.toggle('active', CLI_DASH_SUBS[i] === name));
+  CLI_DASH_SUBS.forEach(s => {
+    const el = document.getElementById('cli-dash-sub-' + s);
+    if (el) el.style.display = s === name ? 'block' : 'none';
+  });
+}
+
+function cliDashPopulateSelects() {
+  const opts = _cliDashPeriods.map(p => `<option value="${escHtml(p.id)}">${escHtml(p.label)}</option>`).join('');
+  ['cli-kpi-period','cli-cnt-period','cli-hl-period','cdk-period','cdh-period'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">— Selecione —</option>' + opts;
+  });
+}
+
+// ── Periods ──────────────────────────────────────────────────────
+function cliDashRenderPeriods() {
+  const el = document.getElementById('cli-dash-periods-list');
+  if (!el) return;
+  if (!_cliDashPeriods.length) { el.innerHTML = '<div class="empty-state"><p>Nenhum período cadastrado.</p></div>'; return; }
+  el.innerHTML = _cliDashPeriods.map(p => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:1px solid var(--c-divider);border-radius:6px;margin-bottom:8px;gap:12px;flex-wrap:wrap">
+      <div>
+        <strong style="font-size:15px">${escHtml(p.label)}</strong>
+        <span style="font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-left:10px">${escHtml(p.month_year)}</span>
+        ${p.is_active ? '<span style="margin-left:8px;background:#0a7a3e;color:#fff;font-size:10px;padding:2px 8px;border-radius:20px;font-family:var(--f-mono)">ATIVO</span>' : ''}
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        ${!p.is_active ? `<button class="btn btn-ghost btn-sm" onclick="cliDashActivatePeriod('${escHtml(p.id)}')">Ativar</button>` : ''}
+        <button class="btn btn-ghost btn-sm" style="color:#e05a5a" onclick="cliDashDeletePeriod('${escHtml(p.id)}','${escHtml(p.label)}')">Excluir</button>
+      </div>
+    </div>`).join('');
+}
+
+function cliDashOpenPeriodModal() {
+  document.getElementById('cdp-label').value = '';
+  document.getElementById('cdp-monthyear').value = '';
+  document.getElementById('cliDashPeriodModal').style.display = 'flex';
+}
+function cliDashClosePeriodModal() { document.getElementById('cliDashPeriodModal').style.display = 'none'; }
+
+async function cliDashSavePeriod() {
+  const label = document.getElementById('cdp-label').value.trim();
+  const my    = document.getElementById('cdp-monthyear').value.trim();
+  if (!label || !my) { showToast('Preencha rótulo e mês/ano.', 'error'); return; }
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/periods`, {
+    method: 'POST', body: { id: cliDashId(), label, month_year: my }
+  });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  cliDashClosePeriodModal();
+  await cliDashSelectClient(_cliDashClientId);
+}
+
+async function cliDashActivatePeriod(id) {
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/periods/${id}/activate`, { method: 'POST' });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  await cliDashSelectClient(_cliDashClientId);
+}
+
+async function cliDashDeletePeriod(id, label) {
+  if (!confirm(`Excluir período "${label}" e todos os dados? Esta ação não pode ser desfeita.`)) return;
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/periods/${id}`, { method: 'DELETE' });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  await cliDashSelectClient(_cliDashClientId);
+}
+
+// ── KPIs ─────────────────────────────────────────────────────────
+async function cliDashLoadKpis() {
+  const periodId = document.getElementById('cli-kpi-period').value;
+  const tabKey   = document.getElementById('cli-kpi-tab').value;
+  const el = document.getElementById('cli-dash-kpis-list');
+  if (!periodId) { el.innerHTML = '<p style="color:var(--c-muted);font-size:13px">Selecione um período.</p>'; return; }
+  const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/kpis?periodId=${encodeURIComponent(periodId)}${tabKey ? '&tabKey='+encodeURIComponent(tabKey) : ''}`);
+  if (error) { el.innerHTML = `<p style="color:#e05a5a">Erro: ${escHtml(error.message)}</p>`; return; }
+  const rows = data || [];
+  const tabLabel = (k) => CLI_DASH_TABS.find(t => t.key === k)?.label || k;
+  el.innerHTML = rows.length ? rows.map(r => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--c-divider);border-radius:6px;margin-bottom:6px;gap:12px;flex-wrap:wrap">
+      <div>
+        <strong>${escHtml(r.label)}</strong>
+        <span style="font-family:var(--f-mono);font-size:12px;color:var(--c-muted);margin-left:8px">${escHtml(r.value)}${r.unit ? ' ' + escHtml(r.unit) : ''}</span>
+        ${r.trend_pct != null ? `<span style="font-size:11px;color:${r.trend_pct >= 0 ? '#0a7a3e' : '#e05a5a'};margin-left:6px">${r.trend_pct >= 0 ? '▲' : '▼'} ${Math.abs(r.trend_pct)}%</span>` : ''}
+        <span style="font-size:10px;font-family:var(--f-mono);color:var(--c-muted);margin-left:8px">[${escHtml(tabLabel(r.tab_key))}]</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="color:#e05a5a" onclick="cliDashDeleteKpi('${escHtml(r.id)}')">×</button>
+    </div>`).join('')
+  : '<div class="empty-state"><p>Nenhum KPI cadastrado.</p></div>';
+}
+
+function cliDashOpenKpiModal() {
+  ['cdk-id','cdk-key','cdk-label','cdk-value','cdk-unit','cdk-trend'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  document.getElementById('cdk-order').value = '0';
+  document.getElementById('cdk-period').value = document.getElementById('cli-kpi-period').value;
+  document.getElementById('cdk-tab').value    = document.getElementById('cli-kpi-tab').value || 'ex_empregados';
+  document.getElementById('cliDashKpiModal').style.display = 'flex';
+}
+function cliDashCloseKpiModal() { document.getElementById('cliDashKpiModal').style.display = 'none'; }
+
+async function cliDashSaveKpi() {
+  const period_id = document.getElementById('cdk-period').value;
+  const tab_key   = document.getElementById('cdk-tab').value;
+  const kpi_key   = document.getElementById('cdk-key').value.trim();
+  const label     = document.getElementById('cdk-label').value.trim();
+  const value     = document.getElementById('cdk-value').value.trim();
+  if (!period_id || !kpi_key || !label || !value) { showToast('Preencha os campos obrigatórios.', 'error'); return; }
+  const trend_pct = document.getElementById('cdk-trend').value !== '' ? Number(document.getElementById('cdk-trend').value) : null;
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/kpis`, {
+    method: 'POST',
+    body: { id: cliDashId(), period_id, tab_key, kpi_key, label, value,
+            unit: document.getElementById('cdk-unit').value.trim() || null,
+            trend_pct, sort_order: Number(document.getElementById('cdk-order').value) || 0 }
+  });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  cliDashCloseKpiModal();
+  cliDashLoadKpis();
+  showToast('KPI salvo.');
+}
+
+async function cliDashDeleteKpi(id) {
+  if (!confirm('Excluir este KPI?')) return;
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/kpis/${id}`, { method: 'DELETE' });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  cliDashLoadKpis();
+}
+
+// ── Content ───────────────────────────────────────────────────────
+async function cliDashLoadContent() {
+  const periodId = document.getElementById('cli-cnt-period').value;
+  const tabKey   = document.getElementById('cli-cnt-tab').value;
+  const editor   = document.getElementById('cli-cnt-editor');
+  const source   = document.getElementById('cli-cnt-source');
+  if (!periodId) { editor.innerHTML = ''; source.value = ''; return; }
+  const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/content?periodId=${encodeURIComponent(periodId)}&tabKey=${encodeURIComponent(tabKey)}`);
+  const html = (data && data[0]) ? data[0].content_html : '';
+  editor.innerHTML = html; source.value = html;
+}
+
+async function cliDashSaveContent() {
+  const periodId = document.getElementById('cli-cnt-period').value;
+  const tabKey   = document.getElementById('cli-cnt-tab').value;
+  const html     = document.getElementById('cli-cnt-editor').innerHTML;
+  if (!periodId) { showToast('Selecione um período.', 'error'); return; }
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/content`, {
+    method: 'POST', body: { id: cliDashId(), period_id: periodId, tab_key: tabKey, content_html: html }
+  });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  showToast('Texto salvo.');
+}
+
+// ── Highlights ────────────────────────────────────────────────────
+async function cliDashLoadHighlights() {
+  const periodId = document.getElementById('cli-hl-period').value;
+  const el = document.getElementById('cli-dash-highlights-list');
+  if (!periodId) { el.innerHTML = ''; return; }
+  const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/highlights?periodId=${encodeURIComponent(periodId)}`);
+  const rows = data || [];
+  el.innerHTML = rows.length ? rows.map(r => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--c-divider);border-radius:6px;margin-bottom:6px;gap:12px">
+      <div>${r.icon ? `<span style="font-size:18px;margin-right:8px">${escHtml(r.icon)}</span>` : ''}<strong>${escHtml(r.title)}</strong>${r.body ? `<span style="color:var(--c-muted);font-size:13px;margin-left:8px">${escHtml(r.body)}</span>` : ''}</div>
+      <button class="btn btn-ghost btn-sm" style="color:#e05a5a" onclick="cliDashDeleteHighlight('${escHtml(r.id)}')">×</button>
+    </div>`).join('')
+  : '<div class="empty-state"><p>Nenhum destaque.</p></div>';
+}
+
+function cliDashOpenHlModal() {
+  ['cdh-id','cdh-icon','cdh-title','cdh-body'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  document.getElementById('cdh-order').value = '0';
+  document.getElementById('cdh-period').value = document.getElementById('cli-hl-period').value;
+  document.getElementById('cliDashHlModal').style.display = 'flex';
+}
+function cliDashCloseHlModal() { document.getElementById('cliDashHlModal').style.display = 'none'; }
+
+async function cliDashSaveHighlight() {
+  const period_id = document.getElementById('cdh-period').value;
+  const title     = document.getElementById('cdh-title').value.trim();
+  if (!period_id || !title) { showToast('Preencha os campos obrigatórios.', 'error'); return; }
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/highlights`, {
+    method: 'POST',
+    body: { id: cliDashId(), period_id, title,
+            icon: document.getElementById('cdh-icon').value.trim() || null,
+            body: document.getElementById('cdh-body').value.trim() || null,
+            sort_order: Number(document.getElementById('cdh-order').value) || 0 }
+  });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  cliDashCloseHlModal();
+  cliDashLoadHighlights();
+  showToast('Destaque salvo.');
+}
+
+async function cliDashDeleteHighlight(id) {
+  if (!confirm('Excluir este destaque?')) return;
+  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/highlights/${id}`, { method: 'DELETE' });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  cliDashLoadHighlights();
+}
+
+function ifoodId() {
+  return 'if_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+let _ifoodPeriods = [];
+
+// ── main loader ──────────────────────
+async function loadIfoodAdmin() {
+  const { data, error } = await ifoodApi('/api/ifood/periods');
+  if (error) { showToast('Configure a Cockroach API em Configurações.'); return; }
+  _ifoodPeriods = (error ? [] : data) || [];
+  renderIfoodPeriods();
+  populateIfoodPeriodSelects();
+  ifoodSubTab('periods');
+}
+
+// ── sub-tab switch ────────────────────
+const IFOOD_SUBS = ['periods','kpis','content','highlights','excel','comparativo'];
+function ifoodSubTab(name) {
+  const nav = document.getElementById('ifoodSubNav');
+  nav.querySelectorAll('.ifood-sub-tab').forEach((t, i) => {
+    t.classList.toggle('active', IFOOD_SUBS[i] === name);
+  });
+  IFOOD_SUBS.forEach(s => {
+    const el = document.getElementById('ifood-sub-' + s);
+    if (el) el.style.display = s === name ? 'block' : 'none';
+  });
+}
+
+// ── populate selects ──────────────────
+function populateIfoodPeriodSelects() {
+  const opts = _ifoodPeriods.map(p => `<option value="${escHtml(p.id)}">${escHtml(p.label)}</option>`).join('');
+  ['ifood-kpi-period','ifood-cnt-period','ifood-hl-period','ifood-xl-period','ifk-period','ifood-comp-a','ifood-comp-b'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">— Selecione —</option>' + opts;
+  });
+  ifoodLoadComparativoList();
+}
+
+// ── COMPARATIVO ──────────────────────
+async function ifoodLoadComparativoList() {
+  const listEl = document.getElementById('ifood-comp-list');
+  if (!listEl) return;
+  const { data, error } = await ifoodApi('/api/ifood/content?tab_key=comparativo');
+  if (error || !data || !data.length) {
+    listEl.innerHTML = '<div style="color:var(--c-muted);font-size:13px">Nenhum configurado.</div>';
+    return;
+  }
+  listEl.innerHTML = data.map(c => {
+    let cfg = {}; try { cfg = JSON.parse(c.content_html); } catch {}
+    const pB = _ifoodPeriods.find(p => p.id === c.period_id);
+    const pA = _ifoodPeriods.find(p => p.id === cfg.compareWithId);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border:1px solid var(--c-divider);border-radius:6px;margin-bottom:8px;font-size:13px">
+      <span><strong>${pB ? escHtml(pB.label) : c.period_id}</strong> vs <strong>${pA ? escHtml(pA.label) : (cfg.compareWithId||'?')}</strong></span>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="ifoodRemoveComparativoById('${escHtml(c.id)}')">Remover</button>
+    </div>`;
+  }).join('');
+}
+
+async function ifoodSaveComparativo() {
+  const periodA = document.getElementById('ifood-comp-a').value;
+  const periodB = document.getElementById('ifood-comp-b').value;
+  const preview = document.getElementById('ifood-comp-preview');
+  if (!periodA || !periodB) { showToast('Selecione os dois períodos.', 'error'); return; }
+  if (periodA === periodB) { showToast('Os períodos precisam ser diferentes.', 'error'); return; }
+  const id = `${periodB}-comparativo`;
+  const { error } = await ifoodApi('/api/ifood/content', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, period_id: periodB, tab_key: 'comparativo', content_html: JSON.stringify({ compareWithId: periodA }) })
+  });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  const pA = _ifoodPeriods.find(p => p.id === periodA);
+  const pB = _ifoodPeriods.find(p => p.id === periodB);
+  if (preview) { preview.style.display = ''; preview.textContent = `✓ Comparativo salvo: ${pB ? pB.label : periodB} vs ${pA ? pA.label : periodA}`; }
+  showToast('Comparativo salvo!');
+  ifoodLoadComparativoList();
+}
+
+async function ifoodRemoveComparativoById(contentId) {
+  if (!confirm('Remover este comparativo?')) return;
+  const { error } = await ifoodApi(`/api/ifood/content/${encodeURIComponent(contentId)}`, { method: 'DELETE' });
+  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  showToast('Comparativo removido.');
+  ifoodLoadComparativoList();
+}
+
+async function ifoodRemoveComparativo() {
+  const periodB = document.getElementById('ifood-comp-b').value;
+  if (!periodB) { showToast('Selecione o Período B.', 'error'); return; }
+  await ifoodRemoveComparativoById(`${periodB}-comparativo`);
+}
+
+// ── PERIODS ──────────────────────────
+function renderIfoodPeriods() {
+  const el = document.getElementById('ifood-periods-list');
+  if (!_ifoodPeriods.length) {
+    el.innerHTML = '<div class="empty-state"><p>Nenhum período criado ainda. Clique em "+ Novo Período" para começar.</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="item-list">' + _ifoodPeriods.map(p => `
+    <div class="item-card">
+      <div class="item-card-body">
+        <div class="item-card-title">${escHtml(p.label)} ${p.is_active ? '<span class="post-tag" style="background:var(--c-accent)">Ativo</span>' : ''}</div>
+        <div class="item-card-meta">${escHtml(p.month_year)} · criado em ${formatDateAdmin(p.created_at)}</div>
+      </div>
+      <div class="item-card-actions">
+        ${!p.is_active ? `<button type="button" class="btn btn-ghost btn-sm" onclick="ifoodActivatePeriod('${p.id}')">Ativar</button>` : ''}
+        <button type="button" class="btn btn-ghost btn-sm" onclick="ifoodOpenPeriodModal('${p.id}')">Editar</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="ifoodClearPeriodContent('${p.id}')">Limpar Textos</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="ifoodDeletePeriod('${p.id}')">Excluir Tudo</button>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
+function ifoodOpenPeriodModal(id) {
+  const p = id ? _ifoodPeriods.find(x => x.id === id) : null;
+  document.getElementById('ifoodPeriodModalTitle').textContent = p ? 'Editar Período' : 'Novo Período';
+  document.getElementById('ifp-id').value        = p ? p.id : '';
+  document.getElementById('ifp-label').value     = p ? p.label : '';
+  document.getElementById('ifp-month').value     = p ? p.month_year : '';
+  document.getElementById('ifp-active').checked  = p ? p.is_active : false;
+  document.getElementById('ifoodPeriodModal').classList.add('open');
+}
+function ifoodClosePeriodModal() { document.getElementById('ifoodPeriodModal').classList.remove('open'); }
+
+async function ifoodSavePeriod() {
+  const id     = document.getElementById('ifp-id').value.trim();
+  const label  = document.getElementById('ifp-label').value.trim();
+  const month  = document.getElementById('ifp-month').value.trim();
+  const active = document.getElementById('ifp-active').checked;
+  if (!label || !month) { showToast('Preencha rótulo e mês/ano.'); return; }
+
+  const row = {
+    id: id || ifoodId(),
+    label,
+    month_year: month,
+    is_active: active,
+    created_at: new Date().toISOString()
+  };
+  const { error } = await ifoodApi('/api/ifood/periods', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(row)
+  });
+  if (error) { showToast('Erro: ' + error.message); return; }
+  if (active) {
+    await ifoodApi('/api/ifood/periods/' + encodeURIComponent(row.id) + '/activate', { method: 'POST' });
+  }
+  ifoodClosePeriodModal();
+  showToast('Período salvo.');
+  await loadIfoodAdmin();
+}
+
+async function ifoodClearPeriodContent(id) {
+  if (!confirm('Limpar apenas os TEXTOS e DESTAQUES deste período?\n\nOs KPIs e gráficos (dados do Excel) serão mantidos.')) return;
+  const { error } = await ifoodApi('/api/ifood/periods/' + encodeURIComponent(id) + '/clear-text', { method: 'POST' });
+  if (error) { showToast('Erro ao limpar textos: ' + error.message); return; }
+  showToast('Textos e destaques removidos. KPIs mantidos.');
+  await loadIfoodAdmin();
+}
+
+async function ifoodDeletePeriod(id) {
+  if (!confirm('EXCLUIR TUDO?\n\nIsso apagará o período e TODOS os dados: KPIs, textos, destaques e gráficos.\n\nPara remover apenas os textos, use "Limpar Textos".')) return;
+  const { error } = await ifoodApi('/api/ifood/periods/' + encodeURIComponent(id), { method: 'DELETE' });
+  if (error) { showToast('Erro: ' + error.message); return; }
+  showToast('Período e todos os dados excluídos.');
+  await loadIfoodAdmin();
+}
+
+async function ifoodActivatePeriod(id) {
+  const { error } = await ifoodApi('/api/ifood/periods/' + encodeURIComponent(id) + '/activate', { method: 'POST' });
+  if (error) { showToast('Erro: ' + error.message); return; }
+  showToast('Período ativado.');
+  await loadIfoodAdmin();
+}
+
+// ── KPIs ─────────────────────────────
+let _ifoodKpis = [];
+
+async function ifoodLoadKpis() {
+  const periodId = document.getElementById('ifood-kpi-period').value;
+  const tabKey   = document.getElementById('ifood-kpi-tab').value;
+  if (!periodId || !tabKey) { document.getElementById('ifood-kpis-list').innerHTML = ''; return; }
+  const { data, error } = await ifoodApi('/api/ifood/kpis?periodId=' + encodeURIComponent(periodId) + '&tabKey=' + encodeURIComponent(tabKey));
+  _ifoodKpis = (error ? [] : data) || [];
+  renderIfoodKpis();
+}
+
+function renderIfoodKpis() {
+  const el = document.getElementById('ifood-kpis-list');
+  if (!_ifoodKpis.length) {
+    el.innerHTML = '<div class="empty-state"><p>Nenhum KPI nesta aba para este período.</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="item-list">' + _ifoodKpis.map(k => `
+    <div class="item-card">
+      <div class="item-card-body">
+        <div class="item-card-title">${escHtml(k.label)} <span style="font-family:var(--f-mono);font-size:20px;font-weight:400">${escHtml(k.value)}${k.unit ? ' <small style="font-size:11px">' + escHtml(k.unit) + '</small>' : ''}</span></div>
+        <div class="item-card-meta">chave: ${escHtml(k.kpi_key)} · ordem ${k.sort_order}${k.trend_pct != null ? ' · tendência: ' + k.trend_pct + '%' : ''}${k.chart_title ? ' · gráfico: ' + escHtml(k.chart_title) : ''}</div>
+      </div>
+      <div class="item-card-actions">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="ifoodOpenKpiModal('${k.id}')">Editar</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="ifoodDeleteKpi('${k.id}')">Excluir</button>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
+function ifoodOpenKpiModal(id) {
+  const k = id ? _ifoodKpis.find(x => x.id === id) : null;
+  document.getElementById('ifoodKpiModalTitle').textContent = k ? 'Editar KPI' : 'Novo KPI';
+  document.getElementById('ifk-id').value          = k ? k.id : '';
+  document.getElementById('ifk-period').value      = k ? k.period_id : (document.getElementById('ifood-kpi-period').value || '');
+  document.getElementById('ifk-tab').value         = k ? k.tab_key   : (document.getElementById('ifood-kpi-tab').value   || 'visao-geral');
+  document.getElementById('ifk-key').value         = k ? k.kpi_key   : '';
+  document.getElementById('ifk-label').value       = k ? k.label     : '';
+  document.getElementById('ifk-value').value       = k ? k.value     : '';
+  document.getElementById('ifk-unit').value        = k ? (k.unit || '') : '';
+  document.getElementById('ifk-trend').value       = k ? (k.trend_pct ?? '') : '';
+  document.getElementById('ifk-order').value       = k ? k.sort_order : 0;
+  document.getElementById('ifk-chart-title').value = k ? (k.chart_title || '') : '';
+  document.getElementById('ifk-chart-data').value  = k && k.chart_data ? JSON.stringify(k.chart_data, null, 2) : '';
+  document.getElementById('ifoodKpiModal').classList.add('open');
+}
+function ifoodCloseKpiModal() { document.getElementById('ifoodKpiModal').classList.remove('open'); }
+
+async function ifoodSaveKpi() {
+  const id         = document.getElementById('ifk-id').value.trim();
+  const periodId   = document.getElementById('ifk-period').value.trim();
+  const tabKey     = document.getElementById('ifk-tab').value.trim();
+  const kpiKey     = document.getElementById('ifk-key').value.trim();
+  const label      = document.getElementById('ifk-label').value.trim();
+  const value      = document.getElementById('ifk-value').value.trim();
+  const unit       = document.getElementById('ifk-unit').value.trim();
+  const trendRaw   = document.getElementById('ifk-trend').value.trim();
+  const order      = parseInt(document.getElementById('ifk-order').value, 10) || 0;
+  const chartTitle = document.getElementById('ifk-chart-title').value.trim();
+  const chartRaw   = document.getElementById('ifk-chart-data').value.trim();
+
+  if (!periodId || !tabKey || !kpiKey || !label || !value) { showToast('Preencha os campos obrigatórios.'); return; }
+
+  let chartData = null;
+  if (chartRaw) {
+    try { chartData = JSON.parse(chartRaw); } catch(e) { showToast('JSON do gráfico inválido.'); return; }
+  }
+
+  const row = {
+    id: id || ifoodId(),
+    period_id: periodId, tab_key: tabKey, kpi_key: kpiKey, label, value, unit,
+    trend_pct: trendRaw !== '' ? parseFloat(trendRaw) : null,
+    sort_order: order, chart_title: chartTitle, chart_data: chartData
+  };
+  const { error } = await ifoodApi('/api/ifood/kpis', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(row)
+  });
+  if (error) { showToast('Erro: ' + error.message); return; }
+  ifoodCloseKpiModal();
+  showToast('KPI salvo.');
+  await ifoodLoadKpis();
+}
+
+async function ifoodDeleteKpi(id) {
+  if (!confirm('Excluir este KPI?')) return;
+  const { error } = await ifoodApi('/api/ifood/kpis/' + encodeURIComponent(id), { method: 'DELETE' });
+  if (error) { showToast('Erro: ' + error.message); return; }
+  showToast('KPI excluído.');
+  await ifoodLoadKpis();
+}
+
+// ── CONTENT ──────────────────────────
+async function ifoodLoadContent() {
+  const periodId = document.getElementById('ifood-cnt-period').value;
+  const tabKey   = document.getElementById('ifood-cnt-tab').value;
+  if (!periodId || !tabKey) return;
+  const { data, error } = await ifoodApi('/api/ifood/content?periodId=' + encodeURIComponent(periodId) + '&tabKey=' + encodeURIComponent(tabKey));
+  const row = !error && Array.isArray(data) && data.length ? data[0] : null;
+  const html = row ? (row.content_html || '') : '';
+  // reset para modo visual ao carregar conteúdo
+  _richSourceMode = false;
+  const srcEl = document.getElementById('ifood-cnt-source');
+  const edEl  = document.getElementById('ifood-cnt-editor');
+  srcEl.style.display = 'none';
+  edEl.style.display  = 'block';
+  document.getElementById('tb-source-btn').style.background = '';
+  document.getElementById('tb-source-btn').style.color = '';
+  edEl.innerHTML = html;
+  srcEl.value = html;
+  document.getElementById('ifood-cnt-preview').style.display = 'none';
+}
+
+async function ifoodSaveContent() {
+  const periodId = document.getElementById('ifood-cnt-period').value;
+  const tabKey   = document.getElementById('ifood-cnt-tab').value;
+  const html     = _richSourceMode
+    ? document.getElementById('ifood-cnt-source').value
+    : document.getElementById('ifood-cnt-editor').innerHTML;
+  if (!periodId || !tabKey) { showToast('Selecione período e aba.'); return; }
+  const row = { id: ifoodId(), period_id: periodId, tab_key: tabKey, content_html: html, updated_at: new Date().toISOString() };
+  const { error } = await ifoodApi('/api/ifood/content', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(row)
+  });
+  if (error) { showToast('Erro ao salvar: ' + error.message); return; }
+  showToast('✓ Texto salvo com sucesso.');
+}
+
+function ifoodPreviewContent() {
+  const raw = _richSourceMode
+    ? document.getElementById('ifood-cnt-source').value
+    : document.getElementById('ifood-cnt-editor').innerHTML;
+  const prev = document.getElementById('ifood-cnt-preview');
+  prev.innerHTML = raw || '<em>Nenhum conteúdo.</em>';
+  prev.style.display = 'block';
+}
+
+// ── RICH EDITOR ──────────────────────
+(function initRichEditor() {
+  const COLORS = [
+    '#060E1A','#0D2B5E','#1A4080','#7B1A2E','#B91C1C','#D97706',
+    '#059669','#2563EB','#7C3AED','#374151','#6B7280','#ffffff',
+  ];
+  const popup = document.getElementById('tb-color-popup');
+  if (popup) {
+    COLORS.forEach(c => {
+      const sw = document.createElement('div');
+      sw.className = 'tb-color-swatch';
+      sw.style.background = c;
+      sw.title = c;
+      sw.onclick = () => { richApplyColor(c); popup.style.display = 'none'; };
+      popup.appendChild(sw);
+    });
+    // custom color input
+    const inp = document.createElement('input');
+    inp.type = 'color'; inp.title = 'Cor personalizada';
+    inp.style.cssText = 'width:22px;height:22px;border:none;padding:0;cursor:pointer;border-radius:2px;';
+    inp.oninput = (e) => richApplyColor(e.target.value);
+    popup.appendChild(inp);
+  }
+  document.addEventListener('click', e => {
+    const pop = document.getElementById('tb-color-popup');
+    if (pop && !pop.contains(e.target) && e.target.id !== 'tb-color-btn' && !e.target.closest('#tb-color-btn')) {
+      pop.style.display = 'none';
+    }
+  });
+})();
+
+function richFmt(cmd) {
+  document.getElementById('ifood-cnt-editor').focus();
+  document.execCommand(cmd, false, null);
+}
+
+function richApplyColor(color) {
+  document.getElementById('ifood-cnt-editor').focus();
+  document.execCommand('foreColor', false, color);
+  const bar = document.getElementById('tb-color-bar');
+  if (bar) bar.style.background = color;
+}
+
+function richBlock(tag) {
+  document.getElementById('ifood-cnt-editor').focus();
+  document.execCommand('formatBlock', false, tag);
+}
+
+function richKeydown(e) {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;');
+  }
+}
+
+function richToggleColorPicker(e) {
+  e.stopPropagation();
+  const pop = document.getElementById('tb-color-popup');
+  pop.style.display = pop.style.display === 'none' ? 'grid' : 'none';
+}
+
+let _richSourceMode = false;
+function richToggleSource() {
+  const editor = document.getElementById('ifood-cnt-editor');
+  const source = document.getElementById('ifood-cnt-source');
+  const btn    = document.getElementById('tb-source-btn');
+  _richSourceMode = !_richSourceMode;
+  if (_richSourceMode) {
+    source.value = editor.innerHTML;
+    editor.style.display = 'none';
+    source.style.display = 'block';
+    btn.style.background = 'var(--c-accent)'; btn.style.color = '#fff';
+  } else {
+    editor.innerHTML = source.value;
+    source.style.display = 'none';
+    editor.style.display = 'block';
+    btn.style.background = ''; btn.style.color = '';
+  }
+}
+
+// ── HIGHLIGHTS ───────────────────────
+let _ifoodHighlights = [];
+
+async function ifoodLoadHighlights() {
+  const periodId = document.getElementById('ifood-hl-period').value;
+  if (!periodId) { document.getElementById('ifood-hl-list').innerHTML = ''; return; }
+  const { data, error } = await ifoodApi('/api/ifood/highlights?periodId=' + encodeURIComponent(periodId));
+  _ifoodHighlights = (error ? [] : data) || [];
+  renderIfoodHighlights(periodId);
+}
+
+function renderIfoodHighlights(periodId) {
+  const el = document.getElementById('ifood-hl-list');
+  if (!_ifoodHighlights.length) {
+    el.innerHTML = '<div class="empty-state"><p>Nenhum destaque para este período.</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="item-list">' + _ifoodHighlights.map(h => `
+    <div class="item-card">
+      <div style="font-size:28px;flex-shrink:0">${escHtml(h.icon || '★')}</div>
+      <div class="item-card-body">
+        <div class="item-card-title">${escHtml(h.title)}</div>
+        <div class="item-card-preview">${escHtml(h.body)}</div>
+        <div class="item-card-meta">ordem ${h.sort_order}</div>
+      </div>
+      <div class="item-card-actions">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="ifoodOpenHighlightModal('${h.id}')">Editar</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="ifoodDeleteHighlight('${h.id}')">Excluir</button>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
+function ifoodOpenHighlightModal(id) {
+  const h = id ? _ifoodHighlights.find(x => x.id === id) : null;
+  const periodId = document.getElementById('ifood-hl-period').value;
+  document.getElementById('ifoodHlModalTitle').textContent = h ? 'Editar Destaque' : 'Novo Destaque';
+  document.getElementById('ifh-id').value     = h ? h.id : '';
+  document.getElementById('ifh-period').value = h ? h.period_id : periodId;
+  document.getElementById('ifh-icon').value   = h ? (h.icon || '★') : '★';
+  document.getElementById('ifh-title').value  = h ? h.title : '';
+  document.getElementById('ifh-body').value   = h ? (h.body || '') : '';
+  document.getElementById('ifh-order').value  = h ? h.sort_order : _ifoodHighlights.length;
+  document.getElementById('ifoodHlModal').classList.add('open');
+}
+function ifoodCloseHlModal() { document.getElementById('ifoodHlModal').classList.remove('open'); }
+
+async function ifoodSaveHighlight() {
+  const id       = document.getElementById('ifh-id').value.trim();
+  const periodId = document.getElementById('ifh-period').value.trim();
+  const icon     = document.getElementById('ifh-icon').value.trim() || '★';
+  const title    = document.getElementById('ifh-title').value.trim();
+  const body     = document.getElementById('ifh-body').value.trim();
+  const order    = parseInt(document.getElementById('ifh-order').value, 10) || 0;
+  if (!periodId || !title) { showToast('Selecione um período e preencha o título.'); return; }
+  const row = { id: id || ifoodId(), period_id: periodId, icon, title, body, sort_order: order };
+  const { error } = await ifoodApi('/api/ifood/highlights', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(row)
+  });
+  if (error) { showToast('Erro: ' + error.message); return; }
+  ifoodCloseHlModal();
+  showToast('Destaque salvo.');
+  await ifoodLoadHighlights();
+}
+
+async function ifoodDeleteHighlight(id) {
+  if (!confirm('Excluir este destaque?')) return;
+  const { error } = await ifoodApi('/api/ifood/highlights/' + encodeURIComponent(id), { method: 'DELETE' });
+  if (error) { showToast('Erro: ' + error.message); return; }
+  showToast('Destaque excluído.');
+  await ifoodLoadHighlights();
+}
+
+// ── EXCEL UPLOAD ─────────────────────
+let _ifoodExcelData = null;
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Falha ao converter arquivo para base64.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function ifoodPreviewExcel(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { showToast('SheetJS não carregado.'); return; }
+  const st = document.getElementById('ifood-xl-status');
+  st.style.display = 'block'; st.textContent = 'Lendo arquivo…';
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    // Store workbook for processing; preview uses first sheet header-based rows
+    const firstWs = wb.Sheets[wb.SheetNames[0]];
+    const previewRows = XLSX.utils.sheet_to_json(firstWs, { defval: '', header: 1 });
+    const cols = previewRows[0] || [];
+    const preview = previewRows.slice(1, 21);
+    let html = '<thead><tr style="background:var(--c-accent);color:#fff">' + cols.map(c => `<th style="padding:6px 10px;text-align:left;white-space:nowrap">${escHtml(String(c))}</th>`).join('') + '</tr></thead><tbody>';
+    html += preview.map((r, i) => `<tr style="background:${i%2?'#f8f8f6':'#fff'}">` + cols.map((_, ci) => `<td style="padding:5px 10px;border-bottom:1px solid #eee;white-space:nowrap">${escHtml(String(r[ci] ?? ''))}</td>`).join('') + '</tr>').join('');
+    html += '</tbody>';
+    document.getElementById('ifood-xl-table').innerHTML = html;
+    document.getElementById('ifood-xl-preview').style.display = 'block';
+    _ifoodExcelData = { filename: file.name, wb, file };
+    st.textContent = `✓ ${wb.SheetNames.length} aba(s): ${wb.SheetNames.join(', ')}. ${previewRows.length - 1} linhas na primeira aba. Selecione o período e clique em "Salvar dados no Cockroach".`;
+  } catch(e) {
+    st.textContent = 'Erro ao ler arquivo: ' + e.message;
+    console.error(e);
+  }
+}
+
+// ── EXCEL PROCESSING HELPERS ─────────
+const _XL_CR_TABS = [
+  { cr: 'ENTREGADOR NUVEM',         tabKey: 'nuvem',         label: 'Nuvem' },
+  { cr: 'ENTREGADOR OL',            tabKey: 'op-logistico',  label: 'Op. Logístico' },
+  { cr: 'EX-FOODLOVER',             tabKey: 'ex-foodlover',  label: 'Ex-Foodlover' },
+  { cr: 'TERCEIRIZAÇÃO',            tabKey: 'terceirizacao', label: 'Terceirização' },
+  { cr: 'ENTREGADOR - MARKETPLACE', tabKey: 'marketplace',   label: 'Marketplace' },
+  { cr: 'RESTAURANTES - CONTRATO',  tabKey: 'restaurantes',  label: 'Restaurantes' },
+];
+const _XL_DEC_CR_MAP = { nuvem:'ENTREGADOR NUVEM', ol:'ENTREGADOR OL', 'ex-foodlover':'EX-FOODLOVER', terceirizado:'TERCEIRIZAÇÃO', 'terceirização':'TERCEIRIZAÇÃO', marketplace:'ENTREGADOR - MARKETPLACE', restaurantes:'RESTAURANTES - CONTRATO' };
+const _XL_UF_TRT = { MG:'TRT-3',RJ:'TRT-1',RS:'TRT-4',BA:'TRT-5',PE:'TRT-6',CE:'TRT-7',PA:'TRT-8',AP:'TRT-8',PR:'TRT-9',DF:'TRT-10',TO:'TRT-10',AM:'TRT-11',RR:'TRT-11',SC:'TRT-12',PB:'TRT-13',RO:'TRT-14',AC:'TRT-14',MA:'TRT-16',ES:'TRT-17',GO:'TRT-18',AL:'TRT-19',SE:'TRT-20',RN:'TRT-21',PI:'TRT-22',MT:'TRT-23',MS:'TRT-24' };
+const _XL_DEC_FAV  = new Set(['Acórdão Favorável','Sentença Improcedente','Decisão Favorável TST']);
+const _XL_DEC_DESF = new Set(['Acórdão Desfavorável','Sentença Desfavorável','Acórdão Anula Sentença','Decisão Desfavorável TST','Acórdão Desfavorável TST']);
+
+function _xlNormTxt(v) {
+  return String(v || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+const _XL_CR_CANON = {
+  'NUVEM': 'ENTREGADOR NUVEM',
+  'ENTREGADOR NUVEM': 'ENTREGADOR NUVEM',
+  'OL': 'ENTREGADOR OL',
+  'OP LOGISTICO': 'ENTREGADOR OL',
+  'OP LOGISTICA': 'ENTREGADOR OL',
+  'OP LOGISTICO': 'ENTREGADOR OL',
+  'OPERACAO LOGISTICA': 'ENTREGADOR OL',
+  'ENTREGADOR OL': 'ENTREGADOR OL',
+  'EX FOODLOVER': 'EX-FOODLOVER',
+  'EX-FOODLOVER': 'EX-FOODLOVER',
+  'TERCEIRIZADO': 'TERCEIRIZAÇÃO',
+  'TERCEIRIZADOS': 'TERCEIRIZAÇÃO',
+  'TERCEIRIZACAO': 'TERCEIRIZAÇÃO',
+  'TERCEIRIZACAO ': 'TERCEIRIZAÇÃO',
+  'TERCEIRIZAÇÃO': 'TERCEIRIZAÇÃO',
+  'MARKET PLACE': 'ENTREGADOR - MARKETPLACE',
+  'MARKETPLACE': 'ENTREGADOR - MARKETPLACE',
+  'ENTREGADOR MARKETPLACE': 'ENTREGADOR - MARKETPLACE',
+  'ENTREGADOR - MARKETPLACE': 'ENTREGADOR - MARKETPLACE',
+  'RESTAURANTE': 'RESTAURANTES - CONTRATO',
+  'RESTAURANTES': 'RESTAURANTES - CONTRATO',
+  'RESTAURANTES CONTRATO': 'RESTAURANTES - CONTRATO',
+  'RESTAURANTES - CONTRATO': 'RESTAURANTES - CONTRATO',
+};
+
+function _xlCanonCR(v) {
+  const n = _xlNormTxt(v).replace(/[^A-Z0-9\- ]+/g, '').trim();
+  return _XL_CR_CANON[n] || String(v || '').trim();
+}
+
+function _xlNormalizeTRT(v) {
+  const n = _xlNormTxt(v);
+  if (!n) return '';
+  const m = n.match(/TRT\s*-?\s*(\d{1,2})/);
+  if (m) return `TRT-${m[1]}`;
+  if (/^\d{1,2}$/.test(n)) return `TRT-${n}`;
+  return String(v || '').trim();
+}
+
+function _xlGetTRT(uf, vara) {
+  uf = (uf||'').toUpperCase(); vara = (vara||'').toLowerCase();
+  if (uf === 'SP') {
+    const kws = ['campinas','sorocaba','jundiai','jundiaí','ribeirão','ribeirao','são josé dos campos','sao jose','bauru','piracicaba','santos','guarulhos','osasco','santo andré','santo andre','mogi','taubaté','taubate','araçatuba','aracatuba'];
+    if (kws.some(k => vara.includes(k))) return 'TRT-15';
+    return 'TRT-2';
+  }
+  return _XL_UF_TRT[uf] || ('TRT-' + uf);
+}
+
+const _XL_VALID_UF = new Set(['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']);
+function _xlParseIfood(rawRows) {
+  const header = Array.isArray(rawRows[0]) ? rawRows[0] : [];
+  const hn = header.map(h => _xlNormTxt(h));
+  const findIdx = (...patterns) => {
+    for (const p of patterns) {
+      const i = hn.findIndex(h => h.includes(_xlNormTxt(p)));
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+  const idx = {
+    dataDistrib: findIdx('DATA DE DISTRIBUICAO', 'DATA DE DISTRIBUIÇÃO', 'DATA DISTRIBUICAO', 'DATA DISTRIBUIÇÃO', 'DATA DE AJUIZAMENTO', 'DATA AJUIZAMENTO'),
+    causa: findIdx('CAUSA RAIZ'),
+    proc: findIdx('NUMERO DO PROCESSO', 'N PROCESSO', 'Nº PROCESSO', 'PROCESSO'),
+    trt: findIdx('TRT'),
+    status: findIdx('STATUS'),
+    cargo: findIdx('CARGO'),
+    assunto: findIdx('ASSUNTO'),
+    vara: findIdx('VARA'),
+    cidade: findIdx('CIDADE', 'COMARCA'),
+    uf: findIdx('UF'),
+    advCna: findIdx('ESCRITORIO CNA REQUERENTE'),
+    advAdverso: findIdx('ADVOGADO ADVERSO'),
+    coReus: findIdx('CO REUS', 'CO-REUS', 'CO RÉUS', 'CÓ-RÉUS'),
+    juizSent: findIdx('JUIZ SENTENCA'),
+    fase: findIdx('FASE PROCESSUAL'),
+    arquivado: findIdx('ARQUIVADO'),
+    autorRec: findIdx('AUTOR DO RECURSO'),
+    resFinal: findIdx('RESULTADO FINAL', 'RESULTADO DA DECISAO DE 1 GRAU'),
+    julgador: findIdx('JULGADOR 2A INSTANCIA', 'JUIZ/ RELATOR', 'JUIZ RELATOR'),
+    resRec: findIdx('RESULTADO JULGAMENTO MAIS RECENTE', 'RESULTADO DA DECISAO DE 2 GRAU'),
+    primeiro: findIdx('1O RESULTADO DO PROCESSO')
+  };
+  const c = (r, i, fb = '') => (i >= 0 ? String(r[i] ?? '').trim() : fb);
+  const normalizeStatus = (s) => {
+    const l = _xlNormTxt(s).toLowerCase();
+    if (l === 'ativo' || l === 'active' || l === 'a' || l === '1') return 'ativo';
+    if (l === 'encerrado' || l === 'closed' || l === 'e' || l === '0' || l === 'encerrada') return 'encerrado';
+    return l;
+  };
+  const normalizeUF = (s) => {
+    const u = _xlNormTxt(s).replace(/[^A-Z]/g, '');
+    return _XL_VALID_UF.has(u) ? u : '';
+  };
+
+  return rawRows.slice(1).filter(r => Array.isArray(r) && r.length).map(r => {
+    const proc = c(r, idx.proc, c(r, 1));
+    if (!proc) return null;
+
+    const causa = _xlCanonCR(c(r, idx.causa, c(r, 0)));
+    const vara = c(r, idx.vara, c(r, 6));
+    const cidadeRaw = c(r, idx.cidade, c(r, 7));
+    const splitComarca = cidadeRaw.includes('/') ? cidadeRaw.split('/') : null;
+    const cidade = splitComarca ? splitComarca[0].trim() : cidadeRaw;
+    const ufFromComarca = splitComarca ? normalizeUF(splitComarca[1]) : '';
+    const uf = normalizeUF(c(r, idx.uf, c(r, 8))) || ufFromComarca;
+    const trtRaw = _xlNormalizeTRT(c(r, idx.trt, c(r, 2)));
+    const trt = trtRaw || _xlGetTRT(uf, vara);
+    const coReus = idx.coReus >= 0 ? c(r, idx.coReus) : '';
+
+    return {
+      causa_raiz: causa,
+      num_processo: proc,
+      trt,
+      status: normalizeStatus(c(r, idx.status, c(r, 3))),
+      cargo: c(r, idx.cargo, c(r, 4)),
+      assunto: c(r, idx.assunto, c(r, 5)),
+      vara,
+      cidade,
+      uf,
+      adv1: c(r, idx.advCna, c(r, idx.advAdverso, c(r, 15))),
+      adv2: '',
+      adv3: '',
+      co_reus: coReus,
+      juiz_sentenca: c(r, idx.juizSent, c(r, 16)),
+      fase: c(r, idx.fase, c(r, 22)),
+      arquivado: c(r, idx.arquivado, c(r, 35)),
+      data_distrib: idx.dataDistrib >= 0 ? c(r, idx.dataDistrib) : c(r, 0),
+      autor_recurso: c(r, idx.autorRec, c(r, 43)),
+      resultado_final: c(r, idx.resFinal, c(r, 51)),
+      julgador: c(r, idx.julgador, c(r, 58)),
+      resultado_recente: c(r, idx.resRec, c(r, 63)),
+      primeiro_resultado: c(r, idx.primeiro, c(r, 66)),
+    };
+  }).filter(Boolean);
+}
+
+function _xlParseDecisoes(rawRows) {
+  // Sheet: 0=N°Processo, 1=TRT, 2=CAUSA RAIZ, 3=RESULTADO DA DECISÃO, 4=JUIZ/RELATOR, 5=VARATURMA
+  const c = (r, i) => String(r[i] ?? '').trim();
+  return rawRows.filter(r => r && r[0] && String(r[0]).trim() && c(r,2)).map(r => ({
+    num_processo: c(r,0),
+    trt:          _xlNormalizeTRT(c(r,1)),
+    causa_raiz:   _xlCanonCR(c(r,2)),
+    resultado:    c(r,3),
+    tipo:         _xlExtractDecTipo(c(r,3)),
+    juiz_relator: c(r,4),
+    varaturma:    c(r,5),
+  }));
+}
+
+function _xlParseNovos(rawRows) {
+  // Sheet has summary table: look for 'Causa Raiz' header row, then CR + count
+  let total = 0, byCR = {}, inTable = false;
+  for (const r of rawRows) {
+    const v0 = String(r[0] ?? '').trim();
+    if (/total:\s*\d+/i.test(v0)) {
+      const m = v0.match(/\d+/);
+      if (m) total = parseInt(m[0]);
+    }
+    if (v0.toLowerCase() === 'causa raiz') { inTable = true; continue; }
+    if (inTable && v0 && v0.toLowerCase() !== 'total') {
+      const cnt = parseInt(r[1] ?? 0);
+      if (!isNaN(cnt) && cnt > 0) {
+        const cr = _xlCanonCR(v0);
+        byCR[cr] = (byCR[cr] || 0) + cnt;
+      }
+    }
+  }
+  if (!total) total = Object.values(byCR).reduce((a,b)=>a+b,0);
+  return { total, byCR };
+}
+
+function _xlClassifyDec(res) {
+  const n = _xlNormTxt(res);
+  if (n.includes('DESFAVOR')) return 'D';
+  if (n.includes('FAVOR')) return 'F';
+  if (_XL_DEC_FAV.has(res))  return 'F';
+  if (_XL_DEC_DESF.has(res)) return 'D';
+  return 'O';
+}
+function _xlExtractDecTipo(res) {
+  const n = _xlNormTxt(res);
+  if (n.includes('TST')) return 'TST';
+  if (n.includes('ACORDAO')) return 'Acórdão';
+  if (n.includes('SENTENCA')) return 'Sentença';
+  return 'Outro';
+}
+
+function _xlCounter(arr) { const m={}; arr.forEach(v=>{ if(v) m[v]=(m[v]||0)+1; }); return m; }
+function _xlTopN(c, n) { return Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,n); }
+function _xlFmtBr(n) { return Number(n).toLocaleString('pt-BR'); }
+function _xlFmtPct(num, den) { return den ? (100*num/den).toFixed(1).replace('.',',')+' %' : '—'; }
+function _xlChartBar(labels, data, datasetLabel, color, horizontal) {
+  const horiz = horizontal !== false; // default horizontal (indexAxis:'y')
+  return {
+    type:'bar',
+    data:{ labels, datasets:[{ label:datasetLabel||'Processos', data, backgroundColor:color||'#0D2B5E', borderRadius:4 }] },
+    options:{
+      indexAxis: horiz ? 'y' : 'x',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ grid:{ color:'rgba(0,0,0,0.05)' }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } },
+        y:{ grid:{ display: horiz ? false : true }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } }
+      }
+    }
+  };
+}
+function _xlChartBarVertical(labels, data, datasetLabel, color) {
+  return _xlChartBar(labels, data, datasetLabel, color, false);
+}
+const _XL_PAL = ['#7B1A2E','#0D2B5E','#0F9E76','#B7791F','#1A4080','#9B2238'];
+
+function _xlChartDoughnut(labels, data) {
+  return {
+    type:'doughnut',
+    data:{ labels, datasets:[{ data, backgroundColor:_XL_PAL.slice(0,data.length), borderWidth:3, borderColor:'#fff', hoverOffset:8 }] },
+    options:{ responsive:true, cutout:'62%', animation:{ duration:900, easing:'easeOutQuart' },
+      plugins:{ legend:{ position:'right', labels:{ font:{ family:'IBM Plex Mono', size:10 }, color:'rgba(26,10,13,0.7)', padding:14 } } } }
+  };
+}
+
+/** Horizontal bar with one distinct color per bar */
+function _xlChartMultiBar(labels, data, datasetLabel, colorOrHorizontal, horizontalMaybe) {
+  let color = '#0D2B5E';
+  let horiz = true;
+  if (typeof colorOrHorizontal === 'boolean') {
+    horiz = colorOrHorizontal;
+  } else {
+    color = colorOrHorizontal || '#0D2B5E';
+    if (typeof horizontalMaybe === 'boolean') horiz = horizontalMaybe;
+  }
+  return {
+    type:'bar',
+    data:{ labels, datasets:[{ label:datasetLabel||'Processos', data, backgroundColor:color, borderRadius:6, maxBarThickness:30 }] },
+    options:{
+      indexAxis: horiz ? 'y' : 'x',
+      responsive:true, maintainAspectRatio:false,
+      animation:{ duration:700, easing:'easeOutQuart' },
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ grid:{ color:'rgba(0,0,0,0.05)' }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } },
+        y:{ grid:{ display: horiz ? false : true }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } }
+      }
+    }
+  };
+}
+
+/** Line chart — distribuições por ano */
+function _xlChartLine(labels, datasets) {
+  const pal = ['#0D2B5E','#7B1A2E','#0F9E76','#B7791F','#1A4080'];
+  return {
+    type:'line',
+    data:{ labels, datasets: datasets.map((ds,i)=>({ 
+      label: ds.label,
+      data: ds.data,
+      borderColor: pal[i%pal.length],
+      backgroundColor: pal[i%pal.length]+'22',
+      borderWidth: 2.5,
+      pointRadius: 5,
+      pointHoverRadius: 8,
+      pointBackgroundColor: pal[i%pal.length],
+      tension: 0.35,
+      fill: datasets.length===1
+    })) },
+    options:{ responsive:true, maintainAspectRatio:false,
+      animation:{ duration:900, easing:'easeOutQuart' },
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 }, padding:14 } },
+        tooltip:{ mode:'index', intersect:false }
+      },
+      scales:{
+        x:{ grid:{ color:'rgba(0,0,0,0.05)' }, ticks:{ font:{ family:'IBM Plex Mono', size:11 } } },
+        y:{ beginAtZero:true, grid:{ color:'rgba(0,0,0,0.06)' }, ticks:{ precision:0, font:{ family:'IBM Plex Mono', size:11 } } }
+      }
+    }
+  };
+}
+
+/** Polar area — ideal for state/UF distribution */
+function _xlChartPolarArea(labels, data) {
+  return {
+    type:'polarArea',
+    data:{ labels, datasets:[{ data, backgroundColor:_XL_PAL.slice(0,data.length).map(c=>c+'BB'), borderColor:_XL_PAL.slice(0,data.length), borderWidth:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      animation:{ duration:900, easing:'easeOutQuart' },
+      plugins:{ legend:{ position:'right', labels:{ font:{ family:'IBM Plex Mono', size:10 }, padding:12 } } },
+      scales:{ r:{ ticks:{ display:false, backdropColor:'transparent' }, grid:{ color:'rgba(0,0,0,0.07)' } } }
+    }
+  };
+}
+
+/** Treemap — ideal para distribuição geográfica (UF) e co-réus */
+function _xlChartTreemap(labels, data) {
+  const treeData = labels.map((g, i) => ({ g, v: data[i] }));
+  return {
+    type:'treemap',
+    data:{ datasets:[{
+      label:'Processos',
+      data: treeData,
+      key:'v',
+      groups:['g'],
+      backgroundColor(ctx) {
+        const pal = ['#0D2B5E','#1A4080','#0F4C8A','#0A3560','#163F6E','#1D4E8F','#0B3070','#14437A','#0E3868','#1C4D85'];
+        return pal[ctx.dataIndex % pal.length] + 'D0';
+      },
+      borderColor:'#fff', borderWidth:2,
+      labels:{ display:true,
+        formatter(ctx) { return [ctx.raw.g, String(ctx.raw.v)]; },
+        color:'#fff',
+        font:[{ size:12, weight:'600', family:'IBM Plex Mono' },{ size:10, family:'IBM Plex Mono' }]
+      }
+    }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{
+          title(items) { return items[0]?.raw?.g || ''; },
+          label(item) { return `Processos: ${item.raw?.v ?? ''}`; }
+        }}
+      }
+    }
+  };
+}
+
+/** Bubble chart — julgadores: x=Favoráveis, y=Desfavoráveis, r=volume total */
+function _xlChartBubble(names, favArr, desfArr) {
+  const maxTotal = Math.max(...names.map((_,i)=>favArr[i]+desfArr[i]), 1);
+  return {
+    type:'bubble',
+    data:{ datasets: names.map((name,i)=>{
+      const total = favArr[i]+desfArr[i];
+      const r = Math.max(5, Math.round(14*Math.sqrt(total/maxTotal)));
+      return {
+        label: name,
+        data:[{ x:favArr[i], y:desfArr[i], r }],
+        backgroundColor: _XL_PAL[i%_XL_PAL.length]+'99',
+        borderColor: _XL_PAL[i%_XL_PAL.length],
+        borderWidth:1.5
+      };
+    })},
+    options:{ responsive:true, maintainAspectRatio:false,
+      animation:{ duration:800, easing:'easeOutQuart' },
+      plugins:{
+        legend:{ position:'right', labels:{ font:{ family:'IBM Plex Mono', size:9 }, padding:8 } },
+        tooltip:{ callbacks:{
+          label(ctx) { return [`${ctx.dataset.label}`,`Fav: ${ctx.parsed.x}  |  Desf: ${ctx.parsed.y}`]; }
+        }}
+      },
+      scales:{
+        x:{ title:{ display:true, text:'Favoráveis', font:{ family:'IBM Plex Mono', size:10 } }, beginAtZero:true, ticks:{ precision:0, font:{ family:'IBM Plex Mono', size:10 } } },
+        y:{ title:{ display:true, text:'Desfavoráveis', font:{ family:'IBM Plex Mono', size:10 } }, beginAtZero:true, ticks:{ precision:0, font:{ family:'IBM Plex Mono', size:10 } } }
+      }
+    }
+  };
+}
+
+/** Radar — decisões por tipo (TST / Acórdão / Sentença) com FAV vs DESF */
+function _xlChartRadar(labels, datasets) {
+  const colors = [['#0F9E76','#0F9E7640'],['#7B1A2E','#7B1A2E40'],['#0D2B5E','#0D2B5E40'],['#B7791F','#B7791F40']];
+  return {
+    type:'radar',
+    data:{ labels, datasets: datasets.map((ds,i)=>({
+      label: ds.label,
+      data: ds.data,
+      borderColor: colors[i%colors.length][0],
+      backgroundColor: colors[i%colors.length][1],
+      borderWidth:2,
+      pointRadius:5,
+      pointBackgroundColor: colors[i%colors.length][0],
+      pointHoverRadius:7
+    }))},
+    options:{ responsive:true, maintainAspectRatio:false,
+      animation:{ duration:900, easing:'easeOutQuart' },
+      plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 }, padding:14 } } },
+      scales:{ r:{
+        beginAtZero:true,
+        grid:{ color:'rgba(0,0,0,0.08)' },
+        ticks:{ display:false },
+        pointLabels:{ font:{ family:'IBM Plex Mono', size:11 }, color:'rgba(26,10,13,0.75)' }
+      }}
+    }
+  };
+}
+
+/** Stacked horizontal bar — Favorável vs Desfavorável empilhados */
+function _xlChartStackedOutcome(labels, favData, desfData) {
+  return {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'Favorável',    data:favData,  backgroundColor:'#0F9E76', borderRadius:4, stack:'s' },
+      { label:'Desfavorável', data:desfData, backgroundColor:'#7B1A2E', borderRadius:4, stack:'s' }
+    ]},
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      animation:{ duration:700, easing:'easeOutQuart' },
+      plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
+      scales:{
+        x:{ stacked:true, grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true, ticks:{ precision:0, font:{ family:'IBM Plex Mono', size:10 } } },
+        y:{ stacked:true, grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } }
+      }
+    }
+  };
+}
+
+function _xlParsePedidos(assunto) {
+  if (!assunto) return {};
+  let s = String(assunto);
+  ['\xbb','\u00bb','\u00b7','»',' – ',' - '].forEach(sep=>{ s=s.split(sep).join('|'); });
+  const skip = new Set(['De','Do','Da','Dos','Das','E','Em','A','O','']);
+  const m = {};
+  s.split('|').forEach(p => {
+    p = p.replace(/\s+/g,' ').trim();
+    p = p.replace(/\w\S*/g, t => t.charAt(0).toUpperCase()+t.slice(1).toLowerCase());
+    if (p.length > 3 && !skip.has(p)) m[p] = (m[p]||0)+1;
+  });
+  return m;
+}
+
+function _xlParseEntityList(value) {
+  return String(value || '')
+    .split(/\s*(?:;|\||\n|\r|\s\/\s)\s*/)
+    .map(part => part.replace(/\s+/g, ' ').trim())
+    .filter(part => part && !/^n\/?a$/i.test(part) && !/^nao informado$/i.test(part));
+}
+
+function _xlTopKeysByTotal(counterMaps, limit) {
+  return [...new Set((counterMaps || []).flatMap(map => Object.keys(map || {})))]
+    .sort((a, b) => (counterMaps || []).reduce((sum, map) => sum + Number((map || {})[b] || 0), 0) - (counterMaps || []).reduce((sum, map) => sum + Number((map || {})[a] || 0), 0))
+    .slice(0, limit);
+}
+
+function _xlTooltipLines(counter, limit) {
+  return Object.entries(counter || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit || 6)
+    .map(([label, count]) => `${label} (${count})`);
+}
+
+/** Gera linhas combinando Julgador e VT/Turma: "NOME (total) — VT1 (n), VT2 (n)" */
+function _xlTooltipJrVtLines(jrVtMap, limit) {
+  // jrVtMap = { 'NOME DO JULGADOR': { 'VT/TURMA': count, ... }, ... }
+  return Object.entries(jrVtMap || {})
+    .map(([jr, vtMap]) => {
+      const total = Object.values(vtMap).reduce((s, v) => s + v, 0);
+      return [jr, total, vtMap];
+    })
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit || 8)
+    .map(([jr, total, vtMap]) => {
+      const vtParts = Object.entries(vtMap).sort((a,b) => b[1]-a[1]).map(([vt,c]) => `${vt} (${c})`).join(', ');
+      return `${jr} (${total}) — ${vtParts}`;
+    });
+}
+
+function _xlChartOutcomeByGroup(labels, favData, desfData, detailTitle, favDetails, desfDetails, judgeInfo) {
+  return {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'Favorável', data:favData, backgroundColor:'#0F9E76', borderRadius:6, maxBarThickness:24 },
+      { label:'Desfavorável', data:desfData, backgroundColor:'#7B1A2E', borderRadius:6, maxBarThickness:24 }
+    ]},
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
+      scales:{
+        x:{ grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true, ticks:{ precision:0, font:{ family:'IBM Plex Mono', size:10 } } },
+        y:{ grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } }
+      }
+    },
+    falaw_meta:{
+      tooltip_mode:'trt_breakdown',
+      detail_title: detailTitle || 'Detalhes',
+      details:{ Favorável: favDetails || {}, Desfavorável: desfDetails || {} },
+      judgeInfo: judgeInfo || {}
+    }
+  };
+}
+
+function _xlFaseValida(fase) { return fase && !fase.toLowerCase().includes('arquiv'); }
+
+function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391) {
+  const rows = []; let so = 0;
+  const push = (tabKey, kpiKey, label, value, unit, chartData, chartTitle) => {
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:tabKey, kpi_key:kpiKey, label, value:String(value), unit:unit||'', chart_data:chartData||null, chart_title:chartTitle||'', sort_order:so++, trend_pct:null });
+  };
+  const susp1389 = suspensos1389 || [];
+  const susp1291 = suspensos1391 || [];
+
+  // ── VISÃO GERAL ──────────────────────────────────────────────────────────────
+  const total  = records.length;
+  const ativos = records.filter(r=>r.status==='ativo').length;
+  const encerr = records.filter(r=>r.status==='encerrado').length;
+  const decF   = decisoes.filter(d=>_xlClassifyDec(d.resultado)==='F').length;
+  const decD   = decisoes.filter(d=>_xlClassifyDec(d.resultado)==='D').length;
+  const decTot = decisoes.length;
+  const novosTotal = (novos && typeof novos === 'object' && 'total' in novos) ? novos.total : (Array.isArray(novos) ? novos.length : 0);
+  const novosByCR = (novos && novos.byCR) ? novos.byCR : {};
+  const _isValidJulg = j => j && !['nan','none','','0'].includes(j.toLowerCase());
+  const _isValidAdv = a => a && !['nan','none','','0','n/a','na'].includes(a.toLowerCase());
+
+  // Gráfico de linha: distribuições por ano (PRIMEIRO gráfico da visão geral)
+  {
+    const _parseYear = d => { const m=String(d||'').match(/(\d{4})/); return m?m[1]:null; };
+    const _byYearAll  = {}; // todos os processos
+    const _byYearCR   = {}; // por causa raiz
+    records.forEach(r => {
+      const y = _parseYear(r.data_distrib);
+      if(!y || y<'2015' || y>'2030') return;
+      _byYearAll[y]  = (_byYearAll[y]||0) + 1;
+      _byYearCR[r.causa_raiz] = _byYearCR[r.causa_raiz] || {};
+      _byYearCR[r.causa_raiz][y] = (_byYearCR[r.causa_raiz][y]||0) + 1;
+    });
+    const _years = Object.keys(_byYearAll).sort();
+    if(_years.length >= 2) {
+      // dataset total + por CR (somente CRs com ≥2 anos de dados)
+      const _datasets = [{ label:'Total', data:_years.map(y=>_byYearAll[y]||0) }];
+      for(const { cr, label: crLabel } of _XL_CR_TABS) {
+        const yCounts = _byYearCR[cr];
+        if(!yCounts) continue;
+        const yearsWithData = Object.keys(yCounts).filter(y=>_years.includes(y));
+        if(yearsWithData.length < 2) continue;
+        _datasets.push({ label: crLabel, data:_years.map(y=>(yCounts[y]||0)) });
+      }
+      push('visao-geral','chart_dist_ano','Ações Distribuídas por Ano','','',
+        _xlChartLine(_years, _datasets), 'Ações Distribuídas por Ano');
+    }
+  }
+
+  // Gráfico de linha: distribuições em 2026 por mês
+  {
+    const _MONTHS_LABELS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const _parseYM = d => { const m=String(d||'').match(/(\d{4})[-\/](\d{1,2})/); return m?{y:m[1],mo:parseInt(m[2],10)}:null; };
+    const _byMonthAll  = {};
+    const _byMonthCR   = {};
+    records.forEach(r => {
+      const ym = _parseYM(r.data_distrib);
+      if(!ym || ym.y !== '2026') return;
+      const mo = ym.mo;
+      _byMonthAll[mo]  = (_byMonthAll[mo]||0) + 1;
+      _byMonthCR[r.causa_raiz] = _byMonthCR[r.causa_raiz] || {};
+      _byMonthCR[r.causa_raiz][mo] = (_byMonthCR[r.causa_raiz][mo]||0) + 1;
+    });
+    const _months = Object.keys(_byMonthAll).map(Number).sort((a,b)=>a-b);
+    if(_months.length >= 1) {
+      const _labels = _months.map(m => _MONTHS_LABELS[m-1]);
+      const _datasets2026 = [{ label:'Total', data:_months.map(m=>_byMonthAll[m]||0) }];
+      for(const { cr, label: crLabel } of _XL_CR_TABS) {
+        const moCounts = _byMonthCR[cr];
+        if(!moCounts) continue;
+        const monthsWithData = Object.keys(moCounts).map(Number).filter(m=>_months.includes(m));
+        if(monthsWithData.length < 1) continue;
+        _datasets2026.push({ label: crLabel, data:_months.map(m=>(moCounts[m]||0)) });
+      }
+      push('visao-geral','chart_dist_2026','Distribuídos em 2026 por Mês','','',
+        _xlChartLine(_labels, _datasets2026), 'Ações Distribuídas em 2026 por Mês');
+    }
+  }
+
+  push('visao-geral','total_processos','Total de Processos',_xlFmtBr(total),'processos');
+  push('visao-geral','ativos','Processos Ativos',_xlFmtBr(ativos),'ativos');
+  push('visao-geral','encerrados','Processos Encerrados',_xlFmtBr(encerr),'encerrados');
+  push('visao-geral','novos_casos','Novos Casos no Mês',_xlFmtBr(novosTotal),'novos');
+  push('visao-geral','decisoes_total','Decisões no Período',_xlFmtBr(decTot),'decisões');
+  push('visao-geral','decisoes_fav','Decisões Favoráveis',_xlFmtBr(decF),`(${_xlFmtPct(decF,decTot)})`);
+  push('visao-geral','decisoes_desf','Decisões Desfavoráveis',_xlFmtBr(decD),`(${_xlFmtPct(decD,decTot)})`);
+
+  // Novos casos por causa raiz
+  for (const [cr, cnt] of Object.entries(novosByCR)) {
+    const crTab = _XL_CR_TABS.find(t=>t.cr===cr);
+    const crLabel = crTab ? crTab.label : cr;
+    push('visao-geral', `novos_cr_${crTab?.tabKey||cr.toLowerCase().replace(/\s/g,'_')}`, `Novos — ${crLabel}`, _xlFmtBr(cnt), 'novos');
+  }
+
+  // Causa raiz doughnut
+  const crC = _xlCounter(records.filter(r=>r.status==='ativo').map(r=>r.causa_raiz));
+  const crTop = _xlTopN(crC, 10);
+  push('visao-geral','chart_cr_dist','Distribuição por Causa Raiz',_xlFmtBr(ativos),'ativos',
+    _xlChartDoughnut(crTop.map(([l])=>l), crTop.map(([,v])=>v)), 'Processos Ativos por Causa Raiz');
+
+  const novosCrEntries = [
+    ..._XL_CR_TABS
+      .map(tab => [tab.label, Number(novosByCR[tab.cr] || 0)])
+      .filter(([, count]) => count > 0),
+    ...Object.entries(novosByCR)
+      .filter(([cr]) => !_XL_CR_TABS.some(tab => tab.cr === cr))
+      .map(([cr, count]) => [cr, Number(count || 0)])
+  ];
+  if (novosCrEntries.length) {
+    push('visao-geral','chart_novos_cr','Novos Casos por Causa Raiz',_xlFmtBr(novosTotal),'novos',
+      _xlChartMultiBar(novosCrEntries.map(([label])=>label), novosCrEntries.map(([,count])=>count), 'Novos Casos', false), 'Novos Casos por Causa Raiz');
+  }
+
+  // Decisões por CR grouped bar
+  const dByCrF={}, dByCrD={};
+  decisoes.forEach(d=>{ const cr=d.causa_raiz||'Outros'; const cl=_xlClassifyDec(d.resultado); if(cl==='F') dByCrF[cr]=(dByCrF[cr]||0)+1; if(cl==='D') dByCrD[cr]=(dByCrD[cr]||0)+1; });
+  const allCRs=[...new Set([...Object.keys(dByCrF),...Object.keys(dByCrD)])].sort();
+  push('visao-geral','chart_dec_cr','Decisões por Causa Raiz','','',
+    { type:'bar', data:{ labels:allCRs, datasets:[
+      { label:'Favorável', data:allCRs.map(c=>dByCrF[c]||0), backgroundColor:'#0F9E76', borderRadius:4 },
+      { label:'Desfavorável', data:allCRs.map(c=>dByCrD[c]||0), backgroundColor:'#7B1A2E', borderRadius:4 }
+    ]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } }, scales:{ x:{ grid:{ display:false } }, y:{ grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true } } }}, 'Decisões do Período por Causa Raiz');
+
+  // Fase processual — sem arquivamento
+  const faseC = _xlCounter(records.filter(r=>r.status==='ativo'&&_xlFaseValida(r.fase)).map(r=>r.fase));
+  const faseTop = _xlTopN(faseC,12);
+  push('visao-geral','chart_fase','Fase Processual','','',
+    _xlChartMultiBar(faseTop.map(([l])=>l),faseTop.map(([,v])=>v),'Processos'), 'Distribuição por Fase Processual');
+
+  // TRT ranking — volume total
+  const trtC = _xlCounter(records.filter(r=>r.status==='ativo'&&r.trt).map(r=>r.trt));
+  const trtTop = _xlTopN(trtC,15);
+  push('visao-geral','chart_trt','Ranking por TRT','','',
+    _xlChartMultiBar(trtTop.map(([l])=>l),trtTop.map(([,v])=>v),'Processos Ativos',false), 'Volume de Processos por TRT');
+
+  // TRT × Causa Raiz — stacked bar (ativos)
+  const _TRT_CR_PAL = ['#0D2B5E','#7B1A2E','#0F9E76','#f59e0b','#6366f1','#ec4899'];
+  const trtCrMap = {}; // trt → { cr: count }
+  records.filter(r=>r.status==='ativo'&&r.trt&&r.causa_raiz).forEach(r=>{
+    if(!trtCrMap[r.trt]) trtCrMap[r.trt]={};
+    trtCrMap[r.trt][r.causa_raiz]=(trtCrMap[r.trt][r.causa_raiz]||0)+1;
+  });
+  const trtCrTrts = Object.entries(trtCrMap).sort((a,b)=>Object.values(b[1]).reduce((s,v)=>s+v,0)-Object.values(a[1]).reduce((s,v)=>s+v,0)).slice(0,12).map(([t])=>t);
+  const trtCrAllCRs = _XL_CR_TABS.map(t=>t.cr);
+  push('visao-geral','chart_trt_cr','Processos Ativos por TRT e Causa Raiz','','',
+    { type:'bar',
+      data:{ labels: trtCrTrts, datasets: trtCrAllCRs.map((cr,i)=>({
+        label: _XL_CR_TABS[i].label,
+        data: trtCrTrts.map(t=>(trtCrMap[t]||{})[cr]||0),
+        backgroundColor: _TRT_CR_PAL[i % _TRT_CR_PAL.length],
+        borderRadius: 3, stack:'s'
+      }))},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:'bottom', labels:{ font:{ family:'IBM Plex Mono', size:10 }, padding:12 } } },
+        scales:{ x:{ stacked:true, grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } },
+                 y:{ stacked:true, grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true } } }
+    }, 'Processos Ativos por TRT e Causa Raiz');
+
+  // Julgadores — a partir da aba Decisões
+  const decJFav = {}, decJDesf = {};
+  const decJInfo = {}; // { judge: { trt: Set, vt: Set } }
+  decisoes.forEach(d => {
+    const judge = String(d.juiz_relator || '').trim();
+    if (!_isValidJulg(judge)) return;
+    const cls = _xlClassifyDec(d.resultado);
+    if (cls === 'F') decJFav[judge] = (decJFav[judge] || 0) + 1;
+    if (cls === 'D') decJDesf[judge] = (decJDesf[judge] || 0) + 1;
+    // Coletar TRT e VT/Turma
+    if (!decJInfo[judge]) decJInfo[judge] = { trt: new Set(), vt: new Set() };
+    const trt = String(d.trt || '').trim(); if (trt && trt !== 'nan') decJInfo[judge].trt.add(trt);
+    const vt  = String(d.varaturma || d.vara || d.turma || d.vt || '').trim(); if (vt && vt !== 'nan') decJInfo[judge].vt.add(vt);
+  });
+  const julgTop = _xlTopKeysByTotal([decJFav, decJDesf], 10);
+  if (julgTop.length) {
+    const judgeInfo = {};
+    julgTop.forEach(j => {
+      const inf = decJInfo[j] || { trt: new Set(), vt: new Set() };
+      judgeInfo[j] = { trt: [...inf.trt].join(', ') || '—', vt: [...inf.vt].slice(0,2).join(', ') || '—' };
+    });
+    push('visao-geral','chart_julgadores','Top 10 Julgadores — Favoráveis vs Desfavoráveis','','',
+      _xlChartOutcomeByGroup(
+        julgTop,
+        julgTop.map(j=>decJFav[j]||0),
+        julgTop.map(j=>decJDesf[j]||0),
+        null, null, null, judgeInfo
+      ), 'Top 10 Julgadores — Favoráveis × Desfavoráveis');
+  }
+
+  // Advogados adversários
+  const advC = {};
+  records.forEach(r=>{ [r.adv1,r.adv2,r.adv3].forEach(a=>{ if(_isValidAdv(a)) advC[a]=(advC[a]||0)+1; }); });
+  const advTop = _xlTopN(advC,10);
+  push('visao-geral','chart_advogados','Top 10 Advogados Adversários','','',
+    _xlChartBar(advTop.map(([l])=>l), advTop.map(([,v])=>v), 'Processos', '#0D2B5E', true), 'Top 10 Advogados Adversários');
+
+  // Co-réus geral — top 10
+  const coReusAllC = {};
+  records.forEach(r=>{ _xlParseEntityList(r.co_reus).forEach(name=>{ coReusAllC[name]=(coReusAllC[name]||0)+1; }); });
+  const coReusAllTop = _xlTopN(coReusAllC, 10);
+  if(coReusAllTop.length) push('visao-geral','chart_coreus_geral','Top 10 Empresas Co-réus','','',
+    _xlChartBar(coReusAllTop.map(([l])=>l), coReusAllTop.map(([,v])=>v), 'Processos', '#0D2B5E', true), 'Top 10 Empresas Co-réus');
+
+  // Tabela consolidada — comparativo entre segmentos (causa raiz)
+  {
+    const crRows = _XL_CR_TABS.map(tab => {
+      const recs = records.filter(r => _xlCanonCR(r.causa_raiz) === tab.cr);
+      const decs = decisoes.filter(d => _xlCanonCR(d.causa_raiz) === tab.cr);
+      if (!recs.length && !decs.length) return null;
+      const ativos     = recs.filter(r => r.status === 'ativo').length;
+      const encerrados = recs.filter(r => r.status === 'encerrado').length;
+      const favDec     = decs.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
+      const desfDec    = decs.filter(d => _xlClassifyDec(d.resultado) === 'D').length;
+      const totalDec   = favDec + desfDec;
+      const pctFav     = totalDec > 0 ? Math.round(100 * favDec / totalDec) : null;
+      const novos      = Number(novosByCR[tab.cr] || 0);
+      return { label: tab.label, total: recs.length, ativos, encerrados, novos, favDec, desfDec, totalDec, pctFav };
+    }).filter(Boolean);
+
+    if (crRows.length >= 2) {
+      push('visao-geral', 'table_cr_consolidado', 'Consolidado por Segmento', '', '',
+        { type: 'table_cr', rows: crRows },
+        'Visão Consolidada por Segmento (Causa Raiz)');
+    }
+  }
+
+  // Radar de comparação entre causas-raiz
+  {
+    const _radarCRs = _XL_CR_TABS.filter(tab => {
+      const recs = records.filter(r=>_xlCanonCR(r.causa_raiz)===tab.cr);
+      return recs.length > 0;
+    });
+    if (_radarCRs.length >= 3) {
+      const _radarLabels = _radarCRs.map(t=>t.label);
+      const _pctAtivos    = _radarCRs.map(t=>{ const r=records.filter(x=>_xlCanonCR(x.causa_raiz)===t.cr); return r.length?Math.round(100*r.filter(x=>x.status==='ativo').length/r.length):0; });
+      const _pctFav       = _radarCRs.map(t=>{ const d=decisoes.filter(x=>_xlCanonCR(x.causa_raiz)===t.cr); return d.length?Math.round(100*d.filter(x=>_xlClassifyDec(x.resultado)==='F').length/d.length):0; });
+      const maxDec = Math.max(..._radarCRs.map(t=>decisoes.filter(x=>_xlCanonCR(x.causa_raiz)===t.cr).length),1);
+      const _normDec = _radarCRs.map(t=>Math.round(100*decisoes.filter(x=>_xlCanonCR(x.causa_raiz)===t.cr).length/maxDec));
+      const maxNovos = Math.max(..._radarCRs.map(t=>Number(novosByCR[t.cr]||0)),1);
+      const _normNovos = _radarCRs.map(t=>Math.round(100*Number(novosByCR[t.cr]||0)/maxNovos));
+      push('visao-geral','chart_radar_cr','Comparativo entre Causas Raiz','','',
+        _xlChartRadar(
+          ['% Processos Ativos','% Favorabilidade','Volume Decisões','Novos Casos'],
+          _radarCRs.map((t,i)=>({ label:t.label, data:[_pctAtivos[i],_pctFav[i],_normDec[i],_normNovos[i]] }))
+        ), 'Comparativo de Desempenho por Causa Raiz');
+    }
+  }
+
+  // ── PER CAUSA RAIZ TABS ──────────────────────────────────────────────────────
+  for (const { cr, tabKey, label } of _XL_CR_TABS) {
+    const recs = records.filter(r=>_xlCanonCR(r.causa_raiz)===cr);
+    const decs = decisoes.filter(d=>_xlCanonCR(d.causa_raiz)===cr);
+    if (!recs.length && !decs.length) continue;
+    const ta = recs.filter(r=>r.status==='ativo').length;
+    const te = recs.filter(r=>r.status==='encerrado').length;
+    const tf = decs.filter(d=>_xlClassifyDec(d.resultado)==='F').length;
+    const td = decs.filter(d=>_xlClassifyDec(d.resultado)==='D').length;
+
+    // Suspensos para esta causa raiz
+    const tSusp1389 = susp1389.filter(s=>_xlCanonCR(String(s[2]||''))===cr);
+    const tSusp1291 = susp1291.filter(s=>_xlCanonCR(String(s[2]||''))===cr);
+    const tSusp = tSusp1389.length + tSusp1291.length;
+
+    push(tabKey,'total','Total de Processos',_xlFmtBr(recs.length),'processos');
+    push(tabKey,'ativos','Processos Ativos',_xlFmtBr(ta),'ativos');
+    push(tabKey,'encerrados','Processos Encerrados',_xlFmtBr(te),'encerrados');
+    if(tSusp>0) push(tabKey,'suspensos','Processos Suspensos',_xlFmtBr(tSusp),'suspensos');
+    if(decs.length>0) {
+      push(tabKey,'decisoes_fav','Decisões Favoráveis',_xlFmtBr(tf),`(${_xlFmtPct(tf,decs.length)})`);
+      push(tabKey,'decisoes_desf','Decisões Desfavoráveis',_xlFmtBr(td),`(${_xlFmtPct(td,decs.length)})`);
+      push(tabKey,'decisoes_total','Total Decisões',_xlFmtBr(decs.length),'no período');
+    }
+
+    // Fase processual — sem arquivamento
+    const tFaseC = _xlCounter(recs.filter(r=>_xlFaseValida(r.fase)).map(r=>r.fase));
+    const tFaseTop = _xlTopN(tFaseC,12);
+    if(tFaseTop.length) push(tabKey,'chart_fase','Fase Processual','','',
+      _xlChartMultiBar(tFaseTop.map(([l])=>l),tFaseTop.map(([,v])=>v),'Processos'), `Fase Processual — ${label}`);
+
+    // UF — only valid 2-letter codes
+    const tUfC = _xlCounter(recs.filter(r=>r.uf&&_XL_VALID_UF.has(r.uf)).map(r=>r.uf));
+    const tUfTop = _xlTopN(tUfC,10);
+    if(tUfTop.length) push(tabKey,'chart_uf','Estados com mais Processos','','',
+      { type:'choropleth', ufValues: Object.fromEntries(tUfTop) }, `Distribuição por Estado — ${label}`);
+
+    // Escritórios CNA Requerente (col 15)
+    const tAdvC = {};
+    recs.forEach(r=>{ if(_isValidAdv(r.adv1)) tAdvC[r.adv1]=(tAdvC[r.adv1]||0)+1; });
+    const tAdvTop = _xlTopN(tAdvC,10);
+    if(tAdvTop.length) push(tabKey,'chart_advogados','Top 10 Escritórios CNA','','',
+      _xlChartMultiBar(tAdvTop.map(([l])=>l),tAdvTop.map(([,v])=>v),'Processos'), `Top 10 Escritórios CNA — ${label}`);
+
+    // Decisões por tipo (TST / Acórdão / Sentença) — grouped bar
+    if(decs.length>0) {
+      const _TIPOS = ['TST','Acórdão','Sentença'];
+      const _tipoFav={TST:0,'Acórdão':0,'Sentença':0}, _tipoDesf={TST:0,'Acórdão':0,'Sentença':0};
+      decs.forEach(d=>{
+        const cls=_xlClassifyDec(d.resultado);
+        if(_TIPOS.includes(d.tipo)){
+          if(cls==='F') _tipoFav[d.tipo]++;
+          else if(cls==='D') _tipoDesf[d.tipo]++;
+        }
+      });
+      const _tiposAtivos = _TIPOS.filter(t=>_tipoFav[t]+_tipoDesf[t]>0);
+      if(_tiposAtivos.length) push(tabKey,'chart_decisoes','Decisões por Tipo',_xlFmtBr(decs.length),'decisões',
+        _xlChartRadar(_tiposAtivos,[{label:'Favorável',data:_tiposAtivos.map(t=>_tipoFav[t])},{label:'Desfavorável',data:_tiposAtivos.map(t=>_tipoDesf[t])}]), `Decisões por Tipo — ${label}`);
+    }
+
+    // Decisões por TRT — unificado (VT/Turma + Julgador/Relator no tooltip)
+    if (decs.length > 0) {
+      const trtFavC={}, trtDesfC={}, trtFavVT={}, trtDesfVT={}, trtFavJR={}, trtDesfJR={}, trtFavJRVT={}, trtDesfJRVT={};
+      decs.forEach(d=>{
+        const trt = d.trt || 'TRT não informado';
+        const vt  = String(d.varaturma   || '').trim() || 'Não informado';
+        const jr  = String(d.juiz_relator || '').trim();
+        const cls = _xlClassifyDec(d.resultado);
+        if(cls==='F'){
+          trtFavC[trt]=(trtFavC[trt]||0)+1;
+          if(!trtFavVT[trt]) trtFavVT[trt]={}; trtFavVT[trt][vt]=(trtFavVT[trt][vt]||0)+1;
+          if(jr){ if(!trtFavJR[trt]) trtFavJR[trt]={}; trtFavJR[trt][jr]=(trtFavJR[trt][jr]||0)+1;
+            if(!trtFavJRVT[trt]) trtFavJRVT[trt]={}; if(!trtFavJRVT[trt][jr]) trtFavJRVT[trt][jr]={};
+            trtFavJRVT[trt][jr][vt]=(trtFavJRVT[trt][jr][vt]||0)+1; }
+        }
+        if(cls==='D'){
+          trtDesfC[trt]=(trtDesfC[trt]||0)+1;
+          if(!trtDesfVT[trt]) trtDesfVT[trt]={}; trtDesfVT[trt][vt]=(trtDesfVT[trt][vt]||0)+1;
+          if(jr){ if(!trtDesfJR[trt]) trtDesfJR[trt]={}; trtDesfJR[trt][jr]=(trtDesfJR[trt][jr]||0)+1;
+            if(!trtDesfJRVT[trt]) trtDesfJRVT[trt]={}; if(!trtDesfJRVT[trt][jr]) trtDesfJRVT[trt][jr]={};
+            trtDesfJRVT[trt][jr][vt]=(trtDesfJRVT[trt][jr][vt]||0)+1; }
+        }
+      });
+      const allTrts = _xlTopKeysByTotal([trtFavC, trtDesfC], 15);
+      if(allTrts.length) push(tabKey,'chart_trt_overview','Decisões por TRT','','',{
+        type:'bar',
+        data:{ labels:allTrts, datasets:[
+          { label:'Favorável',   data:allTrts.map(t=>trtFavC[t]||0),  backgroundColor:'#0F9E76', borderRadius:6, maxBarThickness:24 },
+          { label:'Desfavorável',data:allTrts.map(t=>trtDesfC[t]||0), backgroundColor:'#7B1A2E', borderRadius:6, maxBarThickness:24 }
+        ]},
+        options:{
+          indexAxis:'y', responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
+          scales:{
+            x:{ grid:{ color:'rgba(0,0,0,0.05)' }, beginAtZero:true, ticks:{ precision:0, font:{ family:'IBM Plex Mono', size:10 } } },
+            y:{ grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } }
+          }
+        },
+        falaw_meta:{
+          tooltip_mode:'trt_full',
+          jrVtDetails:{ Favorável: Object.fromEntries(allTrts.map(t=>[t, _xlTooltipJrVtLines(trtFavJRVT[t],8)])), Desfavorável: Object.fromEntries(allTrts.map(t=>[t, _xlTooltipJrVtLines(trtDesfJRVT[t],8)])) }
+        }
+      }, `Decisões por TRT — ${label}`);
+    }
+
+    if (['op-logistico','terceirizacao','marketplace'].includes(tabKey)) {
+      const coReusC = {};
+      recs.forEach(r => {
+        _xlParseEntityList(r.co_reus).forEach(name => {
+          coReusC[name] = (coReusC[name] || 0) + 1;
+        });
+      });
+      const coReusTop = _xlTopN(coReusC, 10);
+      if (coReusTop.length) push(tabKey,'chart_coreus','Top 10 Empresas Co-réus','','',
+        _xlChartBar(coReusTop.map(([name])=>name), coReusTop.map(([,count])=>count), 'Processos', '#0D2B5E', true), `Top 10 Empresas Co-réus — ${label}`);
+    }
+
+
+
+    // Pedidos ranking — somente Ex-Foodlover
+    if (tabKey === 'ex-foodlover') {
+      const pedC = {};
+      recs.forEach(r=>{ Object.entries(_xlParsePedidos(r.assunto)).forEach(([k,v])=>{ pedC[k]=(pedC[k]||0)+v; }); });
+      const pedTop = _xlTopN(pedC,15);
+      if (pedTop.length) push(tabKey,'chart_pedidos','Pedidos mais Frequentes','','',
+        _xlChartBar(pedTop.map(([l])=>l),pedTop.map(([,v])=>v),'Ocorrências','#0D2B5E'), `Ranking de Pedidos — ${label}`);
+    }
+  }
+  return rows;
+}
+
+async function ifoodSaveExcel() {
+  if (!ifoodApiBase()) { showToast('Configure a Cockroach API em Configurações.'); return; }
+  if (!_ifoodExcelData) { showToast('Selecione um arquivo primeiro.'); return; }
+  const periodId = document.getElementById('ifood-xl-period').value;
+  if (!periodId) { showToast('Selecione um período.'); return; }
+  const st = document.getElementById('ifood-xl-status');
+  const setStatus = msg => { st.style.display='block'; st.textContent=msg; };
+
+  try {
+    const { wb, filename, file } = _ifoodExcelData;
+    const findSh = (...names) => { for (const n of names) { const f=wb.SheetNames.find(s=>s.toLowerCase().includes(n.toLowerCase())); if(f) return wb.Sheets[f]; } return null; };
+
+    setStatus('Lendo aba IFOOD…');
+    const ifoodSh = findSh('IFOOD','todos','ifood','all') || wb.Sheets[wb.SheetNames[0]];
+    const ifoodRaw = XLSX.utils.sheet_to_json(ifoodSh, { header:1, defval:'' });
+    const records = _xlParseIfood(ifoodRaw);
+
+    setStatus(`Lendo Decisões… (${records.length} processos)`);
+    const decSh = findSh('Decisões','Decisoes','Decisão','Decisao');
+    const decisoes = decSh ? _xlParseDecisoes(XLSX.utils.sheet_to_json(decSh,{header:1,defval:''}).slice(1)) : [];
+
+    const novosSh = findSh('Novos Casos Recebidos','Novos Casos','novos');
+    const novos = novosSh ? _xlParseNovos(XLSX.utils.sheet_to_json(novosSh,{header:1,defval:''})) : { total:0, byCR:{} };
+
+    const susp1389Sh = findSh('Suspensos Tema 1389','1389','susp 1389');
+    const susp1389 = susp1389Sh ? XLSX.utils.sheet_to_json(susp1389Sh,{header:1,defval:''}).slice(1) : [];
+
+    const susp1291Sh = findSh('Suspensos Tema 1291','1291','susp 1291');
+    const susp1291 = susp1291Sh ? XLSX.utils.sheet_to_json(susp1291Sh,{header:1,defval:''}).slice(1) : [];
+
+    setStatus(`Computando KPIs… (${decisoes.length} decisões, ${novos.total} novos casos)`);
+    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291);
+
+    // Upload do arquivo Excel bruto para Cockroach (quando API configurada)
+    let ifoodExcelFileUrl = null;
+    if (file) {
+      try {
+        setStatus('Enviando arquivo Excel bruto para Cockroach…');
+        const dataUrl = await fileToDataUrl(file);
+        ifoodExcelFileUrl = await apiUploadFile('ifood_excel', periodId, filename, dataUrl);
+      } catch (e) {
+        console.warn('iFood excel upload (Cockroach):', e.message);
+      }
+    }
+
+    // Preservar KPIs adicionados manualmente: busca os existentes cujo kpi_key
+    // não será sobrescrito pela geração automática, e os reinserimos após.
+    setStatus('Verificando KPIs manuais existentes…');
+    const { data: existingKpisResp, error: existingKpisErr } = await ifoodApi('/api/ifood/kpis?periodId=' + encodeURIComponent(periodId));
+    if (existingKpisErr) throw new Error('Erro ao ler KPIs existentes: ' + existingKpisErr.message);
+    const existingKpis = Array.isArray(existingKpisResp) ? existingKpisResp : [];
+    const autoKeySet = new Set(kpiRows.map(r => r.tab_key + '||' + r.kpi_key));
+    const manualKpis = (existingKpis || []).filter(k => !autoKeySet.has(k.tab_key + '||' + k.kpi_key));
+
+    setStatus('Removendo KPIs gerados automaticamente…');
+    const { error: delErr } = await ifoodApi('/api/ifood/kpis/by-period/' + encodeURIComponent(periodId), { method: 'DELETE' });
+    if (delErr) throw new Error('Erro ao limpar KPIs: ' + delErr.message);
+
+    const BATCH = 40;
+    for (let i = 0; i < kpiRows.length; i += BATCH) {
+      setStatus(`Salvando KPIs… (${Math.min(i+BATCH,kpiRows.length)}/${kpiRows.length})`);
+      const { error } = await ifoodApi('/api/ifood/kpis/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: kpiRows.slice(i, i+BATCH) })
+      });
+      if (error) throw new Error('KPI insert: ' + error.message);
+    }
+
+    // Reinserir KPIs manuais preservados (ajusta sort_order para vir após os automáticos)
+    if (manualKpis.length) {
+      setStatus(`Restaurando ${manualKpis.length} KPI(s) adicionado(s) manualmente…`);
+      const maxSo = kpiRows.reduce((m, r) => Math.max(m, r.sort_order), 0);
+      manualKpis.forEach((k, i) => { k.sort_order = maxSo + i + 1; delete k.created_at; });
+      for (let i = 0; i < manualKpis.length; i += BATCH) {
+        const { error } = await ifoodApi('/api/ifood/kpis/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: manualKpis.slice(i, i+BATCH) })
+        });
+        if (error) console.warn('KPI manual reinsert:', error.message);
+      }
+    }
+
+    // Content HTML per tab — só insere se ainda não existir texto escrito manualmente
+    setStatus('Verificando textos de análise existentes…');
+    const { data: existingContentResp } = await ifoodApi('/api/ifood/content?periodId=' + encodeURIComponent(periodId));
+    const existingContent = Array.isArray(existingContentResp) ? existingContentResp : [];
+    const existingTabs = new Set((existingContent||[]).filter(c=>c.content_html&&c.content_html.trim()).map(c=>c.tab_key));
+    const tabMap = { 'visao-geral':'Visão Geral', nuvem:'Nuvem', 'op-logistico':'Op. Logístico', 'ex-foodlover':'Ex-Foodlover', terceirizacao:'Terceirização', marketplace:'Marketplace' };
+    for (const [tabKey, tabLabel] of Object.entries(tabMap)) {
+      if (existingTabs.has(tabKey)) continue; // não sobrescrever texto existente
+      const t = _XL_CR_TABS.find(t=>t.tabKey===tabKey);
+      const recs = t ? records.filter(r=>r.causa_raiz===t.cr) : records;
+      const decs = t ? decisoes.filter(d=>d.causa_raiz===t.cr) : decisoes;
+      const ta = recs.filter(r=>r.status==='ativo').length;
+      const tf = decs.filter(d=>_xlClassifyDec(d.resultado)==='F').length;
+      const td = decs.filter(d=>_xlClassifyDec(d.resultado)==='D').length;
+      const html = `<p>Total de <strong>${_xlFmtBr(recs.length)}</strong> processos, sendo <strong>${_xlFmtBr(ta)}</strong> ativos. No período foram registradas <strong>${_xlFmtBr(decs.length)}</strong> decisões, com índice de favorabilidade de <strong>${_xlFmtPct(tf,decs.length)}</strong> (${_xlFmtBr(tf)} favoráveis / ${_xlFmtBr(td)} desfavoráveis).</p>`;
+      await ifoodApi('/api/ifood/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id:ifoodId(), period_id:periodId, tab_key:tabKey, content_html:html, updated_at:new Date().toISOString() })
+      });
+    }
+
+    // Highlights
+    setStatus('Salvando destaques…');
+    await ifoodApi('/api/ifood/highlights/by-period/' + encodeURIComponent(periodId), { method: 'DELETE' });
+    const total  = records.length;
+    const ativos = records.filter(r=>r.status==='ativo').length;
+    const decF   = decisoes.filter(d=>_xlClassifyDec(d.resultado)==='F').length;
+    const decTot = decisoes.length;
+    const { error: hlErr } = await ifoodApi('/api/ifood/highlights/replace', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ periodId, rows: [
+      { id:ifoodId(), period_id:periodId, icon:'⚖️', title:'Total de Processos', body:`${_xlFmtBr(total)} processos no portfólio, dos quais ${_xlFmtBr(ativos)} ativos.`, sort_order:0 },
+      { id:ifoodId(), period_id:periodId, icon:'✅', title:'Índice de Favorabilidade', body:`${_xlFmtPct(decF,decTot)} das decisões no período foram favoráveis para o iFood (${_xlFmtBr(decF)} de ${_xlFmtBr(decTot)}).`, sort_order:1 },
+      { id:ifoodId(), period_id:periodId, icon:'📋', title:'Novos Casos no Período', body:`${_xlFmtBr(novos.total||0)} novos casos recebidos no mês.`, sort_order:2 },
+      { id:ifoodId(), period_id:periodId, icon:'📊', title:'Decisões do Período', body:`${_xlFmtBr(decTot)} decisões registradas — ${_xlFmtBr(decF)} favoráveis e ${_xlFmtBr(decisoes.filter(d=>_xlClassifyDec(d.resultado)==='D').length)} desfavoráveis.`, sort_order:3 },
+    ] })
+    });
+    if (hlErr) console.warn('highlights:', hlErr.message);
+
+    // Registro técnico do upload/processamento em ifood_raw_data (quando a tabela existir)
+    try {
+      const rawPayload = {
+        workbook_sheets: wb.SheetNames,
+        process_summary: {
+          records: records.length,
+          decisoes: decisoes.length,
+          novos_casos: novos.total || 0,
+          kpis_gerados: kpiRows.length
+        },
+        cockroach_file_url: ifoodExcelFileUrl || null,
+        processed_at: new Date().toISOString()
+      };
+      await ifoodApi('/api/ifood/raw-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+        id: ifoodId(),
+        period_id: periodId,
+        filename,
+        raw_json: rawPayload,
+        uploaded_at: new Date().toISOString()
+      })
+      });
+    } catch (e) {
+      console.warn('ifood_raw_data upsert:', e.message);
+    }
+
+    setStatus(`✓ Concluído! ${kpiRows.length} KPIs computados e salvos no Cockroach a partir de "${filename}". Recarregue o dashboard do cliente para visualizar os dados.`);
+    showToast('Excel processado com sucesso!');
+  } catch(e) {
+    setStatus('Erro: ' + e.message);
+    console.error(e);
+    showToast('Erro ao processar Excel.');
+  }
+}
+
+
