@@ -5553,12 +5553,37 @@ function saveReport() {
 
 /* ── EXTRAÇÃO AUTOMÁTICA DE STATS DO EXCEL ────────────────── */
 const _STAT_ALIASES = {
-  processos:     ['total de processos','total processos','quantidade de processos','qtd processos','num processos','numero de processos','nº de processos','processos'],
-  ativos:        ['processos ativos','ativos','em andamento','andamento','em curso','pendentes'],
-  favoraveis:    ['decisoes favoraveis','decisões favoráveis','favoraveis','favoráveis','ganhos','procedente','procedentes','vitórias','vitorias','favoravel'],
-  desfavoraveis: ['decisoes desfavoraveis','decisões desfavoráveis','desfavoraveis','desfavoráveis','perdas','improcedente','improcedentes','desfavoravel'],
-  novas:         ['novas acoes','novas ações','novos processos','distribuidos','distribuídos','novas acoes no periodo','ingressos','novas'],
-  encerrados:    ['processos encerrados','encerrados','arquivados','finalizados','extintos','baixados','encerrado'],
+  // ── Totais gerais ────────────────────────────────────────────
+  processos:          ['total de processos','total processos','quantidade de processos','qtd processos','num processos','numero de processos','nº de processos','processos'],
+  ativos:             ['processos ativos','ativos','em andamento','andamento','em curso','pendentes'],
+  favoraveis:         ['decisoes favoraveis','decisões favoráveis','favoraveis','favoráveis','ganhos','procedente','procedentes','vitórias','vitorias','favoravel','resultado favoravel','resultado favorável'],
+  desfavoraveis:      ['decisoes desfavoraveis','decisões desfavoráveis','desfavoraveis','desfavoráveis','perdas','improcedente','improcedentes','desfavoravel','resultado desfavoravel','resultado desfavorável'],
+  novas:              ['novas acoes','novas ações','novos processos','distribuidos','distribuídos','novas acoes no periodo','ingressos','novas'],
+  encerrados:         ['processos encerrados','encerrados','arquivados','finalizados','extintos','baixados','encerrado'],
+  // ── Por modalidade: ex-empregados ───────────────────────────
+  mod_exemp:          ['ex-empregado','ex empregado','ex-empregados','ex empregados','exempregados','empregado','reclamante empregado'],
+  mod_exemp_fav:      ['favoravel ex-empregado','favorável ex-empregado','fav ex-emp','favoraveis ex-empregados','favoráveis ex-empregados','ex-emp favoravel','ex-emp favorável'],
+  mod_exemp_desf:     ['desfavoravel ex-empregado','desfavorável ex-empregado','desf ex-emp','desfavoraveis ex-empregados','desfavoráveis ex-empregados','ex-emp desfavoravel'],
+  // ── Por modalidade: subsidiária / terceirização ─────────────
+  mod_terc:           ['terceirizacao','terceirização','subsidiaria','subsidiária','tomador','prestadora','terceirizado','terceirizados','empresa terceirizada'],
+  mod_terc_fav:       ['favoravel subsidiaria','favorável subsidiária','fav subsidiaria','favoraveis subsidiaria','favoráveis subsidiária','fav terceirizacao','favoravel terceirizacao','favorável terceirização'],
+  mod_terc_desf:      ['desfavoravel subsidiaria','desfavorável subsidiária','desf subsidiaria','desfavoraveis subsidiaria','desf terceirizacao','desfavoravel terceirizacao'],
+  // ── Processos suspensos ──────────────────────────────────────
+  suspensos:          ['suspensos','suspenso','processos suspensos','sobrestados','sobrestado','aguardando','sobrestamento'],
+  // ── Perícias ────────────────────────────────────────────────
+  pericias:           ['pericias','perícias','processos com pericia','processos com perícia','com pericia','tem pericia'],
+  pericias_fav:       ['perito favoravel','perito favorável','peritos favoraveis','peritos favoráveis','laudo favoravel','laudo favorável','pericia favoravel','perícia favorável'],
+  pericias_desf:      ['perito desfavoravel','perito desfavorável','peritos desfavoraveis','peritos desfavoráveis','laudo desfavoravel','laudo desfavorável','pericia desfavoravel','perícia desfavorável'],
+  // ── Juízes / Relatores ───────────────────────────────────────
+  juiz_fav:           ['juiz favoravel','juiz favorável','juizes favoraveis','juízes favoráveis','relator favoravel','relator favorável','magistrado favoravel','magistrado favorável'],
+  juiz_desf:          ['juiz desfavoravel','juiz desfavorável','juizes desfavoraveis','juízes desfavoráveis','relator desfavoravel','relator desfavorável','magistrado desfavoravel','magistrado desfavorável'],
+};
+
+// Aliases para rankings textuais (top-N)
+const _RANKING_ALIASES = {
+  perito_top:     ['principal perito','perito principal','perito mais frequente','perito recorrente','tipo de pericia mais frequente','tipo perícia mais frequente','modalidade de pericia','tipo de perícia','tipo pericia'],
+  suspensao_tema: ['tema da suspensao','tema da suspensão','motivo da suspensao','motivo suspensão','tese suspensao','tese suspensão','tese de suspensao','irdr','tema repetitivo','recurso repetitivo'],
+  polo_empresa:   ['empresa no polo','empresa polo passivo','tomadora','empresa terceirizante','outra empresa','contratante','empresa contratante','polo passivo empresa'],
 };
 
 function _norm(s) {
@@ -5576,28 +5601,28 @@ function _parseNum(v) {
 }
 
 function _extractStatsFromWorkbook(wb) {
-  const stats = {};
+  const stats   = {};   // numéricos
+  const rankings = {};  // textuais: top-N listas
 
   for (const sheetName of wb.SheetNames) {
     const ws = wb.Sheets[sheetName];
     if (!ws['!ref']) continue;
 
     const range = XLSX.utils.decode_range(ws['!ref']);
+    const data  = XLSX.utils.sheet_to_json(ws, { header:1, defval: null });
 
     /* ── ESTRATÉGIA 1: varredura célula a célula ─────────────────
-       Procura uma célula que contenha o rótulo e lê o número
-       na célula à direita ou imediatamente abaixo.            */
+       Procura rótulo → valor numérico à direita ou abaixo.     */
     for (let R = range.s.r; R <= range.e.r; R++) {
       for (let C = range.s.c; C <= range.e.c; C++) {
         const cell = ws[XLSX.utils.encode_cell({r:R, c:C})];
         if (!cell || cell.v === undefined) continue;
         const txt = _norm(String(cell.v));
 
+        // --- Numéricos ---
         for (const [key, aliases] of Object.entries(_STAT_ALIASES)) {
           if (stats[key] !== undefined) continue;
           if (!aliases.some(a => txt === _norm(a) || txt.includes(_norm(a)))) continue;
-
-          // Candidatos: direita, abaixo, 2 à direita, 2 abaixo
           const candidates = [
             ws[XLSX.utils.encode_cell({r:R,   c:C+1})],
             ws[XLSX.utils.encode_cell({r:R+1, c:C})],
@@ -5610,14 +5635,28 @@ function _extractStatsFromWorkbook(wb) {
             if (n !== null) { stats[key] = n; break; }
           }
         }
+
+        // --- Textuais / rankings ---
+        for (const [key, aliases] of Object.entries(_RANKING_ALIASES)) {
+          if (rankings[key] !== undefined) continue;
+          if (!aliases.some(a => txt === _norm(a) || txt.includes(_norm(a)))) continue;
+          const candidates = [
+            ws[XLSX.utils.encode_cell({r:R,   c:C+1})],
+            ws[XLSX.utils.encode_cell({r:R+1, c:C})],
+            ws[XLSX.utils.encode_cell({r:R,   c:C+2})],
+          ];
+          for (const nc of candidates) {
+            if (!nc || nc.v === undefined) continue;
+            const val = String(nc.v).trim();
+            if (val.length > 0 && val.length < 200) { rankings[key] = val; break; }
+          }
+        }
       }
     }
 
     /* ── ESTRATÉGIA 2: linha de cabeçalho + linha de valores ─────
-       Para tabelas onde a 1ª linha tem os rótulos e a 2ª os valores.
-       Só usa se estratégia 1 não encontrou nada.              */
+       Para tabelas com 1ª linha de rótulos e 2ª de valores.    */
     if (!Object.keys(stats).length) {
-      const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
       for (let ri = 0; ri < Math.min(20, data.length - 1); ri++) {
         const hdr  = data[ri].map(c => _norm(String(c||'')));
         const vals = data[ri + 1];
@@ -5631,19 +5670,115 @@ function _extractStatsFromWorkbook(wb) {
               if (n !== null) { rowStats[key] = n; matched++; }
             }
           }
+          for (const [key, aliases] of Object.entries(_RANKING_ALIASES)) {
+            if (rankings[key] !== undefined) continue;
+            if (aliases.some(a => hdr[ci] === _norm(a) || hdr[ci].includes(_norm(a)))) {
+              const val = vals[ci] ? String(vals[ci]).trim() : null;
+              if (val && val.length > 0 && val.length < 200) rankings[key] = val;
+            }
+          }
         }
         if (matched >= 2) { Object.assign(stats, rowStats); break; }
       }
     }
+
+    /* ── ESTRATÉGIA 3: tabela de ranking (coluna nome + coluna qtd)
+       Detecta colunas "juiz","perito","empresa" + "qtd"/"total"
+       e monta top-3 automático.                                 */
+    _extractRankingColumns(data, stats, rankings);
   }
 
-  // Normaliza: se tiver "ativos" mas não "processos", usa ativos como processos
-  if (stats.ativos !== undefined && stats.processos === undefined) {
-    stats.processos = stats.ativos;
-  }
+  // Normaliza: ativos → processos se necessário
+  if (stats.ativos !== undefined && stats.processos === undefined) stats.processos = stats.ativos;
   delete stats.ativos;
 
+  // Merge rankings into stats as serialized strings
+  for (const [k, v] of Object.entries(rankings)) {
+    stats['_' + k] = v; // prefixo _ indica texto
+  }
+
   return Object.keys(stats).length ? stats : null;
+}
+
+// Detecta tabelas de ranking em formato coluna-nome + coluna-qtd
+function _extractRankingColumns(data, stats, rankings) {
+  const RANK_COLS = {
+    juiz:        { aliases: ['juiz','juíz','relator','magistrado','vara','juizo','juízo'], out_fav: 'juiz_fav', out_desf: 'juiz_desf', ranking: '_juiz_ranking' },
+    perito:      { aliases: ['perito','expert','perita','peritos'], out_count: 'pericias', ranking: '_perito_ranking' },
+    empresa:     { aliases: ['empresa','tomador','tomadora','polo passivo','contratante','filial'], ranking: '_polo_empresa_ranking' },
+    suspensao:   { aliases: ['tema','motivo','tese','irdr','tema suspensao','tema suspensão'], ranking: '_suspensao_tema_ranking' },
+  };
+  const QTD_ALIASES = ['qtd','quantidade','total','processos','nº','num','count','n.'];
+  const RES_ALIASES = ['resultado','decisao','decisão','favoravel','favorável','desfavoravel','desfavorável'];
+
+  for (let ri = 0; ri < Math.min(50, data.length); ri++) {
+    const row = data[ri];
+    if (!row) continue;
+    const hdr = row.map(c => _norm(String(c||'')));
+
+    for (const [tipo, cfg] of Object.entries(RANK_COLS)) {
+      // Encontrar coluna de nome
+      const nameCol = hdr.findIndex(h => cfg.aliases.some(a => h.includes(_norm(a))));
+      if (nameCol < 0) continue;
+      // Encontrar coluna de quantidade
+      const qtdCol  = hdr.findIndex((h,i) => i !== nameCol && QTD_ALIASES.some(a => h.includes(a)));
+      if (qtdCol < 0) continue;
+      // Encontrar coluna de resultado (opcional)
+      const resCol  = hdr.findIndex((h,i) => i !== nameCol && i !== qtdCol && RES_ALIASES.some(a => h.includes(a)));
+
+      // Ler linhas de dados
+      const entries = [];
+      for (let di = ri + 1; di < Math.min(ri + 51, data.length); di++) {
+        const drow = data[di];
+        if (!drow || drow[nameCol] === null) continue;
+        const nome = String(drow[nameCol] || '').trim();
+        if (!nome || nome.length < 2) continue;
+        const qtd  = _parseNum(drow[qtdCol]);
+        if (qtd === null) continue;
+        const res  = resCol >= 0 ? _norm(String(drow[resCol] || '')) : null;
+        entries.push({ nome, qtd, res });
+      }
+      if (entries.length < 2) continue;
+
+      // Soma de favoráveis/desfavoráveis por juiz
+      if (tipo === 'juiz' && resCol >= 0) {
+        let fav = 0, desf = 0;
+        const favMap = {}, desfMap = {};
+        entries.forEach(e => {
+          if (['fav','favoravel','favorável','procedente'].some(a => e.res && e.res.includes(a))) {
+            fav += e.qtd; favMap[e.nome] = (favMap[e.nome]||0) + e.qtd;
+          } else if (['desf','desfavoravel','desfavorável','improcedente'].some(a => e.res && e.res.includes(a))) {
+            desf += e.qtd; desfMap[e.nome] = (desfMap[e.nome]||0) + e.qtd;
+          }
+        });
+        if (fav  > 0 && stats.juiz_fav  === undefined) stats.juiz_fav  = fav;
+        if (desf > 0 && stats.juiz_desf === undefined) stats.juiz_desf = desf;
+        // Top 3 por resultado
+        const topFav  = Object.entries(favMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n,q])=>`${n} (${q})`).join(', ');
+        const topDesf = Object.entries(desfMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n,q])=>`${n} (${q})`).join(', ');
+        if (topFav  && !rankings['juiz_fav_top'])  rankings['juiz_fav_top']  = topFav;
+        if (topDesf && !rankings['juiz_desf_top']) rankings['juiz_desf_top'] = topDesf;
+      }
+
+      // Top-3 geral por quantidade
+      const top3 = entries.sort((a,b)=>b.qtd-a.qtd).slice(0,3).map(e=>`${e.nome} (${e.qtd})`).join(', ');
+      const rkey = cfg.ranking;
+      if (rkey && !rankings[rkey.replace('_','')]) rankings[rkey.slice(1)] = top3;
+
+      // Pericias: soma total se não encontrado antes
+      if (tipo === 'perito' && stats.pericias === undefined) {
+        stats.pericias = entries.reduce((s,e)=>s+e.qtd, 0);
+        // Tipo mais frequente = primeiro do ranking
+        if (entries.length && !rankings['perito_top']) rankings['perito_top'] = entries[0].nome;
+      }
+
+      // Suspensos: soma total
+      if (tipo === 'suspensao' && stats.suspensos === undefined) {
+        const total = entries.reduce((s,e)=>s+e.qtd, 0);
+        if (total > 0) stats.suspensos = total;
+      }
+    }
+  }
 }
 
 function onRepFileChange(input) {
@@ -5676,21 +5811,80 @@ function onRepFileChange(input) {
       }
       window._repExtractedStats = stats;
 
-      const LABELS = {
-        processos:'Processos Ativos', favoraveis:'Favoráveis',
-        desfavoraveis:'Desfavoráveis', novas:'Novas Ações',
-        encerrados:'Encerrados', andamento:'Em Andamento'
+      // Mapa de labels e cores para exibição agrupada
+      const KPI_META = {
+        processos:       { label:'Total de Processos',        color:'#D4AD3A', group:'Geral' },
+        favoraveis:      { label:'Favoráveis (geral)',         color:'#2DD4A0', group:'Geral' },
+        desfavoraveis:   { label:'Desfavoráveis (geral)',      color:'#F87171', group:'Geral' },
+        novas:           { label:'Novas Ações',                color:'#60A5FA', group:'Geral' },
+        encerrados:      { label:'Encerrados',                 color:'#A78BFA', group:'Geral' },
+        andamento:       { label:'Em Andamento',               color:'#FBBF24', group:'Geral' },
+        mod_exemp:       { label:'Ex-empregados',              color:'#D4AD3A', group:'Modalidade' },
+        mod_exemp_fav:   { label:'Fav. Ex-empregados',         color:'#2DD4A0', group:'Modalidade' },
+        mod_exemp_desf:  { label:'Desf. Ex-empregados',        color:'#F87171', group:'Modalidade' },
+        mod_terc:        { label:'Subsidiária/Terceirização',  color:'#60A5FA', group:'Modalidade' },
+        mod_terc_fav:    { label:'Fav. Terceirização',         color:'#34D399', group:'Modalidade' },
+        mod_terc_desf:   { label:'Desf. Terceirização',        color:'#FB923C', group:'Modalidade' },
+        suspensos:       { label:'Suspensos',                  color:'#94A3B8', group:'Suspensões' },
+        pericias:        { label:'Com Perícia',                color:'#C084FC', group:'Perícias' },
+        pericias_fav:    { label:'Perito Favorável',           color:'#2DD4A0', group:'Perícias' },
+        pericias_desf:   { label:'Perito Desfavorável',        color:'#F87171', group:'Perícias' },
+        juiz_fav:        { label:'Juíz/Relator Favorável',     color:'#2DD4A0', group:'Juízes' },
+        juiz_desf:       { label:'Juíz/Relator Desfavorável',  color:'#F87171', group:'Juízes' },
       };
-      const COLORS = {
-        processos:'#D4AD3A', favoraveis:'#2DD4A0', desfavoraveis:'#F87171',
-        novas:'#60A5FA', encerrados:'#A78BFA', andamento:'#FBBF24'
+      const TEXT_META = {
+        perito_top:          'Tipo de Perícia Mais Frequente',
+        suspensao_tema:      'Tema das Suspensões',
+        polo_empresa:        'Empresa no Polo',
+        juiz_fav_top:        'Top Juízes Favoráveis',
+        juiz_desf_top:       'Top Juízes Desfavoráveis',
+        perito_ranking:      'Ranking de Peritos',
+        polo_empresa_ranking:'Ranking Empresas Polo',
+        suspensao_tema_ranking:'Ranking Temas Suspensos',
+        juiz_ranking:        'Ranking Juízes',
       };
 
-      grid.innerHTML = Object.entries(stats).map(([k,v]) => `
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:10px 12px">
-          <div style="font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);margin-bottom:4px">${LABELS[k]||k}</div>
-          <div style="font-family:var(--f-display);font-size:20px;font-weight:700;color:${COLORS[k]||'#fff'}">${v}</div>
-        </div>`).join('');
+      // Separar numéricos e textuais
+      const numEntries  = Object.entries(stats).filter(([k]) => !k.startsWith('_'));
+      const textEntries = Object.entries(stats).filter(([k]) => k.startsWith('_')).map(([k,v]) => [k.slice(1), v]);
+
+      // Agrupar numéricos
+      const groups = {};
+      numEntries.forEach(([k, v]) => {
+        const meta  = KPI_META[k] || { label: k, color: '#fff', group: 'Outros' };
+        if (!groups[meta.group]) groups[meta.group] = [];
+        groups[meta.group].push({ k, v, meta });
+      });
+
+      let html = '';
+      for (const [grp, items] of Object.entries(groups)) {
+        html += `<div style="margin-bottom:12px">
+          <div style="font-family:var(--f-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:6px">${grp}</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px">`;
+        items.forEach(({ k, v, meta }) => {
+          html += `<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:8px 10px">
+            <div style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted);margin-bottom:3px">${meta.label}</div>
+            <div style="font-family:var(--f-display);font-size:18px;font-weight:700;color:${meta.color}">${v}</div>
+          </div>`;
+        });
+        html += `</div></div>`;
+      }
+
+      // Textuais
+      if (textEntries.length) {
+        html += `<div style="margin-top:8px">
+          <div style="font-family:var(--f-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:6px">Rankings / Detalhes</div>`;
+        textEntries.forEach(([k, v]) => {
+          const lbl = TEXT_META[k] || k;
+          html += `<div style="padding:7px 10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:5px;margin-bottom:5px;font-size:12px">
+            <span style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted);margin-right:8px">${lbl}:</span>
+            <span style="color:var(--c-dark)">${v}</span>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+
+      grid.innerHTML = html;
 
       preview.style.display = 'block';
       status.textContent = '✓ ' + Object.keys(stats).length + ' indicadores extraídos automaticamente';
@@ -5966,7 +6160,6 @@ async function cliDashAutoSaveKpis(clientId, periodLabel, stats) {
   const { data: periods } = await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods`);
   let period = (periods || []).find(p => p.label === periodLabel || p.month_year === periodLabel);
   if (!period) {
-    // Tenta derivar month_year a partir da label (ex: "Janeiro 2026" → 2026-01)
     const now = new Date();
     const monthYear = now.toISOString().slice(0, 7);
     const { data: created } = await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods`, {
@@ -5980,40 +6173,91 @@ async function cliDashAutoSaveKpis(clientId, periodLabel, stats) {
   // 2. Ativar esse período
   await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods/${period.id}/activate`, { method: 'POST' });
 
-  // 3. Mapear stats → KPIs (salvo nas duas categorias)
-  const KPI_MAP = [
-    { key: 'processos',      label: 'Total de Processos',    unit: 'processos' },
-    { key: 'favoraveis',     label: 'Decisões Favoráveis',   unit: 'processos' },
-    { key: 'desfavoraveis',  label: 'Decisões Desfavoráveis',unit: 'processos' },
-    { key: 'novas',          label: 'Novas Ações',           unit: 'processos' },
-    { key: 'encerrados',     label: 'Encerrados',            unit: 'processos' },
-    { key: 'andamento',      label: 'Em Andamento',          unit: 'processos' }
+  // 3. KPIs numéricos mapeados por tab_key
+  // Chaves comuns a ambas as abas
+  const KPI_COMMON = [
+    { key: 'processos',     label: 'Total de Processos',          unit: 'processos' },
+    { key: 'favoraveis',    label: 'Decisões Favoráveis',         unit: 'processos' },
+    { key: 'desfavoraveis', label: 'Decisões Desfavoráveis',      unit: 'processos' },
+    { key: 'novas',         label: 'Novas Ações',                 unit: 'processos' },
+    { key: 'encerrados',    label: 'Encerrados',                  unit: 'processos' },
+    { key: 'andamento',     label: 'Em Andamento',                unit: 'processos' },
+    { key: 'suspensos',     label: 'Processos Suspensos',         unit: 'processos' },
+    { key: 'juiz_fav',      label: 'Juízes/Relatores Favoráveis', unit: 'processos' },
+    { key: 'juiz_desf',     label: 'Juízes/Relatores Desfavoráveis', unit: 'processos' },
   ];
-  const tabKeys = ['ex_empregados', 'terceirizacao'];
-  let sortOrder = 0;
-  for (const tabKey of tabKeys) {
-    for (const m of KPI_MAP) {
-      if (!(m.key in stats)) continue;
-      await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/kpis`, {
-        method: 'POST',
-        body: {
-          id: cliDashId(),
-          client_id: clientId,
-          period_id: period.id,
-          tab_key: tabKey,
-          kpi_key: m.key,
-          label: m.label,
-          value: String(stats[m.key]),
-          unit: m.unit,
-          trend_pct: null,
-          sort_order: sortOrder++,
-          chart_title: null,
-          chart_data: null
-        }
-      });
+  // Chaves específicas de ex-empregados
+  const KPI_EXEMP = [
+    { key: 'mod_exemp',      label: 'Processos Ex-empregados',         unit: 'processos' },
+    { key: 'mod_exemp_fav',  label: 'Favoráveis — Ex-empregados',      unit: 'processos' },
+    { key: 'mod_exemp_desf', label: 'Desfavoráveis — Ex-empregados',   unit: 'processos' },
+    { key: 'pericias',       label: 'Processos com Perícia',           unit: 'processos' },
+    { key: 'pericias_fav',   label: 'Perito Favorável',                unit: 'processos' },
+    { key: 'pericias_desf',  label: 'Perito Desfavorável',             unit: 'processos' },
+  ];
+  // Chaves específicas de terceirização
+  const KPI_TERC = [
+    { key: 'mod_terc',      label: 'Processos Terceirização/Subsidiária', unit: 'processos' },
+    { key: 'mod_terc_fav',  label: 'Favoráveis — Terceirização',          unit: 'processos' },
+    { key: 'mod_terc_desf', label: 'Desfavoráveis — Terceirização',       unit: 'processos' },
+  ];
+
+  // Textuais: chart_data conterá o texto
+  const KPI_TEXT = [
+    { key: '_perito_top',             tab: 'ex_empregados', label: 'Tipo de Perícia Mais Frequente' },
+    { key: '_perito_ranking',         tab: 'ex_empregados', label: 'Ranking de Peritos' },
+    { key: '_suspensao_tema',         tab: 'ex_empregados', label: 'Tema Principal das Suspensões' },
+    { key: '_suspensao_tema_ranking', tab: 'ex_empregados', label: 'Ranking Temas Suspensos' },
+    { key: '_juiz_fav_top',           tab: 'ex_empregados', label: 'Top Juízes/Relatores Favoráveis' },
+    { key: '_juiz_desf_top',          tab: 'ex_empregados', label: 'Top Juízes/Relatores Desfavoráveis' },
+    { key: '_polo_empresa',           tab: 'terceirizacao', label: 'Empresa no Polo Passivo' },
+    { key: '_polo_empresa_ranking',   tab: 'terceirizacao', label: 'Ranking Empresas no Polo' },
+  ];
+
+  const save = async (tab_key, kpi_key, label, value, unit, sort_order, chart_data) => {
+    await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/kpis`, {
+      method: 'POST',
+      body: {
+        id: cliDashId(),
+        client_id: clientId,
+        period_id: period.id,
+        tab_key,
+        kpi_key,
+        label,
+        value: String(value),
+        unit: unit || '',
+        trend_pct: null,
+        sort_order,
+        chart_title: null,
+        chart_data: chart_data || null
+      }
+    });
+  };
+
+  let order = 0;
+  // Comuns em ambas as abas
+  for (const tab of ['ex_empregados', 'terceirizacao']) {
+    order = 0;
+    for (const m of KPI_COMMON) {
+      if (m.key in stats) await save(tab, m.key, m.label, stats[m.key], m.unit, order++);
     }
-    sortOrder = 0;
   }
+  // Ex-empregados específicos
+  order = 20;
+  for (const m of KPI_EXEMP) {
+    if (m.key in stats) await save('ex_empregados', m.key, m.label, stats[m.key], m.unit, order++);
+  }
+  // Terceirização específicos
+  order = 20;
+  for (const m of KPI_TERC) {
+    if (m.key in stats) await save('terceirizacao', m.key, m.label, stats[m.key], m.unit, order++);
+  }
+  // Textuais
+  order = 50;
+  for (const t of KPI_TEXT) {
+    if (t.key in stats) await save(t.tab, t.key.replace('_',''), t.label, '—', '', order++, stats[t.key]);
+  }
+
   showToast('✓ KPIs importados automaticamente para o Dashboard.');
 }
 
