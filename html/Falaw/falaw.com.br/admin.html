@@ -155,6 +155,52 @@
     }
     .admin-tab:hover { color: rgba(247,245,242,.7); }
     .admin-tab.active { color: var(--c-off); border-bottom-color: var(--c-accent); }
+
+    /* Dropdown group */
+    .admin-tab-group { position: relative; display: flex; align-items: center; }
+    .admin-tab-group > .admin-tab { display: flex; align-items: center; gap: 5px; }
+    .admin-tab-group > .admin-tab::after {
+      content: '';
+      display: inline-block;
+      width: 0; height: 0;
+      border-left: 3.5px solid transparent;
+      border-right: 3.5px solid transparent;
+      border-top: 4px solid currentColor;
+      opacity: .5;
+      transition: transform .2s;
+    }
+    .admin-tab-group.open > .admin-tab::after { transform: rotate(180deg); }
+    .admin-tab-group.open > .admin-tab { color: var(--c-off); border-bottom-color: var(--c-accent); }
+    .admin-dropdown {
+      position: absolute;
+      top: calc(100% + 1px);
+      left: 0;
+      background: var(--c-dark);
+      border: 1px solid rgba(247,245,242,.08);
+      border-top: 2px solid var(--c-accent);
+      border-radius: 0 0 6px 6px;
+      min-width: 160px;
+      display: none;
+      flex-direction: column;
+      z-index: 200;
+      box-shadow: 0 8px 24px rgba(0,0,0,.3);
+    }
+    .admin-tab-group.open .admin-dropdown { display: flex; }
+    .admin-dropdown-item {
+      font-family: var(--f-mono);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(247,245,242,.45);
+      padding: 12px 20px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(247,245,242,.05);
+      transition: color .15s, background .15s;
+    }
+    .admin-dropdown-item:last-child { border-bottom: none; }
+    .admin-dropdown-item:hover { color: var(--c-off); background: rgba(247,245,242,.04); }
+    .admin-dropdown-item.active { color: var(--c-accent); }
+
     .admin-logout {
       font-family: var(--f-mono);
       font-size: 10px;
@@ -840,15 +886,21 @@
       <span>Admin</span>
     </div>
     <div class="admin-tabs">
-      <div class="admin-tab active" onclick="switchTab('blog')">Blog</div>
-      <div class="admin-tab" onclick="switchTab('equipe')">Equipe</div>
-      <div class="admin-tab" onclick="switchTab('newsletter')">Newsletter</div>
-      <div class="admin-tab" onclick="switchTab('contato')">Contato</div>
-      <div class="admin-tab" onclick="switchTab('clientes')">Clientes</div>
-      <div class="admin-tab" onclick="switchTab('curriculos')">Currículos</div>
-      <div class="admin-tab" onclick="switchTab('ifood')">iFood</div>
-      <div class="admin-tab" onclick="switchTab('comentarios')">Comentários</div>
-      <div class="admin-tab" onclick="switchTab('config')">Configurações</div>
+      <!-- Grupo Conteúdo -->
+      <div class="admin-tab-group" id="group-conteudo">
+        <div class="admin-tab" onclick="toggleGroup('conteudo')">Conteúdo</div>
+        <div class="admin-dropdown">
+          <div class="admin-dropdown-item active" id="ditem-blog" onclick="switchTab('blog')">Blog</div>
+          <div class="admin-dropdown-item" id="ditem-newsletter" onclick="switchTab('newsletter')">Newsletter</div>
+          <div class="admin-dropdown-item" id="ditem-contato" onclick="switchTab('contato')">Contato</div>
+          <div class="admin-dropdown-item" id="ditem-curriculos" onclick="switchTab('curriculos')">Currículos</div>
+          <div class="admin-dropdown-item" id="ditem-comentarios" onclick="switchTab('comentarios')">Comentários</div>
+        </div>
+      </div>
+      <div class="admin-tab" id="tab-btn-equipe" onclick="switchTab('equipe')">Equipe</div>
+      <div class="admin-tab" id="tab-btn-clientes" onclick="switchTab('clientes')">Clientes</div>
+      <div class="admin-tab" id="tab-btn-ifood" onclick="switchTab('ifood')">iFood</div>
+      <div class="admin-tab" id="tab-btn-config" onclick="switchTab('config')">Configurações</div>
     </div>
     <button class="admin-logout" onclick="doLogout()">Sair</button>
   </nav>
@@ -2654,10 +2706,44 @@ function getSbCreds() {
   return { sbUrl, sbKey };
 }
 
+const CONTEUDO_TABS = ['blog','newsletter','contato','curriculos','comentarios'];
+const STANDALONE_TABS = ['equipe','clientes','ifood','config'];
+
+function toggleGroup(group) {
+  const el = document.getElementById('group-' + group);
+  const isOpen = el.classList.contains('open');
+  // close all groups
+  document.querySelectorAll('.admin-tab-group').forEach(g => g.classList.remove('open'));
+  if (!isOpen) el.classList.add('open');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.admin-tab-group')) {
+    document.querySelectorAll('.admin-tab-group').forEach(g => g.classList.remove('open'));
+  }
+});
+
 function switchTab(name) {
-  document.querySelectorAll('.admin-tab').forEach((t, i) => {
-    t.classList.toggle('active', ['blog','equipe','newsletter','contato','clientes','curriculos','ifood','comentarios','config'][i] === name);
+  // Update standalone tab active states
+  STANDALONE_TABS.forEach(t => {
+    const el = document.getElementById('tab-btn-' + t);
+    if (el) el.classList.toggle('active', t === name);
   });
+  // Update dropdown items
+  CONTEUDO_TABS.forEach(t => {
+    const el = document.getElementById('ditem-' + t);
+    if (el) el.classList.toggle('active', t === name);
+  });
+  // Mark group as active if a conteudo tab is selected
+  const group = document.getElementById('group-conteudo');
+  if (CONTEUDO_TABS.includes(name)) {
+    group.querySelector('.admin-tab').classList.add('active');
+    group.classList.remove('open');
+  } else {
+    group.querySelector('.admin-tab').classList.remove('active');
+    group.classList.remove('open');
+  }
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'blog')          { loadArticlesFromGitHub().then(renderBlog); }
