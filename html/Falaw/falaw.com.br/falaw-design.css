@@ -2451,15 +2451,17 @@ h3 {
   color: #fff;
   background: var(--c-accent);
   border: 2px solid var(--c-accent);
-  border-radius: 2px;
-  padding: 12px 28px;
+  border-radius: 999px;
+  padding: 13px 32px;
   cursor: pointer;
-  transition: background .2s, color .2s, border-color .2s;
+  transition: background .2s, color .2s, border-color .2s, box-shadow .2s;
   line-height: 1;
+  box-shadow: 0 4px 16px rgba(13,43,94,.18);
 }
 .btn-primary:hover {
   background: transparent;
   color: var(--c-accent);
+  box-shadow: none;
 }
 
 /* ── BACK LINK ── */
@@ -2583,16 +2585,17 @@ h3 {
   text-transform: uppercase;
   color: var(--c-accent);
   background: transparent;
-  border: 1px solid var(--c-accent);
-  border-radius: 2px;
-  padding: 7px 16px;
+  border: 1.5px solid var(--c-accent);
+  border-radius: 999px;
+  padding: 8px 20px;
   cursor: pointer;
-  transition: background .18s, color .18s;
+  transition: background .18s, color .18s, box-shadow .18s;
   white-space: nowrap;
 }
 .btn-comment-open:hover {
   background: var(--c-accent);
   color: #fff;
+  box-shadow: 0 4px 14px rgba(13,43,94,.18);
 }
 .article-comments__list {
   display: flex;
@@ -2739,12 +2742,15 @@ h3 {
 .comment-form__field textarea { min-height: 110px; }
 .comment-form__actions {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
 }
 .comment-form__submit {
-  flex-shrink: 0;
+  width: 100%;
+  text-align: center;
+  border-radius: 999px;
 }
 .comment-form__msg {
   font-family: var(--f-mono);
