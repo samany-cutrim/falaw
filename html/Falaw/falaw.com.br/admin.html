@@ -6505,6 +6505,50 @@ async function cliDashSaveExcel() {
     setStatus(`✓ Concluído! ${cliKpiRows.length} KPIs computados e salvos a partir de "${filename}". Recarregue o dashboard do cliente para visualizar.`);
     showToast('Excel processado com sucesso!');
 
+    // Registrar na aba Relatórios do cliente
+    try {
+      const clients = getClients();
+      const cidxRep = clients.findIndex(c => c.id === _cliDashClientId);
+      if (cidxRep >= 0 && _cliExcelData && _cliExcelData.file) {
+        // Verificar se período já foi publicado (evita duplicatas)
+        const alreadyPublished = (clients[cidxRep].reports || []).some(r => r.dashPeriodId === periodId);
+        if (!alreadyPublished) {
+          // Ler o arquivo como DataURL para armazenar localmente
+          const repFileData = await new Promise((resolve, reject) => {
+            const rdr = new FileReader();
+            rdr.onload = () => resolve(rdr.result);
+            rdr.onerror = reject;
+            rdr.readAsDataURL(_cliExcelData.file);
+          });
+          let repFileUrl = null;
+          if (getSB() || ghToken()) {
+            const repId = cliUID();
+            repFileUrl = await sbUploadReport(repId, _cliExcelData.file.name, repFileData).catch(() => null);
+          }
+          // Buscar label do período
+          const { data: periodsList2 } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/periods`);
+          const repPeriodLabel = ((periodsList2 || []).find(p => p.id === periodId) || {}).label
+                              || ((periodsList2 || []).find(p => p.id === periodId) || {}).month_year
+                              || periodId;
+          const repEntry = {
+            id: cliUID(),
+            title: `Dashboard ${repPeriodLabel}`,
+            period: repPeriodLabel,
+            description: `Publicado automaticamente via upload de Excel (${filename})`,
+            fileName: _cliExcelData.file.name,
+            fileData: repFileData,
+            fileUrl: repFileUrl,
+            fileSize: _cliExcelData.file.size,
+            uploadedAt: new Date().toISOString(),
+            dashPeriodId: periodId   // marcador para evitar duplicatas
+          };
+          clients[cidxRep].reports = clients[cidxRep].reports || [];
+          clients[cidxRep].reports.push(repEntry);
+          await saveClients(clients);
+        }
+      }
+    } catch(re) { console.warn('report-register:', re); }
+
     // Notificar cliente por e-mail via n8n
     try {
       const { data: periodsList } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/periods`);
@@ -6836,6 +6880,103 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
         plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
         scales:{ x:{ grid:{ display:false } }, y:{ beginAtZero:true } } }
     },'Resultados por Instância');
+  }
+
+  // ── 12. Ex-empregados tab ─────────────────────────────────────────────
+  const recsExEmp = records.filter(r => {
+    const v = _xlN(r.responsabilidade || '');
+    return v.includes('EX') || v.includes('EMPREGAD') || v.includes('RECLAMANTE') || v === '';
+  });
+  if (recsExEmp.length) {
+    const eeTotal = recsExEmp.length;
+    // Decisões
+    let eeFav=0, eeDesf=0, eeParc=0;
+    recsExEmp.forEach(r => {
+      const s = _xlN(r.sentenca||'');
+      if (!s || s==='NAO SE APLICA'||s==='NAO') return;
+      if (s.includes('FAVORAVEL')||s.includes('IMPROCEDENTE')||s.includes('EXCLUSAO')||s.includes('ACORDO')) eeFav++;
+      else if (s.includes('DESFAVORAVEL')||s.includes('PROCEDENTE')||s.includes('CONDENADA')||s.includes('CONDENANDO')) eeDesf++;
+      else if (s.includes('PARCIAL')) eeParc++;
+    });
+    push('ex_empregados','ee_total',       'Total de Processos',      fmtBr(eeTotal),'processos');
+    push('ex_empregados','ee_favoraveis',  'Decisões Favoráveis',     fmtBr(eeFav),  '');
+    push('ex_empregados','ee_desfavoraveis','Decisões Desfavoráveis', fmtBr(eeDesf), '');
+    if (eeParc) push('ex_empregados','ee_parciais','Decisões Parciais', fmtBr(eeParc),'');
+
+    // Fase processual
+    const eeFaseC = {};
+    recsExEmp.forEach(r => { const f=(r.fase||r.status||'').trim(); if (f&&f!=='N/A'&&f.length>1) eeFaseC[f]=(eeFaseC[f]||0)+1; });
+    const eeFaseTop = topN(eeFaseC, 12);
+    if (eeFaseTop.length) push('ex_empregados','ee_chart_fase','Fase Processual','','',
+      _xlChartMultiBar(eeFaseTop.map(([l])=>l), eeFaseTop.map(([,v])=>v),'Processos'),
+      'Fase Processual — Ex-empregados');
+
+    // Top advogados adversários
+    const eeAdvC = {};
+    recsExEmp.forEach(r => { const a=String(r.adv||'').trim(); if (!a||a.length<4) return; eeAdvC[a]=(eeAdvC[a]||0)+1; });
+    const eeAdvTop = topN(eeAdvC, 10);
+    if (eeAdvTop.length) push('ex_empregados','ee_chart_adv','Top 10 Adv. Adversários','','',
+      _xlChartBar(eeAdvTop.map(([l])=>l), eeAdvTop.map(([,v])=>v),'Processos','#0D2B5E',true),
+      'Ranking Advogados — Ex-empregados');
+
+    // Top julgadores
+    const eeJulgC = {};
+    recsExEmp.forEach(r => { const j=String(r.juiz||'').trim(); if (!j||j.length<4||j.toLowerCase().includes('aguardando')) return; eeJulgC[j]=(eeJulgC[j]||0)+1; });
+    const eeJulgTop = topN(eeJulgC, 10);
+    if (eeJulgTop.length) push('ex_empregados','ee_chart_julg','Top 10 Julgadores','','',
+      _xlChartBar(eeJulgTop.map(([l])=>l), eeJulgTop.map(([,v])=>v),'Processos','#0F9E76',true),
+      'Ranking Julgadores — Ex-empregados');
+
+    // Decisões chart
+    if (eeFav+eeDesf+eeParc > 0) push('ex_empregados','ee_chart_dec','Resultado das Decisões','','',
+      _xlChartDoughnut(['Favorável','Desfavorável','Parcialmente Procedente'],[eeFav,eeDesf,eeParc]),
+      'Decisões Prolatadas — Ex-empregados');
+  }
+
+  // ── 13. Terceirização / Subsidiária tab ───────────────────────────────
+  const recsTerc = records.filter(r => {
+    const v = _xlN(r.responsabilidade || '');
+    return v.includes('TERCEIRIZ') || v.includes('SUBSIDIAR') || v.includes('TOMADOR') || v.includes('PRESTADOR');
+  });
+  if (recsTerc.length) {
+    const tcTotal = recsTerc.length;
+    let tcFav=0, tcDesf=0, tcParc=0;
+    recsTerc.forEach(r => {
+      const s = _xlN(r.sentenca||'');
+      if (!s||s==='NAO SE APLICA'||s==='NAO') return;
+      if (s.includes('FAVORAVEL')||s.includes('IMPROCEDENTE')||s.includes('EXCLUSAO')||s.includes('ACORDO')) tcFav++;
+      else if (s.includes('DESFAVORAVEL')||s.includes('PROCEDENTE')||s.includes('CONDENADA')||s.includes('CONDENANDO')) tcDesf++;
+      else if (s.includes('PARCIAL')) tcParc++;
+    });
+    push('terceirizacao','tc_total',       'Total de Processos',      fmtBr(tcTotal),'processos');
+    push('terceirizacao','tc_favoraveis',  'Decisões Favoráveis',     fmtBr(tcFav),  '');
+    push('terceirizacao','tc_desfavoraveis','Decisões Desfavoráveis', fmtBr(tcDesf), '');
+    if (tcParc) push('terceirizacao','tc_parciais','Decisões Parciais', fmtBr(tcParc),'');
+
+    const tcFaseC = {};
+    recsTerc.forEach(r => { const f=(r.fase||r.status||'').trim(); if (f&&f!=='N/A'&&f.length>1) tcFaseC[f]=(tcFaseC[f]||0)+1; });
+    const tcFaseTop = topN(tcFaseC, 12);
+    if (tcFaseTop.length) push('terceirizacao','tc_chart_fase','Fase Processual','','',
+      _xlChartMultiBar(tcFaseTop.map(([l])=>l), tcFaseTop.map(([,v])=>v),'Processos'),
+      'Fase Processual — Terceirização');
+
+    const tcAdvC = {};
+    recsTerc.forEach(r => { const a=String(r.adv||'').trim(); if (!a||a.length<4) return; tcAdvC[a]=(tcAdvC[a]||0)+1; });
+    const tcAdvTop = topN(tcAdvC, 10);
+    if (tcAdvTop.length) push('terceirizacao','tc_chart_adv','Top 10 Adv. Adversários','','',
+      _xlChartBar(tcAdvTop.map(([l])=>l), tcAdvTop.map(([,v])=>v),'Processos','#0D2B5E',true),
+      'Ranking Advogados — Terceirização');
+
+    const tcJulgC = {};
+    recsTerc.forEach(r => { const j=String(r.juiz||'').trim(); if (!j||j.length<4||j.toLowerCase().includes('aguardando')) return; tcJulgC[j]=(tcJulgC[j]||0)+1; });
+    const tcJulgTop = topN(tcJulgC, 10);
+    if (tcJulgTop.length) push('terceirizacao','tc_chart_julg','Top 10 Julgadores','','',
+      _xlChartBar(tcJulgTop.map(([l])=>l), tcJulgTop.map(([,v])=>v),'Processos','#0F9E76',true),
+      'Ranking Julgadores — Terceirização');
+
+    if (tcFav+tcDesf+tcParc > 0) push('terceirizacao','tc_chart_dec','Resultado das Decisões','','',
+      _xlChartDoughnut(['Favorável','Desfavorável','Parcialmente Procedente'],[tcFav,tcDesf,tcParc]),
+      'Decisões Prolatadas — Terceirização');
   }
 
   return rows;

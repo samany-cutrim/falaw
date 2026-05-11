@@ -444,72 +444,85 @@
     }
 
     /* ── API DASH SUB-TABS ── */
-    .dash-sub-tab {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
-      color: var(--muted); padding: 10px 18px;
-      border-bottom: 2px solid transparent;
-      cursor: pointer; transition: color .15s, border-color .15s;
-      white-space: nowrap; user-select: none;
+    .tab-bar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      display: flex; padding: 0 32px; overflow-x: auto;
+      position: sticky; top: 60px; z-index: 40;
     }
-    .dash-sub-tab:hover { color: var(--text); }
-    .dash-sub-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+    .tab-bar::-webkit-scrollbar { height: 2px; }
+    .tab-bar::-webkit-scrollbar-thumb { background: var(--gold); }
+    .tab-btn {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--muted);
+      padding: 0 20px; height: 48px;
+      display: flex; align-items: center; white-space: nowrap;
+      cursor: pointer; border-bottom: 2px solid transparent;
+      transition: color .2s, border-color .2s; flex-shrink: 0;
+      background: none; border-top: none; border-left: none; border-right: none;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
 
-    /* ── API KPI CARDS ── */
-    .api-kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
-    .api-chart-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 20px 20px 16px; margin-bottom: 20px; }
-    .api-chart-title { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
-    .api-chart-canvas-wrap { position: relative; height: 220px; }
-    .api-kpi-card {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden;
+    /* ── PERIOD BANNER ── */
+    .period-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(90deg, rgba(13,43,94,0.06), rgba(123,26,46,0.06));
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px 20px; margin-bottom: 28px;
     }
-    .api-kpi-card::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-      background: linear-gradient(90deg, var(--gold), transparent);
-    }
-    .api-kpi-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-    .api-kpi-value { font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 700; color: var(--text); line-height: 1; }
-    .api-kpi-unit  { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 4px; }
-    .api-kpi-trend {
-      display: inline-flex; align-items: center; gap: 3px;
-      font-family: 'IBM Plex Mono', monospace; font-size: 9px;
-      margin-top: 6px; padding: 2px 6px; border-radius: 3px;
-    }
-    .api-kpi-trend.up   { background: var(--green-dim); color: var(--green); }
-    .api-kpi-trend.down { background: var(--red-dim);   color: var(--red); }
-    .api-kpi-trend.flat { background: rgba(0,0,0,.04);  color: var(--muted); }
+    .period-banner-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .period-banner-value { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
 
-    /* ── API ANALYSIS ── */
-    .api-analysis {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 10px; padding: 24px 28px; margin-bottom: 20px;
-    }
-    .api-analysis-label {
-      font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .18em;
-      text-transform: uppercase; color: var(--gold); margin-bottom: 14px;
-      padding-bottom: 10px; border-bottom: 1px solid var(--border);
-    }
-    .api-analysis-content { font-size: 14px; line-height: 1.8; color: var(--text); }
-    .api-analysis-content p { margin-bottom: 10px; }
-    .api-analysis-content p:last-child { margin: 0; }
+    /* ── HIGHLIGHTS ── */
+    .highlights-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 20px; margin-bottom: 32px; }
+    .highlight-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; transition: box-shadow .25s, transform .25s; }
+    .highlight-card:hover { box-shadow: 0 10px 36px rgba(123,26,46,0.13); transform: translateY(-3px); }
+    .highlight-card-stripe { height: 5px; background: linear-gradient(90deg, var(--gold) 0%, #0D2B5E 100%); }
+    .highlight-card-body { padding: 22px 22px 18px; flex: 1; }
+    .highlight-icon-badge { width: 46px; height: 46px; background: linear-gradient(135deg, var(--gold-dim), rgba(13,43,94,0.07)); border: 1px solid rgba(123,26,46,0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 16px; }
+    .highlight-title { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px; line-height: 1.3; }
+    .highlight-body { font-size: 13px; color: var(--muted); line-height: 1.75; }
+    .highlight-card-footer { padding: 11px 22px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.018); display: flex; align-items: center; justify-content: space-between; }
+    .highlight-footer-brand { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-l); }
+    .highlight-footer-dot { width: 6px; height: 6px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), #0D2B5E); flex-shrink: 0; }
+    .highlights-section-header { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+    .highlights-section-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); white-space: nowrap; }
+    .highlights-section-rule { flex: 1; height: 1px; background: var(--border); }
+    .highlights-section-count { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .1em; color: var(--muted-l); white-space: nowrap; }
 
-    /* ── API HIGHLIGHTS ── */
-    .api-hl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 20px; }
-    .api-hl-card {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
-      transition: box-shadow .2s, transform .2s;
-    }
-    .api-hl-card:hover { box-shadow: 0 8px 28px rgba(123,26,46,.12); transform: translateY(-2px); }
-    .api-hl-stripe { height: 4px; background: linear-gradient(90deg, var(--gold), #0D2B5E); }
-    .api-hl-body { padding: 18px 18px 14px; flex: 1; }
-    .api-hl-icon { font-size: 24px; margin-bottom: 12px; }
-    .api-hl-title { font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-    .api-hl-text  { font-size: 13px; color: var(--muted); line-height: 1.7; }
+    /* ── ANALYSIS ── */
+    .analysis-block { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 28px 32px; margin-bottom: 24px; }
+    .analysis-block-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+    .analysis-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); }
+    .analysis-content { font-size: 14px; color: var(--text); line-height: 1.8; }
+    .analysis-content p { margin-bottom: 12px; }
+    .analysis-content p:last-child { margin-bottom: 0; }
+    .analysis-empty { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-l); text-align: center; padding: 24px 0; }
 
-    .api-empty { text-align:center; padding:56px 24px; font-family:'IBM Plex Mono',monospace;
-      font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-l); }
+    /* ── PERIOD SELECT IN TOPBAR ── */
+    .period-select {
+      font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .08em;
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      color: #fff; padding: 6px 12px; border-radius: 4px; cursor: pointer; outline: none;
+      max-width: 160px;
+    }
+    .period-select option { background: #1a1a2e; color: #fff; }
+    .btn-export {
+      display: flex; align-items: center; gap: 6px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .1em;
+      text-transform: uppercase; cursor: pointer; border-radius: 4px;
+      padding: 7px 14px; border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8);
+      transition: background .2s, border-color .2s;
+    }
+    .btn-export:hover { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.5); color: #fff; }
+
+    /* ── NO DATA ── */
+    .no-data { text-align: center; padding: 80px 32px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-l); }
+    .no-data .no-data-icon { font-size: 40px; display: block; margin-bottom: 16px; opacity: .3; }
   </style>
 </head>
 <body>
@@ -564,26 +577,28 @@
         <span></span><span></span><span></span>
       </button>
       <span class="topbar-title">Falaw Advogados · <span id="topbarCompany">Portal</span></span>
-      <div class="topbar-right">
+      <div class="topbar-right" id="topbarRight">
         <span><span class="status-dot"></span>Sessão ativa</span>
         <span id="topbarDate" style="font-family:'IBM Plex Mono',monospace;font-size:11px;"></span>
       </div>
     </div>
 
+    <!-- TAB BAR (dashboard tabs — sticky, hidden until data loads) -->
+    <nav class="tab-bar" id="dashTabBar" style="display:none">
+      <button class="tab-btn active" data-tab="visao-geral" onclick="onDashTabChange('visao-geral')">Visão Geral</button>
+      <button class="tab-btn" data-tab="ex_empregados" onclick="onDashTabChange('ex_empregados')">Ex-empregados</button>
+      <button class="tab-btn" data-tab="terceirizacao" onclick="onDashTabChange('terceirizacao')">Terceirização</button>
+      <button class="tab-btn" data-tab="destaques" onclick="onDashTabChange('destaques')">Destaques do Mês</button>
+    </nav>
+
     <!-- CONTENT -->
-    <div class="content">
+    <div class="content" id="mainContent">
 
       <!-- ═══ DASHBOARD TAB ═══ -->
       <div id="tab-dashboard" class="tab-section active">
 
-        <div class="page-header">
-          <div class="page-label">Área do Cliente · Falaw Advogados</div>
-          <h1 class="page-title" id="pageTitle">Dashboard</h1>
-          <p class="page-subtitle" id="pageSubtitle">Visão geral e análise dos seus processos.</p>
-        </div>
-
-        <!-- Stats row (always shown) -->
-        <div class="stats-row">
+        <!-- Stats summary (always visible) -->
+        <div class="stats-row" id="statsRow">
           <div class="stat-card">
             <div class="stat-label">Total de Relatórios</div>
             <div class="stat-value gold" id="statTotal">0</div>
@@ -601,27 +616,77 @@
           </div>
         </div>
 
-        <!-- Period selector + sub-tabs (shown when API data is available) -->
-        <div id="apiDashControls" style="display:none;margin-bottom:24px">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-            <label style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap">Período:</label>
-            <select id="dashPeriodSelect" onchange="onDashPeriodChange(this.value)"
-              style="border:1px solid var(--border);border-radius:6px;padding:8px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text);background:var(--bg-card);outline:none;cursor:pointer;min-width:180px">
-            </select>
+        <!-- ── VISÃO GERAL ── -->
+        <div class="tab-panel active" id="panel-visao-geral">
+          <div class="period-banner" id="bannerVisaoGeral" style="display:none">
+            <div>
+              <div class="period-banner-label">Período de referência</div>
+              <div class="period-banner-value" id="periodLabelVisao">—</div>
+            </div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">Falaw Advogados · Gestão Jurídica</div>
           </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:0;margin-bottom:0" id="dashTabBar">
-            <div class="dash-sub-tab active" data-tab="visao-geral" onclick="onDashTabChange('visao-geral')">📊 Visão Geral</div>
-            <div class="dash-sub-tab" data-tab="ex_empregados" onclick="onDashTabChange('ex_empregados')">⚖️ Ex-empregados</div>
-            <div class="dash-sub-tab" data-tab="terceirizacao" onclick="onDashTabChange('terceirizacao')">🏢 Terceirização / Subsidiária</div>
-            <div class="dash-sub-tab" data-tab="highlights" onclick="onDashTabChange('highlights')">⭐ Destaques</div>
+          <div class="page-header">
+            <div class="page-label">Visão Geral</div>
+            <div class="page-title" id="pageTitle">Dashboard</div>
+            <div class="page-subtitle" id="pageSubtitle">Panorama consolidado dos seus processos.</div>
+          </div>
+          <div class="kpi-grid" id="kpis-visao-geral"></div>
+          <div class="charts-grid" id="charts-visao-geral"></div>
+          <div class="analysis-block" id="analysis-block-visao-geral" style="display:none">
+            <div class="analysis-block-header"><span class="analysis-label">Análise — Visão Geral</span></div>
+            <div class="analysis-content" id="content-visao-geral"><div class="analysis-empty">Nenhuma análise disponível para este período.</div></div>
+          </div>
+          <div id="analyticsArea"></div>
+        </div>
+
+        <!-- ── EX-EMPREGADOS ── -->
+        <div class="tab-panel" id="panel-ex_empregados">
+          <div class="page-header">
+            <div class="page-label">Ex-empregados</div>
+            <div class="page-title">Ações de Ex-empregados</div>
+            <div class="page-subtitle">Dados consolidados dos processos movidos por ex-empregados.</div>
+          </div>
+          <div class="kpi-grid" id="kpis-ex_empregados"></div>
+          <div class="charts-grid" id="charts-ex_empregados"></div>
+          <div class="analysis-block" id="analysis-block-ex_empregados" style="display:none">
+            <div class="analysis-block-header"><span class="analysis-label">Análise — Ex-empregados</span></div>
+            <div class="analysis-content" id="content-ex_empregados"><div class="analysis-empty">Nenhuma análise disponível para este período.</div></div>
           </div>
         </div>
 
-        <!-- New API-sourced KPI area -->
-        <div id="apiDashArea" style="display:none"></div>
+        <!-- ── TERCEIRIZAÇÃO ── -->
+        <div class="tab-panel" id="panel-terceirizacao">
+          <div class="page-header">
+            <div class="page-label">Terceirização / Subsidiária</div>
+            <div class="page-title">Ações de Terceirização</div>
+            <div class="page-subtitle">Dados consolidados de processos com responsabilidade de Terceirização / Subsidiária.</div>
+          </div>
+          <div class="kpi-grid" id="kpis-terceirizacao"></div>
+          <div class="charts-grid" id="charts-terceirizacao"></div>
+          <div class="analysis-block" id="analysis-block-terceirizacao" style="display:none">
+            <div class="analysis-block-header"><span class="analysis-label">Análise — Terceirização</span></div>
+            <div class="analysis-content" id="content-terceirizacao"><div class="analysis-empty">Nenhuma análise disponível para este período.</div></div>
+          </div>
+        </div>
 
-        <!-- Legacy analytics (shown as fallback when no API data) -->
-        <div id="analyticsArea"></div>
+        <!-- ── DESTAQUES ── -->
+        <div class="tab-panel" id="panel-destaques">
+          <div class="page-header">
+            <div class="page-label">Destaques do Mês</div>
+            <div class="page-title">Principais conquistas — <span id="destaquesMonth">—</span></div>
+            <div class="page-subtitle">Resultados, marcos e fatos relevantes do período em destaque.</div>
+          </div>
+          <div class="highlights-section-header">
+            <span class="highlights-section-label">Destaques</span>
+            <span class="highlights-section-rule"></span>
+            <span class="highlights-section-count" id="highlights-count"></span>
+          </div>
+          <div class="highlights-grid" id="highlights-grid"></div>
+          <div class="analysis-block" id="analysis-block-destaques" style="display:none">
+            <div class="analysis-block-header"><span class="analysis-label">Comentários do período</span></div>
+            <div class="analysis-content" id="content-destaques"><div class="analysis-empty">Nenhum comentário para este período.</div></div>
+          </div>
+        </div>
 
       </div>
 
@@ -853,7 +918,208 @@ async function downloadReportPPT(report) {
   await pptx.writeFile({ fileName });
 }
 
+/* ─── DASHBOARD EXPORT (PDF / PPT) ──────────────────────────────────────── */
+async function downloadDashboardPDF() {
+  if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
+    alert('Biblioteca PDF ainda carregando. Tente novamente em instantes.'); return;
+  }
+  const { jsPDF } = window.jspdf || window;
+  const company     = (window._clientData && window._clientData.company) || 'Cliente';
+  const periodLabel = _dashLastPeriodLabel || '';
+  const tabLabels   = { 'visao-geral': 'Visão Geral', 'ex_empregados': 'Ex-empregados', 'terceirizacao': 'Terceirização / Subsidiária', 'highlights': 'Destaques' };
+  const tabLabel    = tabLabels[_dashActiveTab] || _dashActiveTab;
+
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  let y = 18;
+
+  // Header band
+  doc.setFillColor(13, 43, 94);
+  doc.rect(0, 0, W, 28, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text('Falaw Advogados', 14, 12);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Dashboard Jurídico', 14, 20);
+  y = 38;
+
+  // Title block
+  doc.setTextColor(26, 10, 13);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text(company, 14, y); y += 8;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  if (periodLabel) { doc.text('Período: ' + periodLabel, 14, y); y += 6; }
+  doc.text('Aba: ' + tabLabel, 14, y); y += 6;
+  doc.text('Exportado em: ' + new Date().toLocaleDateString('pt-BR'), 14, y); y += 12;
+
+  // KPI cards
+  const cards  = _dashLastKpis.filter(k => !k.chart_data);
+  const charts = _dashLastKpis.filter(k =>  k.chart_data);
+
+  if (cards.length) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(13, 43, 94);
+    doc.text('INDICADORES', 14, y); y += 5;
+    const COLS = 3;
+    const colW = (W - 28) / COLS;
+    const rowH = 22;
+    const totalRows = Math.ceil(cards.length / COLS);
+    for (let r = 0; r < totalRows; r++) {
+      if (y + rowH + 6 > H - 20) { doc.addPage(); y = 18; }
+      for (let c = 0; c < COLS; c++) {
+        const idx = r * COLS + c;
+        if (idx >= cards.length) break;
+        const k = cards[idx];
+        const rx = 14 + c * colW;
+        doc.setFillColor(248, 247, 245);
+        doc.roundedRect(rx, y, colW - 2, rowH - 2, 2, 2, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.setTextColor(26, 10, 13);
+        doc.text(String(k.value ?? '—'), rx + (colW - 2) / 2, y + 9, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.5);
+        doc.setTextColor(120, 120, 120);
+        const lbl = (k.label || k.kpi_key || '').toUpperCase().substring(0, 40);
+        doc.text(lbl, rx + (colW - 2) / 2, y + 16, { align: 'center' });
+      }
+      y += rowH;
+    }
+    y += 6;
+  }
+
+  // Charts as canvas images
+  const canvases = document.querySelectorAll('#panel-' + (_dashActiveTab||'visao-geral') + ' canvas');
+  for (let ci = 0; ci < canvases.length && ci < charts.length; ci++) {
+    const canvas = canvases[ci];
+    const k = charts[ci];
+    try {
+      const imgData = canvas.toDataURL('image/png');
+      const aspRatio = canvas.height / canvas.width;
+      const imgW = W - 28;
+      const imgH = Math.min(imgW * aspRatio, 80);
+      if (y + imgH + 14 > H - 20) { doc.addPage(); y = 18; }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(13, 43, 94);
+      doc.text((k.chart_title || k.label || '').toUpperCase(), 14, y); y += 4;
+      doc.addImage(imgData, 'PNG', 14, y, imgW, imgH);
+      y += imgH + 10;
+    } catch(e) { /* skip chart on error */ }
+  }
+
+  // Highlights (when on highlights tab)
+  if (_dashActiveTab === 'highlights' && _dashLastHighlights.length) {
+    _dashLastHighlights.forEach(h => {
+      const body = (h.body || h.text || '').trim();
+      if (!body) return;
+      if (y + 30 > H - 20) { doc.addPage(); y = 18; }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(13, 43, 94);
+      doc.text(h.title || '', 14, y); y += 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(60, 60, 60);
+      const lines = doc.splitTextToSize(body, W - 28);
+      if (y + lines.length * 4.5 > H - 20) { doc.addPage(); y = 18; }
+      doc.text(lines, 14, y); y += lines.length * 4.5 + 8;
+    });
+  }
+
+  const fname = ('Dashboard_' + company + '_' + (periodLabel || 'export') + '.pdf').replace(/[^a-zA-Z0-9_\-.]/g, '_');
+  doc.save(fname);
+}
+
+async function downloadDashboardPPT() {
+  if (typeof PptxGenJS === 'undefined') {
+    alert('Biblioteca PPT ainda carregando. Tente novamente em instantes.'); return;
+  }
+  const company     = (window._clientData && window._clientData.company) || 'Cliente';
+  const periodLabel = _dashLastPeriodLabel || '';
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_WIDE';
+
+  // Slide 1 — Capa
+  const slide1 = pptx.addSlide();
+  slide1.background = { color: '0D2B5E' };
+  slide1.addText('Falaw Advogados', { x: 0.5, y: 1.2, w: 12, h: 0.8, fontSize: 36, bold: true, color: 'FFFFFF', fontFace: 'Calibri' });
+  slide1.addText('Dashboard Jurídico', { x: 0.5, y: 2.2, w: 12, h: 0.6, fontSize: 22, color: 'D4AD3A', fontFace: 'Calibri' });
+  slide1.addText('Cliente: ' + company, { x: 0.5, y: 3.1, w: 12, h: 0.4, fontSize: 14, color: 'CCCCCC' });
+  if (periodLabel) slide1.addText('Período: ' + periodLabel, { x: 0.5, y: 3.6, w: 12, h: 0.4, fontSize: 14, color: 'CCCCCC' });
+  slide1.addText('falaw.com.br', { x: 0.5, y: 6.8, w: 12, h: 0.3, fontSize: 10, color: '888888', align: 'right' });
+
+  // Slide(s) — KPI cards (max 12 per slide)
+  const cards  = _dashLastKpis.filter(k => !k.chart_data);
+  const charts = _dashLastKpis.filter(k =>  k.chart_data);
+
+  if (cards.length) {
+    const COLS = 4; const ROWS_PER_SLIDE = 3;
+    const cardW = 2.8; const cardH = 1.35;
+    const startX = 0.3; const startY = 1.0;
+    const perSlide = COLS * ROWS_PER_SLIDE;
+    for (let s = 0; s < cards.length; s += perSlide) {
+      const slideK = pptx.addSlide();
+      slideK.background = { color: 'F4F2EF' };
+      slideK.addText('Indicadores', { x: 0.5, y: 0.3, w: 12, h: 0.5, fontSize: 18, bold: true, color: '0D2B5E' });
+      cards.slice(s, s + perSlide).forEach((k, i) => {
+        const col = i % COLS; const row = Math.floor(i / COLS);
+        const x = startX + col * (cardW + 0.15);
+        const y = startY + row * (cardH + 0.15);
+        slideK.addShape(pptx.ShapeType.rect, { x, y, w: cardW, h: cardH, fill: { color: 'FFFFFF' }, line: { color: 'E5E7EB', width: 1 } });
+        slideK.addText(String(k.value ?? '—'), { x, y: y + 0.1, w: cardW, h: 0.7, fontSize: 24, bold: true, color: '0D2B5E', align: 'center' });
+        slideK.addText((k.label || k.kpi_key || '').toUpperCase(), { x, y: y + 0.82, w: cardW, h: 0.35, fontSize: 7, color: '888888', align: 'center' });
+      });
+    }
+  }
+
+  // Slides — charts as images
+  const canvases = document.querySelectorAll('#panel-' + (_dashActiveTab||'visao-geral') + ' canvas');
+  for (let ci = 0; ci < canvases.length && ci < charts.length; ci++) {
+    const canvas = canvases[ci];
+    const k = charts[ci];
+    try {
+      const imgData = canvas.toDataURL('image/png');
+      const aspRatio = canvas.height / canvas.width;
+      const imgW = 12; const imgH = Math.min(imgW * aspRatio, 5.5);
+      const slideC = pptx.addSlide();
+      slideC.background = { color: 'FFFFFF' };
+      slideC.addText(k.chart_title || k.label || '', { x: 0.5, y: 0.25, w: 12, h: 0.5, fontSize: 15, bold: true, color: '0D2B5E' });
+      slideC.addImage({ data: imgData, x: 0.5, y: 0.95, w: imgW, h: imgH });
+    } catch(e) { /* skip */ }
+  }
+
+  // Slide — Highlights
+  if (_dashLastHighlights.length) {
+    const slideH = pptx.addSlide();
+    slideH.background = { color: '0D2B5E' };
+    slideH.addText('Destaques do Período', { x: 0.5, y: 0.3, w: 12, h: 0.5, fontSize: 18, bold: true, color: 'D4AD3A' });
+    _dashLastHighlights.slice(0, 6).forEach((h, i) => {
+      const col = i % 2; const row = Math.floor(i / 2);
+      const x = 0.4 + col * 6.5; const y = 1.1 + row * 1.9;
+      slideH.addShape(pptx.ShapeType.rect, { x, y, w: 6.2, h: 1.7, fill: { color: '1a3a6e' }, line: { color: 'D4AD3A', width: 1 } });
+      slideH.addText(h.title || '', { x: x + 0.15, y: y + 0.12, w: 5.9, h: 0.4, fontSize: 11, bold: true, color: 'FFFFFF' });
+      const body = (h.body || h.text || '').substring(0, 160);
+      slideH.addText(body, { x: x + 0.15, y: y + 0.55, w: 5.9, h: 1.0, fontSize: 9, color: 'CCCCCC', wrap: true });
+    });
+  }
+
+  const fname = ('Dashboard_' + company + '_' + (periodLabel || 'export') + '.pptx').replace(/[^a-zA-Z0-9_\-.]/g, '_');
+  await pptx.writeFile({ fileName: fname });
+}
+
 window._allReports = [];
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
 /* ─── CLIENT DASH API ─────────────────────────────── */
 function apiBase() {
@@ -861,9 +1127,14 @@ function apiBase() {
   return cfg.replace(/\/$/, '');
 }
 
-let _dashClientId = null;
-let _dashPeriods  = [];
+const DASH_TABS = ['visao-geral','ex_empregados','terceirizacao','destaques'];
+let _dashClientId  = null;
+let _dashPeriods   = [];
 let _dashActiveTab = 'visao-geral';
+let _dashPeriodId  = null;
+
+// Chart instances per tab, keyed by tab key
+const _chartInstances = {};
 
 async function _cliDashGet(path) {
   const base = apiBase();
@@ -875,168 +1146,226 @@ async function _cliDashGet(path) {
   } catch { return null; }
 }
 
+/* ─── Activate tab bar in topbar when dashboard loads ─ */
+function _showDashControls(periods, activePeriodId) {
+  // Show tab bar
+  document.getElementById('dashTabBar').style.display = '';
+  // Inject period select + export buttons into topbar right
+  const tr = document.getElementById('topbarRight');
+  tr.innerHTML = `
+    <select class="period-select" id="dashPeriodSelect" onchange="onDashPeriodChange(this.value)">
+      ${periods.map(p=>`<option value="${escHtml(p.id)}"${p.id===activePeriodId?' selected':''}>${escHtml(p.label||p.id)}</option>`).join('')}
+    </select>
+    <button class="btn-export" onclick="downloadDashboardPDF()">⬇ PDF</button>
+    <button class="btn-export" onclick="downloadDashboardPPT()">⬇ PPT</button>`;
+}
+
 async function loadClientDashData(clientId) {
   _dashClientId = clientId;
   const periods = await _cliDashGet('/api/client-dash/' + encodeURIComponent(clientId) + '/periods');
   _dashPeriods  = Array.isArray(periods) ? periods.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0)) : [];
   if (!_dashPeriods.length) return false;
 
-  const sel = document.getElementById('dashPeriodSelect');
-  sel.innerHTML = '';
-  _dashPeriods.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = p.label || p.id;
-    sel.appendChild(opt);
-  });
-
-  document.getElementById('apiDashControls').style.display = '';
-  document.getElementById('apiDashArea').style.display = '';
+  _dashPeriodId = _dashPeriods[0].id;
+  _showDashControls(_dashPeriods, _dashPeriodId);
   document.getElementById('analyticsArea').style.display = 'none';
 
-  await renderApiDash(_dashPeriods[0].id, _dashActiveTab);
+  // Show banner
+  const banner = document.getElementById('bannerVisaoGeral');
+  if (banner) {
+    banner.style.display = '';
+    const lbl = document.getElementById('periodLabelVisao');
+    if (lbl) lbl.textContent = _dashPeriods[0].label || _dashPeriods[0].id;
+  }
+
+  await renderApiDash(_dashPeriodId, _dashActiveTab);
   return true;
 }
 
+/* ─── Rendering ─────────────────────────────────────── */
 async function renderApiDash(periodId, tabKey) {
   _dashActiveTab = tabKey;
+  _dashPeriodId  = periodId;
 
-  // Update tab bar active state
-  document.querySelectorAll('.dash-sub-tab').forEach(el => {
+  // cache period label for export
+  const selPeriod = document.getElementById('dashPeriodSelect');
+  _dashLastPeriodLabel = selPeriod ? (selPeriod.options[selPeriod.selectedIndex]?.text || periodId) : periodId;
+
+  // switch tab-btn active state
+  document.querySelectorAll('#dashTabBar .tab-btn').forEach(el => {
     el.classList.toggle('active', el.dataset.tab === tabKey);
   });
 
-  const area = document.getElementById('apiDashArea');
-  area.innerHTML = '<div class="api-empty" style="padding:40px 0">A carregar…</div>';
+  // switch panel
+  DASH_TABS.forEach(tk => {
+    const panel = document.getElementById('panel-' + tk);
+    if (panel) panel.classList.toggle('active', tk === tabKey);
+  });
 
-  if (tabKey === 'highlights') {
-    const hl = await _cliDashGet('/api/client-dash/' + encodeURIComponent(_dashClientId) + '/highlights?periodId=' + encodeURIComponent(periodId));
-    area.innerHTML = '';
-    renderApiHighlights(hl, area);
+  if (tabKey === 'destaques') {
+    await _renderDestaques(periodId);
     return;
   }
 
+  const kpisEl   = document.getElementById('kpis-'   + tabKey);
+  const chartsEl = document.getElementById('charts-' + tabKey);
+  const contentEl = document.getElementById('content-' + tabKey);
+  const analysisBlock = document.getElementById('analysis-block-' + tabKey);
+
+  if (!kpisEl) return;
+
+  // Avoid re-fetching if already rendered for this period
+  if (kpisEl.dataset.period === periodId && chartsEl.dataset.period === periodId) return;
+
+  kpisEl.innerHTML   = '<div style="grid-column:1/-1;padding:24px;text-align:center;font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--muted-l)">A carregar…</div>';
+  chartsEl.innerHTML = '';
+
   const [kpis, content] = await Promise.all([
-    _cliDashGet('/api/client-dash/' + encodeURIComponent(_dashClientId) + '/kpis?periodId='    + encodeURIComponent(periodId) + '&tabKey=' + encodeURIComponent(tabKey)),
+    _cliDashGet('/api/client-dash/' + encodeURIComponent(_dashClientId) + '/kpis?periodId=' + encodeURIComponent(periodId) + '&tabKey=' + encodeURIComponent(tabKey)),
     _cliDashGet('/api/client-dash/' + encodeURIComponent(_dashClientId) + '/content?periodId=' + encodeURIComponent(periodId) + '&tabKey=' + encodeURIComponent(tabKey))
   ]);
 
-  area.innerHTML = '';
-  renderApiKpis(kpis, area);
-  renderApiContent(content, area);
+  _dashLastKpis = Array.isArray(kpis) ? kpis : [];
+
+  // Destroy previous chart instances for this tab
+  if (_chartInstances[tabKey]) {
+    _chartInstances[tabKey].forEach(c => { try { c.destroy(); } catch(e) {} });
+  }
+  _chartInstances[tabKey] = [];
+
+  kpisEl.innerHTML   = '';
+  chartsEl.innerHTML = '';
+  kpisEl.dataset.period   = periodId;
+  chartsEl.dataset.period = periodId;
+
+  _buildKpiGrid(_dashLastKpis, kpisEl, chartsEl, tabKey);
+  _buildAnalysis(content, contentEl, analysisBlock);
 }
 
-let _chartInstances = [];
-function renderApiKpis(kpis, container) {
-  // Destroy any previous charts
-  _chartInstances.forEach(c => { try { c.destroy(); } catch(e) {} });
-  _chartInstances = [];
+function _buildKpiGrid(kpis, kpisEl, chartsEl, tabKey) {
+  const list  = Array.isArray(kpis) ? kpis.sort((a,b) => (a.sort_order||0)-(b.sort_order||0)) : [];
+  const cards = list.filter(k => !k.chart_data);
+  const charts = list.filter(k => !!k.chart_data);
 
-  const list = Array.isArray(kpis) ? kpis.sort((a,b) => (a.sort_order||0) - (b.sort_order||0)) : [];
   if (!list.length) {
-    container.insertAdjacentHTML('beforeend', '<div class="api-empty">Sem KPIs para este período.</div>');
+    kpisEl.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;font-family:\'IBM Plex Mono\',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted-l)">Sem dados para este período.</div>';
     return;
   }
 
-  // Separate cards from chart items
-  const cards  = list.filter(k => !k.chart_data);
-  const charts = list.filter(k =>  k.chart_data);
+  // KPI Cards
+  cards.forEach(k => {
+    const trend = parseFloat(k.trend_pct);
+    const tDir  = isNaN(trend) ? 'flat' : trend > 0 ? 'up' : trend < 0 ? 'down' : 'flat';
+    const tIcon = tDir === 'up' ? '▲' : tDir === 'down' ? '▼' : '—';
+    const tTxt  = isNaN(trend) ? '' : Math.abs(trend).toFixed(1) + '%';
+    kpisEl.insertAdjacentHTML('beforeend', `
+      <div class="kpi-card">
+        <div class="kpi-label">${escHtml(k.label || k.kpi_key || '')}</div>
+        <div class="kpi-value" style="font-size:28px">${escHtml(String(k.value ?? '—'))}</div>
+        ${k.unit ? `<div class="kpi-unit">${escHtml(k.unit)}</div>` : ''}
+        ${tTxt ? `<div class="kpi-trend ${tDir}">${tIcon} ${tTxt}</div>` : ''}
+      </div>`);
+  });
 
-  // Render cards
-  if (cards.length) {
-    const grid = document.createElement('div');
-    grid.className = 'api-kpi-grid';
-    cards.forEach(k => {
-      const trend = parseFloat(k.trend_pct);
-      const tDir  = isNaN(trend) ? 'flat' : trend > 0 ? 'up' : trend < 0 ? 'down' : 'flat';
-      const tIcon = tDir === 'up' ? '▲' : tDir === 'down' ? '▼' : '—';
-      const tTxt  = isNaN(trend) ? '' : Math.abs(trend).toFixed(1) + '%';
-      grid.insertAdjacentHTML('beforeend', `
-        <div class="api-kpi-card">
-          <div class="api-kpi-label">${escHtml(k.label || k.kpi_key || '')}</div>
-          <div class="api-kpi-value">${escHtml(String(k.value ?? '—'))}</div>
-          ${k.unit ? `<div class="api-kpi-unit">${escHtml(k.unit)}</div>` : ''}
-          ${tTxt ? `<div class="api-kpi-trend ${tDir}">${tIcon} ${tTxt}</div>` : ''}
-        </div>`);
-    });
-    container.appendChild(grid);
-  }
-
-  // Render charts
+  // Charts — rendered in pairs (2-column grid)
   charts.forEach((k, i) => {
     let cfg;
     try { cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; } catch(e) { return; }
     if (!cfg) return;
-    // Detect horizontal bar (for rankings)
+
     const isHorizontal = cfg.options && cfg.options.indexAxis === 'y';
     const height = isHorizontal
-      ? Math.max(160, ((cfg.data && cfg.data.labels && cfg.data.labels.length) || 6) * 28 + 40)
-      : 220;
-    const wrap = document.createElement('div');
-    wrap.className = 'api-chart-wrap';
-    const uid = 'apichart_' + i;
-    wrap.innerHTML = `<div class="api-chart-title">${escHtml(k.chart_title || k.label || '')}</div>
-      <div class="api-chart-canvas-wrap" style="height:${height}px"><canvas id="${uid}"></canvas></div>`;
-    container.appendChild(wrap);
+      ? Math.max(180, ((cfg.data?.labels?.length) || 6) * 32 + 40)
+      : 280;
+
+    // Wide if horizontal bar (rankings tend to be tall)
+    const wide = isHorizontal && (cfg.data?.labels?.length || 0) > 6 ? ' wide' : '';
+    const uid  = 'dashchart_' + tabKey + '_' + i;
+
+    chartsEl.insertAdjacentHTML('beforeend', `
+      <div class="chart-card${wide}">
+        <div class="chart-card-title">${escHtml(k.chart_title || k.label || '')}</div>
+        <div class="chart-wrap" style="height:${height}px"><canvas id="${uid}"></canvas></div>
+      </div>`);
+
     requestAnimationFrame(() => {
       const canvas = document.getElementById(uid);
       if (!canvas) return;
       try {
         const inst = new Chart(canvas, cfg);
-        _chartInstances.push(inst);
+        (_chartInstances[tabKey] = _chartInstances[tabKey] || []).push(inst);
       } catch(e) { console.warn('Chart render error', k.kpi_key, e); }
     });
   });
 }
 
-function renderApiContent(content, container) {
+function _buildAnalysis(content, contentEl, blockEl) {
+  if (!contentEl || !blockEl) return;
   const list = Array.isArray(content) ? content : (content ? [content] : []);
-  list.forEach(item => {
-    if (!item) return;
-    const text = (item.analysis_text || item.text || '').trim();
-    if (!text) return;
-    const block = document.createElement('div');
-    block.className = 'api-analysis';
-    block.innerHTML = `<div class="api-analysis-label">${escHtml(item.section_label || item.title || 'Análise do Período')}</div>
-      <div class="api-analysis-content">${text.split('\n').filter(Boolean).map(l => `<p>${escHtml(l)}</p>`).join('')}</div>`;
-    container.appendChild(block);
-  });
+  const texts = list.map(item => (item?.analysis_text || item?.text || '').trim()).filter(Boolean);
+  if (!texts.length) { blockEl.style.display = 'none'; return; }
+  blockEl.style.display = '';
+  contentEl.innerHTML = texts.map(t => t.split('\n').filter(Boolean).map(l => `<p>${escHtml(l)}</p>`).join('')).join('');
 }
 
-function renderApiHighlights(hl, container) {
-  const list = Array.isArray(hl) ? hl : [];
-  if (!list.length) {
-    container.insertAdjacentHTML('beforeend', '<div class="api-empty">Sem destaques para este período.</div>');
+async function _renderDestaques(periodId) {
+  const hl = await _cliDashGet('/api/client-dash/' + encodeURIComponent(_dashClientId) + '/highlights?periodId=' + encodeURIComponent(periodId));
+  _dashLastHighlights = Array.isArray(hl) ? hl : [];
+
+  const grid  = document.getElementById('highlights-grid');
+  const count = document.getElementById('highlights-count');
+  const month = document.getElementById('destaquesMonth');
+  if (!grid) return;
+
+  if (month) {
+    const selPeriod = document.getElementById('dashPeriodSelect');
+    month.textContent = selPeriod ? (selPeriod.options[selPeriod.selectedIndex]?.text || '') : '';
+  }
+  if (count) count.textContent = _dashLastHighlights.length ? _dashLastHighlights.length + ' item' + (_dashLastHighlights.length !== 1 ? 's' : '') : '';
+
+  if (!_dashLastHighlights.length) {
+    grid.innerHTML = '<div class="no-data"><span class="no-data-icon">⭐</span>Sem destaques para este período.</div>';
     return;
   }
-  const grid = document.createElement('div');
-  grid.className = 'api-hl-grid';
-  list.forEach(h => {
-    grid.insertAdjacentHTML('beforeend', `
-      <div class="api-hl-card">
-        <div class="api-hl-stripe"></div>
-        <div class="api-hl-body">
-          ${h.icon ? `<div class="api-hl-icon">${escHtml(h.icon)}</div>` : ''}
-          <div class="api-hl-title">${escHtml(h.title || '')}</div>
-          <div class="api-hl-text">${escHtml(h.body || h.text || h.description || '')}</div>
-        </div>
-      </div>`);
-  });
-  container.appendChild(grid);
+
+  grid.innerHTML = _dashLastHighlights.map(h => `
+    <div class="highlight-card">
+      <div class="highlight-card-stripe"></div>
+      <div class="highlight-card-body">
+        ${h.icon ? `<div class="highlight-icon-badge">${escHtml(h.icon)}</div>` : ''}
+        <div class="highlight-title">${escHtml(h.title || '')}</div>
+        <div class="highlight-body">${escHtml(h.body || h.text || h.description || '')}</div>
+      </div>
+      <div class="highlight-card-footer">
+        <span class="highlight-footer-brand">Falaw Advogados</span>
+        <span class="highlight-footer-dot"></span>
+      </div>
+    </div>`).join('');
 }
 
-function escHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+let _dashLastKpis = [];
+let _dashLastHighlights = [];
+let _dashLastPeriodLabel = '';
 
 function onDashPeriodChange(periodId) {
   if (!periodId) return;
+  // Reset all cached panels when period changes
+  document.querySelectorAll('.kpi-grid[data-period], .charts-grid[data-period]').forEach(el => {
+    delete el.dataset.period;
+  });
+  // Update banner
+  const banner = document.getElementById('bannerVisaoGeral');
+  if (banner) {
+    banner.style.display = '';
+    const lbl = document.getElementById('periodLabelVisao');
+    const sel = document.getElementById('dashPeriodSelect');
+    if (lbl && sel) lbl.textContent = sel.options[sel.selectedIndex]?.text || periodId;
+  }
   renderApiDash(periodId, _dashActiveTab);
 }
 
 function onDashTabChange(tabKey) {
-  const sel = document.getElementById('dashPeriodSelect');
-  const periodId = sel ? sel.value : '';
+  const periodId = _dashPeriodId;
   if (!periodId) return;
   renderApiDash(periodId, tabKey);
 }
