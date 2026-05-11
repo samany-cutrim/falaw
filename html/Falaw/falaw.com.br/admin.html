@@ -6131,10 +6131,15 @@ async function cliDashApi(path, opts = {}) {
   const base = backendApiBase();
   if (!base) return { data: null, error: { message: 'Configure a URL da Cockroach API em Configurações.' } };
   try {
+    // Accept body as object or pre-serialised string
+    const rawBody = opts.body;
+    const bodyStr = rawBody == null ? undefined
+      : typeof rawBody === 'string' ? rawBody
+      : JSON.stringify(rawBody);
     const res = await fetch(base + path, {
       method: opts.method || 'GET',
       headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-      body: opts.body ? JSON.stringify(opts.body) : undefined
+      body: bodyStr
     });
     let data; try { data = await res.json(); } catch { data = null; }
     if (!res.ok) return { data: null, error: { message: data?.error || 'HTTP ' + res.status } };
@@ -6334,7 +6339,7 @@ async function cliDashPreviewExcel(input) {
       { icon: '📁', label: 'Encerrados',           value: fmtN(dashKpis.encerrados) },
       { icon: '💰', label: 'Exposição Total',       value: dashKpis.exposicao != null ? 'R$ ' + fmtN(dashKpis.exposicao) : '—' },
       { icon: '✅', label: 'Taxa de Êxito',         value: fmtPct(dashKpis.taxaExito) },
-      { icon: '📋', label: 'Registros na planilha', value: fmtN(records.length) },
+      { icon: '📋', label: 'Processos extraídos',   value: fmtN(records.length) },
     ];
     document.getElementById('cli-xl-kpi-cards').innerHTML = kpiCards.map(c =>
       `<div style="background:#fff;border:1px solid #b7e0cb;border-radius:6px;padding:12px 16px;min-width:130px;text-align:center">
@@ -6356,7 +6361,7 @@ async function cliDashPreviewExcel(input) {
 }
 
 async function cliDashSaveExcel() {
-  if (!cliDashApiBase()) { showToast('Configure a Cockroach API em Configurações.'); return; }
+  if (!backendApiBase()) { showToast('Configure a Cockroach API em Configurações.'); return; }
   if (!_cliExcelData) { showToast('Selecione um arquivo primeiro.'); return; }
   if (!_cliDashClientId) { showToast('Selecione um cliente primeiro.'); return; }
   const periodId = document.getElementById('cli-xl-period').value;
@@ -6530,20 +6535,17 @@ function _xlParseClientReport(wb) {
  * Handles: APDATA (2-row header), BUSER (Judiciais), CUIDAR.ME, FRETE (ATIVOS).
  */
 function _xlParseClientActive(rawRows) {
-  // Find header row: first row with a process-number-like column AND ≥4 non-empty cells
+  const HDR_KEYS = ['PROCESSO','NUMERO','DISTRIBUICAO','RECLAMANTE','OBJETO','TIPO DE ACAO','DATA DA DISTRIBUICAO','RECLAMADA'];
   let headerIdx = -1;
-  for (let i = 0; i < Math.min(rawRows.length, 5); i++) {
-    const row = rawRows[i];
-    if (!row) continue;
-    const hasProc = row.some(v => _xlN(v).includes('PROCESSO'));
+  for (let i = 0; i < Math.min(rawRows.length, 6); i++) {
+    const row = rawRows[i]; if (!row) continue;
     const nonEmpty = row.filter(v => String(v).trim() !== '').length;
-    if (hasProc && nonEmpty >= 4) { headerIdx = i; break; }
+    if (nonEmpty < 3) continue;
+    if (HDR_KEYS.some(k => row.some(v => _xlN(v).includes(k)))) { headerIdx = i; break; }
   }
   if (headerIdx < 0) return [];
 
   const header = rawRows[headerIdx].map(v => _xlN(v));
-
-  // Detect 2-row header (APDATA style): next row has RECLAMADA / RECLAMANTE
   let dataStart = headerIdx + 1;
   const nextRow = (rawRows[headerIdx + 1] || []).map(v => _xlN(v));
   if (nextRow.some(v => v === 'RECLAMADA' || v === 'RECLAMANTE')) {
@@ -6551,129 +6553,198 @@ function _xlParseClientActive(rawRows) {
     dataStart = headerIdx + 2;
   }
 
-  const fi = (...pats) => {
-    for (const p of pats) { const i = header.findIndex(h => h.includes(_xlN(p))); if (i >= 0) return i; }
-    return -1;
-  };
+  const fi = (...pats) => { for (const p of pats) { const k = _xlN(p); const i = header.findIndex(h => h.includes(k)); if (i >= 0) return i; } return -1; };
   const idx = {
-    proc:       fi('NUMERO DO PROCESSO', 'PROCESSO N'),
-    trt:        fi('TRT', 'ORGAO'),
-    data:       fi('DATA DA DISTRIBUICAO', 'DATA DE DISTRIBUICAO', 'DATA DE INSTAURACAO', 'DATA DO AJUIZAMENTO'),
-    reclamante: fi('RECLAMANTE', 'POLO ATIVO', 'PARTE(S) CONTRARIA', 'PARTE CONTRARIA'),
-    reclamada:  fi('RECLAMADA', 'PARTE PRINCIPAL', 'POLO PASSIVO'),
-    risco:      fi('RISCO'),
-    status:     fi('STATUS ATUAL', 'STATUS MENSAL', 'STATUS'),
-    fase:       fi('FASE', 'INSTANCIA'),
-    uf:         fi('UF', 'CIDADE/UF', 'ESTADO'),
-    vara:       fi('VARA', 'JUIZO'),
+    proc:            fi('NUMERO DO PROCESSO','PROCESSO N','PROCESSO'),
+    trt:             fi('TRT','ORGAO'),
+    data:            fi('DATA DA DISTRIBUICAO','DATA DE DISTRIBUICAO','DATA DE INSTAURACAO','DATA DO AJUIZAMENTO','DATA DE RECEBIMENTO'),
+    reclamante:      fi('RECLAMANTE','POLO ATIVO','PARTE(S) CONTRARIA','PARTE CONTRARIA'),
+    reclamada:       fi('RECLAMADA','PARTE PRINCIPAL','POLO PASSIVO','AGENTE'),
+    risco:           fi('RISCO DE PERDA','RISCO'),
+    status:          fi('STATUS ATUAL','STATUS MENSAL','STATUS','PRINCIPAIS ANDAMENTOS'),
+    fase:            fi('FASE','INSTANCIA'),
+    uf:              fi('UF','CIDADE/UF','ESTADO','COMARCA'),
+    vara:            fi('VARA','JUIZO'),
+    juiz:            fi('JUIZ','RELATOR'),
+    adv:             fi('ADV. CONTRARIO','ADV CONTRARIO','ESCRITORIO DA PARTE CONTRARIA','ESCRITORIO'),
+    responsabilidade:fi('RESPONSABILIDADE','PAPEL DO AGENTE','PAPEL'),
+    sentenca:        fi('SENTENCA','LIMINAR'),
   };
 
   const c = (r, i) => i >= 0 ? String(r[i] ?? '').trim() : '';
-  const normRisco = v => {
-    const n = _xlN(v);
-    if (n.includes('PROVAVEL')) return 'Prov\u00e1vel';
-    if (n.includes('POSSIVEL')) return 'Poss\u00edvel';
-    if (n.includes('REMOTO'))   return 'Remoto';
-    return v || '';
+  const normRisco = v => { const n = _xlN(v); if (n.includes('PROVAVEL')) return 'Provável'; if (n.includes('POSSIVEL')) return 'Possível'; if (n.includes('REMOTO')) return 'Remoto'; return v || ''; };
+  const parseDate = v => { if (!v) return null; if (v instanceof Date) return v; const s = String(v).trim(); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return new Date(+m[1],+m[2]-1,+m[3]); m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if (m) { const y = m[3].length===2?2000+Number(m[3]):+m[3]; return new Date(y,+m[2]-1,+m[1]); } return null; };
+  const detectResp = r => {
+    const f = [c(r,idx.responsabilidade),c(r,idx.reclamada),c(r,idx.status)].join(' ').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if (f.includes('SUBSIDIARIA')||f.includes('SUBSIDIARI')) return 'Subsidiária';
+    if (f.includes('EX-EMPREGADO')||f.includes('EX EMPREGADO')) return 'Ex-empregado';
+    if (f.includes('TERCEIRIZACAO')||f.includes('TERCEIRIZAD')) return 'Terceirização';
+    const p = _xlN(c(r,idx.responsabilidade)); if (p && p !== 'NAO SE APLICA') return p;
+    return 'Outro';
   };
 
   return rawRows.slice(dataStart).map(r => {
     if (!Array.isArray(r)) return null;
-    const proc = c(r, idx.proc);
-    if (!proc || !proc.match(/\d{7,}/)) return null;
+    let proc = c(r, idx.proc);
+    if (!proc || !proc.match(/\d{7,}/)) {
+      const found = r.find(v => /\d{7,}.*\d{4}\.\d{1,2}\.\d{2}\.\d{4}/.test(String(v||'')));
+      if (found) proc = String(found).trim(); else return null;
+    }
     let trt = c(r, idx.trt);
     if (/^\d{1,2}$/.test(trt.trim())) trt = 'TRT-' + trt.trim();
+    const dataRaw = idx.data >= 0 ? r[idx.data] : null;
     return {
-      num_processo: proc,
-      trt,
-      data_distrib: c(r, idx.data),
-      reclamante:   c(r, idx.reclamante),
-      reclamada:    c(r, idx.reclamada),
+      num_processo: proc, trt,
+      data_distrib: dataRaw instanceof Date ? dataRaw : parseDate(dataRaw),
+      reclamante:   c(r, idx.reclamante), reclamada: c(r, idx.reclamada),
       risco:        normRisco(c(r, idx.risco)),
-      status:       c(r, idx.status),
-      fase:         c(r, idx.fase) || c(r, idx.status),
-      uf:           c(r, idx.uf),
-      vara:         c(r, idx.vara),
+      status:       c(r, idx.status), fase: c(r, idx.fase) || c(r, idx.status),
+      uf:           c(r, idx.uf), vara: c(r, idx.vara),
+      juiz:         c(r, idx.juiz), adv: c(r, idx.adv),
+      responsabilidade: detectResp(r), sentenca: c(r, idx.sentenca),
     };
   }).filter(Boolean);
 }
 
 /**
  * Build KPI rows for the Cockroach API from parsed client report data.
- * Produces tab_key='visao-geral' cards + distribution charts.
  */
 function _xlBuildClientDashKpis(periodId, parsedData) {
-  const { dashKpis, records, chartData } = parsedData;
+  const { dashKpis, records, chartData, encerrados: encRecords } = parsedData;
   const rows = []; let so = 0;
-  const push = (tabKey, kpiKey, label, value, unit, cd, ct) =>
-    rows.push({ id: cliDashId(), period_id: periodId, tab_key: tabKey, kpi_key: kpiKey, label, value: String(value ?? '\u2014'), unit: unit || '', chart_data: cd || null, chart_title: ct || '', sort_order: so++, trend_pct: null });
+  const push = (tk, kk, label, value, unit, cd, ct) =>
+    rows.push({ id: cliDashId(), period_id: periodId, tab_key: tk, kpi_key: kk, label, value: String(value ?? '—'), unit: unit || '', chart_data: cd || null, chart_title: ct || '', sort_order: so++, trend_pct: null });
 
-  const fmtBr = n => (typeof n === 'number' ? n.toLocaleString('pt-BR') : String(n ?? '\u2014'));
-  const fmtPct = v => {
-    if (v == null) return '\u2014';
-    const pct = typeof v === 'number' ? (v < 1 ? v * 100 : v) : parseFloat(String(v).replace('%', '').replace(',', '.')) || 0;
-    return pct.toFixed(1).replace('.', ',') + '%';
-  };
+  const fmtBr = n => (typeof n === 'number' ? n.toLocaleString('pt-BR') : String(n ?? '—'));
+  const fmtPct = v => { if (v == null) return '—'; const p = typeof v==='number' ? (v<1?v*100:v) : parseFloat(String(v).replace('%','').replace(',','.')) || 0; return p.toFixed(1).replace('.', ',') + '%'; };
+  const topN = (obj, n) => Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n);
 
-  // ── Summary KPI cards ───────────────────────────────────────────────────
-  push('visao-geral', 'processos_ativos',    'Processos Ativos',    fmtBr(dashKpis.ativos),    'processos');
-  push('visao-geral', 'processos_encerrados','Processos Encerrados', fmtBr(dashKpis.encerrados),'encerrados');
-  push('visao-geral', 'exposicao_total',     'Exposi\u00e7\u00e3o Total',
-    dashKpis.exposicao != null ? 'R$ ' + fmtBr(dashKpis.exposicao) : '\u2014', '');
-  push('visao-geral', 'taxa_exito',          'Taxa de \u00caxito', fmtPct(dashKpis.taxaExito), '');
+  // ── 1. KPI cards do DASHBOARD ─────────────────────────────────────────
+  push('visao-geral','processos_ativos',   'Processos Ativos',    fmtBr(dashKpis.ativos),    'processos');
+  push('visao-geral','processos_encerrados','Processos Encerrados',fmtBr(dashKpis.encerrados),'encerrados');
+  push('visao-geral','exposicao_total',    'Exposição Total',
+    dashKpis.exposicao != null ? 'R$ ' + fmtBr(dashKpis.exposicao) : '—', '');
+  push('visao-geral','taxa_exito',         'Taxa de Êxito', fmtPct(dashKpis.taxaExito), '');
 
-  // ── Charts from process rows ─────────────────────────────────────────────
-  // Distribuição por risco
-  const riscoC = {}; records.forEach(r => { if (r.risco) riscoC[r.risco] = (riscoC[r.risco] || 0) + 1; });
-  const riscoE = Object.entries(riscoC).sort((a, b) => b[1] - a[1]);
-  if (riscoE.length) push('visao-geral', 'chart_risco', 'Distribui\u00e7\u00e3o por Risco', '', '',
-    _xlChartDoughnut(riscoE.map(([l]) => l), riscoE.map(([, v]) => v)), 'Distribui\u00e7\u00e3o por Risco de Perda');
+  if (!records.length) return rows; // sem dados de processo, só cards
 
-  // Fase processual
-  const faseC = {}; records.forEach(r => { const f = r.fase || r.status; if (f && f !== 'N/A') faseC[f] = (faseC[f] || 0) + 1; });
-  const faseTop = Object.entries(faseC).sort((a, b) => b[1] - a[1]).slice(0, 12);
-  if (faseTop.length) push('visao-geral', 'chart_fase', 'Fase Processual', '', '',
-    _xlChartMultiBar(faseTop.map(([l]) => l), faseTop.map(([, v]) => v), 'Processos'), 'Distribui\u00e7\u00e3o por Fase Processual');
+  // ── 2. Tipos de responsabilidade ─────────────────────────────────────
+  const respC = {}; records.forEach(r => { const v = r.responsabilidade || 'Outro'; respC[v] = (respC[v]||0)+1; });
+  const respExEmp = (respC['Ex-empregado']||0);
+  const respSubs  = (respC['Subsidiária']||0);
+  if (respExEmp) push('visao-geral','resp_ex_empregado','Ações — Ex-empregado', fmtBr(respExEmp),'processos');
+  if (respSubs)  push('visao-geral','resp_subsidiaria', 'Ações — Subsidiária',  fmtBr(respSubs), 'processos');
+  const respE = topN(respC, 8);
+  if (respE.length > 1) push('visao-geral','chart_responsabilidade','Tipo de Responsabilidade','','',
+    _xlChartDoughnut(respE.map(([l])=>l), respE.map(([,v])=>v)),'Distribuição por Responsabilidade');
 
-  // Volume por TRT
-  const trtC = {};
-  records.forEach(r => {
-    let t = String(r.trt || '').trim();
-    if (!t) return;
-    if (/^\d{1,2}$/.test(t)) t = 'TRT-' + t;
-    trtC[t] = (trtC[t] || 0) + 1;
-  });
-  const trtTop = Object.entries(trtC).sort((a, b) => b[1] - a[1]).slice(0, 12);
-  if (trtTop.length) push('visao-geral', 'chart_trt', 'Volume por TRT', '', '',
-    _xlChartMultiBar(trtTop.map(([l]) => l), trtTop.map(([, v]) => v), 'Processos Ativos', false), 'Processos por TRT');
+  // ── 3. Risco de perda ─────────────────────────────────────────────────
+  const riscoC = {}; records.forEach(r => { if (r.risco && r.risco !== 'N/A') riscoC[r.risco] = (riscoC[r.risco]||0)+1; });
+  const riscoE = topN(riscoC, 8);
+  if (riscoE.length) push('visao-geral','chart_risco','Risco de Perda','','',
+    _xlChartDoughnut(riscoE.map(([l])=>l), riscoE.map(([,v])=>v)),'Distribuição por Risco de Perda');
 
-  // Por UF (extract 2-letter state code from "SÃO PAULO/SP" or standalone "SP")
+  // ── 4. Fase / Instância processual ────────────────────────────────────
+  const faseC = {}; records.forEach(r => { const f = (r.fase||r.status||'').trim(); if (f && f !== 'N/A' && f.length > 1) faseC[f] = (faseC[f]||0)+1; });
+  const faseTop = topN(faseC, 12);
+  if (faseTop.length) push('visao-geral','chart_fase','Fase Processual','','',
+    _xlChartMultiBar(faseTop.map(([l])=>l), faseTop.map(([,v])=>v),'Processos'),'Distribuição por Fase Processual');
+
+  // ── 5. Volume por TRT ─────────────────────────────────────────────────
+  const trtC = {}; records.forEach(r => { let t = String(r.trt||'').trim(); if (!t) return; if (/^\d{1,2}$/.test(t)) t='TRT-'+t; trtC[t]=(trtC[t]||0)+1; });
+  const trtTop = topN(trtC, 12);
+  if (trtTop.length) push('visao-geral','chart_trt','Volume por TRT','','',
+    _xlChartMultiBar(trtTop.map(([l])=>l), trtTop.map(([,v])=>v),'Processos',false),'Processos por TRT');
+
+  // ── 6. Distribuição por Estado (UF) ──────────────────────────────────
   const ufC = {};
   records.forEach(r => {
-    const raw = String(r.uf || '').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const m = raw.match(/([A-Z]{2})$/); const u = m ? m[1] : (raw.length === 2 ? raw : '');
-    if (u) ufC[u] = (ufC[u] || 0) + 1;
+    const raw = String(r.uf||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const m = raw.match(/\b([A-Z]{2})\b/g);
+    // prefer last 2-char token (like "SP" in "SÃO PAULO/SP")
+    const u = m ? m[m.length-1] : (raw.length===2 ? raw : '');
+    if (u && u.length===2) ufC[u]=(ufC[u]||0)+1;
   });
-  const ufTop = Object.entries(ufC).sort((a, b) => b[1] - a[1]).slice(0, 10);
-  if (ufTop.length) push('visao-geral', 'chart_uf', 'Distribui\u00e7\u00e3o por Estado', '', '',
-    _xlChartBar(ufTop.map(([l]) => l), ufTop.map(([, v]) => v), 'Processos', '#0D2B5E', false),
-    'Processos por Estado (UF)');
+  const ufTop = topN(ufC, 10);
+  if (ufTop.length) push('visao-geral','chart_uf','Distribuição por Estado','','',
+    _xlChartBar(ufTop.map(([l])=>l), ufTop.map(([,v])=>v),'Processos','#0D2B5E',false),'Processos por Estado (UF)');
 
-  // Instância outcomes (from _ChartData tab — FRETE style)
+  // ── 7. Distribuição por mês de distribuição ───────────────────────────
+  const mesC = {};
+  records.forEach(r => {
+    const d = r.data_distrib;
+    if (!d || !(d instanceof Date) || isNaN(d.getTime())) return;
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    mesC[k] = (mesC[k]||0)+1;
+  });
+  const mesKeys = Object.keys(mesC).sort();
+  if (mesKeys.length > 1) push('visao-geral','chart_periodo','Distribuição por Período','','',
+    _xlChartMultiBar(mesKeys.map(k => { const [y,m]=k.split('-'); return `${m}/${y}`; }), mesKeys.map(k=>mesC[k]),'Processos'),
+    'Distribuição por Mês de Distribuição');
+
+  // ── 8. Top advogados adversários ─────────────────────────────────────
+  const advC = {};
+  records.forEach(r => {
+    const a = String(r.adv||'').trim();
+    if (!a || a.toLowerCase()==='n/a' || a.toLowerCase()==='não se aplica' || a.length < 4) return;
+    // Normalise name (remove LTDA / Advogados etc for grouping)
+    advC[a] = (advC[a]||0)+1;
+  });
+  const advTop = topN(advC, 10);
+  if (advTop.length) push('visao-geral','chart_advogados','Top 10 Adv. Adversários','','',
+    _xlChartBar(advTop.map(([l])=>l), advTop.map(([,v])=>v),'Processos','#0D2B5E',true),
+    'Ranking de Advogados Adversários');
+
+  // ── 9. Top julgadores ─────────────────────────────────────────────────
+  const julgC = {};
+  records.forEach(r => {
+    const j = String(r.juiz||'').trim();
+    if (!j || j.toLowerCase()==='aguardando informação' || j.toLowerCase()==='n/a' || j.length < 4) return;
+    julgC[j] = (julgC[j]||0)+1;
+  });
+  const julgTop = topN(julgC, 10);
+  if (julgTop.length) push('visao-geral','chart_julgadores','Top 10 Julgadores','','',
+    _xlChartBar(julgTop.map(([l])=>l), julgTop.map(([,v])=>v),'Processos','#0F9E76',true),
+    'Ranking de Julgadores');
+
+  // ── 10. Decisões favoráveis / desfavoráveis (da sentença) ────────────
+  let decFav = 0, decDesf = 0, decParc = 0;
+  records.forEach(r => {
+    const s = _xlN(r.sentenca || '');
+    if (!s || s === 'NAO SE APLICA' || s === 'NAO') return;
+    if (s.includes('FAVORAVEL') || s.includes('IMPROCEDENTE') || s.includes('EXCLUSAO') || s.includes('ACORDO')) decFav++;
+    else if (s.includes('DESFAVORAVEL') || s.includes('PROCEDENTE') || s.includes('CONDENADA') || s.includes('CONDENANDO')) decDesf++;
+    else if (s.includes('PARCIAL')) decParc++;
+  });
+  if (decFav + decDesf + decParc > 0) {
+    const decTot = decFav + decDesf + decParc;
+    push('visao-geral','decisoes_favoraveis',   'Decisões Favoráveis',    fmtBr(decFav),  `(${fmtPct(decFav/decTot)})`);
+    push('visao-geral','decisoes_desfavoraveis','Decisões Desfavoráveis', fmtBr(decDesf), `(${fmtPct(decDesf/decTot)})`);
+    push('visao-geral','decisoes_parciais',     'Decisões Parciais',      fmtBr(decParc), `(${fmtPct(decParc/decTot)})`);
+    push('visao-geral','chart_decisoes','Decisões Prolatadas','','',
+      _xlChartDoughnut(['Favorável','Desfavorável','Parcialmente Procedente'],[decFav,decDesf,decParc]),
+      'Resultado das Decisões Prolatadas');
+  }
+
+  // ── 11. Instância outcomes (da aba _ChartData — FRETE) ────────────────
   if (chartData && chartData.length) {
-    const labels  = chartData.map(r => r['Inst\u00e2ncia'] || r[Object.keys(r)[0]]);
-    const favData  = chartData.map(r => Number(r['Favor\u00e1vel']    || r['Favoravel']    || 0));
-    const desfData = chartData.map(r => Number(r['Desfavor\u00e1vel'] || r['Desfavoravel'] || 0));
-    push('visao-geral', 'chart_instancia', 'Resultados por Inst\u00e2ncia', '', '', {
-      type: 'bar',
-      data: { labels, datasets: [
-        { label: 'Favor\u00e1vel',    data: favData,  backgroundColor: '#0F9E76', borderRadius: 4 },
-        { label: 'Desfavor\u00e1vel', data: desfData, backgroundColor: '#7B1A2E', borderRadius: 4 }
+    const labels   = chartData.map(r => r['Instância'] || r[Object.keys(r)[0]]);
+    const favData  = chartData.map(r => Number(r['Favorável']    || r['Favoravel']    || 0));
+    const desfData = chartData.map(r => Number(r['Desfavorável'] || r['Desfavoravel'] || 0));
+    const totFav   = favData.reduce((s,v)=>s+v,0);
+    const totDesf  = desfData.reduce((s,v)=>s+v,0);
+    push('visao-geral','decisoes_fav_instancia', 'Decisões Favoráveis',    fmtBr(totFav),  `(${fmtPct(totFav/(totFav+totDesf)||0)})`);
+    push('visao-geral','decisoes_desf_instancia','Decisões Desfavoráveis', fmtBr(totDesf), `(${fmtPct(totDesf/(totFav+totDesf)||0)})`);
+    push('visao-geral','chart_instancia','Resultados por Instância','','',{
+      type:'bar',
+      data:{ labels, datasets:[
+        { label:'Favorável',    data:favData,  backgroundColor:'#0F9E76', borderRadius:4 },
+        { label:'Desfavorável', data:desfData, backgroundColor:'#7B1A2E', borderRadius:4 }
       ]},
-      options: { responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'top', labels: { font: { family: 'IBM Plex Mono', size: 10 } } } },
-        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } } }
-    }, 'Resultados por Inst\u00e2ncia');
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
+        scales:{ x:{ grid:{ display:false } }, y:{ beginAtZero:true } } }
+    },'Resultados por Instância');
   }
 
   return rows;
@@ -6684,16 +6755,24 @@ function _xlBuildClientHighlights(periodId, parsedData) {
   const { dashKpis, records } = parsedData;
   const ativos = dashKpis.ativos ?? records.length;
   const enc    = dashKpis.encerrados ?? 0;
-  const exp    = dashKpis.exposicao != null ? 'R$ ' + _xlFmtBr(dashKpis.exposicao) : '\u2014';
+  const exp    = dashKpis.exposicao != null ? 'R$ ' + _xlFmtBr(dashKpis.exposicao) : '—';
   const exito  = dashKpis.taxaExito != null
     ? ((dashKpis.taxaExito < 1 ? dashKpis.taxaExito * 100 : dashKpis.taxaExito).toFixed(1).replace('.', ',') + '%')
-    : '\u2014';
-  return [
-    { id: cliDashId(), period_id: periodId, icon: '\u2696\ufe0f', title: 'Processos Ativos',       body: `${_xlFmtBr(ativos)} processos ativos no portf\u00f3lio do per\u00edodo.`, sort_order: 0 },
-    { id: cliDashId(), period_id: periodId, icon: '\u2705',       title: 'Taxa de \u00caxito',     body: `\u00cdndice de \u00eaxito de ${exito} com base nos processos encerrados.`, sort_order: 1 },
-    { id: cliDashId(), period_id: periodId, icon: '\ud83d\udcb0', title: 'Exposi\u00e7\u00e3o Total', body: `Exposi\u00e7\u00e3o financeira estimada de ${exp}.`, sort_order: 2 },
-    { id: cliDashId(), period_id: periodId, icon: '\ud83d\udcc1', title: 'Processos Encerrados',   body: `${_xlFmtBr(enc)} processos encerrados acumulados at\u00e9 o per\u00edodo.`, sort_order: 3 },
+    : '—';
+  const respExEmp = records.filter(r => r.responsabilidade === 'Ex-empregado').length;
+  const respSubs  = records.filter(r => r.responsabilidade === 'Subsidiária').length;
+  const hl = [
+    { id: cliDashId(), period_id: periodId, icon: '⚖️', title: 'Processos Ativos',    body: `${_xlFmtBr(ativos)} processos ativos no portfólio do período.`, sort_order: 0 },
+    { id: cliDashId(), period_id: periodId, icon: '✅', title: 'Taxa de Êxito',        body: `Índice de êxito de ${exito} com base nos processos encerrados.`, sort_order: 1 },
+    { id: cliDashId(), period_id: periodId, icon: '💰', title: 'Exposição Total',      body: `Exposição financeira estimada de ${exp}.`, sort_order: 2 },
+    { id: cliDashId(), period_id: periodId, icon: '📁', title: 'Processos Encerrados', body: `${_xlFmtBr(enc)} processos encerrados acumulados até o período.`, sort_order: 3 },
   ];
+  if (respExEmp || respSubs) hl.push({
+    id: cliDashId(), period_id: periodId, icon: '👤', sort_order: 4,
+    title: 'Perfil das Ações',
+    body: `${_xlFmtBr(respExEmp)} ações de ex-empregados e ${_xlFmtBr(respSubs)} de responsabilidade subsidiária.`,
+  });
+  return hl;
 }
 
 /** Build KPI rows for non-iFood clients (tabs: ex_empregados / terceirizacao) */

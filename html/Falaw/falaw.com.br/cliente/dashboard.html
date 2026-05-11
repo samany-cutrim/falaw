@@ -457,6 +457,9 @@
 
     /* ── API KPI CARDS ── */
     .api-kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .api-chart-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 20px 20px 16px; margin-bottom: 20px; }
+    .api-chart-title { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+    .api-chart-canvas-wrap { position: relative; height: 220px; }
     .api-kpi-card {
       background: var(--bg-card); border: 1px solid var(--border);
       border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden;
@@ -607,7 +610,8 @@
             </select>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:0;margin-bottom:0" id="dashTabBar">
-            <div class="dash-sub-tab active" data-tab="ex_empregados" onclick="onDashTabChange('ex_empregados')">⚖️ Ações de Ex-empregados</div>
+            <div class="dash-sub-tab active" data-tab="visao-geral" onclick="onDashTabChange('visao-geral')">📊 Visão Geral</div>
+            <div class="dash-sub-tab" data-tab="ex_empregados" onclick="onDashTabChange('ex_empregados')">⚖️ Ex-empregados</div>
             <div class="dash-sub-tab" data-tab="terceirizacao" onclick="onDashTabChange('terceirizacao')">🏢 Terceirização / Subsidiária</div>
             <div class="dash-sub-tab" data-tab="highlights" onclick="onDashTabChange('highlights')">⭐ Destaques</div>
           </div>
@@ -859,7 +863,7 @@ function apiBase() {
 
 let _dashClientId = null;
 let _dashPeriods  = [];
-let _dashActiveTab = 'ex_empregados';
+let _dashActiveTab = 'visao-geral';
 
 async function _cliDashGet(path) {
   const base = apiBase();
@@ -922,28 +926,67 @@ async function renderApiDash(periodId, tabKey) {
   renderApiContent(content, area);
 }
 
+let _chartInstances = [];
 function renderApiKpis(kpis, container) {
+  // Destroy any previous charts
+  _chartInstances.forEach(c => { try { c.destroy(); } catch(e) {} });
+  _chartInstances = [];
+
   const list = Array.isArray(kpis) ? kpis.sort((a,b) => (a.sort_order||0) - (b.sort_order||0)) : [];
   if (!list.length) {
     container.insertAdjacentHTML('beforeend', '<div class="api-empty">Sem KPIs para este período.</div>');
     return;
   }
-  const grid = document.createElement('div');
-  grid.className = 'api-kpi-grid';
-  list.forEach(k => {
-    const trend = parseFloat(k.trend_pct);
-    const tDir  = isNaN(trend) ? 'flat' : trend > 0 ? 'up' : trend < 0 ? 'down' : 'flat';
-    const tIcon = tDir === 'up' ? '▲' : tDir === 'down' ? '▼' : '—';
-    const tTxt  = isNaN(trend) ? '' : Math.abs(trend).toFixed(1) + '%';
-    grid.insertAdjacentHTML('beforeend', `
-      <div class="api-kpi-card">
-        <div class="api-kpi-label">${escHtml(k.label || k.kpi_key || '')}</div>
-        <div class="api-kpi-value">${escHtml(String(k.value ?? '—'))}</div>
-        ${k.unit ? `<div class="api-kpi-unit">${escHtml(k.unit)}</div>` : ''}
-        ${tTxt ? `<div class="api-kpi-trend ${tDir}">${tIcon} ${tTxt}</div>` : ''}
-      </div>`);
+
+  // Separate cards from chart items
+  const cards  = list.filter(k => !k.chart_data);
+  const charts = list.filter(k =>  k.chart_data);
+
+  // Render cards
+  if (cards.length) {
+    const grid = document.createElement('div');
+    grid.className = 'api-kpi-grid';
+    cards.forEach(k => {
+      const trend = parseFloat(k.trend_pct);
+      const tDir  = isNaN(trend) ? 'flat' : trend > 0 ? 'up' : trend < 0 ? 'down' : 'flat';
+      const tIcon = tDir === 'up' ? '▲' : tDir === 'down' ? '▼' : '—';
+      const tTxt  = isNaN(trend) ? '' : Math.abs(trend).toFixed(1) + '%';
+      grid.insertAdjacentHTML('beforeend', `
+        <div class="api-kpi-card">
+          <div class="api-kpi-label">${escHtml(k.label || k.kpi_key || '')}</div>
+          <div class="api-kpi-value">${escHtml(String(k.value ?? '—'))}</div>
+          ${k.unit ? `<div class="api-kpi-unit">${escHtml(k.unit)}</div>` : ''}
+          ${tTxt ? `<div class="api-kpi-trend ${tDir}">${tIcon} ${tTxt}</div>` : ''}
+        </div>`);
+    });
+    container.appendChild(grid);
+  }
+
+  // Render charts
+  charts.forEach((k, i) => {
+    let cfg;
+    try { cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; } catch(e) { return; }
+    if (!cfg) return;
+    // Detect horizontal bar (for rankings)
+    const isHorizontal = cfg.options && cfg.options.indexAxis === 'y';
+    const height = isHorizontal
+      ? Math.max(160, ((cfg.data && cfg.data.labels && cfg.data.labels.length) || 6) * 28 + 40)
+      : 220;
+    const wrap = document.createElement('div');
+    wrap.className = 'api-chart-wrap';
+    const uid = 'apichart_' + i;
+    wrap.innerHTML = `<div class="api-chart-title">${escHtml(k.chart_title || k.label || '')}</div>
+      <div class="api-chart-canvas-wrap" style="height:${height}px"><canvas id="${uid}"></canvas></div>`;
+    container.appendChild(wrap);
+    requestAnimationFrame(() => {
+      const canvas = document.getElementById(uid);
+      if (!canvas) return;
+      try {
+        const inst = new Chart(canvas, cfg);
+        _chartInstances.push(inst);
+      } catch(e) { console.warn('Chart render error', k.kpi_key, e); }
+    });
   });
-  container.appendChild(grid);
 }
 
 function renderApiContent(content, container) {
@@ -975,7 +1018,7 @@ function renderApiHighlights(hl, container) {
         <div class="api-hl-body">
           ${h.icon ? `<div class="api-hl-icon">${escHtml(h.icon)}</div>` : ''}
           <div class="api-hl-title">${escHtml(h.title || '')}</div>
-          <div class="api-hl-text">${escHtml(h.text || h.description || '')}</div>
+          <div class="api-hl-text">${escHtml(h.body || h.text || h.description || '')}</div>
         </div>
       </div>`);
   });
