@@ -6621,7 +6621,14 @@ function _xlParseClientReport(wb) {
   const activeShName = wb.SheetNames.find(n => {
     const nl = _xlN(n);
     return nl.includes('ATIVO') || nl.includes('JUDICIAL') || nl.includes('TRABALHISTA') ||
+           nl.includes('ANDAMENTO') || nl.includes('PROCESSOS') ||
+           nl.includes('ACOMPANHAMENTO') || nl.includes('CARTEIRA') ||
            (nl.includes('RELATORIO') && nl.includes('PROCESSO'));
+  }) ||
+  // Last-resort: any sheet with at least one cell matching a process number pattern
+  wb.SheetNames.find(n => {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '', range: { s: { r: 0, c: 0 }, e: { r: 20, c: 20 } } });
+    return rows.some(r => r.some(v => /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/.test(String(v || ''))));
   });
   console.log('[_xlParseClientReport] sheets:', wb.SheetNames, '| activeSheet:', activeShName || 'NOT FOUND');
   const records = activeShName
@@ -6775,11 +6782,14 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   const topN = (obj, n) => Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n);
 
   // ── 1. KPI cards do DASHBOARD ─────────────────────────────────────────
-  push('visao-geral','processos_ativos',   'Processos Ativos',    fmtBr(dashKpis.ativos),    'processos');
-  push('visao-geral','processos_encerrados','Processos Encerrados',fmtBr(dashKpis.encerrados),'encerrados');
+  push('visao-geral','processos_ativos',   'Processos Ativos',    fmtBr(dashKpis.ativos),    '');
+  push('visao-geral','processos_encerrados','Processos Encerrados',fmtBr(dashKpis.encerrados),'');
   push('visao-geral','exposicao_total',    'Exposição Total',
     dashKpis.exposicao != null ? 'R$ ' + fmtBr(dashKpis.exposicao) : '—', '');
   push('visao-geral','taxa_exito',         'Taxa de Êxito', fmtPct(dashKpis.taxaExito), '');
+
+  // If ativos still null, use records count as fallback
+  if (dashKpis.ativos == null && records.length) dashKpis.ativos = records.length;
 
   if (!records.length) return rows; // sem dados de processo, só cards
 
