@@ -5364,6 +5364,65 @@ function openReportModal(clientId) {
 
 function closeReportModal() { document.getElementById('reportModal').classList.remove('open'); }
 
+async function notifyClientDashboard(client, periodLabel) {
+  const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
+  if (!n8nBase) return;
+  const portalUrl = 'https://falaw.com.br/cliente/index.html';
+  const clientName = client.name || client.company || 'Cliente';
+  const subject = `DASHBOARD DISPONÍVEL — ${clientName.toUpperCase()}${periodLabel ? ' — ' + periodLabel.toUpperCase() : ''}`;
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>${escHtml(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f4f2ef;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+  <tr><td style="background:#060E1A;padding:32px 40px;border-radius:4px 4px 0 0;">
+    <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" alt="Falaw Advogados" style="display:block;height:36px;width:auto;margin-bottom:14px;" />
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#4a90d9;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.4);margin:0;">Portal do Cliente</p>
+  </td></tr>
+  <tr><td style="background:#ffffff;padding:44px 40px 36px;">
+    <p style="font-family:Georgia,serif;font-size:18px;color:#060E1A;margin:0 0 24px 0;line-height:1.4;">Olá, <strong>${escHtml(clientName)}</strong>,</p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 12px 0;">
+      Seu <strong>Dashboard Gerencial${periodLabel ? ' — ' + escHtml(periodLabel) : ''}</strong> foi atualizado e está disponível no portal do cliente.
+    </p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 32px 0;">
+      Acesse agora para visualizar os KPIs, gráficos e destaques do seu portfólio de processos.
+    </p>
+    <table cellpadding="0" cellspacing="0" style="margin-bottom:36px;"><tr>
+      <td style="background:#0D2B5E;border-radius:3px;">
+        <a href="${portalUrl}" style="display:inline-block;padding:16px 32px;font-family:monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#ffffff;text-decoration:none;">Acessar dashboard &rarr;</a>
+      </td>
+    </tr></table>
+    <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e8e4df;border-radius:3px;margin-bottom:8px;">
+      <tr><td colspan="2" style="padding:14px 20px 10px;border-bottom:1px solid #e8e4df;">
+        <p style="font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#7A7672;margin:0;">Suas credenciais de acesso</p>
+      </td></tr>
+      <tr>
+        <td style="padding:12px 20px;font-family:monospace;font-size:11px;color:#7A7672;width:40%;border-bottom:1px solid #f0ede8;">E-mail</td>
+        <td style="padding:12px 20px;font-family:monospace;font-size:12px;color:#060E1A;font-weight:600;border-bottom:1px solid #f0ede8;">${escHtml(client.email || '')}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 20px;font-family:monospace;font-size:11px;color:#7A7672;">Código de acesso</td>
+        <td style="padding:12px 20px;font-family:monospace;font-size:12px;color:#060E1A;font-weight:600;">${escHtml(client.code || '')}</td>
+      </tr>
+    </table>
+    <p style="font-family:monospace;font-size:10px;color:#b0aba5;margin:20px 0 0 0;">Em caso de dúvidas, entre em contato conosco respondendo este e-mail.</p>
+  </td></tr>
+  <tr><td style="background:#f7f5f2;padding:24px 40px;border-radius:0 0 4px 4px;border-top:1px solid #e8e4df;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;color:#b0aba5;margin:0;">Av. Francisco Matarazzo, 1752 &middot; Salas 414 e 415 &middot; São Paulo / SP</p>
+  </td></tr>
+</table></td></tr></table>
+</body></html>`;
+  await fetch(n8nBase + '/falaw-newsletter', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subject, html, subscribers: [client.notifyAddr || client.email] })
+  });
+}
+
 async function notifyClientByEmail(client, report) {
   const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
   if (!n8nBase) return;
@@ -6445,6 +6504,24 @@ async function cliDashSaveExcel() {
 
     setStatus(`✓ Concluído! ${cliKpiRows.length} KPIs computados e salvos a partir de "${filename}". Recarregue o dashboard do cliente para visualizar.`);
     showToast('Excel processado com sucesso!');
+
+    // Notificar cliente por e-mail via n8n
+    try {
+      const { data: periodsList } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/periods`);
+      const period = (periodsList || []).find(p => p.id === periodId);
+      const periodLabel = (period && (period.label || period.month_year)) || periodId;
+      const clients = getClients();
+      const cliRow = clients.find(c => c.id === _cliDashClientId);
+      if (cliRow) {
+        notifyClientDashboard({
+          name: cliRow.name || cliRow.company,
+          company: cliRow.company,
+          email: cliRow.email,
+          notifyAddr: cliRow.notifyEmail || cliRow.email,
+          code: cliRow.code || ''
+        }, periodLabel).catch(() => {});
+      }
+    } catch(ne) { console.warn('notify:', ne); }
   } catch(e) {
     setStatus('Erro: ' + e.message);
     console.error(e);
