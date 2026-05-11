@@ -5977,7 +5977,8 @@ function renderClients() {
   const clients = getClients().slice().sort((a, b) => (a.company || a.name || '').localeCompare(b.company || b.name || '', 'pt-BR', { sensitivity: 'base' }));
   const totalReports = clients.reduce((s, c) => s + (c.reports || []).length, 0);
   document.getElementById('cli-stat-total').textContent   = clients.length;
-  document.getElementById('cli-stat-reports').textContent = totalReports;
+  const repEl = document.getElementById('cli-stat-reports');
+  if (repEl) repEl.textContent = totalReports;
 
   const list = document.getElementById('clientList');
   if (!list) return;
