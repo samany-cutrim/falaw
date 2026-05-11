@@ -1135,7 +1135,7 @@
       <!-- Stats -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;">
         <div class="stats-card"><div class="stats-label">Clientes Cadastrados</div><div class="stats-val" id="cli-stat-total">0</div></div>
-        <div class="stats-card"><div class="stats-label">Relatórios Enviados</div><div class="stats-val" id="cli-stat-reports">0</div></div>
+        
         <div class="stats-card"><div class="stats-label">Link do Portal</div><div class="stats-val" style="font-size:12px;word-break:break-all"><a href="cliente/index.html" target="_blank" style="color:var(--c-accent)">cliente/index.html</a></div></div>
       </div>
 
@@ -6501,9 +6501,11 @@ function _xlParseClientReport(wb) {
     return nl.includes('ATIVO') || nl.includes('JUDICIAL') || nl.includes('TRABALHISTA') ||
            (nl.includes('RELATORIO') && nl.includes('PROCESSO'));
   });
+  console.log('[_xlParseClientReport] sheets:', wb.SheetNames, '| activeSheet:', activeShName || 'NOT FOUND');
   const records = activeShName
     ? _xlParseClientActive(XLSX.utils.sheet_to_json(wb.Sheets[activeShName], { header: 1, defval: '' }))
     : [];
+  console.log('[_xlParseClientReport] records found:', records.length);
 
   // ── ENCERRADOS COUNT (fallback if DASHBOARD had no value) ────────────────
   if (dashKpis.encerrados == null) {
@@ -6535,14 +6537,26 @@ function _xlParseClientReport(wb) {
  * Handles: APDATA (2-row header), BUSER (Judiciais), CUIDAR.ME, FRETE (ATIVOS).
  */
 function _xlParseClientActive(rawRows) {
-  const HDR_KEYS = ['PROCESSO','NUMERO','DISTRIBUICAO','RECLAMANTE','OBJETO','TIPO DE ACAO','DATA DA DISTRIBUICAO','RECLAMADA'];
+  const HDR_KEYS = ['PROCESSO','NUMERO','DISTRIBUICAO','RECLAMANTE','OBJETO','TIPO DE ACAO','DATA DA DISTRIBUICAO','RECLAMADA','RECLAMADO','COMARCA','FASE','STATUS','RISCO','ADVOGADO','ADVOGADO(A)'];
   let headerIdx = -1;
-  for (let i = 0; i < Math.min(rawRows.length, 6); i++) {
+  // Search first 15 rows (BUSER may have merged header rows pushing data down)
+  for (let i = 0; i < Math.min(rawRows.length, 15); i++) {
     const row = rawRows[i]; if (!row) continue;
     const nonEmpty = row.filter(v => String(v).trim() !== '').length;
-    if (nonEmpty < 3) continue;
-    if (HDR_KEYS.some(k => row.some(v => _xlN(v).includes(k)))) { headerIdx = i; break; }
+    if (nonEmpty < 2) continue;
+    const rowNorms = row.map(v => _xlN(v));
+    if (HDR_KEYS.some(k => rowNorms.some(v => v.includes(k)))) { headerIdx = i; break; }
   }
+  // Fallback: if no match by keyword, find first row with ≥5 non-empty string cells (likely a header)
+  if (headerIdx < 0) {
+    for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
+      const row = rawRows[i]; if (!row) continue;
+      const strCells = row.filter(v => typeof v === 'string' && v.trim().length > 2).length;
+      if (strCells >= 5) { headerIdx = i; break; }
+    }
+  }
+  console.log('[_xlParseClientActive] rows total:', rawRows.length, '| headerIdx:', headerIdx,
+    '| header:', headerIdx >= 0 ? rawRows[headerIdx].slice(0,10) : 'NOT FOUND');
   if (headerIdx < 0) return [];
 
   const header = rawRows[headerIdx].map(v => _xlN(v));
