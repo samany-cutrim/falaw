@@ -6701,34 +6701,53 @@ function _xlParseClientActive(rawRows) {
     fase:            fi('FASE','INSTANCIA'),
     uf:              fi('UF','CIDADE/UF','ESTADO','COMARCA'),
     vara:            fi('VARA','JUIZO'),
-    juiz:            fi('JUIZ','RELATOR'),
-    adv:             fi('ADV. CONTRARIO','ADV CONTRARIO','ESCRITORIO DA PARTE CONTRARIA','ESCRITORIO'),
-    responsabilidade:fi('RESPONSABILIDADE','PAPEL DO AGENTE','PAPEL'),
-    sentenca:        fi('SENTENCA','LIMINAR'),
+    juiz:            fi('JUIZ','JUIZA','MAGISTRADO','MAGISTRADA','RELATOR','RELATORA','DESEMBARGADOR','MINISTRO'),
+    adv:             fi('ADV. CONTRARIO','ADV CONTRARIO','ESCRITORIO DA PARTE CONTRARIA','ESCRITORIO','ADVOGADO CONTRARIO'),
+    responsabilidade:fi('RESPONSABILIDADE','PAPEL DO AGENTE','PAPEL','TIPO DE RESPONSABILIDADE'),
+    sentenca:        fi('SENTENCA','RESULTADO','DESFECHO','LIMINAR'),
   };
 
-  const c = (r, i) => i >= 0 ? String(r[i] ?? '').trim() : '';
+  // Helper: get cell as string, skip if value is a raw number (Excel serial or numeric column)
+  const c = (r, i) => {
+    if (i < 0) return '';
+    const v = r[i];
+    if (v == null) return '';
+    // If purely numeric and no letter → return empty (avoid picking up dates/serials as names)
+    if (typeof v === 'number') return '';
+    return String(v).trim();
+  };
+  const cRaw = (r, i) => i >= 0 ? r[i] : null; // raw value (for dates)
   const normRisco = v => { const n = _xlN(v); if (n.includes('PROVAVEL')) return 'Provável'; if (n.includes('POSSIVEL')) return 'Possível'; if (n.includes('REMOTO')) return 'Remoto'; return v || ''; };
-  const parseDate = v => { if (!v) return null; if (v instanceof Date) return v; const s = String(v).trim(); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return new Date(+m[1],+m[2]-1,+m[3]); m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if (m) { const y = m[3].length===2?2000+Number(m[3]):+m[3]; return new Date(y,+m[2]-1,+m[1]); } return null; };
+  const parseDate = v => { if (!v) return null; if (v instanceof Date) return v; if (typeof v === 'number') { const d = new Date(Math.round((v - 25569)*86400*1000)); return isNaN(d) ? null : d; } const s = String(v).trim(); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return new Date(+m[1],+m[2]-1,+m[3]); m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if (m) { const y = m[3].length===2?2000+Number(m[3]):+m[3]; return new Date(y,+m[2]-1,+m[1]); } return null; };
   const detectResp = r => {
-    const f = [c(r,idx.responsabilidade),c(r,idx.reclamada),c(r,idx.status)].join(' ').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const respRaw = c(r, idx.responsabilidade);
+    const rn = _xlN(respRaw);
+    if (rn && rn !== 'NAO SE APLICA' && rn !== 'OUTRO' && rn !== '') {
+      if (rn.includes('SUBSIDIARIA')||rn.includes('SUBSIDIARI')) return 'Subsidiária';
+      if (rn.includes('EX') && (rn.includes('EMPREGAD')||rn.includes('-EMP'))) return 'Ex-empregado';
+      if (rn.includes('TERCEIRIZ')||rn.includes('TOMADOR')||rn.includes('PRESTADOR')) return 'Terceirização';
+      return respRaw; // use the original value from the column
+    }
+    // Fallback: detect from reclamada/status
+    const f = [c(r,idx.reclamada), c(r,idx.status)].join(' ').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     if (f.includes('SUBSIDIARIA')||f.includes('SUBSIDIARI')) return 'Subsidiária';
     if (f.includes('EX-EMPREGADO')||f.includes('EX EMPREGADO')) return 'Ex-empregado';
     if (f.includes('TERCEIRIZACAO')||f.includes('TERCEIRIZAD')) return 'Terceirização';
-    const p = _xlN(c(r,idx.responsabilidade)); if (p && p !== 'NAO SE APLICA') return p;
     return 'Outro';
   };
 
   return rawRows.slice(dataStart).map(r => {
     if (!Array.isArray(r)) return null;
     let proc = c(r, idx.proc);
+    // proc may be numeric in some formats
+    if (!proc) proc = String(r[idx.proc] ?? '').trim();
     if (!proc || !proc.match(/\d{7,}/)) {
       const found = r.find(v => /\d{7,}.*\d{4}\.\d{1,2}\.\d{2}\.\d{4}/.test(String(v||'')));
       if (found) proc = String(found).trim(); else return null;
     }
-    let trt = c(r, idx.trt);
+    let trt = c(r, idx.trt) || String(r[idx.trt] ?? '').trim();
     if (/^\d{1,2}$/.test(trt.trim())) trt = 'TRT-' + trt.trim();
-    const dataRaw = idx.data >= 0 ? r[idx.data] : null;
+    const dataRaw = cRaw(r, idx.data);
     return {
       num_processo: proc, trt,
       data_distrib: dataRaw instanceof Date ? dataRaw : parseDate(dataRaw),
@@ -6764,12 +6783,8 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
 
   if (!records.length) return rows; // sem dados de processo, só cards
 
-  // ── 2. Tipos de responsabilidade ─────────────────────────────────────
+  // ── 2. Distribuição por Responsabilidade (gráfico — sem KPI cards) ────
   const respC = {}; records.forEach(r => { const v = r.responsabilidade || 'Outro'; respC[v] = (respC[v]||0)+1; });
-  const respExEmp = (respC['Ex-empregado']||0);
-  const respSubs  = (respC['Subsidiária']||0);
-  if (respExEmp) push('visao-geral','resp_ex_empregado','Ações — Ex-empregado', fmtBr(respExEmp),'processos');
-  if (respSubs)  push('visao-geral','resp_subsidiaria', 'Ações — Subsidiária',  fmtBr(respSubs), 'processos');
   const respE = topN(respC, 8);
   if (respE.length > 1) push('visao-geral','chart_responsabilidade','Tipo de Responsabilidade','','',
     _xlChartDoughnut(respE.map(([l])=>l), respE.map(([,v])=>v)),'Distribuição por Responsabilidade');
@@ -6780,9 +6795,16 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   if (riscoE.length) push('visao-geral','chart_risco','Risco de Perda','','',
     _xlChartDoughnut(riscoE.map(([l])=>l), riscoE.map(([,v])=>v)),'Distribuição por Risco de Perda');
 
-  // ── 4. Fase / Instância processual ────────────────────────────────────
-  const faseC = {}; records.forEach(r => { const f = (r.fase||r.status||'').trim(); if (f && f !== 'N/A' && f.length > 1) faseC[f] = (faseC[f]||0)+1; });
-  const faseTop = topN(faseC, 12);
+  // ── 4. Fase / Instância processual (inclui Acordo e Encerrados) ───────
+  const faseC = {};
+  records.forEach(r => {
+    const f = (r.fase || r.status || '').trim();
+    if (f && f !== 'N/A' && f.length > 1) faseC[f] = (faseC[f]||0)+1;
+    // Contar acordos separadamente pela sentença
+    if (_xlN(r.sentenca||'').includes('ACORDO')) faseC['Acordo'] = (faseC['Acordo']||0)+1;
+  });
+  if (dashKpis.encerrados > 0) faseC['Encerrados'] = dashKpis.encerrados;
+  const faseTop = topN(faseC, 15);
   if (faseTop.length) push('visao-geral','chart_fase','Fase Processual','','',
     _xlChartMultiBar(faseTop.map(([l])=>l), faseTop.map(([,v])=>v),'Processos'),'Distribuição por Fase Processual');
 
@@ -6797,7 +6819,6 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   records.forEach(r => {
     const raw = String(r.uf||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     const m = raw.match(/\b([A-Z]{2})\b/g);
-    // prefer last 2-char token (like "SP" in "SÃO PAULO/SP")
     const u = m ? m[m.length-1] : (raw.length===2 ? raw : '');
     if (u && u.length===2) ufC[u]=(ufC[u]||0)+1;
   });
@@ -6823,7 +6844,6 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   records.forEach(r => {
     const a = String(r.adv||'').trim();
     if (!a || a.toLowerCase()==='n/a' || a.toLowerCase()==='não se aplica' || a.length < 4) return;
-    // Normalise name (remove LTDA / Advogados etc for grouping)
     advC[a] = (advC[a]||0)+1;
   });
   const advTop = topN(advC, 10);
@@ -6835,7 +6855,11 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   const julgC = {};
   records.forEach(r => {
     const j = String(r.juiz||'').trim();
-    if (!j || j.toLowerCase()==='aguardando informação' || j.toLowerCase()==='n/a' || j.length < 4) return;
+    if (!j || j.length < 4) return;
+    const jn = _xlN(j);
+    // Pular valores inválidos: numéricos, "aguardando", "n/a", datas serializadas
+    if (/^\d[\d.,/\- ]*$/.test(j)) return;
+    if (jn.includes('AGUARDANDO') || jn === 'N/A' || jn === 'NAO SE APLICA' || jn === 'NAO INFORMADO') return;
     julgC[j] = (julgC[j]||0)+1;
   });
   const julgTop = topN(julgC, 10);
@@ -6843,44 +6867,49 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     _xlChartBar(julgTop.map(([l])=>l), julgTop.map(([,v])=>v),'Processos','#0F9E76',true),
     'Ranking de Julgadores');
 
-  // ── 10. Decisões favoráveis / desfavoráveis (da sentença) ────────────
-  let decFav = 0, decDesf = 0, decParc = 0;
+  // ── 10. Decisões do período (da sentença) — apenas números ───────────
+  let decFav = 0, decDesf = 0, decParc = 0, decAcordo = 0;
   records.forEach(r => {
     const s = _xlN(r.sentenca || '');
     if (!s || s === 'NAO SE APLICA' || s === 'NAO') return;
-    if (s.includes('FAVORAVEL') || s.includes('IMPROCEDENTE') || s.includes('EXCLUSAO') || s.includes('ACORDO')) decFav++;
+    if (s.includes('ACORDO')) { decAcordo++; decFav++; }
+    else if (s.includes('FAVORAVEL') || s.includes('IMPROCEDENTE') || s.includes('EXCLUSAO')) decFav++;
     else if (s.includes('DESFAVORAVEL') || s.includes('PROCEDENTE') || s.includes('CONDENADA') || s.includes('CONDENANDO')) decDesf++;
     else if (s.includes('PARCIAL')) decParc++;
   });
   if (decFav + decDesf + decParc > 0) {
-    const decTot = decFav + decDesf + decParc;
-    push('visao-geral','decisoes_favoraveis',   'Decisões Favoráveis',    fmtBr(decFav),  `(${fmtPct(decFav/decTot)})`);
-    push('visao-geral','decisoes_desfavoraveis','Decisões Desfavoráveis', fmtBr(decDesf), `(${fmtPct(decDesf/decTot)})`);
-    push('visao-geral','decisoes_parciais',     'Decisões Parciais',      fmtBr(decParc), `(${fmtPct(decParc/decTot)})`);
-    push('visao-geral','chart_decisoes','Decisões Prolatadas','','',
-      _xlChartDoughnut(['Favorável','Desfavorável','Parcialmente Procedente'],[decFav,decDesf,decParc]),
+    push('visao-geral','decisoes_favoraveis',   'Favoráveis',  fmtBr(decFav),    '');
+    push('visao-geral','decisoes_desfavoraveis','Desfavoráveis',fmtBr(decDesf),  '');
+    if (decParc)   push('visao-geral','decisoes_parciais','Parciais',   fmtBr(decParc),   '');
+    if (decAcordo) push('visao-geral','decisoes_acordos', 'Acordos',    fmtBr(decAcordo), '');
+    push('visao-geral','chart_decisoes','Decisões do Período','','',
+      _xlChartDoughnut(['Favorável','Desfavorável','Parcialmente Procedente','Acordo'].filter((_,i)=>[decFav,decDesf,decParc,decAcordo][i]>0),
+        [decFav,decDesf,decParc,decAcordo].filter(v=>v>0)),
       'Resultado das Decisões Prolatadas');
   }
 
-  // ── 11. Instância outcomes (da aba _ChartData — FRETE) ────────────────
+  // ── 11. Resultado por Instância (apenas 1º Grau, 2º Grau, TST) ───────
   if (chartData && chartData.length) {
-    const labels   = chartData.map(r => r['Instância'] || r[Object.keys(r)[0]]);
-    const favData  = chartData.map(r => Number(r['Favorável']    || r['Favoravel']    || 0));
-    const desfData = chartData.map(r => Number(r['Desfavorável'] || r['Desfavoravel'] || 0));
-    const totFav   = favData.reduce((s,v)=>s+v,0);
-    const totDesf  = desfData.reduce((s,v)=>s+v,0);
-    push('visao-geral','decisoes_fav_instancia', 'Decisões Favoráveis',    fmtBr(totFav),  `(${fmtPct(totFav/(totFav+totDesf)||0)})`);
-    push('visao-geral','decisoes_desf_instancia','Decisões Desfavoráveis', fmtBr(totDesf), `(${fmtPct(totDesf/(totFav+totDesf)||0)})`);
-    push('visao-geral','chart_instancia','Resultados por Instância','','',{
-      type:'bar',
-      data:{ labels, datasets:[
-        { label:'Favorável',    data:favData,  backgroundColor:'#0F9E76', borderRadius:4 },
-        { label:'Desfavorável', data:desfData, backgroundColor:'#7B1A2E', borderRadius:4 }
-      ]},
-      options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
-        scales:{ x:{ grid:{ display:false } }, y:{ beginAtZero:true } } }
-    },'Resultados por Instância');
+    const INST_PATS = [/1.?\s*(grau|GRAU|º)/i, /2.?\s*(grau|GRAU|º)/i, /TST/i, /primeiro/i, /segundo/i];
+    const instRows = chartData.filter(r => {
+      const lbl = String(r['Instância'] || r[Object.keys(r)[0]] || '');
+      return INST_PATS.some(p => p.test(lbl));
+    });
+    if (instRows.length) {
+      const labels   = instRows.map(r => r['Instância'] || r[Object.keys(r)[0]]);
+      const favData  = instRows.map(r => Math.max(0, Number(r['Favorável']    || r['Favoravel']    || 0) || 0));
+      const desfData = instRows.map(r => Math.max(0, Number(r['Desfavorável'] || r['Desfavoravel'] || 0) || 0));
+      push('visao-geral','chart_instancia','Resultados por Instância','','',{
+        type:'bar',
+        data:{ labels, datasets:[
+          { label:'Favorável',    data:favData,  backgroundColor:'#0F9E76', borderRadius:4 },
+          { label:'Desfavorável', data:desfData, backgroundColor:'#7B1A2E', borderRadius:4 }
+        ]},
+        options:{ responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
+          scales:{ x:{ grid:{ display:false } }, y:{ beginAtZero:true, ticks:{ stepSize:1 } } } }
+      },'Resultados por Instância (1º, 2º Grau e TST)');
+    }
   }
 
   // ── 12. Ex-empregados tab ─────────────────────────────────────────────

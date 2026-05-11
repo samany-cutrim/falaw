@@ -924,114 +924,180 @@ async function downloadDashboardPDF() {
     alert('Biblioteca PDF ainda carregando. Tente novamente em instantes.'); return;
   }
   const { jsPDF } = window.jspdf || window;
+  const tabKey      = _dashActiveTab || 'visao-geral';
   const company     = (window._clientData && window._clientData.company) || 'Cliente';
   const periodLabel = _dashLastPeriodLabel || '';
-  const tabLabels   = { 'visao-geral': 'Visão Geral', 'ex_empregados': 'Ex-empregados', 'terceirizacao': 'Terceirização / Subsidiária', 'highlights': 'Destaques' };
-  const tabLabel    = tabLabels[_dashActiveTab] || _dashActiveTab;
+  const tabLabels   = { 'visao-geral': 'Visão Geral', 'ex_empregados': 'Ex-empregados', 'terceirizacao': 'Terceirização / Subsidiária', 'destaques': 'Destaques' };
+  const tabLabel    = tabLabels[tabKey] || tabKey;
+
+  // Read KPI cards from DOM
+  const kpiCardEls   = Array.from(document.querySelectorAll('#kpis-'   + tabKey + ' .kpi-card'));
+  const chartCardEls = Array.from(document.querySelectorAll('#charts-' + tabKey + ' .chart-card'));
 
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
-  let y = 18;
+  let y = 0;
 
-  // Header band
+  // ── Header band ──────────────────────────────────────────────────────
   doc.setFillColor(13, 43, 94);
-  doc.rect(0, 0, W, 28, 'F');
+  doc.rect(0, 0, W, 34, 'F');
+
+  // Gold accent line
+  doc.setFillColor(212, 173, 58);
+  doc.rect(0, 34, W, 2, 'F');
+
+  // Try to load logo
+  try {
+    const logoUrl = '../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png';
+    const resp = await fetch(logoUrl);
+    if (resp.ok) {
+      const blob = await resp.blob();
+      const b64 = await new Promise(res => {
+        const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob);
+      });
+      doc.addImage(b64, 'PNG', 10, 5, 24, 24);
+    }
+  } catch(e) { /* logo not critical */ }
+
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.text('Falaw Advogados', 14, 12);
-  doc.setFontSize(10);
+  doc.setFontSize(15);
+  doc.text('Falaw Advogados', 38, 15);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Dashboard Jurídico', 14, 20);
-  y = 38;
+  doc.setTextColor(212, 173, 58);
+  doc.text('Dashboard Jurídico', 38, 23);
+  y = 46;
 
-  // Title block
-  doc.setTextColor(26, 10, 13);
+  // ── Title block ───────────────────────────────────────────────────────
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(13, 43, 94);
   doc.text(company, 14, y); y += 8;
-  doc.setFontSize(10);
+
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 100, 100);
-  if (periodLabel) { doc.text('Período: ' + periodLabel, 14, y); y += 6; }
-  doc.text('Aba: ' + tabLabel, 14, y); y += 6;
-  doc.text('Exportado em: ' + new Date().toLocaleDateString('pt-BR'), 14, y); y += 12;
+  if (periodLabel) { doc.text('Período: ' + periodLabel, 14, y); y += 5; }
+  doc.text('Aba: ' + tabLabel, 14, y); y += 5;
+  doc.text('Exportado em: ' + new Date().toLocaleDateString('pt-BR'), 14, y); y += 10;
 
-  // KPI cards
-  const cards  = _dashLastKpis.filter(k => !k.chart_data);
-  const charts = _dashLastKpis.filter(k =>  k.chart_data);
+  // Divider
+  doc.setDrawColor(220, 220, 220);
+  doc.line(14, y, W - 14, y); y += 8;
 
-  if (cards.length) {
+  // ── KPI Cards ─────────────────────────────────────────────────────────
+  if (kpiCardEls.length) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
+    doc.setFontSize(7.5);
     doc.setTextColor(13, 43, 94);
     doc.text('INDICADORES', 14, y); y += 5;
+
     const COLS = 3;
     const colW = (W - 28) / COLS;
     const rowH = 22;
-    const totalRows = Math.ceil(cards.length / COLS);
-    for (let r = 0; r < totalRows; r++) {
+
+    for (let i = 0; i < kpiCardEls.length; i++) {
+      const col = i % COLS;
+      if (col === 0 && i > 0) y += rowH;
       if (y + rowH + 6 > H - 20) { doc.addPage(); y = 18; }
-      for (let c = 0; c < COLS; c++) {
-        const idx = r * COLS + c;
-        if (idx >= cards.length) break;
-        const k = cards[idx];
-        const rx = 14 + c * colW;
-        doc.setFillColor(248, 247, 245);
-        doc.roundedRect(rx, y, colW - 2, rowH - 2, 2, 2, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(13);
-        doc.setTextColor(26, 10, 13);
-        doc.text(String(k.value ?? '—'), rx + (colW - 2) / 2, y + 9, { align: 'center' });
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(6.5);
-        doc.setTextColor(120, 120, 120);
-        const lbl = (k.label || k.kpi_key || '').toUpperCase().substring(0, 40);
-        doc.text(lbl, rx + (colW - 2) / 2, y + 16, { align: 'center' });
-      }
-      y += rowH;
+
+      const el  = kpiCardEls[i];
+      const lbl = (el.querySelector('.kpi-label')?.textContent || '').trim().toUpperCase();
+      const val = (el.querySelector('.kpi-value')?.textContent || '—').trim();
+      const unit = (el.querySelector('.kpi-unit')?.textContent || '').trim();
+      const rx  = 14 + col * colW;
+
+      // Card background
+      doc.setFillColor(247, 246, 243);
+      doc.roundedRect(rx, y, colW - 2, rowH - 2, 2, 2, 'F');
+      // Top accent
+      doc.setFillColor(13, 43, 94);
+      doc.rect(rx, y, colW - 2, 2, 'F');
+
+      // Value
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(13, 43, 94);
+      doc.text(val, rx + (colW - 2) / 2, y + 11, { align: 'center' });
+
+      // Label + unit
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6);
+      doc.setTextColor(120, 120, 120);
+      const subLine = unit ? lbl + '  ' + unit : lbl;
+      doc.text(subLine.substring(0, 45), rx + (colW - 2) / 2, y + 17.5, { align: 'center' });
     }
-    y += 6;
+
+    // Advance past last row
+    const lastCol = (kpiCardEls.length - 1) % COLS;
+    if (lastCol >= 0) y += rowH;
+    y += 8;
   }
 
-  // Charts as canvas images
-  const canvases = document.querySelectorAll('#panel-' + (_dashActiveTab||'visao-geral') + ' canvas');
-  for (let ci = 0; ci < canvases.length && ci < charts.length; ci++) {
-    const canvas = canvases[ci];
-    const k = charts[ci];
+  // ── Charts ────────────────────────────────────────────────────────────
+  for (const chartEl of chartCardEls) {
+    const canvas = chartEl.querySelector('canvas');
+    const title  = (chartEl.querySelector('.chart-card-title')?.textContent || '').trim();
+    if (!canvas) continue;
     try {
-      const imgData = canvas.toDataURL('image/png');
+      const imgData  = canvas.toDataURL('image/png');
       const aspRatio = canvas.height / canvas.width;
-      const imgW = W - 28;
-      const imgH = Math.min(imgW * aspRatio, 80);
-      if (y + imgH + 14 > H - 20) { doc.addPage(); y = 18; }
+      const imgW     = W - 28;
+      const imgH     = Math.min(imgW * aspRatio, 85);
+      if (y + imgH + 16 > H - 20) { doc.addPage(); y = 18; }
+
+      // Chart title
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
+      doc.setFontSize(7.5);
       doc.setTextColor(13, 43, 94);
-      doc.text((k.chart_title || k.label || '').toUpperCase(), 14, y); y += 4;
+      doc.text(title.toUpperCase(), 14, y); y += 4;
+
       doc.addImage(imgData, 'PNG', 14, y, imgW, imgH);
       y += imgH + 10;
-    } catch(e) { /* skip chart on error */ }
+    } catch(e) { /* skip failed chart */ }
   }
 
-  // Highlights (when on highlights tab)
-  if (_dashActiveTab === 'highlights' && _dashLastHighlights.length) {
-    _dashLastHighlights.forEach(h => {
-      const body = (h.body || h.text || '').trim();
-      if (!body) return;
-      if (y + 30 > H - 20) { doc.addPage(); y = 18; }
+  // ── Highlights (destaques tab) ────────────────────────────────────────
+  if (tabKey === 'destaques') {
+    const hlCards = document.querySelectorAll('#highlights-grid .highlight-card');
+    hlCards.forEach(hEl => {
+      const htitle = (hEl.querySelector('.highlight-title')?.textContent || '').trim();
+      const hbody  = (hEl.querySelector('.highlight-body')?.textContent || '').trim();
+      if (!htitle && !hbody) return;
+      if (y + 28 > H - 20) { doc.addPage(); y = 18; }
+
+      doc.setFillColor(247, 246, 243);
+      doc.roundedRect(14, y, W - 28, 24, 2, 2, 'F');
+      doc.setFillColor(212, 173, 58);
+      doc.rect(14, y, 3, 24, 'F');
+
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(13, 43, 94);
-      doc.text(h.title || '', 14, y); y += 5;
-      doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
+      doc.setTextColor(13, 43, 94);
+      doc.text(htitle, 20, y + 7);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
       doc.setTextColor(60, 60, 60);
-      const lines = doc.splitTextToSize(body, W - 28);
-      if (y + lines.length * 4.5 > H - 20) { doc.addPage(); y = 18; }
-      doc.text(lines, 14, y); y += lines.length * 4.5 + 8;
+      const lines = doc.splitTextToSize(hbody, W - 44);
+      doc.text(lines.slice(0, 2), 20, y + 13);
+      y += 28;
     });
+  }
+
+  // ── Footer on each page ───────────────────────────────────────────────
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(13, 43, 94);
+    doc.rect(0, H - 10, W, 10, 'F');
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(180, 180, 180);
+    doc.text('falaw.com.br  ·  Confidencial', 14, H - 4);
+    doc.text(p + '/' + totalPages, W - 14, H - 4, { align: 'right' });
   }
 
   const fname = ('Dashboard_' + company + '_' + (periodLabel || 'export') + '.pdf').replace(/[^a-zA-Z0-9_\-.]/g, '_');
@@ -1042,72 +1108,105 @@ async function downloadDashboardPPT() {
   if (typeof PptxGenJS === 'undefined') {
     alert('Biblioteca PPT ainda carregando. Tente novamente em instantes.'); return;
   }
+  const tabKey      = _dashActiveTab || 'visao-geral';
   const company     = (window._clientData && window._clientData.company) || 'Cliente';
   const periodLabel = _dashLastPeriodLabel || '';
+  const tabLabels   = { 'visao-geral': 'Visão Geral', 'ex_empregados': 'Ex-empregados', 'terceirizacao': 'Terceirização / Subsidiária', 'destaques': 'Destaques' };
+  const tabLabel    = tabLabels[tabKey] || tabKey;
+
+  // Read DOM
+  const kpiCardEls   = Array.from(document.querySelectorAll('#kpis-'   + tabKey + ' .kpi-card'));
+  const chartCardEls = Array.from(document.querySelectorAll('#charts-' + tabKey + ' .chart-card'));
+
+  // Try to load logo as base64
+  let logoB64 = null;
+  try {
+    const resp = await fetch('../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png');
+    if (resp.ok) {
+      const blob = await resp.blob();
+      logoB64 = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
+    }
+  } catch(e) {}
+
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_WIDE';
 
   // Slide 1 — Capa
   const slide1 = pptx.addSlide();
   slide1.background = { color: '0D2B5E' };
-  slide1.addText('Falaw Advogados', { x: 0.5, y: 1.2, w: 12, h: 0.8, fontSize: 36, bold: true, color: 'FFFFFF', fontFace: 'Calibri' });
-  slide1.addText('Dashboard Jurídico', { x: 0.5, y: 2.2, w: 12, h: 0.6, fontSize: 22, color: 'D4AD3A', fontFace: 'Calibri' });
-  slide1.addText('Cliente: ' + company, { x: 0.5, y: 3.1, w: 12, h: 0.4, fontSize: 14, color: 'CCCCCC' });
-  if (periodLabel) slide1.addText('Período: ' + periodLabel, { x: 0.5, y: 3.6, w: 12, h: 0.4, fontSize: 14, color: 'CCCCCC' });
-  slide1.addText('falaw.com.br', { x: 0.5, y: 6.8, w: 12, h: 0.3, fontSize: 10, color: '888888', align: 'right' });
+  if (logoB64) slide1.addImage({ data: logoB64, x: 0.4, y: 0.3, w: 1.4, h: 1.4 });
+  slide1.addText('Falaw Advogados', { x: 0.5, y: 1.9, w: 12, h: 0.8, fontSize: 34, bold: true, color: 'FFFFFF', fontFace: 'Calibri' });
+  slide1.addText('Dashboard Jurídico', { x: 0.5, y: 2.85, w: 12, h: 0.6, fontSize: 20, color: 'D4AD3A', fontFace: 'Calibri' });
+  slide1.addShape(pptx.ShapeType.rect, { x: 0.5, y: 3.55, w: 12, h: 0.04, fill: { color: 'D4AD3A' } });
+  slide1.addText(company, { x: 0.5, y: 3.75, w: 12, h: 0.45, fontSize: 15, bold: true, color: 'FFFFFF' });
+  if (periodLabel) slide1.addText('Período: ' + periodLabel, { x: 0.5, y: 4.25, w: 12, h: 0.4, fontSize: 13, color: 'CCCCCC' });
+  slide1.addText(tabLabel, { x: 0.5, y: 4.7, w: 12, h: 0.35, fontSize: 12, color: 'D4AD3A' });
+  slide1.addText('falaw.com.br', { x: 0.5, y: 6.8, w: 12, h: 0.3, fontSize: 10, color: '555555', align: 'right' });
 
-  // Slide(s) — KPI cards (max 12 per slide)
-  const cards  = _dashLastKpis.filter(k => !k.chart_data);
-  const charts = _dashLastKpis.filter(k =>  k.chart_data);
-
-  if (cards.length) {
+  // Slide(s) — KPI cards (read from DOM)
+  if (kpiCardEls.length) {
     const COLS = 4; const ROWS_PER_SLIDE = 3;
     const cardW = 2.8; const cardH = 1.35;
     const startX = 0.3; const startY = 1.0;
     const perSlide = COLS * ROWS_PER_SLIDE;
-    for (let s = 0; s < cards.length; s += perSlide) {
+
+    for (let s = 0; s < kpiCardEls.length; s += perSlide) {
       const slideK = pptx.addSlide();
       slideK.background = { color: 'F4F2EF' };
-      slideK.addText('Indicadores', { x: 0.5, y: 0.3, w: 12, h: 0.5, fontSize: 18, bold: true, color: '0D2B5E' });
-      cards.slice(s, s + perSlide).forEach((k, i) => {
+      slideK.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.65, fill: { color: '0D2B5E' } });
+      slideK.addText('INDICADORES — ' + tabLabel.toUpperCase(), { x: 0.5, y: 0.1, w: 10, h: 0.45, fontSize: 14, bold: true, color: 'FFFFFF' });
+      if (logoB64) slideK.addImage({ data: logoB64, x: 12.0, y: 0.05, w: 0.8, h: 0.55 });
+
+      kpiCardEls.slice(s, s + perSlide).forEach((el, i) => {
         const col = i % COLS; const row = Math.floor(i / COLS);
-        const x = startX + col * (cardW + 0.15);
+        const x = startX + col * (cardW + 0.18);
         const y = startY + row * (cardH + 0.15);
+        const val  = (el.querySelector('.kpi-value')?.textContent || '—').trim();
+        const lbl  = (el.querySelector('.kpi-label')?.textContent || '').trim().toUpperCase();
+        const unit = (el.querySelector('.kpi-unit')?.textContent || '').trim();
+
         slideK.addShape(pptx.ShapeType.rect, { x, y, w: cardW, h: cardH, fill: { color: 'FFFFFF' }, line: { color: 'E5E7EB', width: 1 } });
-        slideK.addText(String(k.value ?? '—'), { x, y: y + 0.1, w: cardW, h: 0.7, fontSize: 24, bold: true, color: '0D2B5E', align: 'center' });
-        slideK.addText((k.label || k.kpi_key || '').toUpperCase(), { x, y: y + 0.82, w: cardW, h: 0.35, fontSize: 7, color: '888888', align: 'center' });
+        slideK.addShape(pptx.ShapeType.rect, { x, y, w: cardW, h: 0.06, fill: { color: '0D2B5E' } });
+        slideK.addText(val, { x, y: y + 0.1, w: cardW, h: 0.7, fontSize: 22, bold: true, color: '0D2B5E', align: 'center' });
+        slideK.addText(lbl + (unit ? '  ' + unit : ''), { x, y: y + 0.85, w: cardW, h: 0.35, fontSize: 6.5, color: '888888', align: 'center' });
       });
     }
   }
 
-  // Slides — charts as images
-  const canvases = document.querySelectorAll('#panel-' + (_dashActiveTab||'visao-geral') + ' canvas');
-  for (let ci = 0; ci < canvases.length && ci < charts.length; ci++) {
-    const canvas = canvases[ci];
-    const k = charts[ci];
+  // Slide(s) — Charts from DOM canvases
+  for (const chartEl of chartCardEls) {
+    const canvas = chartEl.querySelector('canvas');
+    const title  = (chartEl.querySelector('.chart-card-title')?.textContent || '').trim();
+    if (!canvas) continue;
     try {
-      const imgData = canvas.toDataURL('image/png');
+      const imgData  = canvas.toDataURL('image/png');
       const aspRatio = canvas.height / canvas.width;
-      const imgW = 12; const imgH = Math.min(imgW * aspRatio, 5.5);
+      const imgW = 12;
+      const imgH = Math.min(imgW * aspRatio, 5.5);
       const slideC = pptx.addSlide();
       slideC.background = { color: 'FFFFFF' };
-      slideC.addText(k.chart_title || k.label || '', { x: 0.5, y: 0.25, w: 12, h: 0.5, fontSize: 15, bold: true, color: '0D2B5E' });
-      slideC.addImage({ data: imgData, x: 0.5, y: 0.95, w: imgW, h: imgH });
+      slideC.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.65, fill: { color: '0D2B5E' } });
+      slideC.addText(title.toUpperCase(), { x: 0.5, y: 0.1, w: 11, h: 0.45, fontSize: 13, bold: true, color: 'FFFFFF' });
+      if (logoB64) slideC.addImage({ data: logoB64, x: 12.0, y: 0.05, w: 0.8, h: 0.55 });
+      slideC.addImage({ data: imgData, x: 0.65, y: 0.85, w: imgW, h: imgH });
     } catch(e) { /* skip */ }
   }
 
-  // Slide — Highlights
-  if (_dashLastHighlights.length) {
+  // Slide — Highlights (read from DOM)
+  const hlEls = Array.from(document.querySelectorAll('#highlights-grid .highlight-card'));
+  if (hlEls.length) {
     const slideH = pptx.addSlide();
     slideH.background = { color: '0D2B5E' };
-    slideH.addText('Destaques do Período', { x: 0.5, y: 0.3, w: 12, h: 0.5, fontSize: 18, bold: true, color: 'D4AD3A' });
-    _dashLastHighlights.slice(0, 6).forEach((h, i) => {
+    if (logoB64) slideH.addImage({ data: logoB64, x: 12.0, y: 0.05, w: 0.8, h: 0.55 });
+    slideH.addText('Destaques do Período', { x: 0.5, y: 0.1, w: 11, h: 0.55, fontSize: 18, bold: true, color: 'D4AD3A' });
+    hlEls.slice(0, 6).forEach((el, i) => {
       const col = i % 2; const row = Math.floor(i / 2);
-      const x = 0.4 + col * 6.5; const y = 1.1 + row * 1.9;
-      slideH.addShape(pptx.ShapeType.rect, { x, y, w: 6.2, h: 1.7, fill: { color: '1a3a6e' }, line: { color: 'D4AD3A', width: 1 } });
-      slideH.addText(h.title || '', { x: x + 0.15, y: y + 0.12, w: 5.9, h: 0.4, fontSize: 11, bold: true, color: 'FFFFFF' });
-      const body = (h.body || h.text || '').substring(0, 160);
-      slideH.addText(body, { x: x + 0.15, y: y + 0.55, w: 5.9, h: 1.0, fontSize: 9, color: 'CCCCCC', wrap: true });
+      const x = 0.4 + col * 6.5; const y = 0.85 + row * 1.95;
+      const htitle = (el.querySelector('.highlight-title')?.textContent || '').trim();
+      const hbody  = (el.querySelector('.highlight-body')?.textContent || '').substring(0, 160);
+      slideH.addShape(pptx.ShapeType.rect, { x, y, w: 6.2, h: 1.75, fill: { color: '1a3a6e' }, line: { color: 'D4AD3A', width: 1 } });
+      slideH.addText(htitle, { x: x + 0.15, y: y + 0.12, w: 5.9, h: 0.4, fontSize: 11, bold: true, color: 'FFFFFF' });
+      slideH.addText(hbody, { x: x + 0.15, y: y + 0.58, w: 5.9, h: 1.0, fontSize: 8.5, color: 'CCCCCC', wrap: true });
     });
   }
 
