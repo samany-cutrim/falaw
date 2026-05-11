@@ -638,6 +638,54 @@ app.delete('/api/client-dash/:clientId/kpis/:id', async (req, res) => {
   } catch (e) { return res.status(500).json({ error: String(e.message || e) }); }
 });
 
+app.post('/api/client-dash/:clientId/kpis/bulk', async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+    if (!rows.length) return res.status(400).json({ error: 'rows obrigatorio' });
+    await prisma.$transaction(rows.map((row) => prisma.clientDashKpi.upsert({
+      where: { id: String(row.id) },
+      create: {
+        id: String(row.id), clientId, periodId: String(row.period_id), tabKey: String(row.tab_key),
+        kpiKey: String(row.kpi_key), label: String(row.label), value: String(row.value),
+        unit: row.unit ? String(row.unit) : null,
+        trendPct: row.trend_pct == null ? null : Number(row.trend_pct),
+        sortOrder: toIntOrNull(row.sort_order) ?? 0,
+        chartTitle: row.chart_title ? String(row.chart_title) : null,
+        chartData: row.chart_data ?? null
+      },
+      update: {
+        periodId: String(row.period_id), tabKey: String(row.tab_key),
+        kpiKey: String(row.kpi_key), label: String(row.label), value: String(row.value),
+        unit: row.unit ? String(row.unit) : null,
+        trendPct: row.trend_pct == null ? null : Number(row.trend_pct),
+        sortOrder: toIntOrNull(row.sort_order) ?? 0,
+        chartTitle: row.chart_title ? String(row.chart_title) : null,
+        chartData: row.chart_data ?? null
+      }
+    })));
+    return res.json({ ok: true, count: rows.length });
+  } catch (e) { return res.status(500).json({ error: String(e.message || e) }); }
+});
+
+app.delete('/api/client-dash/:clientId/kpis/by-period/:periodId', async (req, res) => {
+  try {
+    const out = await prisma.clientDashKpi.deleteMany({
+      where: { clientId: req.params.clientId, periodId: req.params.periodId }
+    });
+    return res.json({ deleted: out.count || 0 });
+  } catch (e) { return res.status(500).json({ error: String(e.message || e) }); }
+});
+
+app.delete('/api/client-dash/:clientId/highlights/by-period/:periodId', async (req, res) => {
+  try {
+    const out = await prisma.clientDashHighlight.deleteMany({
+      where: { clientId: req.params.clientId, periodId: req.params.periodId }
+    });
+    return res.json({ deleted: out.count || 0 });
+  } catch (e) { return res.status(500).json({ error: String(e.message || e) }); }
+});
+
 // ── Content ───────────────────────────────────────────────────────
 
 app.get('/api/client-dash/:clientId/content', async (req, res) => {

@@ -1206,6 +1206,7 @@
           <div class="ifood-sub-tab"        onclick="cliDashSubTab('kpis')">📊 KPIs / Gráficos</div>
           <div class="ifood-sub-tab"        onclick="cliDashSubTab('content')">✍️ Textos das Abas</div>
           <div class="ifood-sub-tab"        onclick="cliDashSubTab('highlights')">⭐ Destaques do Mês</div>
+          <div class="ifood-sub-tab"        onclick="cliDashSubTab('excel')">📁 Upload Excel</div>
         </div>
 
         <!-- Sub: Períodos -->
@@ -1274,6 +1275,32 @@
         </div>
 
         <!-- Sub: Destaques -->
+        <!-- Sub: Upload Excel -->
+        <div id="cli-dash-sub-excel" style="display:none">
+          <p style="font-size:13px;color:var(--c-muted);margin-bottom:20px;">Faça upload da planilha Excel do cliente. Os dados serão extraídos e armazenados. O arquivo <strong>não ficará acessível</strong> para o cliente — apenas os dados processados aparecem no dashboard.</p>
+          <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;">
+            <div class="form-field" style="margin:0;flex:1;min-width:200px">
+              <label>Período *</label>
+              <select id="cli-xl-period" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;">
+                <option value="">— Selecione um período —</option>
+              </select>
+            </div>
+            <div class="form-field" style="margin:0;flex:1;min-width:200px">
+              <label>Arquivo Excel (.xlsx / .xls) *</label>
+              <input type="file" id="cli-xl-file" accept=".xlsx,.xls" onchange="cliDashPreviewExcel(this)" style="padding:10px 14px;border:1px solid var(--c-divider);border-radius:2px;width:100%;background:#fafaf8;" />
+            </div>
+          </div>
+          <div id="cli-xl-preview" style="display:none;margin-bottom:16px">
+            <label style="display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:10px">Pré-visualização (primeiras linhas)</label>
+            <div style="overflow:auto;max-height:320px;border:1px solid var(--c-divider);border-radius:4px;background:#fff">
+              <table id="cli-xl-table" style="width:100%;border-collapse:collapse;font-size:12px;font-family:var(--f-mono)"></table>
+            </div>
+            <p style="font-size:11px;color:var(--c-muted);margin-top:8px">Exibindo as primeiras 20 linhas. O arquivo completo será processado ao salvar.</p>
+          </div>
+          <div id="cli-xl-status" style="display:none;font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-bottom:12px;"></div>
+          <button type="button" class="btn btn-primary" onclick="cliDashSaveExcel()">Salvar dados no Cockroach</button>
+        </div>
+
         <div id="cli-dash-sub-highlights" style="display:none">
           <div class="form-field" style="margin-bottom:20px">
             <label>Período</label>
@@ -5926,7 +5953,6 @@ function renderClients() {
           <div class="client-actions">
             <span class="client-reports-count">${reports.length} relatório${reports.length !== 1 ? 's' : ''}</span>
             <span class="client-code-badge">${c.code}</span>
-            <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="event.stopPropagation();openReportModal('${c.id}')">+ Relatório</button>
             <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="event.stopPropagation();openClientModal('${c.id}')">Editar</button>
             <button class="btn-icon" onclick="event.stopPropagation();deleteClient('${c.id}')" title="Excluir cliente">🗑</button>
           </div>
@@ -6093,7 +6119,7 @@ async function ifoodApi(path, options) {
 ══════════════════════════════════════ */
 let _cliDashClientId = null;
 let _cliDashPeriods  = [];
-const CLI_DASH_SUBS  = ['periods','kpis','content','highlights'];
+const CLI_DASH_SUBS  = ['periods','kpis','content','highlights','excel'];
 const CLI_DASH_TABS  = [
   { key: 'ex_empregados', label: 'Ações de Ex-empregados' },
   { key: 'terceirizacao', label: 'Terceirização / Subsidiária' }
@@ -6279,8 +6305,257 @@ function cliDashSubTab(name) {
   });
 }
 
+// ── CLIENT EXCEL UPLOAD ───────────────────────────────────────────
+let _cliExcelData = null;
+
+async function cliDashPreviewExcel(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { showToast('SheetJS não carregado.'); return; }
+  const st = document.getElementById('cli-xl-status');
+  st.style.display = 'block'; st.textContent = 'Lendo arquivo…';
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const firstWs = wb.Sheets[wb.SheetNames[0]];
+    const previewRows = XLSX.utils.sheet_to_json(firstWs, { defval: '', header: 1 });
+    const cols = previewRows[0] || [];
+    const preview = previewRows.slice(1, 21);
+    let html = '<thead><tr style="background:var(--c-accent);color:#fff">' + cols.map(c => `<th style="padding:6px 10px;text-align:left;white-space:nowrap">${escHtml(String(c))}</th>`).join('') + '</tr></thead><tbody>';
+    html += preview.map((r, i) => `<tr style="background:${i%2?'#f8f8f6':'#fff'}">` + cols.map((_, ci) => `<td style="padding:5px 10px;border-bottom:1px solid #eee;white-space:nowrap">${escHtml(String(r[ci] ?? ''))}</td>`).join('') + '</tr>').join('');
+    html += '</tbody>';
+    document.getElementById('cli-xl-table').innerHTML = html;
+    document.getElementById('cli-xl-preview').style.display = 'block';
+    _cliExcelData = { filename: file.name, wb, file };
+    st.textContent = `✓ ${wb.SheetNames.length} aba(s): ${wb.SheetNames.join(', ')}. ${previewRows.length - 1} linhas na primeira aba. Selecione o período e clique em "Salvar dados no Cockroach".`;
+  } catch(e) {
+    st.textContent = 'Erro ao ler arquivo: ' + e.message;
+    console.error(e);
+  }
+}
+
+async function cliDashSaveExcel() {
+  if (!cliDashApiBase()) { showToast('Configure a Cockroach API em Configurações.'); return; }
+  if (!_cliExcelData) { showToast('Selecione um arquivo primeiro.'); return; }
+  if (!_cliDashClientId) { showToast('Selecione um cliente primeiro.'); return; }
+  const periodId = document.getElementById('cli-xl-period').value;
+  if (!periodId) { showToast('Selecione um período.'); return; }
+  const st = document.getElementById('cli-xl-status');
+  const setStatus = msg => { st.style.display = 'block'; st.textContent = msg; };
+
+  try {
+    const { wb, filename } = _cliExcelData;
+    const findSh = (...names) => {
+      for (const n of names) { const f = wb.SheetNames.find(s => s.toLowerCase().includes(n.toLowerCase())); if (f) return wb.Sheets[f]; }
+      return null;
+    };
+
+    setStatus('Lendo processos…');
+    const mainSh = findSh('todos','ifood','processos','all') || wb.Sheets[wb.SheetNames[0]];
+    const mainRaw = XLSX.utils.sheet_to_json(mainSh, { header: 1, defval: '' });
+    const records = _xlParseIfood(mainRaw);
+
+    setStatus(`Lendo Decisões… (${records.length} processos)`);
+    const decSh = findSh('Decisões','Decisoes','Decisão','Decisao');
+    const decisoes = decSh ? _xlParseDecisoes(XLSX.utils.sheet_to_json(decSh, { header: 1, defval: '' }).slice(1)) : [];
+
+    const novosSh = findSh('Novos Casos Recebidos','Novos Casos','novos');
+    const novos = novosSh ? _xlParseNovos(XLSX.utils.sheet_to_json(novosSh, { header: 1, defval: '' })) : { total: 0, byCR: {} };
+
+    setStatus(`Computando KPIs… (${decisoes.length} decisões)`);
+    const cliKpiRows = _xlBuildCliKpiRows(periodId, records, decisoes, novos);
+
+    // Preservar KPIs manuais
+    setStatus('Verificando KPIs manuais existentes…');
+    const { data: existingResp } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/kpis?periodId=${encodeURIComponent(periodId)}`);
+    const existingKpis = Array.isArray(existingResp) ? existingResp : [];
+    const autoKeySet = new Set(cliKpiRows.map(r => r.tab_key + '||' + r.kpi_key));
+    const manualKpis = existingKpis.filter(k => !autoKeySet.has(k.tab_key + '||' + k.kpi_key));
+
+    setStatus('Removendo KPIs antigos…');
+    await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/kpis/by-period/${encodeURIComponent(periodId)}`, { method: 'DELETE' });
+
+    const BATCH = 40;
+    for (let i = 0; i < cliKpiRows.length; i += BATCH) {
+      setStatus(`Salvando KPIs… (${Math.min(i + BATCH, cliKpiRows.length)}/${cliKpiRows.length})`);
+      const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/kpis/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: cliKpiRows.slice(i, i + BATCH) })
+      });
+      if (error) throw new Error('KPI insert: ' + error.message);
+    }
+
+    if (manualKpis.length) {
+      setStatus(`Restaurando ${manualKpis.length} KPI(s) manuais…`);
+      const maxSo = cliKpiRows.reduce((m, r) => Math.max(m, r.sort_order), 0);
+      manualKpis.forEach((k, i) => { k.sort_order = maxSo + i + 1; delete k.created_at; });
+      for (let i = 0; i < manualKpis.length; i += BATCH) {
+        await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/kpis/bulk`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: manualKpis.slice(i, i + BATCH) })
+        });
+      }
+    }
+
+    // Textos de análise automáticos (somente se não houver texto manual)
+    setStatus('Verificando textos existentes…');
+    const { data: existingContent } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/content?periodId=${encodeURIComponent(periodId)}`);
+    const existingTabs = new Set((existingContent || []).filter(c => c.content_html && c.content_html.trim()).map(c => c.tab_key));
+    const tabNames = { ex_empregados: 'Ações de Ex-empregados', terceirizacao: 'Terceirização / Filial' };
+    for (const [tabKey, tabLabel] of Object.entries(tabNames)) {
+      if (existingTabs.has(tabKey)) continue;
+      const isTerceirizacao = tabKey === 'terceirizacao';
+      const recs = isTerceirizacao ? records.filter(r => _xlCanonCR(r.causa_raiz) === 'TERCEIRIZAÇÃO') : records.filter(r => _xlCanonCR(r.causa_raiz) !== 'TERCEIRIZAÇÃO');
+      const decs = isTerceirizacao ? decisoes.filter(d => _xlCanonCR(d.causa_raiz) === 'TERCEIRIZAÇÃO') : decisoes.filter(d => _xlCanonCR(d.causa_raiz) !== 'TERCEIRIZAÇÃO');
+      const ta = recs.filter(r => r.status === 'ativo').length;
+      const tf = decs.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
+      const td = decs.filter(d => _xlClassifyDec(d.resultado) === 'D').length;
+      const html = `<p>Total de <strong>${_xlFmtBr(recs.length)}</strong> processos em <strong>${tabLabel}</strong>, sendo <strong>${_xlFmtBr(ta)}</strong> ativos. Foram registradas <strong>${_xlFmtBr(decs.length)}</strong> decisões, com índice de favorabilidade de <strong>${_xlFmtPct(tf, decs.length)}</strong> (${_xlFmtBr(tf)} favoráveis / ${_xlFmtBr(td)} desfavoráveis).</p>`;
+      await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/content`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: cliDashId(), period_id: periodId, tab_key: tabKey, content_html: html, updated_at: new Date().toISOString() })
+      });
+    }
+
+    // Destaques automáticos
+    setStatus('Salvando destaques…');
+    await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/highlights/by-period/${encodeURIComponent(periodId)}`, { method: 'DELETE' });
+    const hlRows = _xlBuildCliHighlights(periodId, records, decisoes, novos);
+    if (hlRows.length) {
+      await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/highlights/replace`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ periodId, rows: hlRows })
+      });
+    }
+
+    setStatus(`✓ Concluído! ${cliKpiRows.length} KPIs computados e salvos a partir de "${filename}". Recarregue o dashboard do cliente para visualizar.`);
+    showToast('Excel processado com sucesso!');
+  } catch(e) {
+    setStatus('Erro: ' + e.message);
+    console.error(e);
+    showToast('Erro ao processar Excel.');
+  }
+}
+
+/** Build KPI rows for non-iFood clients (tabs: ex_empregados / terceirizacao) */
+function _xlBuildCliKpiRows(periodId, records, decisoes, novos) {
+  const rows = []; let so = 0;
+  const push = (tabKey, kpiKey, label, value, unit, chartData, chartTitle) => {
+    rows.push({ id: cliDashId(), period_id: periodId, tab_key: tabKey, kpi_key: kpiKey, label, value: String(value), unit: unit || '', chart_data: chartData || null, chart_title: chartTitle || '', sort_order: so++, trend_pct: null });
+  };
+  const novosByCR = (novos && novos.byCR) ? novos.byCR : {};
+
+  const tabDefs = [
+    { tabKey: 'ex_empregados', label: 'Ações de Ex-empregados',
+      filterRec: r => _xlCanonCR(r.causa_raiz) !== 'TERCEIRIZAÇÃO',
+      filterDec: d => _xlCanonCR(d.causa_raiz) !== 'TERCEIRIZAÇÃO' },
+    { tabKey: 'terceirizacao', label: 'Terceirização / Filial',
+      filterRec: r => _xlCanonCR(r.causa_raiz) === 'TERCEIRIZAÇÃO',
+      filterDec: d => _xlCanonCR(d.causa_raiz) === 'TERCEIRIZAÇÃO' },
+  ];
+
+  for (const { tabKey, label, filterRec, filterDec } of tabDefs) {
+    const recs = records.filter(filterRec);
+    const decs = decisoes.filter(filterDec);
+    if (!recs.length && !decs.length) continue;
+
+    const ta = recs.filter(r => r.status === 'ativo').length;
+    const te = recs.filter(r => r.status === 'encerrado').length;
+    const tf = decs.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
+    const td = decs.filter(d => _xlClassifyDec(d.resultado) === 'D').length;
+    const novosTab = Object.entries(novosByCR).filter(([cr]) => filterDec({ causa_raiz: cr })).reduce((s, [, v]) => s + v, 0);
+
+    push(tabKey, 'total',          'Total de Processos',     _xlFmtBr(recs.length), 'processos');
+    push(tabKey, 'ativos',         'Processos Ativos',       _xlFmtBr(ta),          'ativos');
+    push(tabKey, 'encerrados',     'Processos Encerrados',   _xlFmtBr(te),          'encerrados');
+    push(tabKey, 'novos',          'Novos Casos no Mês',     _xlFmtBr(novosTab),    'novos');
+    if (decs.length) {
+      push(tabKey, 'decisoes_fav',  'Decisões Favoráveis',    _xlFmtBr(tf), `(${_xlFmtPct(tf, decs.length)})`);
+      push(tabKey, 'decisoes_desf', 'Decisões Desfavoráveis', _xlFmtBr(td), `(${_xlFmtPct(td, decs.length)})`);
+      push(tabKey, 'decisoes_total','Total de Decisões',      _xlFmtBr(decs.length), 'no período');
+    }
+
+    // Fase processual
+    const faseC = _xlCounter(recs.filter(r => _xlFaseValida(r.fase)).map(r => r.fase));
+    const faseTop = _xlTopN(faseC, 12);
+    if (faseTop.length) push(tabKey, 'chart_fase', 'Fase Processual', '', '',
+      _xlChartMultiBar(faseTop.map(([l]) => l), faseTop.map(([, v]) => v), 'Processos'), `Fase Processual — ${label}`);
+
+    // TRT ranking
+    const trtC = _xlCounter(recs.filter(r => r.status === 'ativo' && r.trt).map(r => r.trt));
+    const trtTop = _xlTopN(trtC, 12);
+    if (trtTop.length) push(tabKey, 'chart_trt', 'Volume por TRT', '', '',
+      _xlChartMultiBar(trtTop.map(([l]) => l), trtTop.map(([, v]) => v), 'Processos Ativos', false), `Processos Ativos por TRT — ${label}`);
+
+    // Decisões FAV vs DESF por TRT
+    if (decs.length) {
+      const trtFavC = {}, trtDesfC = {};
+      decs.forEach(d => {
+        const trt = d.trt || 'Não informado';
+        const cls = _xlClassifyDec(d.resultado);
+        if (cls === 'F') trtFavC[trt] = (trtFavC[trt] || 0) + 1;
+        if (cls === 'D') trtDesfC[trt] = (trtDesfC[trt] || 0) + 1;
+      });
+      const allTrts = _xlTopKeysByTotal([trtFavC, trtDesfC], 15);
+      if (allTrts.length) push(tabKey, 'chart_dec_trt', 'Decisões por TRT', '', '', {
+        type: 'bar',
+        data: { labels: allTrts, datasets: [
+          { label: 'Favorável',    data: allTrts.map(t => trtFavC[t] || 0),  backgroundColor: '#0F9E76', borderRadius: 6, maxBarThickness: 24 },
+          { label: 'Desfavorável', data: allTrts.map(t => trtDesfC[t] || 0), backgroundColor: '#7B1A2E', borderRadius: 6, maxBarThickness: 24 }
+        ]},
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', labels: { font: { family: 'IBM Plex Mono', size: 10 } } } },
+          scales: { x: { grid: { color: 'rgba(0,0,0,0.05)' }, beginAtZero: true, ticks: { precision: 0 } }, y: { grid: { display: false } } } }
+      }, `Decisões por TRT — ${label}`);
+    }
+
+    // Top julgadores
+    const jFavC = {}, jDesfC = {};
+    decs.forEach(d => {
+      const j = String(d.juiz_relator || '').trim();
+      if (!j || j === 'nan') return;
+      const cls = _xlClassifyDec(d.resultado);
+      if (cls === 'F') jFavC[j] = (jFavC[j] || 0) + 1;
+      if (cls === 'D') jDesfC[j] = (jDesfC[j] || 0) + 1;
+    });
+    const jTop = _xlTopKeysByTotal([jFavC, jDesfC], 10);
+    if (jTop.length) push(tabKey, 'chart_julgadores', 'Top 10 Julgadores', '', '',
+      _xlChartOutcomeByGroup(jTop, jTop.map(j => jFavC[j] || 0), jTop.map(j => jDesfC[j] || 0)),
+      `Top 10 Julgadores — ${label}`);
+
+    // Adv adversários
+    const advC = {};
+    recs.forEach(r => { [r.adv1, r.adv2, r.adv3].forEach(a => { if (a && !['nan','none','','0','n/a'].includes(a.toLowerCase())) advC[a] = (advC[a] || 0) + 1; }); });
+    const advTop = _xlTopN(advC, 10);
+    if (advTop.length) push(tabKey, 'chart_advogados', 'Top 10 Adv. Adversários', '', '',
+      _xlChartBar(advTop.map(([l]) => l), advTop.map(([, v]) => v), 'Processos', '#0D2B5E', true),
+      `Top 10 Advogados Adversários — ${label}`);
+  }
+  return rows;
+}
+
+function _xlBuildCliHighlights(periodId, records, decisoes, novos) {
+  const total   = records.length;
+  const ativos  = records.filter(r => r.status === 'ativo').length;
+  const decF    = decisoes.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
+  const decTot  = decisoes.length;
+  const novosTotal = (novos && 'total' in novos) ? novos.total : 0;
+  return [
+    { id: cliDashId(), period_id: periodId, icon: '⚖️', title: 'Total de Processos',      body: `${_xlFmtBr(total)} processos no portfólio, dos quais ${_xlFmtBr(ativos)} ativos.`, sort_order: 0 },
+    { id: cliDashId(), period_id: periodId, icon: '✅', title: 'Índice de Favorabilidade', body: `${_xlFmtPct(decF, decTot)} das decisões no período foram favoráveis (${_xlFmtBr(decF)} de ${_xlFmtBr(decTot)}).`, sort_order: 1 },
+    { id: cliDashId(), period_id: periodId, icon: '📋', title: 'Novos Casos no Período',   body: `${_xlFmtBr(novosTotal)} novos casos recebidos no mês.`, sort_order: 2 },
+    { id: cliDashId(), period_id: periodId, icon: '📊', title: 'Decisões do Período',      body: `${_xlFmtBr(decTot)} decisões registradas — ${_xlFmtBr(decF)} favoráveis e ${_xlFmtBr(decisoes.filter(d => _xlClassifyDec(d.resultado) === 'D').length)} desfavoráveis.`, sort_order: 3 },
+  ];
+}
+
 function cliDashPopulateSelects() {
   const opts = _cliDashPeriods.map(p => `<option value="${escHtml(p.id)}">${escHtml(p.label)}</option>`).join('');
+  const xlSel = document.getElementById('cli-xl-period');
+  if (xlSel) xlSel.innerHTML = '<option value="">\u2014 Selecione um per\u00edodo \u2014</option>' + opts;
   ['cli-kpi-period','cli-cnt-period','cli-hl-period','cdk-period','cdh-period'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '<option value="">— Selecione —</option>' + opts;
