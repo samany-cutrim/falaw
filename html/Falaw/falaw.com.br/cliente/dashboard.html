@@ -436,10 +436,77 @@
       .btn-logout, .btn-back-site { min-height: 44px; }
     }
 
+    }
+
     @media (max-width: 400px) {
       .stats-row { grid-template-columns: 1fr; }
       .kpi-grid { grid-template-columns: 1fr; }
     }
+
+    /* ── API DASH SUB-TABS ── */
+    .dash-sub-tab {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--muted); padding: 10px 18px;
+      border-bottom: 2px solid transparent;
+      cursor: pointer; transition: color .15s, border-color .15s;
+      white-space: nowrap; user-select: none;
+    }
+    .dash-sub-tab:hover { color: var(--text); }
+    .dash-sub-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+    /* ── API KPI CARDS ── */
+    .api-kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .api-kpi-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden;
+    }
+    .api-kpi-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--gold), transparent);
+    }
+    .api-kpi-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .api-kpi-value { font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 700; color: var(--text); line-height: 1; }
+    .api-kpi-unit  { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 4px; }
+    .api-kpi-trend {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+      margin-top: 6px; padding: 2px 6px; border-radius: 3px;
+    }
+    .api-kpi-trend.up   { background: var(--green-dim); color: var(--green); }
+    .api-kpi-trend.down { background: var(--red-dim);   color: var(--red); }
+    .api-kpi-trend.flat { background: rgba(0,0,0,.04);  color: var(--muted); }
+
+    /* ── API ANALYSIS ── */
+    .api-analysis {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 24px 28px; margin-bottom: 20px;
+    }
+    .api-analysis-label {
+      font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .18em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 14px;
+      padding-bottom: 10px; border-bottom: 1px solid var(--border);
+    }
+    .api-analysis-content { font-size: 14px; line-height: 1.8; color: var(--text); }
+    .api-analysis-content p { margin-bottom: 10px; }
+    .api-analysis-content p:last-child { margin: 0; }
+
+    /* ── API HIGHLIGHTS ── */
+    .api-hl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .api-hl-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+      transition: box-shadow .2s, transform .2s;
+    }
+    .api-hl-card:hover { box-shadow: 0 8px 28px rgba(123,26,46,.12); transform: translateY(-2px); }
+    .api-hl-stripe { height: 4px; background: linear-gradient(90deg, var(--gold), #0D2B5E); }
+    .api-hl-body { padding: 18px 18px 14px; flex: 1; }
+    .api-hl-icon { font-size: 24px; margin-bottom: 12px; }
+    .api-hl-title { font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .api-hl-text  { font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+    .api-empty { text-align:center; padding:56px 24px; font-family:'IBM Plex Mono',monospace;
+      font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-l); }
   </style>
 </head>
 <body>
@@ -531,7 +598,25 @@
           </div>
         </div>
 
-        <!-- Analytics (dynamic) -->
+        <!-- Period selector + sub-tabs (shown when API data is available) -->
+        <div id="apiDashControls" style="display:none;margin-bottom:24px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+            <label style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap">Período:</label>
+            <select id="dashPeriodSelect" onchange="onDashPeriodChange(this.value)"
+              style="border:1px solid var(--border);border-radius:6px;padding:8px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text);background:var(--bg-card);outline:none;cursor:pointer;min-width:180px">
+            </select>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:0;margin-bottom:0" id="dashTabBar">
+            <div class="dash-sub-tab active" data-tab="ex_empregados" onclick="onDashTabChange('ex_empregados')">⚖️ Ações de Ex-empregados</div>
+            <div class="dash-sub-tab" data-tab="terceirizacao" onclick="onDashTabChange('terceirizacao')">🏢 Terceirização / Subsidiária</div>
+            <div class="dash-sub-tab" data-tab="highlights" onclick="onDashTabChange('highlights')">⭐ Destaques</div>
+          </div>
+        </div>
+
+        <!-- New API-sourced KPI area -->
+        <div id="apiDashArea" style="display:none"></div>
+
+        <!-- Legacy analytics (shown as fallback when no API data) -->
         <div id="analyticsArea"></div>
 
       </div>
@@ -766,7 +851,154 @@ async function downloadReportPPT(report) {
 
 window._allReports = [];
 
-/* ─── ANALYTICS ─────────────────────────────────────── */
+/* ─── CLIENT DASH API ─────────────────────────────── */
+function apiBase() {
+  const cfg = (localStorage.getItem('fa_backend_api_url') || window.BACKEND_API_URL || '').trim();
+  return cfg.replace(/\/$/, '');
+}
+
+let _dashClientId = null;
+let _dashPeriods  = [];
+let _dashActiveTab = 'ex_empregados';
+
+async function _cliDashGet(path) {
+  const base = apiBase();
+  if (!base) return null;
+  try {
+    const res = await fetch(base + path);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
+async function loadClientDashData(clientId) {
+  _dashClientId = clientId;
+  const periods = await _cliDashGet('/api/client-dash/' + encodeURIComponent(clientId) + '/periods');
+  _dashPeriods  = Array.isArray(periods) ? periods.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0)) : [];
+  if (!_dashPeriods.length) return false;
+
+  const sel = document.getElementById('dashPeriodSelect');
+  sel.innerHTML = '';
+  _dashPeriods.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.label || p.id;
+    sel.appendChild(opt);
+  });
+
+  document.getElementById('apiDashControls').style.display = '';
+  document.getElementById('apiDashArea').style.display = '';
+  document.getElementById('analyticsArea').style.display = 'none';
+
+  await renderApiDash(_dashPeriods[0].id, _dashActiveTab);
+  return true;
+}
+
+async function renderApiDash(periodId, tabKey) {
+  _dashActiveTab = tabKey;
+
+  // Update tab bar active state
+  document.querySelectorAll('.dash-sub-tab').forEach(el => {
+    el.classList.toggle('active', el.dataset.tab === tabKey);
+  });
+
+  const area = document.getElementById('apiDashArea');
+  area.innerHTML = '<div class="api-empty" style="padding:40px 0">A carregar…</div>';
+
+  if (tabKey === 'highlights') {
+    const hl = await _cliDashGet('/api/client-dash/' + encodeURIComponent(_dashClientId) + '/highlights?periodId=' + encodeURIComponent(periodId));
+    area.innerHTML = '';
+    renderApiHighlights(hl, area);
+    return;
+  }
+
+  const [kpis, content] = await Promise.all([
+    _cliDashGet('/api/client-dash/' + encodeURIComponent(_dashClientId) + '/kpis?periodId='    + encodeURIComponent(periodId) + '&tabKey=' + encodeURIComponent(tabKey)),
+    _cliDashGet('/api/client-dash/' + encodeURIComponent(_dashClientId) + '/content?periodId=' + encodeURIComponent(periodId) + '&tabKey=' + encodeURIComponent(tabKey))
+  ]);
+
+  area.innerHTML = '';
+  renderApiKpis(kpis, area);
+  renderApiContent(content, area);
+}
+
+function renderApiKpis(kpis, container) {
+  const list = Array.isArray(kpis) ? kpis.sort((a,b) => (a.sort_order||0) - (b.sort_order||0)) : [];
+  if (!list.length) {
+    container.insertAdjacentHTML('beforeend', '<div class="api-empty">Sem KPIs para este período.</div>');
+    return;
+  }
+  const grid = document.createElement('div');
+  grid.className = 'api-kpi-grid';
+  list.forEach(k => {
+    const trend = parseFloat(k.trend_pct);
+    const tDir  = isNaN(trend) ? 'flat' : trend > 0 ? 'up' : trend < 0 ? 'down' : 'flat';
+    const tIcon = tDir === 'up' ? '▲' : tDir === 'down' ? '▼' : '—';
+    const tTxt  = isNaN(trend) ? '' : Math.abs(trend).toFixed(1) + '%';
+    grid.insertAdjacentHTML('beforeend', `
+      <div class="api-kpi-card">
+        <div class="api-kpi-label">${escHtml(k.label || k.kpi_key || '')}</div>
+        <div class="api-kpi-value">${escHtml(String(k.value ?? '—'))}</div>
+        ${k.unit ? `<div class="api-kpi-unit">${escHtml(k.unit)}</div>` : ''}
+        ${tTxt ? `<div class="api-kpi-trend ${tDir}">${tIcon} ${tTxt}</div>` : ''}
+      </div>`);
+  });
+  container.appendChild(grid);
+}
+
+function renderApiContent(content, container) {
+  const list = Array.isArray(content) ? content : (content ? [content] : []);
+  list.forEach(item => {
+    if (!item) return;
+    const text = (item.analysis_text || item.text || '').trim();
+    if (!text) return;
+    const block = document.createElement('div');
+    block.className = 'api-analysis';
+    block.innerHTML = `<div class="api-analysis-label">${escHtml(item.section_label || item.title || 'Análise do Período')}</div>
+      <div class="api-analysis-content">${text.split('\n').filter(Boolean).map(l => `<p>${escHtml(l)}</p>`).join('')}</div>`;
+    container.appendChild(block);
+  });
+}
+
+function renderApiHighlights(hl, container) {
+  const list = Array.isArray(hl) ? hl : [];
+  if (!list.length) {
+    container.insertAdjacentHTML('beforeend', '<div class="api-empty">Sem destaques para este período.</div>');
+    return;
+  }
+  const grid = document.createElement('div');
+  grid.className = 'api-hl-grid';
+  list.forEach(h => {
+    grid.insertAdjacentHTML('beforeend', `
+      <div class="api-hl-card">
+        <div class="api-hl-stripe"></div>
+        <div class="api-hl-body">
+          ${h.icon ? `<div class="api-hl-icon">${escHtml(h.icon)}</div>` : ''}
+          <div class="api-hl-title">${escHtml(h.title || '')}</div>
+          <div class="api-hl-text">${escHtml(h.text || h.description || '')}</div>
+        </div>
+      </div>`);
+  });
+  container.appendChild(grid);
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function onDashPeriodChange(periodId) {
+  if (!periodId) return;
+  renderApiDash(periodId, _dashActiveTab);
+}
+
+function onDashTabChange(tabKey) {
+  const sel = document.getElementById('dashPeriodSelect');
+  const periodId = sel ? sel.value : '';
+  if (!periodId) return;
+  renderApiDash(periodId, tabKey);
+}
+
+
 if (typeof Chart !== 'undefined') {
   Chart.defaults.color = 'rgba(26,10,13,0.5)';
   Chart.defaults.font.family = "'IBM Plex Mono', monospace";
@@ -1039,11 +1271,6 @@ async function init() {
 
   const session = JSON.parse(raw);
 
-  function apiBase() {
-    const cfg = (localStorage.getItem('fa_backend_api_url') || window.BACKEND_API_URL || '').trim();
-    return cfg.replace(/\/$/, '');
-  }
-
   async function loadReportsFromApi(clientId) {
     const base = apiBase();
     if (!base || !clientId) return [];
@@ -1133,7 +1360,9 @@ async function init() {
   document.getElementById('topbarDate').textContent  = new Date().toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
 
   /* Build sections */
-  buildAnalytics(reports);
+  /* Try new Cockroach API dashboard first; fall back to legacy analytics */
+  const hasApiDash = await loadClientDashData(client.id);
+  if (!hasApiDash) buildAnalytics(reports);
   renderReports(reports);
 }
 init();
