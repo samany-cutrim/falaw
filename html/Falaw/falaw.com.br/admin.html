@@ -1196,7 +1196,6 @@
           style="flex:1;max-width:420px;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
           <option value="">— Selecione um cliente —</option>
         </select>
-        <button type="button" class="btn btn-secondary" id="cli-dash-upload-btn" style="display:none" onclick="cliDashOpenUpload()">📁 Enviar Relatório / Excel</button>
       </div>
 
       <div id="cli-dash-panel" style="display:none">
@@ -1290,12 +1289,11 @@
               <input type="file" id="cli-xl-file" accept=".xlsx,.xls" onchange="cliDashPreviewExcel(this)" style="padding:10px 14px;border:1px solid var(--c-divider);border-radius:2px;width:100%;background:#fafaf8;" />
             </div>
           </div>
-          <div id="cli-xl-preview" style="display:none;margin-bottom:16px">
-            <label style="display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:10px">Pré-visualização (primeiras linhas)</label>
-            <div style="overflow:auto;max-height:320px;border:1px solid var(--c-divider);border-radius:4px;background:#fff">
-              <table id="cli-xl-table" style="width:100%;border-collapse:collapse;font-size:12px;font-family:var(--f-mono)"></table>
-            </div>
-            <p style="font-size:11px;color:var(--c-muted);margin-top:8px">Exibindo as primeiras 20 linhas. O arquivo completo será processado ao salvar.</p>
+          <!-- Resumo de extração (aparece ao selecionar arquivo) -->
+          <div id="cli-xl-summary" style="display:none;margin-bottom:20px;padding:20px 24px;background:#f3faf6;border:1px solid #b7e0cb;border-radius:6px">
+            <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#1B7A4E;margin-bottom:14px">📊 Dados extraídos do arquivo</div>
+            <div id="cli-xl-kpi-cards" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px"></div>
+            <div id="cli-xl-sheets" style="font-size:12px;color:var(--c-muted);font-family:var(--f-mono)"></div>
           </div>
           <div id="cli-xl-status" style="display:none;font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-bottom:12px;"></div>
           <button type="button" class="btn btn-primary" onclick="cliDashSaveExcel()">Salvar dados no Cockroach</button>
@@ -6312,22 +6310,45 @@ async function cliDashPreviewExcel(input) {
   const file = input.files && input.files[0];
   if (!file) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS não carregado.'); return; }
-  const st = document.getElementById('cli-xl-status');
-  st.style.display = 'block'; st.textContent = 'Lendo arquivo…';
+  const st  = document.getElementById('cli-xl-status');
+  const sum = document.getElementById('cli-xl-summary');
+  st.style.display  = 'block'; st.textContent  = 'Lendo e analisando arquivo…';
+  sum.style.display = 'none';
   try {
     const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array' });
-    const firstWs = wb.Sheets[wb.SheetNames[0]];
-    const previewRows = XLSX.utils.sheet_to_json(firstWs, { defval: '', header: 1 });
-    const cols = previewRows[0] || [];
-    const preview = previewRows.slice(1, 21);
-    let html = '<thead><tr style="background:var(--c-accent);color:#fff">' + cols.map(c => `<th style="padding:6px 10px;text-align:left;white-space:nowrap">${escHtml(String(c))}</th>`).join('') + '</tr></thead><tbody>';
-    html += preview.map((r, i) => `<tr style="background:${i%2?'#f8f8f6':'#fff'}">` + cols.map((_, ci) => `<td style="padding:5px 10px;border-bottom:1px solid #eee;white-space:nowrap">${escHtml(String(r[ci] ?? ''))}</td>`).join('') + '</tr>').join('');
-    html += '</tbody>';
-    document.getElementById('cli-xl-table').innerHTML = html;
-    document.getElementById('cli-xl-preview').style.display = 'block';
-    _cliExcelData = { filename: file.name, wb, file };
-    st.textContent = `✓ ${wb.SheetNames.length} aba(s): ${wb.SheetNames.join(', ')}. ${previewRows.length - 1} linhas na primeira aba. Selecione o período e clique em "Salvar dados no Cockroach".`;
+    const wb  = XLSX.read(buf, { type: 'array' });
+
+    // Parse imediatamente para mostrar resumo
+    const parsed = _xlParseClientReport(wb);
+    _cliExcelData = { filename: file.name, wb, file, parsed };
+
+    const { dashKpis, records } = parsed;
+    const fmtN = n => (n != null ? Number(n).toLocaleString('pt-BR') : '—');
+    const fmtPct = v => {
+      if (v == null) return '—';
+      const p = typeof v === 'number' ? (v < 1 ? v * 100 : v) : parseFloat(String(v).replace('%','').replace(',','.')) || 0;
+      return p.toFixed(1).replace('.', ',') + '%';
+    };
+    const kpiCards = [
+      { icon: '⚖️', label: 'Processos Ativos',    value: fmtN(dashKpis.ativos) },
+      { icon: '📁', label: 'Encerrados',           value: fmtN(dashKpis.encerrados) },
+      { icon: '💰', label: 'Exposição Total',       value: dashKpis.exposicao != null ? 'R$ ' + fmtN(dashKpis.exposicao) : '—' },
+      { icon: '✅', label: 'Taxa de Êxito',         value: fmtPct(dashKpis.taxaExito) },
+      { icon: '📋', label: 'Registros na planilha', value: fmtN(records.length) },
+    ];
+    document.getElementById('cli-xl-kpi-cards').innerHTML = kpiCards.map(c =>
+      `<div style="background:#fff;border:1px solid #b7e0cb;border-radius:6px;padding:12px 16px;min-width:130px;text-align:center">
+        <div style="font-size:20px;margin-bottom:4px">${c.icon}</div>
+        <div style="font-family:var(--f-mono);font-size:18px;font-weight:700;color:#0D2B5E">${escHtml(c.value)}</div>
+        <div style="font-size:11px;color:var(--c-muted);margin-top:2px">${escHtml(c.label)}</div>
+      </div>`
+    ).join('');
+    const kpiCount = _xlBuildClientDashKpis('__preview__', parsed).length;
+    document.getElementById('cli-xl-sheets').innerHTML =
+      `📄 <strong>${escHtml(file.name)}</strong> &nbsp;·&nbsp; ${wb.SheetNames.length} aba(s): ${wb.SheetNames.map(n => escHtml(n)).join(', ')}<br>` +
+      `<span style="color:#1B7A4E">✓ ${kpiCount} KPIs serão gerados. Selecione o período e clique em "Salvar dados no Cockroach".</span>`;
+    sum.style.display = 'block';
+    st.style.display  = 'none';
   } catch(e) {
     st.textContent = 'Erro ao ler arquivo: ' + e.message;
     console.error(e);
@@ -6344,26 +6365,12 @@ async function cliDashSaveExcel() {
   const setStatus = msg => { st.style.display = 'block'; st.textContent = msg; };
 
   try {
-    const { wb, filename } = _cliExcelData;
-    const findSh = (...names) => {
-      for (const n of names) { const f = wb.SheetNames.find(s => s.toLowerCase().includes(n.toLowerCase())); if (f) return wb.Sheets[f]; }
-      return null;
-    };
+    const { wb, filename, parsed: _cachedParsed } = _cliExcelData;
 
-    setStatus('Lendo processos…');
-    const mainSh = findSh('todos','ifood','processos','all') || wb.Sheets[wb.SheetNames[0]];
-    const mainRaw = XLSX.utils.sheet_to_json(mainSh, { header: 1, defval: '' });
-    const records = _xlParseIfood(mainRaw);
-
-    setStatus(`Lendo Decisões… (${records.length} processos)`);
-    const decSh = findSh('Decisões','Decisoes','Decisão','Decisao');
-    const decisoes = decSh ? _xlParseDecisoes(XLSX.utils.sheet_to_json(decSh, { header: 1, defval: '' }).slice(1)) : [];
-
-    const novosSh = findSh('Novos Casos Recebidos','Novos Casos','novos');
-    const novos = novosSh ? _xlParseNovos(XLSX.utils.sheet_to_json(novosSh, { header: 1, defval: '' })) : { total: 0, byCR: {} };
-
-    setStatus(`Computando KPIs… (${decisoes.length} decisões)`);
-    const cliKpiRows = _xlBuildCliKpiRows(periodId, records, decisoes, novos);
+    setStatus('Processando dados extraídos…');
+    const parsedData = _cachedParsed || _xlParseClientReport(wb);
+    setStatus(`Computando KPIs… (${parsedData.records.length} processos encontrados)`);
+    const cliKpiRows = _xlBuildClientDashKpis(periodId, parsedData);
 
     // Preservar KPIs manuais
     setStatus('Verificando KPIs manuais existentes…');
@@ -6399,31 +6406,30 @@ async function cliDashSaveExcel() {
       }
     }
 
-    // Textos de análise automáticos (somente se não houver texto manual)
+    // Texto de análise automático (somente se não houver texto manual)
     setStatus('Verificando textos existentes…');
     const { data: existingContent } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/content?periodId=${encodeURIComponent(periodId)}`);
     const existingTabs = new Set((existingContent || []).filter(c => c.content_html && c.content_html.trim()).map(c => c.tab_key));
-    const tabNames = { ex_empregados: 'Ações de Ex-empregados', terceirizacao: 'Terceirização / Filial' };
-    for (const [tabKey, tabLabel] of Object.entries(tabNames)) {
-      if (existingTabs.has(tabKey)) continue;
-      const isTerceirizacao = tabKey === 'terceirizacao';
-      const recs = isTerceirizacao ? records.filter(r => _xlCanonCR(r.causa_raiz) === 'TERCEIRIZAÇÃO') : records.filter(r => _xlCanonCR(r.causa_raiz) !== 'TERCEIRIZAÇÃO');
-      const decs = isTerceirizacao ? decisoes.filter(d => _xlCanonCR(d.causa_raiz) === 'TERCEIRIZAÇÃO') : decisoes.filter(d => _xlCanonCR(d.causa_raiz) !== 'TERCEIRIZAÇÃO');
-      const ta = recs.filter(r => r.status === 'ativo').length;
-      const tf = decs.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
-      const td = decs.filter(d => _xlClassifyDec(d.resultado) === 'D').length;
-      const html = `<p>Total de <strong>${_xlFmtBr(recs.length)}</strong> processos em <strong>${tabLabel}</strong>, sendo <strong>${_xlFmtBr(ta)}</strong> ativos. Foram registradas <strong>${_xlFmtBr(decs.length)}</strong> decisões, com índice de favorabilidade de <strong>${_xlFmtPct(tf, decs.length)}</strong> (${_xlFmtBr(tf)} favoráveis / ${_xlFmtBr(td)} desfavoráveis).</p>`;
+    if (!existingTabs.has('visao-geral')) {
+      const { dashKpis, records: recs } = parsedData;
+      const ta   = dashKpis.ativos    ?? recs.length;
+      const te   = dashKpis.encerrados ?? 0;
+      const exp  = dashKpis.exposicao  != null ? 'R$ ' + _xlFmtBr(dashKpis.exposicao) : '—';
+      const exito = dashKpis.taxaExito != null
+        ? ((dashKpis.taxaExito < 1 ? dashKpis.taxaExito * 100 : dashKpis.taxaExito).toFixed(1).replace('.', ',') + '%')
+        : '—';
+      const html = `<p>O portfólio conta com <strong>${_xlFmtBr(ta)}</strong> processos ativos e <strong>${_xlFmtBr(te)}</strong> encerrados. A exposição total estimada é de <strong>${exp}</strong>, com taxa de êxito de <strong>${exito}</strong>. Os dados foram importados a partir do relatório mensal em formato Excel.</p>`;
       await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/content`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: cliDashId(), period_id: periodId, tab_key: tabKey, content_html: html, updated_at: new Date().toISOString() })
+        body: JSON.stringify({ id: cliDashId(), period_id: periodId, tab_key: 'visao-geral', content_html: html, updated_at: new Date().toISOString() })
       });
     }
 
     // Destaques automáticos
     setStatus('Salvando destaques…');
     await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/highlights/by-period/${encodeURIComponent(periodId)}`, { method: 'DELETE' });
-    const hlRows = _xlBuildCliHighlights(periodId, records, decisoes, novos);
+    const hlRows = _xlBuildClientHighlights(periodId, parsedData);
     if (hlRows.length) {
       await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/highlights/replace`, {
         method: 'POST',
@@ -6439,6 +6445,255 @@ async function cliDashSaveExcel() {
     console.error(e);
     showToast('Erro ao processar Excel.');
   }
+}
+
+// ── UNIVERSAL CLIENT EXCEL PARSER ────────────────────────────────────────────
+
+/** Normalise string: strip diacritics, trim, uppercase */
+const _xlN = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+
+/**
+ * Parse a client monthly Excel report (APDATA / BUSER / CUIDAR.ME / FRETE style).
+ * Returns { dashKpis, records, chartData }
+ */
+function _xlParseClientReport(wb) {
+  // ── DASHBOARD KPIs (row 5 = labels, row 6 = values) ─────────────────────
+  const dashShName = wb.SheetNames.find(n => _xlN(n).includes('DASHBOARD'));
+  const dashKpis = { ativos: null, exposicao: null, encerrados: null, taxaExito: null, periodo: '' };
+
+  if (dashShName) {
+    const dashRows = XLSX.utils.sheet_to_json(wb.Sheets[dashShName], { header: 1, defval: null });
+    // Period label
+    for (const r of dashRows.slice(0, 5)) {
+      const v = (r || []).find(v => String(v || '').includes('RELAT\u00d3RIO MENSAL') || String(v || '').includes('RELATORIO MENSAL'));
+      if (v) { dashKpis.periodo = String(v); break; }
+    }
+    // Find KPI header row
+    for (let i = 0; i < Math.min(dashRows.length, 15); i++) {
+      const row = dashRows[i];
+      if (!row || !row.some(v => _xlN(v).includes('PROCESSOS ATIVOS'))) continue;
+      const valRow = dashRows[i + 1] || [];
+      const parseV = v => {
+        if (v == null) return null;
+        if (typeof v === 'number') return v;
+        const s = String(v).replace(/[R$\s.]/g, '').replace(',', '.').replace('%', '');
+        const n = parseFloat(s); return isNaN(n) ? null : n;
+      };
+      row.forEach((label, ci) => {
+        const n = _xlN(label);
+        if (n.includes('PROCESSOS ATIVOS') && !n.includes('ENCERRADO')) dashKpis.ativos = parseV(valRow[ci]);
+        else if (n.includes('EXPOSICAO TOTAL') || n.includes('EXPOSIÇÃO TOTAL')) dashKpis.exposicao = parseV(valRow[ci]);
+        else if (n.includes('PROCESSOS ENCERRADOS')) dashKpis.encerrados = parseV(valRow[ci]);
+        else if (n.includes('TAXA') && (n.includes('EXITO') || n.includes('\u00caxito') || n.includes('\u00caxIT'))) dashKpis.taxaExito = parseV(valRow[ci]);
+      });
+      break;
+    }
+  }
+
+  // ── ACTIVE PROCESSES SHEET ───────────────────────────────────────────────
+  const activeShName = wb.SheetNames.find(n => {
+    const nl = _xlN(n);
+    return nl.includes('ATIVO') || nl.includes('JUDICIAL') || nl.includes('TRABALHISTA') ||
+           (nl.includes('RELATORIO') && nl.includes('PROCESSO'));
+  });
+  const records = activeShName
+    ? _xlParseClientActive(XLSX.utils.sheet_to_json(wb.Sheets[activeShName], { header: 1, defval: '' }))
+    : [];
+
+  // ── ENCERRADOS COUNT (fallback if DASHBOARD had no value) ────────────────
+  if (dashKpis.encerrados == null) {
+    const encShName = wb.SheetNames.find(n => { const nl = _xlN(n); return nl.includes('ENCERRADO') || nl.includes('ARQUIVADO'); });
+    if (encShName) {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[encShName], { header: 1, defval: '' });
+      dashKpis.encerrados = rows.slice(1).filter(r => r && String(r[0] || r[1] || '').match(/\d{7,}/)).length;
+    }
+  }
+
+  // ── _ChartData tab (FRETE-style: Instância / Favorável / Desfavorável) ───
+  const chartShName = wb.SheetNames.find(n => _xlN(n).includes('CHARTDATA') || _xlN(n).includes('_CHART'));
+  let chartData = null;
+  if (chartShName) {
+    const chartRows = XLSX.utils.sheet_to_json(wb.Sheets[chartShName], { header: 1, defval: '' });
+    if (chartRows[0] && chartRows.length > 1) {
+      const hdr = chartRows[0];
+      chartData = chartRows.slice(1).filter(r => r[0]).map(r => {
+        const obj = {}; hdr.forEach((h, i) => { obj[String(h)] = r[i]; }); return obj;
+      });
+    }
+  }
+
+  return { dashKpis, records, chartData };
+}
+
+/**
+ * Flexible parser for an active-processes sheet with variable column layouts.
+ * Handles: APDATA (2-row header), BUSER (Judiciais), CUIDAR.ME, FRETE (ATIVOS).
+ */
+function _xlParseClientActive(rawRows) {
+  // Find header row: first row with a process-number-like column AND ≥4 non-empty cells
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(rawRows.length, 5); i++) {
+    const row = rawRows[i];
+    if (!row) continue;
+    const hasProc = row.some(v => _xlN(v).includes('PROCESSO'));
+    const nonEmpty = row.filter(v => String(v).trim() !== '').length;
+    if (hasProc && nonEmpty >= 4) { headerIdx = i; break; }
+  }
+  if (headerIdx < 0) return [];
+
+  const header = rawRows[headerIdx].map(v => _xlN(v));
+
+  // Detect 2-row header (APDATA style): next row has RECLAMADA / RECLAMANTE
+  let dataStart = headerIdx + 1;
+  const nextRow = (rawRows[headerIdx + 1] || []).map(v => _xlN(v));
+  if (nextRow.some(v => v === 'RECLAMADA' || v === 'RECLAMANTE')) {
+    nextRow.forEach((v, i) => { if (v) header[i] = v; });
+    dataStart = headerIdx + 2;
+  }
+
+  const fi = (...pats) => {
+    for (const p of pats) { const i = header.findIndex(h => h.includes(_xlN(p))); if (i >= 0) return i; }
+    return -1;
+  };
+  const idx = {
+    proc:       fi('NUMERO DO PROCESSO', 'PROCESSO N'),
+    trt:        fi('TRT', 'ORGAO'),
+    data:       fi('DATA DA DISTRIBUICAO', 'DATA DE DISTRIBUICAO', 'DATA DE INSTAURACAO', 'DATA DO AJUIZAMENTO'),
+    reclamante: fi('RECLAMANTE', 'POLO ATIVO', 'PARTE(S) CONTRARIA', 'PARTE CONTRARIA'),
+    reclamada:  fi('RECLAMADA', 'PARTE PRINCIPAL', 'POLO PASSIVO'),
+    risco:      fi('RISCO'),
+    status:     fi('STATUS ATUAL', 'STATUS MENSAL', 'STATUS'),
+    fase:       fi('FASE', 'INSTANCIA'),
+    uf:         fi('UF', 'CIDADE/UF', 'ESTADO'),
+    vara:       fi('VARA', 'JUIZO'),
+  };
+
+  const c = (r, i) => i >= 0 ? String(r[i] ?? '').trim() : '';
+  const normRisco = v => {
+    const n = _xlN(v);
+    if (n.includes('PROVAVEL')) return 'Prov\u00e1vel';
+    if (n.includes('POSSIVEL')) return 'Poss\u00edvel';
+    if (n.includes('REMOTO'))   return 'Remoto';
+    return v || '';
+  };
+
+  return rawRows.slice(dataStart).map(r => {
+    if (!Array.isArray(r)) return null;
+    const proc = c(r, idx.proc);
+    if (!proc || !proc.match(/\d{7,}/)) return null;
+    let trt = c(r, idx.trt);
+    if (/^\d{1,2}$/.test(trt.trim())) trt = 'TRT-' + trt.trim();
+    return {
+      num_processo: proc,
+      trt,
+      data_distrib: c(r, idx.data),
+      reclamante:   c(r, idx.reclamante),
+      reclamada:    c(r, idx.reclamada),
+      risco:        normRisco(c(r, idx.risco)),
+      status:       c(r, idx.status),
+      fase:         c(r, idx.fase) || c(r, idx.status),
+      uf:           c(r, idx.uf),
+      vara:         c(r, idx.vara),
+    };
+  }).filter(Boolean);
+}
+
+/**
+ * Build KPI rows for the Cockroach API from parsed client report data.
+ * Produces tab_key='visao-geral' cards + distribution charts.
+ */
+function _xlBuildClientDashKpis(periodId, parsedData) {
+  const { dashKpis, records, chartData } = parsedData;
+  const rows = []; let so = 0;
+  const push = (tabKey, kpiKey, label, value, unit, cd, ct) =>
+    rows.push({ id: cliDashId(), period_id: periodId, tab_key: tabKey, kpi_key: kpiKey, label, value: String(value ?? '\u2014'), unit: unit || '', chart_data: cd || null, chart_title: ct || '', sort_order: so++, trend_pct: null });
+
+  const fmtBr = n => (typeof n === 'number' ? n.toLocaleString('pt-BR') : String(n ?? '\u2014'));
+  const fmtPct = v => {
+    if (v == null) return '\u2014';
+    const pct = typeof v === 'number' ? (v < 1 ? v * 100 : v) : parseFloat(String(v).replace('%', '').replace(',', '.')) || 0;
+    return pct.toFixed(1).replace('.', ',') + '%';
+  };
+
+  // ── Summary KPI cards ───────────────────────────────────────────────────
+  push('visao-geral', 'processos_ativos',    'Processos Ativos',    fmtBr(dashKpis.ativos),    'processos');
+  push('visao-geral', 'processos_encerrados','Processos Encerrados', fmtBr(dashKpis.encerrados),'encerrados');
+  push('visao-geral', 'exposicao_total',     'Exposi\u00e7\u00e3o Total',
+    dashKpis.exposicao != null ? 'R$ ' + fmtBr(dashKpis.exposicao) : '\u2014', '');
+  push('visao-geral', 'taxa_exito',          'Taxa de \u00caxito', fmtPct(dashKpis.taxaExito), '');
+
+  // ── Charts from process rows ─────────────────────────────────────────────
+  // Distribuição por risco
+  const riscoC = {}; records.forEach(r => { if (r.risco) riscoC[r.risco] = (riscoC[r.risco] || 0) + 1; });
+  const riscoE = Object.entries(riscoC).sort((a, b) => b[1] - a[1]);
+  if (riscoE.length) push('visao-geral', 'chart_risco', 'Distribui\u00e7\u00e3o por Risco', '', '',
+    _xlChartDoughnut(riscoE.map(([l]) => l), riscoE.map(([, v]) => v)), 'Distribui\u00e7\u00e3o por Risco de Perda');
+
+  // Fase processual
+  const faseC = {}; records.forEach(r => { const f = r.fase || r.status; if (f && f !== 'N/A') faseC[f] = (faseC[f] || 0) + 1; });
+  const faseTop = Object.entries(faseC).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  if (faseTop.length) push('visao-geral', 'chart_fase', 'Fase Processual', '', '',
+    _xlChartMultiBar(faseTop.map(([l]) => l), faseTop.map(([, v]) => v), 'Processos'), 'Distribui\u00e7\u00e3o por Fase Processual');
+
+  // Volume por TRT
+  const trtC = {};
+  records.forEach(r => {
+    let t = String(r.trt || '').trim();
+    if (!t) return;
+    if (/^\d{1,2}$/.test(t)) t = 'TRT-' + t;
+    trtC[t] = (trtC[t] || 0) + 1;
+  });
+  const trtTop = Object.entries(trtC).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  if (trtTop.length) push('visao-geral', 'chart_trt', 'Volume por TRT', '', '',
+    _xlChartMultiBar(trtTop.map(([l]) => l), trtTop.map(([, v]) => v), 'Processos Ativos', false), 'Processos por TRT');
+
+  // Por UF (extract 2-letter state code from "SÃO PAULO/SP" or standalone "SP")
+  const ufC = {};
+  records.forEach(r => {
+    const raw = String(r.uf || '').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const m = raw.match(/([A-Z]{2})$/); const u = m ? m[1] : (raw.length === 2 ? raw : '');
+    if (u) ufC[u] = (ufC[u] || 0) + 1;
+  });
+  const ufTop = Object.entries(ufC).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  if (ufTop.length) push('visao-geral', 'chart_uf', 'Distribui\u00e7\u00e3o por Estado', '', '',
+    _xlChartBar(ufTop.map(([l]) => l), ufTop.map(([, v]) => v), 'Processos', '#0D2B5E', false),
+    'Processos por Estado (UF)');
+
+  // Instância outcomes (from _ChartData tab — FRETE style)
+  if (chartData && chartData.length) {
+    const labels  = chartData.map(r => r['Inst\u00e2ncia'] || r[Object.keys(r)[0]]);
+    const favData  = chartData.map(r => Number(r['Favor\u00e1vel']    || r['Favoravel']    || 0));
+    const desfData = chartData.map(r => Number(r['Desfavor\u00e1vel'] || r['Desfavoravel'] || 0));
+    push('visao-geral', 'chart_instancia', 'Resultados por Inst\u00e2ncia', '', '', {
+      type: 'bar',
+      data: { labels, datasets: [
+        { label: 'Favor\u00e1vel',    data: favData,  backgroundColor: '#0F9E76', borderRadius: 4 },
+        { label: 'Desfavor\u00e1vel', data: desfData, backgroundColor: '#7B1A2E', borderRadius: 4 }
+      ]},
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'top', labels: { font: { family: 'IBM Plex Mono', size: 10 } } } },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } } }
+    }, 'Resultados por Inst\u00e2ncia');
+  }
+
+  return rows;
+}
+
+/** Build highlight cards for non-iFood client reports */
+function _xlBuildClientHighlights(periodId, parsedData) {
+  const { dashKpis, records } = parsedData;
+  const ativos = dashKpis.ativos ?? records.length;
+  const enc    = dashKpis.encerrados ?? 0;
+  const exp    = dashKpis.exposicao != null ? 'R$ ' + _xlFmtBr(dashKpis.exposicao) : '\u2014';
+  const exito  = dashKpis.taxaExito != null
+    ? ((dashKpis.taxaExito < 1 ? dashKpis.taxaExito * 100 : dashKpis.taxaExito).toFixed(1).replace('.', ',') + '%')
+    : '\u2014';
+  return [
+    { id: cliDashId(), period_id: periodId, icon: '\u2696\ufe0f', title: 'Processos Ativos',       body: `${_xlFmtBr(ativos)} processos ativos no portf\u00f3lio do per\u00edodo.`, sort_order: 0 },
+    { id: cliDashId(), period_id: periodId, icon: '\u2705',       title: 'Taxa de \u00caxito',     body: `\u00cdndice de \u00eaxito de ${exito} com base nos processos encerrados.`, sort_order: 1 },
+    { id: cliDashId(), period_id: periodId, icon: '\ud83d\udcb0', title: 'Exposi\u00e7\u00e3o Total', body: `Exposi\u00e7\u00e3o financeira estimada de ${exp}.`, sort_order: 2 },
+    { id: cliDashId(), period_id: periodId, icon: '\ud83d\udcc1', title: 'Processos Encerrados',   body: `${_xlFmtBr(enc)} processos encerrados acumulados at\u00e9 o per\u00edodo.`, sort_order: 3 },
+  ];
 }
 
 /** Build KPI rows for non-iFood clients (tabs: ex_empregados / terceirizacao) */
