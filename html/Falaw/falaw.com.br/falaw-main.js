@@ -934,4 +934,72 @@
     });
   })();
 
+  /* ────────────────────────────────────────
+     COOKIE CONSENT BANNER
+  ──────────────────────────────────────── */
+  (function initCookieBanner() {
+    var STORAGE_KEY = 'fa_cookie_consent';
+    var lang = (function() { try { return localStorage.getItem('fa_site_lang') || 'pt'; } catch(e) { return 'pt'; } })();
+
+    var text = {
+      message: {
+        pt: 'Este site utiliza cookies e tecnologias similares para melhorar sua experiência. Ao continuar navegando, você concorda com nossa <a href="/privacidade.html">Política de Privacidade</a> e <a href="/cookies.html">Política de Cookies</a>.',
+        en: 'This site uses cookies and similar technologies to improve your experience. By continuing to browse, you agree to our <a href="/privacidade.html">Privacy Policy</a> and <a href="/cookies.html">Cookie Policy</a>.'
+      },
+      accept:  { pt: 'Aceitar', en: 'Accept' },
+      dismiss: { pt: 'Continuar sem aceitar', en: 'Continue without accepting' },
+      pill:    { pt: 'Cookies', en: 'Cookies' },
+      tooltip: { pt: 'Preferências de cookies aceitas ✓', en: 'Cookie preferences accepted ✓' }
+    };
+
+    function t(key) { return (text[key] && (text[key][lang] || text[key]['pt'])) || ''; }
+
+    /* Always create the accepted pill; show only after consent */
+    var pill = document.createElement('div');
+    pill.className = 'cookie-accepted-pill';
+    pill.innerHTML =
+      '<div class="cookie-accepted-pill-inner" data-tooltip="' + t('tooltip') + '">' +
+        '<span class="cookie-accepted-dot"></span>' + t('pill') +
+      '</div>';
+    document.body.appendChild(pill);
+
+    function showPill() { pill.classList.add('visible'); }
+
+    var already = false;
+    try { already = !!localStorage.getItem(STORAGE_KEY); } catch(e) {}
+    if (already) { showPill(); return; }
+
+    /* Build banner */
+    var bar = document.createElement('div');
+    bar.className = 'cookie-bar';
+    bar.setAttribute('role', 'dialog');
+    bar.setAttribute('aria-label', lang === 'en' ? 'Cookie consent' : 'Aviso de cookies');
+    bar.innerHTML =
+      '<p class="cookie-bar-text">' + t('message') + '</p>' +
+      '<div class="cookie-bar-actions">' +
+        '<button class="cookie-bar-dismiss" id="cookie-dismiss">' + t('dismiss') + '</button>' +
+        '<button class="cookie-bar-btn" id="cookie-accept">' + t('accept') + '</button>' +
+      '</div>';
+    document.body.appendChild(bar);
+
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() { bar.classList.add('visible'); });
+    });
+
+    function removeBar() {
+      bar.classList.remove('visible');
+      bar.addEventListener('transitionend', function() {
+        if (bar.parentNode) bar.parentNode.removeChild(bar);
+      }, { once: true });
+    }
+
+    document.getElementById('cookie-accept').addEventListener('click', function() {
+      try { localStorage.setItem(STORAGE_KEY, '1'); } catch(e) {}
+      removeBar();
+      showPill();
+    });
+
+    document.getElementById('cookie-dismiss').addEventListener('click', removeBar);
+  })();
+
 })();
