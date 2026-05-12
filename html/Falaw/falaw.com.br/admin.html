@@ -5410,6 +5410,36 @@ function openReportModal(clientId) {
 
 function closeReportModal() { document.getElementById('reportModal').classList.remove('open'); }
 
+/** Mostra modal de confirmação de e-mail. Retorna Promise<boolean>. */
+function _confirmEmailSend(email, company, period) {
+  return new Promise(resolve => {
+    // Criar modal se não existir
+    let m = document.getElementById('emailConfirmModal');
+    if (!m) {
+      m = document.createElement('div');
+      m.id = 'emailConfirmModal';
+      m.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);align-items:center;justify-content:center;';
+      m.innerHTML = `
+        <div style="background:#fff;border-radius:12px;padding:32px 28px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.18);font-family:IBM Plex Mono,monospace;">
+          <div style="font-size:22px;margin-bottom:6px;">✉ Enviar e-mail?</div>
+          <div id="emailConfirmBody" style="color:#444;font-size:13px;line-height:1.6;margin-bottom:20px;"></div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button id="emailConfirmNo"  style="padding:8px 20px;border:1px solid #ccc;border-radius:6px;background:#f5f5f5;cursor:pointer;font-size:13px;">Não enviar</button>
+            <button id="emailConfirmYes" style="padding:8px 20px;border:none;border-radius:6px;background:#7B1A2E;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Enviar agora</button>
+          </div>
+        </div>`;
+      document.body.appendChild(m);
+    }
+    document.getElementById('emailConfirmBody').innerHTML =
+      `Deseja notificar <strong>${company || email}</strong> sobre o relatório <strong>${period}</strong>?<br><span style="color:#888;font-size:12px;">${email}</span>`;
+    m.style.display = 'flex';
+    const cleanup = (val) => { m.style.display = 'none'; resolve(val); };
+    document.getElementById('emailConfirmYes').onclick = () => cleanup(true);
+    document.getElementById('emailConfirmNo').onclick  = () => cleanup(false);
+    m.onclick = (e) => { if (e.target === m) cleanup(false); };
+  });
+}
+
 async function notifyClientDashboard(client, periodLabel) {
   const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
   if (!n8nBase) throw new Error('n8n URL não configurada — configure em Configurações.');
@@ -6664,7 +6694,7 @@ async function cliDashSaveExcel() {
       }
     } catch(re) { console.warn('report-register:', re); }
 
-    // Notificar cliente por e-mail via n8n
+    // Notificar cliente por e-mail via n8n — perguntar antes de enviar
     try {
       const clients2 = getClients();
       const cliRow = clients2.find(c => c.id === _cliDashClientId);
@@ -6679,14 +6709,19 @@ async function cliDashSaveExcel() {
 
         const notifyAddr = cliRow.notifyEmail || cliRow.email;
         if (notifyAddr) {
-          await notifyClientDashboard({
-            name: cliRow.name || cliRow.company,
-            company: cliRow.company,
-            email: cliRow.email,
-            notifyAddr,
-            code: cliRow.code || ''
-          }, periodLabel);
-          showToast(`E-mail enviado para ${notifyAddr}`);
+          const doSend = await _confirmEmailSend(notifyAddr, cliRow.company || cliRow.name, periodLabel);
+          if (doSend) {
+            await notifyClientDashboard({
+              name: cliRow.name || cliRow.company,
+              company: cliRow.company,
+              email: cliRow.email,
+              notifyAddr,
+              code: cliRow.code || ''
+            }, periodLabel);
+            showToast(`E-mail enviado para ${notifyAddr}`);
+          } else {
+            showToast('E-mail não enviado.');
+          }
         }
       }
     } catch(ne) {
@@ -6839,14 +6874,16 @@ function _xlParseClientActive(rawRows) {
     turma:           fi('TURMA/CAMARA','TURMA / CAMARA','TURMA/CÂMARA','TURMA / CÂMARA','CÂMARA','CAMARA','TURMA'),
     relator:         fi('RELATOR','RELATORA','DESEMBARGADOR RELATOR','DESEMBARGADORA RELATORA'),
     juiz:            fi('JUIZ','JUIZA','MAGISTRADO','MAGISTRADA','RELATOR','RELATORA','DESEMBARGADOR','MINISTRO'),
-    julgador1g:      fi('JULGADOR 1 GRAU','JULGADOR DE 1 GRAU','JULGADOR 1o GRAU','JULGADOR 1º GRAU','JUIZ 1 GRAU','JUIZ DE 1 GRAU'),
-    julgador2g:      fi('JULGADOR 2 GRAU','JULGADOR DE 2 GRAU','JULGADOR 2o GRAU','JULGADOR 2º GRAU','JUIZ 2 GRAU','JUIZ DE 2 GRAU','DESEMBARGADOR RELATOR','RELATORA'),
-    vara1g:          fi('VARA 1 GRAU','VARA DE 1 GRAU','VARA 1o GRAU','ORGAO JULGADOR 1 GRAU'),
-    turma2g:         fi('TURMA 2 GRAU','TURMA DE 2 GRAU','ORGAO JULGADOR 2 GRAU','CAMARA 2 GRAU'),
+    julgador1g:      fi('JULGADOR DE 1 GRAU','JULGADOR DE 1o GRAU','JULGADOR 1 GRAU','JULGADOR 1o GRAU','JULGADOR 1º GRAU','JUIZ 1 GRAU','JUIZ DE 1 GRAU','JULGADOR','MAGISTRADO'),
+    julgador2g:      fi('JULGADOR DE 2 GRAU','JULGADOR DE 2o GRAU','JULGADOR 2 GRAU','JULGADOR 2o GRAU','JULGADOR 2º GRAU','JUIZ 2 GRAU','JUIZ DE 2 GRAU'),
+    julgador3g:      fi('JULGADOR DO 3 GRAU','JULGADOR DE 3 GRAU','JULGADOR 3 GRAU','JULGADOR TST'),
+    vara1g:          fi('VARA 1 GRAU','VARA DE 1 GRAU','ORGAO JULGADOR 1 GRAU','ORGAO'),
+    turma2g:         fi('TURMA 2 GRAU','TURMA DE 2 GRAU','ORGAO JULGADOR 2 GRAU','CAMARA 2 GRAU','TURMA'),
     empresa_terceira:fi('EMPRESA TERCEIRA','EMPRESA TERCEIRIZADA','TOMADOR','TOMADORA'),
     adv:             fi('ADV. CONTRARIO','ADV CONTRARIO','ESCRITORIO DA PARTE CONTRARIA','ESCRITORIO','ADVOGADO CONTRARIO'),
     responsabilidade:fi('RESPONSABILIDADE','PAPEL DO AGENTE','PAPEL','TIPO DE RESPONSABILIDADE'),
     sentenca:        fi('SENTENCA','RESULTADO','DESFECHO','LIMINAR'),
+    data_sentenca:   fi('DATA DA SENTENCA','DATA DO ACORDAO','DATA DO JULGAMENTO','DATA DA DECISAO','DATA DA SENTENÇA','DATA DO ACÓRDÃO'),
     objeto:          fi('OBJETO','ASSUNTO','MATERIA','PEDIDOS'),
   };
 
@@ -6928,11 +6965,12 @@ function _xlParseClientActive(rawRows) {
       instancia:    c(r, idx.instancia),
       uf:           c(r, idx.uf), vara: c(r, idx.vara),
       juiz:         c(r, idx.juiz), relator: c(r, idx.relator), turma: c(r, idx.turma),
-      julgador1g:   c(r, idx.julgador1g), julgador2g: c(r, idx.julgador2g),
+      julgador1g:   c(r, idx.julgador1g), julgador2g: c(r, idx.julgador2g), julgador3g: c(r, idx.julgador3g),
       vara1g:       c(r, idx.vara1g), turma2g: c(r, idx.turma2g),
       adv: c(r, idx.adv),
       empresa_terceira: c(r, idx.empresa_terceira),
       responsabilidade: detectResp(r), sentenca: c(r, idx.sentenca),
+      data_sentenca: parseDate(cRaw(r, idx.data_sentenca)),
       objeto:       c(r, idx.objeto),
     };
   }).filter(Boolean);
@@ -6950,6 +6988,33 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   const fmtBr = n => (typeof n === 'number' ? n.toLocaleString('pt-BR') : String(n ?? '—'));
   const fmtPct = v => { if (v == null) return '—'; const p = typeof v==='number' ? (v<1?v*100:v) : parseFloat(String(v).replace('%','').replace(',','.')) || 0; return p.toFixed(1).replace('.', ',') + '%'; };
   const topN = (obj, n) => Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n);
+
+  // ── Mês de referência: extraído do periodId ("abril-2026") ou mês anterior ──
+  const _MESES = {janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+  let refMes = null, refAno = null;
+  const pidLow = _xlN(periodId || '');
+  for (const [nm, mv] of Object.entries(_MESES)) { if (pidLow.includes(nm.toUpperCase())) { refMes = mv; break; } }
+  const anoM = pidLow.match(/(\d{4})/); if (anoM) refAno = Number(anoM[1]);
+  if (!refMes) { const d = new Date(); d.setMonth(d.getMonth()-1); refMes = d.getMonth()+1; refAno = d.getFullYear(); }
+  if (!refAno) refAno = new Date().getFullYear();
+
+  // Helper: conta decisões filtrando por data_sentenca no mês de referência
+  const _contarDecisoes = (recs) => {
+    let fav=0, desf=0, parc=0, total=0;
+    recs.forEach(r => {
+      const s = _xlN(r.sentenca||'');
+      if (!s || s==='NAO SE APLICA' || s==='NAO') return;
+      // Filtrar pelo mês de referência se data disponível
+      if (r.data_sentenca instanceof Date) {
+        if (r.data_sentenca.getFullYear() !== refAno || r.data_sentenca.getMonth()+1 !== refMes) return;
+      }
+      total++;
+      if (s.includes('FAVORAVEL')||s.includes('IMPROCEDENTE')||s.includes('EXCLUSAO')||s.includes('ACORDO')) fav++;
+      else if (s.includes('PARCIAL')) parc++;
+      else if (s.includes('DESFAVORAVEL')||s.includes('PROCEDENTE')||s.includes('CONDENADA')||s.includes('CONDENANDO')) desf++;
+    });
+    return { fav, desf, parc, total };
+  };
 
   // ── 1. KPI cards do DASHBOARD ─────────────────────────────────────────
   const fmtMi = v => {
@@ -7105,6 +7170,9 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     const j2g  = String(r.julgador2g||'').trim();
     const t2g  = String(r.turma2g||r.turma||'').trim();
     if (_ok(j2g)) return { name: j2g, location: _isNA(t2g) ? null : t2g };
+    // 3) Julgador 3º grau / TST
+    const j3g  = String(r.julgador3g||'').trim();
+    if (_ok(j3g)) return { name: j3g, location: 'TST' };
     // 3) Relator + turma (fallback)
     const relator = String(r.relator||'').trim();
     const turma   = String(r.turma||'').trim();
@@ -7130,21 +7198,12 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       'Ranking de Julgadores');
   }
 
-  // ── 10. Decisões do período (da sentença) — apenas números ───────────
-  let decFav = 0, decDesf = 0, decParc = 0, decAcordo = 0;
-  records.forEach(r => {
-    const s = _xlN(r.sentenca || '');
-    if (!s || s === 'NAO SE APLICA' || s === 'NAO') return;
-    if (s.includes('ACORDO')) { decAcordo++; decFav++; }
-    else if (s.includes('FAVORAVEL') || s.includes('IMPROCEDENTE') || s.includes('EXCLUSAO')) decFav++;
-    else if (s.includes('PARCIAL')) decParc++;
-    else if (s.includes('DESFAVORAVEL') || s.includes('PROCEDENTE') || s.includes('CONDENADA') || s.includes('CONDENANDO')) decDesf++;
-  });
+  // ── 10. Decisões do mês de referência ───────────────────────────────
+  const { fav: decFav, desf: decDesf, parc: decParc } = _contarDecisoes(records);
   if (decFav + decDesf + decParc > 0) {
-    push('visao-geral','decisoes_favoraveis',   'Favoráveis',  fmtBr(decFav),    '');
-    push('visao-geral','decisoes_desfavoraveis','Desfavoráveis',fmtBr(decDesf),  '');
-    if (decParc)   push('visao-geral','decisoes_parciais','Parciais',   fmtBr(decParc),   '');
-    if (decAcordo) push('visao-geral','decisoes_acordos', 'Acordos',    fmtBr(decAcordo), '');
+    push('visao-geral','decisoes_favoraveis',   'Decisões Favoráveis',  fmtBr(decFav),    '');
+    push('visao-geral','decisoes_desfavoraveis','Decisões Desfavoráveis',fmtBr(decDesf),  '');
+    if (decParc) push('visao-geral','decisoes_parciais','Decisões Parciais', fmtBr(decParc), '');
   }
 
   // ── 11. Resultado por Instância (apenas 1º Grau, 2º Grau, TST) ───────
@@ -7178,15 +7237,8 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   });
   if (recsExEmp.length) {
     const eeTotal = recsExEmp.length;
-    // Decisões
-    let eeFav=0, eeDesf=0, eeParc=0;
-    recsExEmp.forEach(r => {
-      const s = _xlN(r.sentenca||'');
-      if (!s || s==='NAO SE APLICA'||s==='NAO') return;
-      if (s.includes('FAVORAVEL')||s.includes('IMPROCEDENTE')||s.includes('EXCLUSAO')||s.includes('ACORDO')) eeFav++;
-      else if (s.includes('PARCIAL')) eeParc++;
-      else if (s.includes('DESFAVORAVEL')||s.includes('PROCEDENTE')||s.includes('CONDENADA')||s.includes('CONDENANDO')) eeDesf++;
-    });
+    // Decisões do mês de referência
+    const { fav: eeFav, desf: eeDesf, parc: eeParc } = _contarDecisoes(recsExEmp);
     push('ex_empregados','ee_total',       'Total de Processos',      fmtBr(eeTotal),'processos');
     push('ex_empregados','ee_favoraveis',  'Decisões Favoráveis',     fmtBr(eeFav),  '');
     push('ex_empregados','ee_desfavoraveis','Decisões Desfavoráveis', fmtBr(eeDesf), '');
@@ -7230,9 +7282,10 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       'Ranking de Pedidos — Ex-empregados');
 
     // Decisões chart
-    if (eeFav+eeDesf+eeParc > 0) push('ex_empregados','ee_chart_dec','Resultado das Decisões','','',
-      _xlChartDoughnut(['Favorável','Desfavorável','Parcialmente Procedente'],[eeFav,eeDesf,eeParc]),
-      'Decisões Prolatadas — Ex-empregados');
+    if (eeFav+eeDesf+eeParc > 0) push('ex_empregados','ee_chart_dec','Resultado das Decisões do Mês','','',
+      _xlChartDoughnut(['Favorável','Desfavorável','Parcialmente Procedente'].filter((_,i)=>[eeFav,eeDesf,eeParc][i]>0),
+        [eeFav,eeDesf,eeParc].filter(v=>v>0)),
+      'Decisões Prolatadas no Mês — Ex-empregados');
   }
 
   // ── 13. Terceirização / Subsidiária tab ───────────────────────────────
@@ -7242,14 +7295,8 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   });
   if (recsTerc.length) {
     const tcTotal = recsTerc.length;
-    let tcFav=0, tcDesf=0, tcParc=0;
-    recsTerc.forEach(r => {
-      const s = _xlN(r.sentenca||'');
-      if (!s||s==='NAO SE APLICA'||s==='NAO') return;
-      if (s.includes('FAVORAVEL')||s.includes('IMPROCEDENTE')||s.includes('EXCLUSAO')||s.includes('ACORDO')) tcFav++;
-      else if (s.includes('PARCIAL')) tcParc++;
-      else if (s.includes('DESFAVORAVEL')||s.includes('PROCEDENTE')||s.includes('CONDENADA')||s.includes('CONDENANDO')) tcDesf++;
-    });
+    // Decisões do mês de referência
+    const { fav: tcFav, desf: tcDesf, parc: tcParc } = _contarDecisoes(recsTerc);
     push('terceirizacao','tc_total',       'Total de Processos',      fmtBr(tcTotal),'processos');
     push('terceirizacao','tc_favoraveis',  'Decisões Favoráveis',     fmtBr(tcFav),  '');
     push('terceirizacao','tc_desfavoraveis','Decisões Desfavoráveis', fmtBr(tcDesf), '');
@@ -7302,9 +7349,10 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       _xlChartBar(tcPedTop.map(([l])=>l), tcPedTop.map(([,v])=>v),'Ocorrências','#0D2B5E',true),
       'Ranking de Pedidos — Subsidiária');
 
-    if (tcFav+tcDesf+tcParc > 0) push('terceirizacao','tc_chart_dec','Resultado das Decisões','','',
-      _xlChartDoughnut(['Favorável','Desfavorável','Parcialmente Procedente'],[tcFav,tcDesf,tcParc]),
-      'Decisões Prolatadas — Subsidiária');
+    if (tcFav+tcDesf+tcParc > 0) push('terceirizacao','tc_chart_dec','Resultado das Decisões do Mês','','',
+      _xlChartDoughnut(['Favorável','Desfavorável','Parcialmente Procedente'].filter((_,i)=>[tcFav,tcDesf,tcParc][i]>0),
+        [tcFav,tcDesf,tcParc].filter(v=>v>0)),
+      'Decisões Prolatadas no Mês — Subsidiária');
   }
 
   return rows;
