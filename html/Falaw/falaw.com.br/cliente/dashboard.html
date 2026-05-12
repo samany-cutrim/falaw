@@ -587,7 +587,7 @@
     <nav class="tab-bar" id="dashTabBar" style="display:none">
       <button class="tab-btn active" data-tab="visao-geral" onclick="onDashTabChange('visao-geral')">Visão Geral</button>
       <button class="tab-btn" data-tab="ex_empregados" onclick="onDashTabChange('ex_empregados')">Ex-empregados</button>
-      <button class="tab-btn" data-tab="terceirizacao" onclick="onDashTabChange('terceirizacao')">Terceirização</button>
+      <button class="tab-btn" data-tab="terceirizacao" onclick="onDashTabChange('terceirizacao')">Subsidiária</button>
       <button class="tab-btn" data-tab="destaques" onclick="onDashTabChange('destaques')">Destaques do Mês</button>
     </nav>
 
@@ -927,7 +927,7 @@ async function downloadDashboardPDF() {
   const tabKey      = _dashActiveTab || 'visao-geral';
   const company     = (window._clientData && window._clientData.company) || 'Cliente';
   const periodLabel = _dashLastPeriodLabel || '';
-  const tabLabels   = { 'visao-geral': 'Visão Geral', 'ex_empregados': 'Ex-empregados', 'terceirizacao': 'Terceirização / Subsidiária', 'destaques': 'Destaques' };
+  const tabLabels   = { 'visao-geral': 'Visão Geral', 'ex_empregados': 'Ex-empregados', 'terceirizacao': 'Subsidiária', 'destaques': 'Destaques' };
   const tabLabel    = tabLabels[tabKey] || tabKey;
 
   // Read KPI cards from DOM
@@ -1111,7 +1111,7 @@ async function downloadDashboardPPT() {
   const tabKey      = _dashActiveTab || 'visao-geral';
   const company     = (window._clientData && window._clientData.company) || 'Cliente';
   const periodLabel = _dashLastPeriodLabel || '';
-  const tabLabels   = { 'visao-geral': 'Visão Geral', 'ex_empregados': 'Ex-empregados', 'terceirizacao': 'Terceirização / Subsidiária', 'destaques': 'Destaques' };
+  const tabLabels   = { 'visao-geral': 'Visão Geral', 'ex_empregados': 'Ex-empregados', 'terceirizacao': 'Subsidiária', 'destaques': 'Destaques' };
   const tabLabel    = tabLabels[tabKey] || tabKey;
 
   // Read DOM

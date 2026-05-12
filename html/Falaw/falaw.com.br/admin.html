@@ -1229,7 +1229,7 @@
                 style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
                 <option value="">Todas</option>
                 <option value="ex_empregados">Ações de Ex-empregados</option>
-                <option value="terceirizacao">Terceirização / Subsidiária</option>
+                <option value="terceirizacao">Subsidiária</option>
               </select>
             </div>
           </div>
@@ -1252,7 +1252,7 @@
               <select id="cli-cnt-tab" onchange="cliDashLoadContent()"
                 style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
                 <option value="ex_empregados">Ações de Ex-empregados</option>
-                <option value="terceirizacao">Terceirização / Subsidiária</option>
+                <option value="terceirizacao">Subsidiária</option>
               </select>
             </div>
           </div>
@@ -1350,7 +1350,7 @@
                 <label>Categoria *</label>
                 <select id="cdk-tab" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
                   <option value="ex_empregados">Ações de Ex-empregados</option>
-                  <option value="terceirizacao">Terceirização / Subsidiária</option>
+                  <option value="terceirizacao">Subsidiária</option>
                 </select>
               </div>
             </div>
@@ -6180,7 +6180,7 @@ let _cliDashPeriods  = [];
 const CLI_DASH_SUBS  = ['periods','kpis','content','highlights','excel'];
 const CLI_DASH_TABS  = [
   { key: 'ex_empregados', label: 'Ações de Ex-empregados' },
-  { key: 'terceirizacao', label: 'Terceirização / Subsidiária' }
+  { key: 'terceirizacao', label: 'Subsidiária' }
 ];
 
 function cliDashId() {
@@ -6620,7 +6620,7 @@ function _xlParseClientReport(wb) {
   // ── ACTIVE PROCESSES SHEET ───────────────────────────────────────────────
   const activeShName = wb.SheetNames.find(n => {
     const nl = _xlN(n);
-    return nl.includes('ATIVO') || nl.includes('JUDICIAL') || nl.includes('TRABALHISTA') ||
+    return nl.includes('ATIVO') || nl.includes('JUDICI') || nl.includes('TRABALHISTA') ||
            nl.includes('ANDAMENTO') || nl.includes('PROCESSOS') ||
            nl.includes('ACOMPANHAMENTO') || nl.includes('CARTEIRA') ||
            (nl.includes('RELATORIO') && nl.includes('PROCESSO'));
@@ -6702,7 +6702,8 @@ function _xlParseClientActive(rawRows) {
     trt:             fi('TRT','ORGAO'),
     data:            fi('DATA DA DISTRIBUICAO','DATA DE DISTRIBUICAO','DATA DE INSTAURACAO','DATA DO AJUIZAMENTO','DATA DE RECEBIMENTO'),
     reclamante:      fi('RECLAMANTE','POLO ATIVO','PARTE(S) CONTRARIA','PARTE CONTRARIA'),
-    reclamada:       fi('RECLAMADA','PARTE PRINCIPAL','POLO PASSIVO','AGENTE'),
+    reclamada:       fi('RECLAMADA','PARTE PRINCIPAL','AGENTE'),
+    polo_passivo:    fi('POLO PASSIVO'),
     risco:           fi('RISCO DE PERDA','RISCO'),
     status:          fi('STATUS ATUAL','STATUS MENSAL','STATUS','PRINCIPAIS ANDAMENTOS'),
     fase:            fi('FASE','INSTANCIA'),
@@ -6712,6 +6713,7 @@ function _xlParseClientActive(rawRows) {
     adv:             fi('ADV. CONTRARIO','ADV CONTRARIO','ESCRITORIO DA PARTE CONTRARIA','ESCRITORIO','ADVOGADO CONTRARIO'),
     responsabilidade:fi('RESPONSABILIDADE','PAPEL DO AGENTE','PAPEL','TIPO DE RESPONSABILIDADE'),
     sentenca:        fi('SENTENCA','RESULTADO','DESFECHO','LIMINAR'),
+    objeto:          fi('OBJETO','ASSUNTO','MATERIA','PEDIDOS'),
   };
 
   // Helper: get cell as string, skip if value is a raw number (Excel serial or numeric column)
@@ -6727,15 +6729,24 @@ function _xlParseClientActive(rawRows) {
   const normRisco = v => { const n = _xlN(v); if (n.includes('PROVAVEL')) return 'Provável'; if (n.includes('POSSIVEL')) return 'Possível'; if (n.includes('REMOTO')) return 'Remoto'; return v || ''; };
   const parseDate = v => { if (!v) return null; if (v instanceof Date) return v; if (typeof v === 'number') { const d = new Date(Math.round((v - 25569)*86400*1000)); return isNaN(d) ? null : d; } const s = String(v).trim(); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return new Date(+m[1],+m[2]-1,+m[3]); m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if (m) { const y = m[3].length===2?2000+Number(m[3]):+m[3]; return new Date(y,+m[2]-1,+m[1]); } return null; };
   const detectResp = r => {
+    // Primary: polo_passivo column — company name → subsidiária; "EX EMPREGADO" text → ex-empregado
+    if (idx.polo_passivo >= 0) {
+      const poloRaw = String(r[idx.polo_passivo] ?? '').trim();
+      const polo = _xlN(poloRaw);
+      if (polo.includes('EX EMPREGAD') || polo.includes('EX-EMPREGAD')) return 'Ex-empregado';
+      // Has a real company name (not blank, not "NAO SE APLICA")
+      if (polo && !polo.startsWith('NAO SE APLICA') && polo.length > 3) return 'Subsidiária';
+    }
+    // Fallback: responsabilidade column
     const respRaw = c(r, idx.responsabilidade);
     const rn = _xlN(respRaw);
-    if (rn && rn !== 'NAO SE APLICA' && rn !== 'OUTRO' && rn !== '') {
+    if (rn && rn !== 'NAO SE APLICA' && rn !== 'OUTRO' && rn !== '' && rn !== 'REU' && rn !== 'RÉU') {
       if (rn.includes('SUBSIDIARIA')||rn.includes('SUBSIDIARI')) return 'Subsidiária';
       if (rn.includes('EX') && (rn.includes('EMPREGAD')||rn.includes('-EMP'))) return 'Ex-empregado';
       if (rn.includes('TERCEIRIZ')||rn.includes('TOMADOR')||rn.includes('PRESTADOR')) return 'Terceirização';
-      return respRaw; // use the original value from the column
+      return respRaw;
     }
-    // Fallback: detect from reclamada/status
+    // Last resort: detect from reclamada/status text
     const f = [c(r,idx.reclamada), c(r,idx.status)].join(' ').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     if (f.includes('SUBSIDIARIA')||f.includes('SUBSIDIARI')) return 'Subsidiária';
     if (f.includes('EX-EMPREGADO')||f.includes('EX EMPREGADO')) return 'Ex-empregado';
@@ -6755,15 +6766,18 @@ function _xlParseClientActive(rawRows) {
     let trt = c(r, idx.trt) || String(r[idx.trt] ?? '').trim();
     if (/^\d{1,2}$/.test(trt.trim())) trt = 'TRT-' + trt.trim();
     const dataRaw = cRaw(r, idx.data);
+    const poloPassivo = idx.polo_passivo >= 0 ? String(r[idx.polo_passivo] ?? '').trim() : '';
     return {
       num_processo: proc, trt,
       data_distrib: dataRaw instanceof Date ? dataRaw : parseDate(dataRaw),
       reclamante:   c(r, idx.reclamante), reclamada: c(r, idx.reclamada),
+      polo_passivo: poloPassivo,
       risco:        normRisco(c(r, idx.risco)),
       status:       c(r, idx.status), fase: c(r, idx.fase) || c(r, idx.status),
       uf:           c(r, idx.uf), vara: c(r, idx.vara),
       juiz:         c(r, idx.juiz), adv: c(r, idx.adv),
       responsabilidade: detectResp(r), sentenca: c(r, idx.sentenca),
+      objeto:       c(r, idx.objeto),
     };
   }).filter(Boolean);
 }
@@ -6793,11 +6807,30 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
 
   if (!records.length) return rows; // sem dados de processo, só cards
 
-  // ── 2. Distribuição por Responsabilidade (gráfico — sem KPI cards) ────
+  // ── 2. KPI cards: ex-empregados vs subsidiária ──────────────────────
+  const totalExEmp = records.filter(r => r.responsabilidade === 'Ex-empregado').length;
+  const totalSubs  = records.filter(r => r.responsabilidade === 'Subsidiária' || r.responsabilidade === 'Terceirização').length;
+  if (totalExEmp)  push('visao-geral','total_ex_empregados',  'Ações de Ex-empregados',          fmtBr(totalExEmp), 'processos');
+  if (totalSubs)   push('visao-geral','total_subsidiaria',    'Resp. Subsidiária/Terceirização', fmtBr(totalSubs),  'processos');
+
+  // ── Distribuição por Responsabilidade (gráfico) ───────────────────────
   const respC = {}; records.forEach(r => { const v = r.responsabilidade || 'Outro'; respC[v] = (respC[v]||0)+1; });
   const respE = topN(respC, 8);
   if (respE.length > 1) push('visao-geral','chart_responsabilidade','Tipo de Responsabilidade','','',
     _xlChartDoughnut(respE.map(([l])=>l), respE.map(([,v])=>v)),'Distribuição por Responsabilidade');
+
+  // ── Ranking de Empresas no Polo Passivo ───────────────────────────────
+  const empresaC = {};
+  records.forEach(r => {
+    const polo = _xlN(r.polo_passivo || '');
+    if (!polo || polo.startsWith('NAO SE APLICA') || polo.includes('EX EMPREGAD')) return;
+    const name = r.polo_passivo.trim();
+    if (name.length > 3) empresaC[name] = (empresaC[name]||0)+1;
+  });
+  const empresaTop = topN(empresaC, 12);
+  if (empresaTop.length) push('visao-geral','chart_empresas_polo','Empresas no Polo Passivo','','',
+    _xlChartBar(empresaTop.map(([l])=>l), empresaTop.map(([,v])=>v),'Processos','#7B1A2E',true),
+    'Ranking de Empresas no Polo Passivo');
 
   // ── 3. Risco de perda ─────────────────────────────────────────────────
   const riscoC = {}; records.forEach(r => { if (r.risco && r.risco !== 'N/A') riscoC[r.risco] = (riscoC[r.risco]||0)+1; });
@@ -6836,18 +6869,39 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   if (ufTop.length) push('visao-geral','chart_uf','Distribuição por Estado','','',
     _xlChartBar(ufTop.map(([l])=>l), ufTop.map(([,v])=>v),'Processos','#0D2B5E',false),'Processos por Estado (UF)');
 
-  // ── 7. Distribuição por mês de distribuição ───────────────────────────
-  const mesC = {};
+  // ── 7. Casos distribuídos por ano ────────────────────────────────────
+  const anoC = {};
+  const mes2026C = {};
+  const MONTHS_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   records.forEach(r => {
     const d = r.data_distrib;
     if (!d || !(d instanceof Date) || isNaN(d.getTime())) return;
-    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    mesC[k] = (mesC[k]||0)+1;
+    const y = d.getFullYear();
+    anoC[y] = (anoC[y]||0)+1;
+    if (y === 2026) {
+      const mk = String(d.getMonth()+1).padStart(2,'0');
+      mes2026C[mk] = (mes2026C[mk]||0)+1;
+    }
   });
-  const mesKeys = Object.keys(mesC).sort();
-  if (mesKeys.length > 1) push('visao-geral','chart_periodo','Distribuição por Período','','',
-    _xlChartMultiBar(mesKeys.map(k => { const [y,m]=k.split('-'); return `${m}/${y}`; }), mesKeys.map(k=>mesC[k]),'Processos'),
-    'Distribuição por Mês de Distribuição');
+  const anoKeys = Object.keys(anoC).sort();
+  if (anoKeys.length > 1) push('visao-geral','chart_por_ano','Casos por Ano','','',
+    _xlChartMultiBar(anoKeys, anoKeys.map(k=>anoC[k]),'Processos',false),
+    'Casos Distribuídos por Ano');
+
+  const mes26Keys = Object.keys(mes2026C).sort();
+  if (mes26Keys.length) push('visao-geral','chart_2026_mes','Casos em 2026 por Mês','','',
+    _xlChartMultiBar(mes26Keys.map(k => MONTHS_PT[parseInt(k,10)-1]), mes26Keys.map(k=>mes2026C[k]),'Processos'),
+    'Casos Distribuídos em 2026 (por Mês)');
+
+  // ── Pedidos (objeto) mais frequentes — visão geral
+  {
+    const pedC = {};
+    records.forEach(r => { Object.entries(_xlParsePedidos(r.objeto)).forEach(([k,v]) => { pedC[k]=(pedC[k]||0)+v; }); });
+    const pedTop = topN(pedC, 15);
+    if (pedTop.length) push('visao-geral','chart_pedidos','Pedidos mais Frequentes','','',
+      _xlChartBar(pedTop.map(([l])=>l), pedTop.map(([,v])=>v),'Ocorrências','#0D2B5E',true),
+      'Ranking de Pedidos — Geral');
+  }
 
   // ── 8. Top advogados adversários ─────────────────────────────────────
   const advC = {};
@@ -6925,7 +6979,7 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   // ── 12. Ex-empregados tab ─────────────────────────────────────────────
   const recsExEmp = records.filter(r => {
     const v = _xlN(r.responsabilidade || '');
-    return v.includes('EX') || v.includes('EMPREGAD') || v.includes('RECLAMANTE') || v === '';
+    return v.includes('EX') || v.includes('EMPREGAD') || v.includes('RECLAMANTE');
   });
   if (recsExEmp.length) {
     const eeTotal = recsExEmp.length;
@@ -6967,6 +7021,14 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       _xlChartBar(eeJulgTop.map(([l])=>l), eeJulgTop.map(([,v])=>v),'Processos','#0F9E76',true),
       'Ranking Julgadores — Ex-empregados');
 
+    // Pedidos mais frequentes — Ex-empregados
+    const eePedC = {};
+    recsExEmp.forEach(r => { Object.entries(_xlParsePedidos(r.objeto)).forEach(([k,v]) => { eePedC[k]=(eePedC[k]||0)+v; }); });
+    const eePedTop = topN(eePedC, 15);
+    if (eePedTop.length) push('ex_empregados','ee_chart_pedidos','Pedidos mais Frequentes','','',
+      _xlChartBar(eePedTop.map(([l])=>l), eePedTop.map(([,v])=>v),'Ocorrências','#0D2B5E',true),
+      'Ranking de Pedidos — Ex-empregados');
+
     // Decisões chart
     if (eeFav+eeDesf+eeParc > 0) push('ex_empregados','ee_chart_dec','Resultado das Decisões','','',
       _xlChartDoughnut(['Favorável','Desfavorável','Parcialmente Procedente'],[eeFav,eeDesf,eeParc]),
@@ -6976,7 +7038,7 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   // ── 13. Terceirização / Subsidiária tab ───────────────────────────────
   const recsTerc = records.filter(r => {
     const v = _xlN(r.responsabilidade || '');
-    return v.includes('TERCEIRIZ') || v.includes('SUBSIDIAR') || v.includes('TOMADOR') || v.includes('PRESTADOR');
+    return v.includes('TERCEIRIZ') || v.includes('SUBSIDIAR') || v.includes('TOMADOR') || v.includes('PRESTADOR') || v === 'SUBSIDIARIA';
   });
   if (recsTerc.length) {
     const tcTotal = recsTerc.length;
@@ -7013,6 +7075,27 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     if (tcJulgTop.length) push('terceirizacao','tc_chart_julg','Top 10 Julgadores','','',
       _xlChartBar(tcJulgTop.map(([l])=>l), tcJulgTop.map(([,v])=>v),'Processos','#0F9E76',true),
       'Ranking Julgadores — Terceirização');
+
+    // Ranking de empresas no polo passivo — subsidiária
+    const tcEmpC = {};
+    recsTerc.forEach(r => {
+      const polo = _xlN(r.polo_passivo || r.reclamada || '');
+      if (!polo || polo.startsWith('NAO SE APLICA') || polo.includes('EX EMPREGAD')) return;
+      const name = (r.polo_passivo || r.reclamada || '').trim();
+      if (name.length > 3) tcEmpC[name] = (tcEmpC[name]||0)+1;
+    });
+    const tcEmpTop = topN(tcEmpC, 12);
+    if (tcEmpTop.length) push('terceirizacao','tc_chart_empresas','Empresas no Polo Passivo','','',
+      _xlChartBar(tcEmpTop.map(([l])=>l), tcEmpTop.map(([,v])=>v),'Processos','#7B1A2E',true),
+      'Ranking de Empresas — Subsidiária/Terceirização');
+
+    // Pedidos mais frequentes — Subsidiária
+    const tcPedC = {};
+    recsTerc.forEach(r => { Object.entries(_xlParsePedidos(r.objeto)).forEach(([k,v]) => { tcPedC[k]=(tcPedC[k]||0)+v; }); });
+    const tcPedTop = topN(tcPedC, 15);
+    if (tcPedTop.length) push('terceirizacao','tc_chart_pedidos','Pedidos mais Frequentes','','',
+      _xlChartBar(tcPedTop.map(([l])=>l), tcPedTop.map(([,v])=>v),'Ocorrências','#0D2B5E',true),
+      'Ranking de Pedidos — Subsidiária');
 
     if (tcFav+tcDesf+tcParc > 0) push('terceirizacao','tc_chart_dec','Resultado das Decisões','','',
       _xlChartDoughnut(['Favorável','Desfavorável','Parcialmente Procedente'],[tcFav,tcDesf,tcParc]),
@@ -8568,6 +8651,15 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   if(coReusAllTop.length) push('visao-geral','chart_coreus_geral','Top 10 Empresas Co-réus','','',
     _xlChartBar(coReusAllTop.map(([l])=>l), coReusAllTop.map(([,v])=>v), 'Processos', '#0D2B5E', true), 'Top 10 Empresas Co-réus');
 
+  // Pedidos mais frequentes — visão geral iFood
+  {
+    const allPedC = {};
+    records.forEach(r=>{ Object.entries(_xlParsePedidos(r.assunto)).forEach(([k,v])=>{ allPedC[k]=(allPedC[k]||0)+v; }); });
+    const allPedTop = _xlTopN(allPedC, 15);
+    if(allPedTop.length) push('visao-geral','chart_pedidos','Pedidos mais Frequentes','','',
+      _xlChartBar(allPedTop.map(([l])=>l), allPedTop.map(([,v])=>v),'Ocorrências','#0D2B5E',true), 'Ranking de Pedidos — Geral');
+  }
+
   // Tabela consolidada — comparativo entre segmentos (causa raiz)
   {
     const crRows = _XL_CR_TABS.map(tab => {
@@ -8732,13 +8824,13 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
 
 
 
-    // Pedidos ranking — somente Ex-Foodlover
-    if (tabKey === 'ex-foodlover') {
+    // Pedidos ranking — todas as abas
+    {
       const pedC = {};
       recs.forEach(r=>{ Object.entries(_xlParsePedidos(r.assunto)).forEach(([k,v])=>{ pedC[k]=(pedC[k]||0)+v; }); });
       const pedTop = _xlTopN(pedC,15);
       if (pedTop.length) push(tabKey,'chart_pedidos','Pedidos mais Frequentes','','',
-        _xlChartBar(pedTop.map(([l])=>l),pedTop.map(([,v])=>v),'Ocorrências','#0D2B5E'), `Ranking de Pedidos — ${label}`);
+        _xlChartBar(pedTop.map(([l])=>l),pedTop.map(([,v])=>v),'Ocorrências','#0D2B5E',true), `Ranking de Pedidos — ${label}`);
     }
   }
   return rows;
