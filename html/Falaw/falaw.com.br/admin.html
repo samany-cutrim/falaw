@@ -6880,6 +6880,17 @@ function _xlParseClientActive(rawRows) {
     if (f.includes('SUBSIDIARIA')||f.includes('SUBSIDIARI')) return 'Subsidiária';
     if (f.includes('EX-EMPREGADO')||f.includes('EX EMPREGADO')) return 'Ex-empregado';
     if (f.includes('TERCEIRIZACAO')||f.includes('TERCEIRIZAD')) return 'Subsidiária';
+    // Fallback: detect from RECLAMADA field — multiple companies = subsidiária, single = ex-empregado
+    if (idx.reclamada >= 0) {
+      const recRaw = String(r[idx.reclamada] ?? '').trim();
+      const recN = recRaw.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      // Multiple companies: contains "1ª RECLAMADA"/"2ª RECLAMADA", semicolons, or "E ... LTDA/SA"
+      if (recN.includes('1A RECLAMADA') || recN.includes('1\u00aa RECLAMADA') ||
+          recN.includes('2A RECLAMADA') || recN.includes('2\u00aa RECLAMADA') ||
+          recRaw.includes(';')) return 'Subsidiária';
+      // Single company in reclamada → ex-empregado
+      if (recRaw.length > 3) return 'Ex-empregado';
+    }
     return 'Outro';
   };
 
