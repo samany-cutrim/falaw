@@ -5370,7 +5370,7 @@ async function notifyClientDashboard(client, periodLabel) {
   if (!n8nBase) throw new Error('n8n URL não configurada — configure em Configurações.');
   const portalUrl = 'https://falaw.com.br/cliente/index.html';
   const clientName = client.name || client.company || 'Cliente';
-  const subject = `DASHBOARD DISPONÍVEL — ${clientName.toUpperCase()}${periodLabel ? ' — ' + periodLabel.toUpperCase() : ''}`;
+  const subject = `RELATÓRIO MENSAL - ${clientName.toUpperCase()}${periodLabel ? ' - ' + periodLabel.toUpperCase() : ''}`;
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><title>${escHtml(subject)}</title></head>
@@ -5386,14 +5386,14 @@ async function notifyClientDashboard(client, periodLabel) {
   <tr><td style="background:#ffffff;padding:44px 40px 36px;">
     <p style="font-family:Georgia,serif;font-size:18px;color:#060E1A;margin:0 0 24px 0;line-height:1.4;">Olá, <strong>${escHtml(clientName)}</strong>,</p>
     <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 12px 0;">
-      Seu <strong>Dashboard Gerencial${periodLabel ? ' — ' + escHtml(periodLabel) : ''}</strong> foi atualizado e está disponível no portal do cliente.
+      Seu relatório${periodLabel ? ` referente ao mês de <strong>${escHtml(periodLabel)}</strong>` : ''} já está disponível em nosso portal.
     </p>
     <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 32px 0;">
-      Acesse agora para visualizar os KPIs, gráficos e destaques do seu portfólio de processos.
+      Para acessá-lo, clique no botão abaixo e informe suas credenciais de acesso.
     </p>
     <table cellpadding="0" cellspacing="0" style="margin-bottom:36px;"><tr>
       <td style="background:#0D2B5E;border-radius:3px;">
-        <a href="${portalUrl}" style="display:inline-block;padding:16px 32px;font-family:monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#ffffff;text-decoration:none;">Acessar dashboard &rarr;</a>
+        <a href="${portalUrl}" style="display:inline-block;padding:16px 32px;font-family:monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#ffffff;text-decoration:none;">Acessar portal &rarr;</a>
       </td>
     </tr></table>
     <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e8e4df;border-radius:3px;margin-bottom:8px;">
