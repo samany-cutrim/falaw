@@ -6055,7 +6055,6 @@ function renderClients() {
             <div class="client-meta">${c.email} · Cadastrado em ${formatDateAdmin(c.createdAt)}</div>
           </div>
           <div class="client-actions">
-            <span class="client-reports-count">${reports.length} relatório${reports.length !== 1 ? 's' : ''}</span>
             <span class="client-code-badge">${c.code}</span>
             <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="event.stopPropagation();openClientModal('${c.id}')">Editar</button>
             <button class="btn-icon" onclick="event.stopPropagation();deleteClient('${c.id}')" title="Excluir cliente">🗑</button>
