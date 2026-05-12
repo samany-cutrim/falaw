@@ -5366,7 +5366,7 @@ function closeReportModal() { document.getElementById('reportModal').classList.r
 
 async function notifyClientDashboard(client, periodLabel) {
   const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
-  if (!n8nBase) return;
+  if (!n8nBase) throw new Error('n8n URL não configurada — configure em Configurações.');
   const portalUrl = 'https://falaw.com.br/cliente/index.html';
   const clientName = client.name || client.company || 'Cliente';
   const subject = `DASHBOARD DISPONÍVEL — ${clientName.toUpperCase()}${periodLabel ? ' — ' + periodLabel.toUpperCase() : ''}`;
@@ -6552,21 +6552,33 @@ async function cliDashSaveExcel() {
 
     // Notificar cliente por e-mail via n8n
     try {
-      const { data: periodsList } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/periods`);
-      const period = (periodsList || []).find(p => p.id === periodId);
-      const periodLabel = (period && (period.label || period.month_year)) || periodId;
-      const clients = getClients();
-      const cliRow = clients.find(c => c.id === _cliDashClientId);
+      const clients2 = getClients();
+      const cliRow = clients2.find(c => c.id === _cliDashClientId);
       if (cliRow) {
-        notifyClientDashboard({
-          name: cliRow.name || cliRow.company,
-          company: cliRow.company,
-          email: cliRow.email,
-          notifyAddr: cliRow.notifyEmail || cliRow.email,
-          code: cliRow.code || ''
-        }, periodLabel).catch(() => {});
+        // Tentar obter label do período; usar periodId como fallback
+        let periodLabel = periodId;
+        try {
+          const { data: periodsList } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/periods`);
+          const period = (periodsList || []).find(p => p.id === periodId);
+          periodLabel = (period && (period.label || period.month_year)) || periodId;
+        } catch(_) { /* usa periodId como label */ }
+
+        const notifyAddr = cliRow.notifyEmail || cliRow.email;
+        if (notifyAddr) {
+          await notifyClientDashboard({
+            name: cliRow.name || cliRow.company,
+            company: cliRow.company,
+            email: cliRow.email,
+            notifyAddr,
+            code: cliRow.code || ''
+          }, periodLabel);
+          showToast(`E-mail enviado para ${notifyAddr}`);
+        }
       }
-    } catch(ne) { console.warn('notify:', ne); }
+    } catch(ne) {
+      console.warn('notify:', ne);
+      showToast('Aviso: não foi possível enviar e-mail de notificação.');
+    }
   } catch(e) {
     setStatus('Erro: ' + e.message);
     console.error(e);
@@ -6796,10 +6808,18 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   const topN = (obj, n) => Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n);
 
   // ── 1. KPI cards do DASHBOARD ─────────────────────────────────────────
+  const fmtMi = v => {
+    if (v == null) return '—';
+    const n = Number(v);
+    if (n >= 1e9)  return '+' + (n / 1e9).toLocaleString('pt-BR', {maximumFractionDigits:1}) + 'bi';
+    if (n >= 1e6)  return '+' + (n / 1e6).toLocaleString('pt-BR', {maximumFractionDigits:1}) + 'mi';
+    if (n >= 1e3)  return '+' + (n / 1e3).toLocaleString('pt-BR', {maximumFractionDigits:1}) + 'k';
+    return 'R$ ' + fmtBr(v);
+  };
   push('visao-geral','processos_ativos',   'Processos Ativos',    fmtBr(dashKpis.ativos),    '');
   push('visao-geral','processos_encerrados','Processos Encerrados',fmtBr(dashKpis.encerrados),'');
   push('visao-geral','exposicao_total',    'Exposição Total',
-    dashKpis.exposicao != null ? 'R$ ' + fmtBr(dashKpis.exposicao) : '—', '');
+    dashKpis.exposicao != null ? fmtMi(dashKpis.exposicao) : '—', '');
   push('visao-geral','taxa_exito',         'Taxa de Êxito', fmtPct(dashKpis.taxaExito), '');
 
   // If ativos still null, use records count as fallback
@@ -6810,8 +6830,8 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   // ── 2. KPI cards: ex-empregados vs subsidiária ──────────────────────
   const totalExEmp = records.filter(r => r.responsabilidade === 'Ex-empregado').length;
   const totalSubs  = records.filter(r => r.responsabilidade === 'Subsidiária' || r.responsabilidade === 'Terceirização').length;
-  if (totalExEmp)  push('visao-geral','total_ex_empregados',  'Ações de Ex-empregados',          fmtBr(totalExEmp), 'processos');
-  if (totalSubs)   push('visao-geral','total_subsidiaria',    'Resp. Subsidiária/Terceirização', fmtBr(totalSubs),  'processos');
+  if (totalExEmp)  push('visao-geral','total_ex_empregados',  'Ações de Ex-empregados',          fmtBr(totalExEmp), '');
+  if (totalSubs)   push('visao-geral','total_subsidiaria',    'Resp. Subsidiária/Terceirização', fmtBr(totalSubs),  '');
 
   // ── Distribuição por Responsabilidade (gráfico) ───────────────────────
   const respC = {}; records.forEach(r => { const v = r.responsabilidade || 'Outro'; respC[v] = (respC[v]||0)+1; });
@@ -6840,26 +6860,26 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
 
   // ── 4. Fase / Instância processual (inclui Acordo e Encerrados) ───────
   const _normFase = raw => {
-    const n = _xlN(raw || '');
-    if (!n || n === 'N/A') return null;
-    if (n.includes('ENCERRAD') || n.includes('ARQUIVAD')) return 'Encerrado/Arquivado';
-    if (n.includes('AGUARDANDO AUD') || n.includes('AUDIENCIA') || n.includes('RAZOES FINAIS') || n.includes('RAZÃO FINAL') || n.includes('RAZAO FINAL') || n.includes('INSTRUCAO')) return 'Instrução';
-    if (n.includes('ACORDO') || n.includes('HOMOLOGAD') || n.includes('CUMPRIMENTO')) return 'Acordo';
-    if (n.includes('AGUARDANDO SENTENCA') || n.includes('AGUARDANDO ACORDAO') || n.includes('RECURSO') || n.includes('RECURSAL') || n.includes('SENTENCA') || n.includes('ACORDAO')) return 'Recursal';
-    if (n.includes('SOBRESTADO') || n.includes('SUSPENSO') || n.includes('SUSPENSAO')) return 'Suspenso';
-    return raw.trim();
+    const s = String(raw || '').trim();
+    if (!s || s.toLowerCase() === 'n/a' || s.toLowerCase() === 'nao se aplica') return null;
+    // Capitalize first letter only
+    return s.charAt(0).toUpperCase() + s.slice(1);
   };
   const faseC = {};
   records.forEach(r => {
-    const f = _normFase(r.fase || r.status);
+    const f = _normFase(r.status);
     if (f) faseC[f] = (faseC[f]||0)+1;
-    // Acordos da coluna sentença também
-    if (_xlN(r.sentenca||'').includes('ACORDO')) faseC['Acordo'] = (faseC['Acordo']||0)+1;
   });
-  if (dashKpis.encerrados > 0) faseC['Encerrado/Arquivado'] = Math.max(faseC['Encerrado/Arquivado']||0, dashKpis.encerrados);
   const faseTop = topN(faseC, 15);
-  if (faseTop.length) push('visao-geral','chart_fase','Fase Processual','','',
-    _xlChartMultiBar(faseTop.map(([l])=>l), faseTop.map(([,v])=>v),'Processos'),'Distribuição por Fase Processual');
+  if (faseTop.length) push('visao-geral','chart_fase','Status Atual','','',
+    _xlChartMultiBar(faseTop.map(([l])=>l), faseTop.map(([,v])=>v),'Processos'),'Distribuição por Status Atual');
+
+  // Distribuição por Instância (1º Grau, 2º Grau, TST)
+  const instC = {};
+  records.forEach(r => { const f = _normFase(r.fase); if (f) instC[f] = (instC[f]||0)+1; });
+  const instTop = topN(instC, 10);
+  if (instTop.length) push('visao-geral','chart_instancia_dist','Instância','','',
+    _xlChartDoughnut(instTop.map(([l])=>l), instTop.map(([,v])=>v)),'Distribuição por Instância');
 
   // ── 5. Volume por TRT ─────────────────────────────────────────────────
   const trtC = {}; records.forEach(r => { let t = String(r.trt||'').trim(); if (!t) return; if (/^\d{1,2}$/.test(t)) t='TRT-'+t; trtC[t]=(trtC[t]||0)+1; });
@@ -7009,11 +7029,16 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
 
     // Fase processual
     const eeFaseC = {};
-    recsExEmp.forEach(r => { const f=_normFase(r.fase||r.status); if (f) eeFaseC[f]=(eeFaseC[f]||0)+1; });
+    recsExEmp.forEach(r => { const f=_normFase(r.status); if (f) eeFaseC[f]=(eeFaseC[f]||0)+1; });
     const eeFaseTop = topN(eeFaseC, 12);
-    if (eeFaseTop.length) push('ex_empregados','ee_chart_fase','Fase Processual','','',
+    if (eeFaseTop.length) push('ex_empregados','ee_chart_fase','Status Atual','','',
       _xlChartMultiBar(eeFaseTop.map(([l])=>l), eeFaseTop.map(([,v])=>v),'Processos'),
-      'Fase Processual — Ex-empregados');
+      'Status Atual — Ex-empregados');
+    const eeInstC = {};
+    recsExEmp.forEach(r => { const f=_normFase(r.fase); if (f) eeInstC[f]=(eeInstC[f]||0)+1; });
+    const eeInstTop = topN(eeInstC, 6);
+    if (eeInstTop.length) push('ex_empregados','ee_chart_instancia','Instância','','',
+      _xlChartDoughnut(eeInstTop.map(([l])=>l), eeInstTop.map(([,v])=>v)),'Distribuição por Instância — Ex-empregados');
 
     // Top advogados adversários
     const eeAdvC = {};
@@ -7066,11 +7091,16 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     if (tcParc) push('terceirizacao','tc_parciais','Decisões Parciais', fmtBr(tcParc),'');
 
     const tcFaseC = {};
-    recsTerc.forEach(r => { const f=_normFase(r.fase||r.status); if (f) tcFaseC[f]=(tcFaseC[f]||0)+1; });
+    recsTerc.forEach(r => { const f=_normFase(r.status); if (f) tcFaseC[f]=(tcFaseC[f]||0)+1; });
     const tcFaseTop = topN(tcFaseC, 12);
-    if (tcFaseTop.length) push('terceirizacao','tc_chart_fase','Fase Processual','','',
+    if (tcFaseTop.length) push('terceirizacao','tc_chart_fase','Status Atual','','',
       _xlChartMultiBar(tcFaseTop.map(([l])=>l), tcFaseTop.map(([,v])=>v),'Processos'),
-      'Fase Processual — Terceirização');
+      'Status Atual — Subsidiária');
+    const tcInstC = {};
+    recsTerc.forEach(r => { const f=_normFase(r.fase); if (f) tcInstC[f]=(tcInstC[f]||0)+1; });
+    const tcInstTop = topN(tcInstC, 6);
+    if (tcInstTop.length) push('terceirizacao','tc_chart_instancia','Instância','','',
+      _xlChartDoughnut(tcInstTop.map(([l])=>l), tcInstTop.map(([,v])=>v)),'Distribuição por Instância — Subsidiária');
 
     const tcAdvC = {};
     recsTerc.forEach(r => { const a=String(r.adv||'').trim(); if (!a||a.length<4) return; tcAdvC[a]=(tcAdvC[a]||0)+1; });
