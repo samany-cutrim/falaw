@@ -6836,6 +6836,8 @@ function _xlParseClientActive(rawRows) {
     fase:            fi('FASE','INSTANCIA'),
     uf:              fi('UF','CIDADE/UF','ESTADO','COMARCA'),
     vara:            fi('VARA','JUIZO'),
+    turma:           fi('TURMA/CAMARA','TURMA / CAMARA','TURMA/CÂMARA','TURMA / CÂMARA','CÂMARA','CAMARA','TURMA'),
+    relator:         fi('RELATOR','RELATORA','DESEMBARGADOR RELATOR','DESEMBARGADORA RELATORA'),
     juiz:            fi('JUIZ','JUIZA','MAGISTRADO','MAGISTRADA','RELATOR','RELATORA','DESEMBARGADOR','MINISTRO'),
     adv:             fi('ADV. CONTRARIO','ADV CONTRARIO','ESCRITORIO DA PARTE CONTRARIA','ESCRITORIO','ADVOGADO CONTRARIO'),
     responsabilidade:fi('RESPONSABILIDADE','PAPEL DO AGENTE','PAPEL','TIPO DE RESPONSABILIDADE'),
@@ -6902,7 +6904,8 @@ function _xlParseClientActive(rawRows) {
       risco:        normRisco(c(r, idx.risco)),
       status:       c(r, idx.status), fase: c(r, idx.fase) || c(r, idx.status),
       uf:           c(r, idx.uf), vara: c(r, idx.vara),
-      juiz:         c(r, idx.juiz), adv: c(r, idx.adv),
+      juiz:         c(r, idx.juiz), relator: c(r, idx.relator), turma: c(r, idx.turma),
+      adv: c(r, idx.adv),
       responsabilidade: detectResp(r), sentenca: c(r, idx.sentenca),
       objeto:       c(r, idx.objeto),
     };
@@ -7061,15 +7064,22 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     'Ranking de Advogados Adversários');
 
   // ── 9. Top julgadores ─────────────────────────────────────────────────
+  const _isNA = v => { const n = _xlN(String(v||'')); return !n || n === 'N/A' || n === 'NAO SE APLICA' || n === 'NAO INFORMADO' || n === 'AGUARDANDO'; };
+  const _getJulgLabel = r => {
+    const relator = String(r.relator||'').trim();
+    const turma   = String(r.turma||'').trim();
+    const juiz    = String(r.juiz||'').trim();
+    const vara    = String(r.vara||'').trim();
+    if (!_isNA(relator)) return _isNA(turma) ? relator : relator + ' (' + turma + ')';
+    if (!_isNA(juiz))    return _isNA(vara)  ? juiz    : juiz    + ' (' + vara  + ')';
+    return null;
+  };
   const julgC = {};
   records.forEach(r => {
-    const j = String(r.juiz||'').trim();
-    if (!j || j.length < 4) return;
-    const jn = _xlN(j);
-    // Pular valores inválidos: numéricos, "aguardando", "n/a", datas serializadas
-    if (/^\d[\d.,/\- ]*$/.test(j)) return;
-    if (jn.includes('AGUARDANDO') || jn === 'N/A' || jn === 'NAO SE APLICA' || jn === 'NAO INFORMADO') return;
-    julgC[j] = (julgC[j]||0)+1;
+    const label = _getJulgLabel(r);
+    if (!label || label.length < 4) return;
+    if (/^\d[\d.,/\- ]*$/.test(label)) return;
+    julgC[label] = (julgC[label]||0)+1;
   });
   const julgTop = topN(julgC, 10);
   if (julgTop.length) push('visao-geral','chart_julgadores','Top 10 Julgadores','','',
@@ -7165,7 +7175,7 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
 
     // Top julgadores
     const eeJulgC = {};
-    recsExEmp.forEach(r => { const j=String(r.juiz||'').trim(); if (!j||j.length<4||j.toLowerCase().includes('aguardando')) return; eeJulgC[j]=(eeJulgC[j]||0)+1; });
+    recsExEmp.forEach(r => { const label=_getJulgLabel(r); if (!label||label.length<4) return; eeJulgC[label]=(eeJulgC[label]||0)+1; });
     const eeJulgTop = topN(eeJulgC, 10);
     if (eeJulgTop.length) push('ex_empregados','ee_chart_julg','Top 10 Julgadores','','',
       _xlChartBar(eeJulgTop.map(([l])=>l), eeJulgTop.map(([,v])=>v),'Processos','#0F9E76',true),
@@ -7225,7 +7235,7 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       'Ranking Advogados — Subsidiária');
 
     const tcJulgC = {};
-    recsTerc.forEach(r => { const j=String(r.juiz||'').trim(); if (!j||j.length<4||j.toLowerCase().includes('aguardando')) return; tcJulgC[j]=(tcJulgC[j]||0)+1; });
+    recsTerc.forEach(r => { const label=_getJulgLabel(r); if (!label||label.length<4) return; tcJulgC[label]=(tcJulgC[label]||0)+1; });
     const tcJulgTop = topN(tcJulgC, 10);
     if (tcJulgTop.length) push('terceirizacao','tc_chart_julg','Top 10 Julgadores','','',
       _xlChartBar(tcJulgTop.map(([l])=>l), tcJulgTop.map(([,v])=>v),'Processos','#0F9E76',true),
