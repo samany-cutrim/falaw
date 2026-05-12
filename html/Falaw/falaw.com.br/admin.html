@@ -7064,27 +7064,33 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     'Ranking de Advogados Adversários');
 
   // ── 9. Top julgadores ─────────────────────────────────────────────────
-  const _isNA = v => { const n = _xlN(String(v||'')); return !n || n === 'N/A' || n === 'NAO SE APLICA' || n === 'NAO INFORMADO' || n === 'AGUARDANDO'; };
-  const _getJulgLabel = r => {
+  const _isNA = v => { const n = _xlN(String(v||'')); return !n || n === 'N/A' || n === 'NAO SE APLICA' || n === 'NAO INFORMADO' || n.startsWith('AGUARDANDO'); };
+  // Retorna true se o valor parece vara/local e não um nome de pessoa
+  const _isVaraName = v => { const n = _xlN(String(v||'')); return n.includes('VARA DO TRABALHO') || n.includes('DO TRABALHO DE') || n.includes('JUIZO DO') || n.startsWith('VARA ') || n.startsWith('JCJ') || n.startsWith('MM.'); };
+  // Retorna { name, location } ou null se não aplicável
+  const _getJulgInfo = r => {
     const relator = String(r.relator||'').trim();
     const turma   = String(r.turma||'').trim();
     const juiz    = String(r.juiz||'').trim();
     const vara    = String(r.vara||'').trim();
-    if (!_isNA(relator)) return _isNA(turma) ? relator : relator + ' (' + turma + ')';
-    if (!_isNA(juiz))    return _isNA(vara)  ? juiz    : juiz    + ' (' + vara  + ')';
+    if (!_isNA(relator) && !_isVaraName(relator)) return { name: relator, location: _isNA(turma) ? null : turma };
+    if (!_isNA(juiz)    && !_isVaraName(juiz))    return { name: juiz,    location: _isNA(vara)  ? null : vara  };
     return null;
   };
-  const julgC = {};
+  const julgMap = {}; // name -> { count, location }
   records.forEach(r => {
-    const label = _getJulgLabel(r);
-    if (!label || label.length < 4) return;
-    if (/^\d[\d.,/\- ]*$/.test(label)) return;
-    julgC[label] = (julgC[label]||0)+1;
+    const info = _getJulgInfo(r);
+    if (!info || info.name.length < 4 || /^\d[\d.,/\- ]*$/.test(info.name)) return;
+    if (!julgMap[info.name]) julgMap[info.name] = { count: 0, location: info.location };
+    julgMap[info.name].count++;
   });
-  const julgTop = topN(julgC, 10);
-  if (julgTop.length) push('visao-geral','chart_julgadores','Top 10 Julgadores','','',
-    _xlChartBar(julgTop.map(([l])=>l), julgTop.map(([,v])=>v),'Processos','#0F9E76',true),
-    'Ranking de Julgadores');
+  const julgTop = topN(Object.fromEntries(Object.entries(julgMap).map(([k,v])=>[k,v.count])), 10);
+  if (julgTop.length) {
+    const julgTooltips = julgTop.map(([name]) => julgMap[name].location || '');
+    push('visao-geral','chart_julgadores','Top 10 Julgadores','','',
+      _xlChartBarTooltip(julgTop.map(([l])=>l), julgTop.map(([,v])=>v), julgTooltips,'Processos','#0F9E76'),
+      'Ranking de Julgadores');
+  }
 
   // ── 10. Decisões do período (da sentença) — apenas números ───────────
   let decFav = 0, decDesf = 0, decParc = 0, decAcordo = 0;
@@ -7174,11 +7180,11 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       'Ranking Advogados — Ex-empregados');
 
     // Top julgadores
-    const eeJulgC = {};
-    recsExEmp.forEach(r => { const label=_getJulgLabel(r); if (!label||label.length<4) return; eeJulgC[label]=(eeJulgC[label]||0)+1; });
-    const eeJulgTop = topN(eeJulgC, 10);
+    const eeJulgMap = {};
+    recsExEmp.forEach(r => { const info=_getJulgInfo(r); if (!info||info.name.length<4) return; if (!eeJulgMap[info.name]) eeJulgMap[info.name]={count:0,location:info.location}; eeJulgMap[info.name].count++; });
+    const eeJulgTop = topN(Object.fromEntries(Object.entries(eeJulgMap).map(([k,v])=>[k,v.count])), 10);
     if (eeJulgTop.length) push('ex_empregados','ee_chart_julg','Top 10 Julgadores','','',
-      _xlChartBar(eeJulgTop.map(([l])=>l), eeJulgTop.map(([,v])=>v),'Processos','#0F9E76',true),
+      _xlChartBarTooltip(eeJulgTop.map(([l])=>l), eeJulgTop.map(([,v])=>v), eeJulgTop.map(([n])=>eeJulgMap[n].location||''),'Processos','#0F9E76'),
       'Ranking Julgadores — Ex-empregados');
 
     // Pedidos mais frequentes — Ex-empregados
@@ -7234,11 +7240,11 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       _xlChartBar(tcAdvTop.map(([l])=>l), tcAdvTop.map(([,v])=>v),'Processos','#0D2B5E',true),
       'Ranking Advogados — Subsidiária');
 
-    const tcJulgC = {};
-    recsTerc.forEach(r => { const label=_getJulgLabel(r); if (!label||label.length<4) return; tcJulgC[label]=(tcJulgC[label]||0)+1; });
-    const tcJulgTop = topN(tcJulgC, 10);
+    const tcJulgMap = {};
+    recsTerc.forEach(r => { const info=_getJulgInfo(r); if (!info||info.name.length<4) return; if (!tcJulgMap[info.name]) tcJulgMap[info.name]={count:0,location:info.location}; tcJulgMap[info.name].count++; });
+    const tcJulgTop = topN(Object.fromEntries(Object.entries(tcJulgMap).map(([k,v])=>[k,v.count])), 10);
     if (tcJulgTop.length) push('terceirizacao','tc_chart_julg','Top 10 Julgadores','','',
-      _xlChartBar(tcJulgTop.map(([l])=>l), tcJulgTop.map(([,v])=>v),'Processos','#0F9E76',true),
+      _xlChartBarTooltip(tcJulgTop.map(([l])=>l), tcJulgTop.map(([,v])=>v), tcJulgTop.map(([n])=>tcJulgMap[n].location||''),'Processos','#0F9E76'),
       'Ranking Julgadores — Subsidiária');
 
     // Ranking de empresas no polo passivo — subsidiária
@@ -8385,6 +8391,23 @@ function _xlChartBar(labels, data, datasetLabel, color, horizontal) {
         y:{ grid:{ display: horiz ? false : true }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } }
       }
     }
+  };
+}
+
+function _xlChartBarTooltip(labels, data, tooltips, datasetLabel, color) {
+  return {
+    type:'bar',
+    data:{ labels, datasets:[{ label:datasetLabel||'Processos', data, backgroundColor:color||'#0D2B5E', borderRadius:4 }] },
+    options:{
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ grid:{ color:'rgba(0,0,0,0.05)' }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } },
+        y:{ grid:{ display:false }, ticks:{ font:{ family:'IBM Plex Mono', size:10 } } }
+      }
+    },
+    _tooltips: tooltips
   };
 }
 function _xlChartBarVertical(labels, data, datasetLabel, color) {

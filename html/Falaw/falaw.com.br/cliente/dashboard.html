@@ -1400,6 +1400,22 @@ function _buildKpiGrid(kpis, kpisEl, chartsEl, tabKey) {
     try { cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; } catch(e) { return; }
     if (!cfg) return;
 
+    // Restore tooltip callback for charts with _tooltips array (e.g. judge rankings)
+    if (Array.isArray(cfg._tooltips) && cfg._tooltips.length) {
+      const tips = cfg._tooltips;
+      const dsLabel = cfg.data?.datasets?.[0]?.label || 'Processos';
+      cfg.options = cfg.options || {};
+      cfg.options.plugins = cfg.options.plugins || {};
+      cfg.options.plugins.tooltip = cfg.options.plugins.tooltip || {};
+      cfg.options.plugins.tooltip.callbacks = {
+        label: ctx => {
+          const loc = tips[ctx.dataIndex];
+          const base = dsLabel + ': ' + ctx.parsed.x;
+          return loc ? base + '  —  ' + loc : base;
+        }
+      };
+    }
+
     const isHorizontal = cfg.options && cfg.options.indexAxis === 'y';
     const height = isHorizontal
       ? Math.max(180, ((cfg.data?.labels?.length) || 6) * 32 + 40)
