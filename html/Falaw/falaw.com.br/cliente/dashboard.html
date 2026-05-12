@@ -546,11 +546,7 @@
     <nav class="sidebar-nav">
       <div class="nav-item active" id="nav-dashboard" onclick="showTab('dashboard');closeSidebar()">
         <span class="nav-icon">📊</span>
-        Dashboard
-      </div>
-      <div class="nav-item" id="nav-relatorios" onclick="showTab('relatorios');closeSidebar()">
-        <span class="nav-icon">📁</span>
-        Relatórios
+        Relatório
       </div>
       <a href="ifood.html" class="nav-item hidden" id="nav-ifood">
         <span class="nav-icon">📈</span>
@@ -918,7 +914,17 @@ async function downloadReportPPT(report) {
   await pptx.writeFile({ fileName });
 }
 
-/* ─── DASHBOARD EXPORT (PDF / PPT) ──────────────────────────────────────── */
+/* ─── DASHBOARD EXPORT (Excel / PDF / PPT) ──────────────────────────────── */
+async function downloadDashboardExcel() {
+  // Tenta encontrar o relatório Excel associado ao período selecionado
+  const periodId = _dashPeriodId;
+  const reports  = window._allReports || [];
+  // Procura pelo dashPeriodId correspondente, ou pega o mais recente
+  const report = reports.find(r => r.dashPeriodId === periodId) || reports[0];
+  if (!report) { alert('Nenhum arquivo Excel disponível para este período.'); return; }
+  await downloadReport(report);
+}
+
 async function downloadDashboardPDF() {
   if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
     alert('Biblioteca PDF ainda carregando. Tente novamente em instantes.'); return;
@@ -1255,6 +1261,7 @@ function _showDashControls(periods, activePeriodId) {
     <select class="period-select" id="dashPeriodSelect" onchange="onDashPeriodChange(this.value)">
       ${periods.map(p=>`<option value="${escHtml(p.id)}"${p.id===activePeriodId?' selected':''}>${escHtml(p.label||p.id)}</option>`).join('')}
     </select>
+    <button class="btn-export" onclick="downloadDashboardExcel()">⬇ Excel</button>
     <button class="btn-export" onclick="downloadDashboardPDF()">⬇ PDF</button>
     <button class="btn-export" onclick="downloadDashboardPPT()">⬇ PPT</button>`;
 }
