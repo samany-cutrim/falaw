@@ -631,6 +631,41 @@ app.post('/api/client-dash/:clientId/kpis', async (req, res) => {
   } catch (e) { return res.status(500).json({ error: String(e.message || e) }); }
 });
 
+// PUT = upsert por ID (edição manual no admin)
+app.put('/api/client-dash/:clientId/kpis/:id', async (req, res) => {
+  req.body = { ...req.body, id: req.params.id };
+  req.params = { clientId: req.params.clientId };
+  // delegate — find the POST handler logic inline
+  try {
+    const { clientId } = req.params;
+    const row = req.body || {};
+    if (!row.id || !row.period_id || !row.tab_key || !row.kpi_key || !row.label || row.value === undefined)
+      return res.status(400).json({ error: 'Campos obrigatorios: id, period_id, tab_key, kpi_key, label, value' });
+    const saved = await prisma.clientDashKpi.upsert({
+      where: { id: String(row.id) },
+      create: {
+        id: String(row.id), clientId, periodId: String(row.period_id), tabKey: String(row.tab_key),
+        kpiKey: String(row.kpi_key), label: String(row.label), value: String(row.value),
+        unit: row.unit ? String(row.unit) : null,
+        trendPct: row.trend_pct == null ? null : Number(row.trend_pct),
+        sortOrder: toIntOrNull(row.sort_order) ?? 0,
+        chartTitle: row.chart_title ? String(row.chart_title) : null,
+        chartData: row.chart_data ?? null
+      },
+      update: {
+        periodId: String(row.period_id), tabKey: String(row.tab_key),
+        kpiKey: String(row.kpi_key), label: String(row.label), value: String(row.value),
+        unit: row.unit ? String(row.unit) : null,
+        trendPct: row.trend_pct == null ? null : Number(row.trend_pct),
+        sortOrder: toIntOrNull(row.sort_order) ?? 0,
+        chartTitle: row.chart_title ? String(row.chart_title) : null,
+        chartData: row.chart_data ?? null
+      }
+    });
+    return res.status(200).json(saved);
+  } catch (e) { return res.status(500).json({ error: String(e.message || e) }); }
+});
+
 app.delete('/api/client-dash/:clientId/kpis/:id', async (req, res) => {
   try {
     await prisma.clientDashKpi.delete({ where: { id: req.params.id } });

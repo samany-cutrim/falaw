@@ -645,7 +645,7 @@
           </div>
         </div>
 
-        <!-- ── TERCEIRIZAÇÃO ── -->
+        <!-- ── SUBSIDIÁRIA ── -->
         <div class="tab-panel" id="panel-terceirizacao">
           <div class="page-header">
             <div class="page-label">Subsidiária</div>
@@ -1429,10 +1429,14 @@ function _buildKpiGrid(kpis, kpisEl, chartsEl, tabKey) {
 function _buildAnalysis(content, contentEl, blockEl) {
   if (!contentEl || !blockEl) return;
   const list = Array.isArray(content) ? content : (content ? [content] : []);
-  const texts = list.map(item => (item?.analysis_text || item?.text || '').trim()).filter(Boolean);
-  if (!texts.length) { blockEl.style.display = 'none'; return; }
+  const items = list.filter(item => item && (item.content_html || item.analysis_text || item.text));
+  if (!items.length) { blockEl.style.display = 'none'; return; }
   blockEl.style.display = '';
-  contentEl.innerHTML = texts.map(t => t.split('\n').filter(Boolean).map(l => `<p>${escHtml(l)}</p>`).join('')).join('');
+  contentEl.innerHTML = items.map(item => {
+    if (item.content_html && item.content_html.trim()) return item.content_html;
+    const t = (item.analysis_text || item.text || '').trim();
+    return t.split('\n').filter(Boolean).map(l => `<p>${escHtml(l)}</p>`).join('');
+  }).join('');
 }
 
 async function _renderDestaques(periodId) {
@@ -1883,6 +1887,7 @@ async function init() {
           email: (data.email || '').trim() || session.email || '',
           code: data.code,
           createdAt: data.created_at,
+          comparativoEnabled: data.comparativo_enabled || false,
           reports: apiReports.map(rep => {
             const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
             return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
@@ -1928,6 +1933,10 @@ async function init() {
   if ((client.company || session.company || '').toLowerCase().includes('ifood')) {
     document.getElementById('nav-ifood').classList.remove('hidden');
   }
+
+  /* Aba Comparativo: só mostrar se habilitado no admin */
+  const compBtn = document.querySelector('#dashTabBar .tab-btn[data-tab="comparativo"]');
+  if (compBtn) compBtn.style.display = client.comparativoEnabled ? '' : 'none';
 
   /* Page title */
   document.getElementById('pageTitle').textContent     = 'Olá, ' + displayName.split(' ')[0];

@@ -1165,6 +1165,13 @@
               <small style="color:var(--c-muted)">Receberá aviso automático ao incluir um novo relatório. Se em branco, usa o e-mail de acesso.</small>
             </div>
             <div class="form-field">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" id="cli-comparativo-enabled" />
+                Habilitar aba "Comparativo" para este cliente
+              </label>
+              <small style="color:var(--c-muted)">Quando ativo, o cliente verá a aba Comparativo de Períodos no dashboard.</small>
+            </div>
+            <div class="form-field">
               <label>Código de Acesso *</label>
               <div style="display:flex;gap:8px">
                 <input id="cli-code" type="text" placeholder="Ex: FALAW2026@ABC" style="flex:1" />
@@ -1229,6 +1236,7 @@
               <select id="cli-kpi-tab" onchange="cliDashLoadKpis()"
                 style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
                 <option value="">Todas</option>
+                <option value="visao-geral">Visão Geral</option>
                 <option value="ex_empregados">Ações de Ex-empregados</option>
                 <option value="terceirizacao">Subsidiária</option>
               </select>
@@ -1252,6 +1260,7 @@
               <label>Categoria</label>
               <select id="cli-cnt-tab" onchange="cliDashLoadContent()"
                 style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                <option value="visao-geral">Visão Geral</option>
                 <option value="ex_empregados">Ações de Ex-empregados</option>
                 <option value="terceirizacao">Subsidiária</option>
               </select>
@@ -1368,6 +1377,7 @@
               <div class="form-field">
                 <label>Categoria *</label>
                 <select id="cdk-tab" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                  <option value="visao-geral">Visão Geral</option>
                   <option value="ex_empregados">Ações de Ex-empregados</option>
                   <option value="terceirizacao">Subsidiária</option>
                 </select>
@@ -1377,10 +1387,22 @@
               <div class="form-field"><label>Chave *</label><input id="cdk-key" type="text" placeholder="processos_ativos" /></div>
               <div class="form-field"><label>Rótulo *</label><input id="cdk-label" type="text" placeholder="Processos Ativos" /></div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
-              <div class="form-field"><label>Valor *</label><input id="cdk-value" type="text" placeholder="142" /></div>
-              <div class="form-field"><label>Unidade</label><input id="cdk-unit" type="text" placeholder="processos" /></div>
-              <div class="form-field"><label>Tendência (%)</label><input id="cdk-trend" type="number" step="0.1" placeholder="-5.2" /></div>
+            <div class="form-field" style="margin-bottom:12px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" id="cdk-is-chart" onchange="document.getElementById('cdk-chart-fields').style.display=this.checked?'':'none';document.getElementById('cdk-value-fields').style.display=this.checked?'none':'';" />
+                É um gráfico (chart_data JSON)
+              </label>
+            </div>
+            <div id="cdk-value-fields">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+                <div class="form-field"><label>Valor *</label><input id="cdk-value" type="text" placeholder="142" /></div>
+                <div class="form-field"><label>Unidade</label><input id="cdk-unit" type="text" placeholder="processos" /></div>
+                <div class="form-field"><label>Tendência (%)</label><input id="cdk-trend" type="number" step="0.1" placeholder="-5.2" /></div>
+              </div>
+            </div>
+            <div id="cdk-chart-fields" style="display:none">
+              <div class="form-field"><label>Título do Gráfico</label><input id="cdk-chart-title" type="text" placeholder="Risco de Perda" /></div>
+              <div class="form-field"><label>JSON do Gráfico (Chart.js config) *</label><textarea id="cdk-chart-data" rows="6" placeholder='{"type":"pie","data":{"labels":["A","B"],"datasets":[{"data":[60,40]}]}}' style="width:100%;border:1px solid var(--c-divider);padding:10px 14px;font-family:var(--f-mono);font-size:12px;border-radius:2px;background:#fafaf8;resize:vertical"></textarea></div>
             </div>
             <div class="form-field"><label>Ordem</label><input id="cdk-order" type="number" value="0" /></div>
           </div>
@@ -1494,7 +1516,7 @@
               <option value="nuvem">Nuvem</option>
               <option value="op-logistico">Op. Logístico</option>
               <option value="ex-foodlover">Ex-Foodlover</option>
-              <option value="terceirizacao">Terceirização</option>
+              <option value="terceirizacao">Subsidiária</option>
               <option value="marketplace">Marketplace</option>
               <option value="metas">Metas</option>
             </select>
@@ -1522,7 +1544,7 @@
               <option value="nuvem">Nuvem</option>
               <option value="op-logistico">Op. Logístico</option>
               <option value="ex-foodlover">Ex-Foodlover</option>
-              <option value="terceirizacao">Terceirização</option>
+              <option value="terceirizacao">Subsidiária</option>
               <option value="marketplace">Marketplace</option>
               <option value="destaques">Destaques do Mês</option>
               <option value="metas">Metas</option>
@@ -1689,7 +1711,7 @@
                   <option value="nuvem">Nuvem</option>
                   <option value="op-logistico">Op. Logístico</option>
                   <option value="ex-foodlover">Ex-Foodlover</option>
-                  <option value="terceirizacao">Terceirização</option>
+                  <option value="terceirizacao">Subsidiária</option>
                   <option value="marketplace">Marketplace</option>
                   <option value="metas">Metas</option>
                 </select>
@@ -2469,6 +2491,7 @@ async function loadPortalFromSupabase() {
       company: (r.company || '').trim(),
       email: r.email,
       notifyEmail: r.notify_email || '',
+      comparativoEnabled: r.comparativo_enabled || false,
       code: r.code,
       createdAt: r.created_at,
       reports: apiReports.map(rep => {
@@ -2483,7 +2506,7 @@ async function loadPortalFromSupabase() {
 async function sbSaveClients(list) {
   const sb = getSB();
   if (!sb) { showToast('⚠️ Supabase não configurado. Configure nas Configurações.'); return false; }
-  const stripped = list.map(c => ({ id: c.id, name: c.name, company: c.company, email: c.email, notify_email: c.notifyEmail || null, code: c.code, created_at: c.createdAt || new Date().toISOString() }));
+  const stripped = list.map(c => ({ id: c.id, name: c.name, company: c.company, email: c.email, notify_email: c.notifyEmail || null, comparativo_enabled: c.comparativoEnabled || false, code: c.code, created_at: c.createdAt || new Date().toISOString() }));
   const { error } = await sb.from('clients').upsert(stripped);
   if (error) {
     console.warn('SB clients upsert:', error.message);
@@ -5304,6 +5327,7 @@ function openClientModal(clientId) {
     document.getElementById('cli-company').value      = c.company || c.name || '';
     document.getElementById('cli-email').value         = c.email;
     document.getElementById('cli-notify-email').value  = c.notifyEmail || '';
+    document.getElementById('cli-comparativo-enabled').checked = c.comparativoEnabled || false;
     document.getElementById('cli-code').value          = c.code;
   } else {
     document.getElementById('clientModalTitle').textContent = 'Novo Cliente';
@@ -5311,6 +5335,7 @@ function openClientModal(clientId) {
     document.getElementById('cli-company').value        = '';
     document.getElementById('cli-email').value          = '';
     document.getElementById('cli-notify-email').value   = '';
+    document.getElementById('cli-comparativo-enabled').checked = false;
     document.getElementById('cli-code').value           = '';
     genCode();
   }
@@ -5322,6 +5347,7 @@ async function saveClient() {
   const company     = document.getElementById('cli-company').value.trim();
   const email       = document.getElementById('cli-email').value.trim().toLowerCase();
   const notifyEmail = document.getElementById('cli-notify-email').value.trim().toLowerCase();
+  const comparativoEnabled = document.getElementById('cli-comparativo-enabled').checked;
   const code        = document.getElementById('cli-code').value.trim();
   const id          = document.getElementById('cli-id').value;
 
@@ -5331,9 +5357,9 @@ async function saveClient() {
 
   if (id) {
     const idx = clients.findIndex(c => c.id === id);
-    if (idx >= 0) clients[idx] = { ...clients[idx], name: company, company, email, notifyEmail, code };
+    if (idx >= 0) clients[idx] = { ...clients[idx], name: company, company, email, notifyEmail, comparativoEnabled, code };
   } else {
-    clients.push({ id: cliUID(), name: company, company, email, notifyEmail, code, createdAt: new Date().toISOString(), reports: [] });
+    clients.push({ id: cliUID(), name: company, company, email, notifyEmail, comparativoEnabled, code, createdAt: new Date().toISOString(), reports: [] });
   }
 
   const ok = await saveClients(clients);
@@ -5891,9 +5917,9 @@ function onRepFileChange(input) {
         mod_exemp:       { label:'Ex-empregados',              color:'#D4AD3A', group:'Modalidade' },
         mod_exemp_fav:   { label:'Fav. Ex-empregados',         color:'#2DD4A0', group:'Modalidade' },
         mod_exemp_desf:  { label:'Desf. Ex-empregados',        color:'#F87171', group:'Modalidade' },
-        mod_terc:        { label:'Subsidiária/Terceirização',  color:'#60A5FA', group:'Modalidade' },
-        mod_terc_fav:    { label:'Fav. Terceirização',         color:'#34D399', group:'Modalidade' },
-        mod_terc_desf:   { label:'Desf. Terceirização',        color:'#FB923C', group:'Modalidade' },
+        mod_terc:        { label:'Subsidiária',  color:'#60A5FA', group:'Modalidade' },
+        mod_terc_fav:    { label:'Fav. Subsidiária',         color:'#34D399', group:'Modalidade' },
+        mod_terc_desf:   { label:'Desf. Subsidiária',        color:'#FB923C', group:'Modalidade' },
         suspensos:       { label:'Suspensos',                  color:'#94A3B8', group:'Suspensões' },
         pericias:        { label:'Com Perícia',                color:'#C084FC', group:'Perícias' },
         pericias_fav:    { label:'Perito Favorável',           color:'#2DD4A0', group:'Perícias' },
@@ -6271,9 +6297,9 @@ async function cliDashAutoSaveKpis(clientId, periodLabel, stats) {
   ];
   // Chaves específicas de terceirização
   const KPI_TERC = [
-    { key: 'mod_terc',      label: 'Processos Terceirização/Subsidiária', unit: 'processos' },
-    { key: 'mod_terc_fav',  label: 'Favoráveis — Terceirização',          unit: 'processos' },
-    { key: 'mod_terc_desf', label: 'Desfavoráveis — Terceirização',       unit: 'processos' },
+    { key: 'mod_terc',      label: 'Processos Subsidiária', unit: 'processos' },
+    { key: 'mod_terc_fav',  label: 'Favoráveis — Subsidiária',          unit: 'processos' },
+    { key: 'mod_terc_desf', label: 'Desfavoráveis — Subsidiária',       unit: 'processos' },
   ];
 
   // Textuais: chart_data conterá o texto
@@ -6844,14 +6870,14 @@ function _xlParseClientActive(rawRows) {
     if (rn && rn !== 'NAO SE APLICA' && rn !== 'OUTRO' && rn !== '' && rn !== 'REU' && rn !== 'RÉU') {
       if (rn.includes('SUBSIDIARIA')||rn.includes('SUBSIDIARI')) return 'Subsidiária';
       if (rn.includes('EX') && (rn.includes('EMPREGAD')||rn.includes('-EMP'))) return 'Ex-empregado';
-      if (rn.includes('TERCEIRIZ')||rn.includes('TOMADOR')||rn.includes('PRESTADOR')) return 'Terceirização';
+      if (rn.includes('TERCEIRIZ')||rn.includes('TOMADOR')||rn.includes('PRESTADOR')) return 'Subsidiária';
       return respRaw;
     }
     // Last resort: detect from reclamada/status text
     const f = [c(r,idx.reclamada), c(r,idx.status)].join(' ').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     if (f.includes('SUBSIDIARIA')||f.includes('SUBSIDIARI')) return 'Subsidiária';
     if (f.includes('EX-EMPREGADO')||f.includes('EX EMPREGADO')) return 'Ex-empregado';
-    if (f.includes('TERCEIRIZACAO')||f.includes('TERCEIRIZAD')) return 'Terceirização';
+    if (f.includes('TERCEIRIZACAO')||f.includes('TERCEIRIZAD')) return 'Subsidiária';
     return 'Outro';
   };
 
@@ -6918,9 +6944,9 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
 
   // ── 2. KPI cards: ex-empregados vs subsidiária ──────────────────────
   const totalExEmp = records.filter(r => r.responsabilidade === 'Ex-empregado').length;
-  const totalSubs  = records.filter(r => r.responsabilidade === 'Subsidiária' || r.responsabilidade === 'Terceirização').length;
+  const totalSubs  = records.filter(r => r.responsabilidade === 'Subsidiária').length;
   if (totalExEmp)  push('visao-geral','total_ex_empregados',  'Ações de Ex-empregados',          fmtBr(totalExEmp), '');
-  if (totalSubs)   push('visao-geral','total_subsidiaria',    'Resp. Subsidiária/Terceirização', fmtBr(totalSubs),  '');
+  if (totalSubs)   push('visao-geral','total_subsidiaria',    'Resp. Subsidiária', fmtBr(totalSubs),  '');
 
   // ── Distribuição por Responsabilidade (gráfico) ───────────────────────
   const respC = {}; records.forEach(r => { const v = r.responsabilidade || 'Outro'; respC[v] = (respC[v]||0)+1; });
@@ -7196,14 +7222,14 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     const tcAdvTop = topN(tcAdvC, 10);
     if (tcAdvTop.length) push('terceirizacao','tc_chart_adv','Top 10 Adv. Adversários','','',
       _xlChartBar(tcAdvTop.map(([l])=>l), tcAdvTop.map(([,v])=>v),'Processos','#0D2B5E',true),
-      'Ranking Advogados — Terceirização');
+      'Ranking Advogados — Subsidiária');
 
     const tcJulgC = {};
     recsTerc.forEach(r => { const j=String(r.juiz||'').trim(); if (!j||j.length<4||j.toLowerCase().includes('aguardando')) return; tcJulgC[j]=(tcJulgC[j]||0)+1; });
     const tcJulgTop = topN(tcJulgC, 10);
     if (tcJulgTop.length) push('terceirizacao','tc_chart_julg','Top 10 Julgadores','','',
       _xlChartBar(tcJulgTop.map(([l])=>l), tcJulgTop.map(([,v])=>v),'Processos','#0F9E76',true),
-      'Ranking Julgadores — Terceirização');
+      'Ranking Julgadores — Subsidiária');
 
     // Ranking de empresas no polo passivo — subsidiária
     const tcEmpC = {};
@@ -7216,7 +7242,7 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     const tcEmpTop = topN(tcEmpC, 12);
     if (tcEmpTop.length) push('terceirizacao','tc_chart_empresas','Empresas no Polo Passivo','','',
       _xlChartBar(tcEmpTop.map(([l])=>l), tcEmpTop.map(([,v])=>v),'Processos','#7B1A2E',true),
-      'Ranking de Empresas — Subsidiária/Terceirização');
+      'Ranking de Empresas — Subsidiária');
 
     // Pedidos mais frequentes — Subsidiária
     const tcPedC = {};
@@ -7228,7 +7254,7 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
 
     if (tcFav+tcDesf+tcParc > 0) push('terceirizacao','tc_chart_dec','Resultado das Decisões','','',
       _xlChartDoughnut(['Favorável','Desfavorável','Parcialmente Procedente'],[tcFav,tcDesf,tcParc]),
-      'Decisões Prolatadas — Terceirização');
+      'Decisões Prolatadas — Subsidiária');
   }
 
   return rows;
@@ -7271,7 +7297,7 @@ function _xlBuildCliKpiRows(periodId, records, decisoes, novos) {
     { tabKey: 'ex_empregados', label: 'Ações de Ex-empregados',
       filterRec: r => _xlCanonCR(r.causa_raiz) !== 'TERCEIRIZAÇÃO',
       filterDec: d => _xlCanonCR(d.causa_raiz) !== 'TERCEIRIZAÇÃO' },
-    { tabKey: 'terceirizacao', label: 'Terceirização / Filial',
+    { tabKey: 'terceirizacao', label: 'Subsidiária',
       filterRec: r => _xlCanonCR(r.causa_raiz) === 'TERCEIRIZAÇÃO',
       filterDec: d => _xlCanonCR(d.causa_raiz) === 'TERCEIRIZAÇÃO' },
   ];
@@ -7445,45 +7471,85 @@ async function cliDashLoadKpis() {
   if (!periodId) { el.innerHTML = '<p style="color:var(--c-muted);font-size:13px">Selecione um período.</p>'; return; }
   const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/kpis?periodId=${encodeURIComponent(periodId)}${tabKey ? '&tabKey='+encodeURIComponent(tabKey) : ''}`);
   if (error) { el.innerHTML = `<p style="color:#e05a5a">Erro: ${escHtml(error.message)}</p>`; return; }
-  const rows = data || [];
-  const tabLabel = (k) => CLI_DASH_TABS.find(t => t.key === k)?.label || k;
+  window._cliDashKpisCache = data || [];
+  const rows = window._cliDashKpisCache;
+  const tabLabel = (k) => CLI_DASH_TABS.find(t => t.key === k)?.label || (k === 'visao-geral' ? 'Visão Geral' : k);
   el.innerHTML = rows.length ? rows.map(r => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--c-divider);border-radius:6px;margin-bottom:6px;gap:12px;flex-wrap:wrap">
       <div>
         <strong>${escHtml(r.label)}</strong>
-        <span style="font-family:var(--f-mono);font-size:12px;color:var(--c-muted);margin-left:8px">${escHtml(r.value)}${r.unit ? ' ' + escHtml(r.unit) : ''}</span>
+        <span style="font-family:var(--f-mono);font-size:12px;color:var(--c-muted);margin-left:8px">${r.chart_data ? '📊 gráfico' : escHtml(r.value)+(r.unit ? ' ' + escHtml(r.unit) : '')}</span>
         ${r.trend_pct != null ? `<span style="font-size:11px;color:${r.trend_pct >= 0 ? '#0a7a3e' : '#e05a5a'};margin-left:6px">${r.trend_pct >= 0 ? '▲' : '▼'} ${Math.abs(r.trend_pct)}%</span>` : ''}
         <span style="font-size:10px;font-family:var(--f-mono);color:var(--c-muted);margin-left:8px">[${escHtml(tabLabel(r.tab_key))}]</span>
       </div>
-      <button class="btn btn-ghost btn-sm" style="color:#e05a5a" onclick="cliDashDeleteKpi('${escHtml(r.id)}')">×</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="cliDashOpenKpiModal('${escHtml(r.id)}')">Editar</button>
+        <button class="btn btn-ghost btn-sm" style="color:#e05a5a" onclick="cliDashDeleteKpi('${escHtml(r.id)}')">×</button>
+      </div>
     </div>`).join('')
   : '<div class="empty-state"><p>Nenhum KPI cadastrado.</p></div>';
 }
 
-function cliDashOpenKpiModal() {
-  ['cdk-id','cdk-key','cdk-label','cdk-value','cdk-unit','cdk-trend'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
-  document.getElementById('cdk-order').value = '0';
-  document.getElementById('cdk-period').value = document.getElementById('cli-kpi-period').value;
-  document.getElementById('cdk-tab').value    = document.getElementById('cli-kpi-tab').value || 'ex_empregados';
+function cliDashOpenKpiModal(id) {
+  const k = id ? (window._cliDashKpisCache || []).find(r => r.id === id) : null;
+  document.getElementById('cdk-id').value    = k ? k.id : '';
+  document.getElementById('cdk-key').value   = k ? (k.kpi_key || '') : '';
+  document.getElementById('cdk-label').value = k ? (k.label || '') : '';
+  document.getElementById('cdk-value').value = k ? (k.chart_data ? '' : (k.value || '')) : '';
+  document.getElementById('cdk-unit').value  = k ? (k.unit || '') : '';
+  document.getElementById('cdk-trend').value = k && k.trend_pct != null ? k.trend_pct : '';
+  document.getElementById('cdk-order').value = k ? (k.sort_order || 0) : 0;
+  document.getElementById('cdk-chart-title').value = k ? (k.chart_title || '') : '';
+  document.getElementById('cdk-chart-data').value  = k && k.chart_data ? (typeof k.chart_data === 'string' ? k.chart_data : JSON.stringify(k.chart_data, null, 2)) : '';
+  const isChart = k && !!k.chart_data;
+  document.getElementById('cdk-is-chart').checked = isChart;
+  document.getElementById('cdk-chart-fields').style.display = isChart ? '' : 'none';
+  document.getElementById('cdk-value-fields').style.display = isChart ? 'none' : '';
+  if (k) {
+    const sel = document.getElementById('cdk-tab');
+    if (sel) sel.value = k.tab_key || 'visao-geral';
+  } else {
+    document.getElementById('cdk-period').value = document.getElementById('cli-kpi-period').value;
+    document.getElementById('cdk-tab').value    = document.getElementById('cli-kpi-tab').value || 'visao-geral';
+  }
+  document.getElementById('cliDashKpiModal').querySelector('h3').textContent = k ? 'Editar KPI' : 'Adicionar KPI';
   document.getElementById('cliDashKpiModal').style.display = 'flex';
 }
 function cliDashCloseKpiModal() { document.getElementById('cliDashKpiModal').style.display = 'none'; }
 
 async function cliDashSaveKpi() {
-  const period_id = document.getElementById('cdk-period').value;
-  const tab_key   = document.getElementById('cdk-tab').value;
-  const kpi_key   = document.getElementById('cdk-key').value.trim();
-  const label     = document.getElementById('cdk-label').value.trim();
-  const value     = document.getElementById('cdk-value').value.trim();
-  if (!period_id || !kpi_key || !label || !value) { showToast('Preencha os campos obrigatórios.', 'error'); return; }
+  const existingId = document.getElementById('cdk-id').value.trim();
+  const period_id  = document.getElementById('cdk-period').value;
+  const tab_key    = document.getElementById('cdk-tab').value;
+  const kpi_key    = document.getElementById('cdk-key').value.trim();
+  const label      = document.getElementById('cdk-label').value.trim();
+  const isChart    = document.getElementById('cdk-is-chart').checked;
+  if (!period_id || !kpi_key || !label) { showToast('Preencha os campos obrigatórios.', 'error'); return; }
+  let chart_data = null;
+  if (isChart) {
+    const raw = document.getElementById('cdk-chart-data').value.trim();
+    if (!raw) { showToast('Cole o JSON do gráfico.', 'error'); return; }
+    try { chart_data = JSON.parse(raw); } catch(e) { showToast('JSON do gráfico inválido.', 'error'); return; }
+  }
+  const value     = isChart ? '' : document.getElementById('cdk-value').value.trim();
+  if (!isChart && !value) { showToast('Preencha o valor.', 'error'); return; }
   const trend_pct = document.getElementById('cdk-trend').value !== '' ? Number(document.getElementById('cdk-trend').value) : null;
-  const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/kpis`, {
-    method: 'POST',
-    body: { id: cliDashId(), period_id, tab_key, kpi_key, label, value,
-            unit: document.getElementById('cdk-unit').value.trim() || null,
-            trend_pct, sort_order: Number(document.getElementById('cdk-order').value) || 0 }
-  });
-  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  const body = {
+    period_id, tab_key, kpi_key, label, value,
+    unit: document.getElementById('cdk-unit').value.trim() || null,
+    trend_pct, sort_order: Number(document.getElementById('cdk-order').value) || 0,
+    chart_data: chart_data ? JSON.stringify(chart_data) : null,
+    chart_title: document.getElementById('cdk-chart-title').value.trim() || null
+  };
+  if (existingId) {
+    body.id = existingId;
+    const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/kpis/${existingId}`, { method: 'PUT', body });
+    if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  } else {
+    body.id = cliDashId();
+    const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/kpis`, { method: 'POST', body });
+    if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  }
   cliDashCloseKpiModal();
   cliDashLoadKpis();
   showToast('KPI salvo.');

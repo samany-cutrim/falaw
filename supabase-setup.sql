@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS clients (
   company      TEXT NOT NULL,
   email        TEXT NOT NULL,
   notify_email TEXT,
+  comparativo_enabled BOOLEAN NOT NULL DEFAULT false,
   code         TEXT NOT NULL,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   reports      JSONB NOT NULL DEFAULT '[]'::jsonb
@@ -62,6 +63,8 @@ CREATE TABLE IF NOT EXISTS clients (
 
 -- Migração: adiciona notify_email se a tabela já existia sem a coluna
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS notify_email TEXT;
+-- Migração: adiciona comparativo_enabled
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS comparativo_enabled BOOLEAN NOT NULL DEFAULT false;
 
 -- 6. Configuracoes de Admin (senha compartilhada entre navegadores)
 CREATE TABLE IF NOT EXISTS admin_settings (
