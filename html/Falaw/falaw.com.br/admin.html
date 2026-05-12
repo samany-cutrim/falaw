@@ -6839,14 +6839,24 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     _xlChartDoughnut(riscoE.map(([l])=>l), riscoE.map(([,v])=>v)),'Distribuição por Risco de Perda');
 
   // ── 4. Fase / Instância processual (inclui Acordo e Encerrados) ───────
+  const _normFase = raw => {
+    const n = _xlN(raw || '');
+    if (!n || n === 'N/A') return null;
+    if (n.includes('ENCERRAD') || n.includes('ARQUIVAD')) return 'Encerrado/Arquivado';
+    if (n.includes('AGUARDANDO AUD') || n.includes('AUDIENCIA') || n.includes('RAZOES FINAIS') || n.includes('RAZÃO FINAL') || n.includes('RAZAO FINAL') || n.includes('INSTRUCAO')) return 'Instrução';
+    if (n.includes('ACORDO') || n.includes('HOMOLOGAD') || n.includes('CUMPRIMENTO')) return 'Acordo';
+    if (n.includes('AGUARDANDO SENTENCA') || n.includes('AGUARDANDO ACORDAO') || n.includes('RECURSO') || n.includes('RECURSAL') || n.includes('SENTENCA') || n.includes('ACORDAO')) return 'Recursal';
+    if (n.includes('SOBRESTADO') || n.includes('SUSPENSO') || n.includes('SUSPENSAO')) return 'Suspenso';
+    return raw.trim();
+  };
   const faseC = {};
   records.forEach(r => {
-    const f = (r.fase || r.status || '').trim();
-    if (f && f !== 'N/A' && f.length > 1) faseC[f] = (faseC[f]||0)+1;
-    // Contar acordos separadamente pela sentença
+    const f = _normFase(r.fase || r.status);
+    if (f) faseC[f] = (faseC[f]||0)+1;
+    // Acordos da coluna sentença também
     if (_xlN(r.sentenca||'').includes('ACORDO')) faseC['Acordo'] = (faseC['Acordo']||0)+1;
   });
-  if (dashKpis.encerrados > 0) faseC['Encerrados'] = dashKpis.encerrados;
+  if (dashKpis.encerrados > 0) faseC['Encerrado/Arquivado'] = Math.max(faseC['Encerrado/Arquivado']||0, dashKpis.encerrados);
   const faseTop = topN(faseC, 15);
   if (faseTop.length) push('visao-geral','chart_fase','Fase Processual','','',
     _xlChartMultiBar(faseTop.map(([l])=>l), faseTop.map(([,v])=>v),'Processos'),'Distribuição por Fase Processual');
@@ -6999,7 +7009,7 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
 
     // Fase processual
     const eeFaseC = {};
-    recsExEmp.forEach(r => { const f=(r.fase||r.status||'').trim(); if (f&&f!=='N/A'&&f.length>1) eeFaseC[f]=(eeFaseC[f]||0)+1; });
+    recsExEmp.forEach(r => { const f=_normFase(r.fase||r.status); if (f) eeFaseC[f]=(eeFaseC[f]||0)+1; });
     const eeFaseTop = topN(eeFaseC, 12);
     if (eeFaseTop.length) push('ex_empregados','ee_chart_fase','Fase Processual','','',
       _xlChartMultiBar(eeFaseTop.map(([l])=>l), eeFaseTop.map(([,v])=>v),'Processos'),
@@ -7056,7 +7066,7 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     if (tcParc) push('terceirizacao','tc_parciais','Decisões Parciais', fmtBr(tcParc),'');
 
     const tcFaseC = {};
-    recsTerc.forEach(r => { const f=(r.fase||r.status||'').trim(); if (f&&f!=='N/A'&&f.length>1) tcFaseC[f]=(tcFaseC[f]||0)+1; });
+    recsTerc.forEach(r => { const f=_normFase(r.fase||r.status); if (f) tcFaseC[f]=(tcFaseC[f]||0)+1; });
     const tcFaseTop = topN(tcFaseC, 12);
     if (tcFaseTop.length) push('terceirizacao','tc_chart_fase','Fase Processual','','',
       _xlChartMultiBar(tcFaseTop.map(([l])=>l), tcFaseTop.map(([,v])=>v),'Processos'),
@@ -8376,17 +8386,47 @@ function _xlChartStackedOutcome(labels, favData, desfData) {
 
 function _xlParsePedidos(assunto) {
   if (!assunto) return {};
-  let s = String(assunto);
-  ['\xbb','\u00bb','\u00b7','»',' – ',' - '].forEach(sep=>{ s=s.split(sep).join('|'); });
-  const skip = new Set(['De','Do','Da','Dos','Das','E','Em','A','O','']);
+  const s = String(assunto).toLowerCase();
+  // Mapeamento de pedidos jurídicos com keywords de detecção
+  const PEDIDOS_MAP = [
+    ['Horas Extras',                /horas?\s+extras?/],
+    ['Adicional Noturno',           /adicional\s+noturno/],
+    ['Adicional de Insalubridade',  /insalubridade/],
+    ['Adicional de Periculosidade', /periculosidade/],
+    ['Intervalo Intrajornada',      /intervalo\s+intra/],
+    ['Intervalo Interjornada',      /intervalo\s+inter/],
+    ['Verbas Rescisórias',          /verbas\s+rescis[oó]ri|verbas\s+da\s+rescis[aã]o|rescis[aã]o\s+indireta/],
+    ['Vínculo Empregatício',        /v[íi]nculo\s+empregatício|reconhecimento\s+de\s+v[íi]nculo|v[íi]nculo\s+de\s+emprego/],
+    ['FGTS',                        /\bfgts\b|fundo\s+de\s+garantia/],
+    ['Danos Morais',                /danos\s+morais/],
+    ['Danos Existenciais',          /danos\s+existenciais/],
+    ['Danos Materiais',             /danos\s+materiais/],
+    ['Vale Transporte',             /vale[- ]transporte/],
+    ['Vale / Auxílio Alimentação',  /vale[- ]alimenta[cç][aã]o|aux[íi]lio[- ]alimenta[cç][aã]o|ajuda[- ]alimenta[cç][aã]o/],
+    ['PLR / Participação nos Lucros', /\bplr\b|participa[cç][aã]o\s+nos\s+lucros/],
+    ['Diferenças Salariais',        /diferen[cç]as\s+salariais|equipara[cç][aã]o\s+salarial|piso\s+salarial/],
+    ['Acúmulo de Função',           /ac[uú]mulo\s+de\s+fun[cç][aã]o/],
+    ['13º Salário',                 /d[eé]cimo\s+terceiro|13[oº]/],
+    ['Férias',                      /\bf[eé]rias\b/],
+    ['Banco de Horas',              /banco\s+de\s+horas/],
+    ['Comissões',                   /comiss[õo]es/],
+    ['Multa 40% FGTS',              /multa\s+(?:de\s+)?40|multa\s+dos\s+artigos\s+467|art(?:igo)?\.?\s*467/],
+    ['Resp. Subsidiária',           /responsabilidade\s+subsidi[áa]ria/],
+    ['Resp. Solidária',             /responsabilidade\s+solid[áa]ria/],
+    ['Honorários Advocatícios',     /honor[áa]rios\s+advocat[íi]cios|honor[áa]rios/],
+    ['Justiça Gratuita',            /justi[cç]a\s+gratuita|gratuidade/],
+    ['Anotação CTPS',               /anota[cç][aã]o.*ctps|\bctps\b/],
+    ['Rescisão Indireta',           /rescis[aã]o\s+indireta/],
+    ['Acidente de Trabalho',        /acidente\s+de\s+trabalho/],
+    ['Indenização por Danos',       /indeniza[cç][aã]o/],
+  ];
   const m = {};
-  s.split('|').forEach(p => {
-    p = p.replace(/\s+/g,' ').trim();
-    p = p.replace(/\w\S*/g, t => t.charAt(0).toUpperCase()+t.slice(1).toLowerCase());
-    if (p.length > 3 && !skip.has(p)) m[p] = (m[p]||0)+1;
+  PEDIDOS_MAP.forEach(([label, pat]) => {
+    if (pat.test(s)) m[label] = 1;
   });
   return m;
 }
+
 
 function _xlParseEntityList(value) {
   return String(value || '')
