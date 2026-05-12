@@ -6839,6 +6839,7 @@ function _xlParseClientActive(rawRows) {
     turma:           fi('TURMA/CAMARA','TURMA / CAMARA','TURMA/CÂMARA','TURMA / CÂMARA','CÂMARA','CAMARA','TURMA'),
     relator:         fi('RELATOR','RELATORA','DESEMBARGADOR RELATOR','DESEMBARGADORA RELATORA'),
     juiz:            fi('JUIZ','JUIZA','MAGISTRADO','MAGISTRADA','RELATOR','RELATORA','DESEMBARGADOR','MINISTRO'),
+    empresa_terceira:fi('EMPRESA TERCEIRA','EMPRESA TERCEIRIZADA','TOMADOR','TOMADORA'),
     adv:             fi('ADV. CONTRARIO','ADV CONTRARIO','ESCRITORIO DA PARTE CONTRARIA','ESCRITORIO','ADVOGADO CONTRARIO'),
     responsabilidade:fi('RESPONSABILIDADE','PAPEL DO AGENTE','PAPEL','TIPO DE RESPONSABILIDADE'),
     sentenca:        fi('SENTENCA','RESULTADO','DESFECHO','LIMINAR'),
@@ -6917,6 +6918,7 @@ function _xlParseClientActive(rawRows) {
       uf:           c(r, idx.uf), vara: c(r, idx.vara),
       juiz:         c(r, idx.juiz), relator: c(r, idx.relator), turma: c(r, idx.turma),
       adv: c(r, idx.adv),
+      empresa_terceira: c(r, idx.empresa_terceira),
       responsabilidade: detectResp(r), sentenca: c(r, idx.sentenca),
       objeto:       c(r, idx.objeto),
     };
@@ -6996,12 +6998,12 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   };
   const faseC = {};
   records.forEach(r => {
-    const f = _normFase(r.status);
+    const f = _normFase(r.fase || r.status);
     if (f) faseC[f] = (faseC[f]||0)+1;
   });
   const faseTop = topN(faseC, 15);
-  if (faseTop.length) push('visao-geral','chart_fase','Status Atual','','',
-    _xlChartMultiBar(faseTop.map(([l])=>l), faseTop.map(([,v])=>v),'Processos'),'Distribuição por Status Atual');
+  if (faseTop.length) push('visao-geral','chart_fase','Distribuição por Fase','','',
+    _xlChartMultiBar(faseTop.map(([l])=>l), faseTop.map(([,v])=>v),'Processos'),'Distribuição por Fase');
 
   // Distribuição por Instância (1º Grau, 2º Grau, TST)
   const instC = {};
@@ -7171,11 +7173,11 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
 
     // Fase processual
     const eeFaseC = {};
-    recsExEmp.forEach(r => { const f=_normFase(r.status); if (f) eeFaseC[f]=(eeFaseC[f]||0)+1; });
+    recsExEmp.forEach(r => { const f=_normFase(r.fase||r.status); if (f) eeFaseC[f]=(eeFaseC[f]||0)+1; });
     const eeFaseTop = topN(eeFaseC, 12);
-    if (eeFaseTop.length) push('ex_empregados','ee_chart_fase','Status Atual','','',
+    if (eeFaseTop.length) push('ex_empregados','ee_chart_fase','Distribuição por Fase','','',
       _xlChartMultiBar(eeFaseTop.map(([l])=>l), eeFaseTop.map(([,v])=>v),'Processos'),
-      'Status Atual — Ex-empregados');
+      'Distribuição por Fase — Ex-empregados');
     const eeInstC = {};
     recsExEmp.forEach(r => { const f=_normFase(r.fase); if (f) eeInstC[f]=(eeInstC[f]||0)+1; });
     const eeInstTop = topN(eeInstC, 6);
@@ -7233,11 +7235,11 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     if (tcParc) push('terceirizacao','tc_parciais','Decisões Parciais', fmtBr(tcParc),'');
 
     const tcFaseC = {};
-    recsTerc.forEach(r => { const f=_normFase(r.status); if (f) tcFaseC[f]=(tcFaseC[f]||0)+1; });
+    recsTerc.forEach(r => { const f=_normFase(r.fase||r.status); if (f) tcFaseC[f]=(tcFaseC[f]||0)+1; });
     const tcFaseTop = topN(tcFaseC, 12);
-    if (tcFaseTop.length) push('terceirizacao','tc_chart_fase','Status Atual','','',
+    if (tcFaseTop.length) push('terceirizacao','tc_chart_fase','Distribuição por Fase','','',
       _xlChartMultiBar(tcFaseTop.map(([l])=>l), tcFaseTop.map(([,v])=>v),'Processos'),
-      'Status Atual — Subsidiária');
+      'Distribuição por Fase — Subsidiária');
     const tcInstC = {};
     recsTerc.forEach(r => { const f=_normFase(r.fase); if (f) tcInstC[f]=(tcInstC[f]||0)+1; });
     const tcInstTop = topN(tcInstC, 6);
