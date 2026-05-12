@@ -1206,6 +1206,7 @@
           <div class="ifood-sub-tab"        onclick="cliDashSubTab('content')">✍️ Textos das Abas</div>
           <div class="ifood-sub-tab"        onclick="cliDashSubTab('highlights')">⭐ Destaques do Mês</div>
           <div class="ifood-sub-tab"        onclick="cliDashSubTab('excel')">📁 Upload Excel</div>
+          <div class="ifood-sub-tab"        onclick="cliDashSubTab('comparativo')">📈 Comparativo</div>
         </div>
 
         <!-- Sub: Períodos -->
@@ -1297,6 +1298,24 @@
           </div>
           <div id="cli-xl-status" style="display:none;font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-bottom:12px;"></div>
           <button type="button" class="btn btn-primary" onclick="cliDashSaveExcel()">Salvar dados no Cockroach</button>
+        </div>
+
+        <!-- Sub: Comparativo -->
+        <div id="cli-dash-sub-comparativo" style="display:none">
+          <p style="font-size:13px;color:var(--c-muted);margin-bottom:20px;">Compare dois períodos para visualizar o que mudou na carteira do cliente.</p>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-bottom:20px">
+            <div class="form-field" style="margin:0;flex:1;min-width:180px">
+              <label>Período A (base)</label>
+              <select id="adm-comp-period-a" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none"><option value="">— Selecione —</option></select>
+            </div>
+            <div style="font-size:18px;color:var(--c-muted);padding-bottom:10px">→</div>
+            <div class="form-field" style="margin:0;flex:1;min-width:180px">
+              <label>Período B (atual)</label>
+              <select id="adm-comp-period-b" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none"><option value="">— Selecione —</option></select>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="admRenderComparativo()" style="margin-bottom:0">Comparar</button>
+          </div>
+          <div id="adm-comp-output"></div>
         </div>
 
         <div id="cli-dash-sub-highlights" style="display:none">
@@ -6178,7 +6197,7 @@ async function ifoodApi(path, options) {
 ══════════════════════════════════════ */
 let _cliDashClientId = null;
 let _cliDashPeriods  = [];
-const CLI_DASH_SUBS  = ['periods','kpis','content','highlights','excel'];
+const CLI_DASH_SUBS  = ['periods','kpis','content','highlights','excel','comparativo'];
 const CLI_DASH_TABS  = [
   { key: 'ex_empregados', label: 'Ações de Ex-empregados' },
   { key: 'terceirizacao', label: 'Subsidiária' }
@@ -6367,6 +6386,75 @@ function cliDashSubTab(name) {
     const el = document.getElementById('cli-dash-sub-' + s);
     if (el) el.style.display = s === name ? 'block' : 'none';
   });
+}
+
+async function admRenderComparativo() {
+  const selA = document.getElementById('adm-comp-period-a');
+  const selB = document.getElementById('adm-comp-period-b');
+  const out  = document.getElementById('adm-comp-output');
+  if (!selA || !selB || !out) return;
+  const pidA = selA.value; const pidB = selB.value;
+  if (!pidA || !pidB) { out.innerHTML = '<p style="color:var(--c-muted);font-size:13px">Selecione dois períodos.</p>'; return; }
+  if (pidA === pidB)  { out.innerHTML = '<p style="color:var(--c-muted);font-size:13px">Selecione dois períodos diferentes.</p>'; return; }
+  if (!_cliDashClientId) return;
+  out.innerHTML = '<p style="color:var(--c-muted);font-size:13px">Carregando…</p>';
+  const labelA = selA.options[selA.selectedIndex]?.text || pidA;
+  const labelB = selB.options[selB.selectedIndex]?.text || pidB;
+  const TABS = [{key:'visao-geral',label:'Visão Geral'},{key:'ex_empregados',label:'Ex-empregados'},{key:'terceirizacao',label:'Subsidiária'}];
+  const base = encodeURIComponent(_cliDashClientId);
+  const fetches = TABS.flatMap(t => [
+    cliDashApi(`/api/client-dash/${base}/kpis?periodId=${encodeURIComponent(pidA)}&tabKey=${encodeURIComponent(t.key)}`),
+    cliDashApi(`/api/client-dash/${base}/kpis?periodId=${encodeURIComponent(pidB)}&tabKey=${encodeURIComponent(t.key)}`)
+  ]);
+  const results = await Promise.all(fetches);
+
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let html = '';
+  const tblStyle = 'width:100%;border-collapse:collapse;font-size:13px;margin-bottom:28px';
+  const thStyle  = 'font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);padding:8px 12px;border-bottom:1px solid var(--c-divider);text-align:left;font-weight:400';
+  const tdStyle  = 'padding:10px 12px;border-bottom:1px solid #f0ede8;vertical-align:middle';
+
+  TABS.forEach((t, i) => {
+    const kpisA = ((results[i*2]?.data)  || []).filter(k => !k.chart_data);
+    const kpisB = ((results[i*2+1]?.data)|| []).filter(k => !k.chart_data);
+    if (!kpisA.length && !kpisB.length) return;
+    const mapA = Object.fromEntries(kpisA.map(k => [k.kpi_key, k]));
+    const mapB = Object.fromEntries(kpisB.map(k => [k.kpi_key, k]));
+    const allKeys = [...new Set([...Object.keys(mapA), ...Object.keys(mapB)])];
+    html += `<div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--c-muted);margin:20px 0 10px">${esc(t.label)}</div>`;
+    html += `<table style="${tblStyle}"><thead><tr>
+      <th style="${thStyle}">Indicador</th>
+      <th style="${thStyle}">${esc(labelA)}</th>
+      <th style="${thStyle}">${esc(labelB)}</th>
+      <th style="${thStyle}">Variação</th>
+    </tr></thead><tbody>`;
+    allKeys.forEach(key => {
+      const kA = mapA[key]; const kB = mapB[key];
+      const label = (kB || kA).label || key;
+      const valA = kA ? String(kA.value ?? '—') : '—';
+      const valB = kB ? String(kB.value ?? '—') : '—';
+      const nA = parseFloat(String(valA).replace(/[^0-9,.-]/g,'').replace(',','.'));
+      const nB = parseFloat(String(valB).replace(/[^0-9,.-]/g,'').replace(',','.'));
+      let delta = '<span style="color:var(--c-muted)">—</span>';
+      if (!isNaN(nA) && !isNaN(nB)) {
+        const diff = nB - nA;
+        const pct  = nA !== 0 ? ((diff/Math.abs(nA))*100).toFixed(1) : null;
+        const sign = diff > 0 ? '+' : '';
+        const clr  = diff > 0 ? '#0a7a3e' : diff < 0 ? '#b91c1c' : 'var(--c-muted)';
+        const bg   = diff > 0 ? 'rgba(10,122,62,0.08)' : diff < 0 ? 'rgba(185,28,28,0.08)' : 'rgba(0,0,0,0.04)';
+        const diffFmt = diff % 1 === 0 ? sign+diff.toLocaleString('pt-BR') : sign+diff.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+        delta = `<span style="font-family:var(--f-mono);font-size:11px;font-weight:700;color:${clr};background:${bg};padding:2px 8px;border-radius:3px">${diffFmt}${pct !== null ? ' ('+sign+pct+'%)' : ''}</span>`;
+      }
+      html += `<tr>
+        <td style="${tdStyle};font-weight:600">${esc(label)}</td>
+        <td style="${tdStyle};font-family:var(--f-mono);font-size:13px">${esc(valA)}</td>
+        <td style="${tdStyle};font-family:var(--f-mono);font-size:13px">${esc(valB)}</td>
+        <td style="${tdStyle}">${delta}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+  });
+  out.innerHTML = html || '<p style="color:var(--c-muted);font-size:13px">Nenhum dado disponível.</p>';
 }
 
 // ── CLIENT EXCEL UPLOAD ───────────────────────────────────────────
@@ -7290,6 +7378,12 @@ function cliDashPopulateSelects() {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '<option value="">— Selecione —</option>' + opts;
   });
+  // Comparativo
+  const compOpts = _cliDashPeriods.map(p => `<option value="${escHtml(p.id)}">${escHtml(p.label)}</option>`).join('');
+  const compA = document.getElementById('adm-comp-period-a');
+  const compB = document.getElementById('adm-comp-period-b');
+  if (compA) { compA.innerHTML = '<option value="">— Selecione —</option>' + compOpts; if (_cliDashPeriods.length >= 2) compA.selectedIndex = 2; }
+  if (compB) { compB.innerHTML = '<option value="">— Selecione —</option>' + compOpts; if (_cliDashPeriods.length >= 1) compB.selectedIndex = 1; }
 }
 
 // ── Periods ──────────────────────────────────────────────────────

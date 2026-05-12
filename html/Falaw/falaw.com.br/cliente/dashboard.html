@@ -396,6 +396,26 @@
 
     /* ── SIDEBAR OVERLAY ── */
     .sidebar-overlay {
+
+    /* ── COMPARATIVO ── */
+    .comp-selectors { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end; margin-bottom:28px; }
+    .comp-selectors label { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:6px; }
+    .comp-selectors select { border:1px solid var(--border); border-radius:4px; padding:8px 14px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text); background:var(--bg-card); outline:none; min-width:160px; }
+    .comp-kpi-table { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:32px; }
+    .comp-kpi-table th { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); padding:10px 14px; border-bottom:1px solid var(--border); text-align:left; font-weight:400; }
+    .comp-kpi-table td { padding:12px 14px; border-bottom:1px solid rgba(0,0,0,0.05); vertical-align:middle; }
+    .comp-kpi-table tr:last-child td { border-bottom:none; }
+    .comp-kpi-table .col-label { font-weight:600; color:var(--text); }
+    .comp-kpi-table .col-val { font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text); }
+    .comp-kpi-table .col-delta { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; padding:3px 8px; border-radius:3px; display:inline-block; }
+    .comp-kpi-table .delta-up   { color:#0F9E76; background:rgba(15,158,118,0.1); }
+    .comp-kpi-table .delta-down { color:#C0392B; background:rgba(192,57,43,0.1); }
+    .comp-kpi-table .delta-flat { color:var(--muted); background:rgba(0,0,0,0.05); }
+    .comp-section-title { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:28px 0 12px; }
+    .comp-empty { padding:40px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted-l); }
+
+    /* ── SIDEBAR OVERLAY ── */
+    .sidebar-overlay {
       display: none;
       position: fixed;
       inset: 0;
@@ -548,6 +568,10 @@
         <span class="nav-icon">📊</span>
         Relatório
       </div>
+      <div class="nav-item" id="nav-comparativo" onclick="showTab('dashboard');onDashTabChange('comparativo');closeSidebar()">
+        <span class="nav-icon">📈</span>
+        Comparativo
+      </div>
       <a href="ifood.html" class="nav-item hidden" id="nav-ifood">
         <span class="nav-icon">📈</span>
         Dashboard iFood
@@ -585,6 +609,7 @@
       <button class="tab-btn" data-tab="ex_empregados" onclick="onDashTabChange('ex_empregados')">Ex-empregados</button>
       <button class="tab-btn" data-tab="terceirizacao" onclick="onDashTabChange('terceirizacao')">Subsidiária</button>
       <button class="tab-btn" data-tab="destaques" onclick="onDashTabChange('destaques')">Destaques do Mês</button>
+      <button class="tab-btn" data-tab="comparativo" onclick="onDashTabChange('comparativo')">Comparativo</button>
     </nav>
 
     <!-- CONTENT -->
@@ -593,34 +618,8 @@
       <!-- ═══ DASHBOARD TAB ═══ -->
       <div id="tab-dashboard" class="tab-section active">
 
-        <!-- Stats summary (always visible) -->
-        <div class="stats-row" id="statsRow">
-          <div class="stat-card">
-            <div class="stat-label">Total de Relatórios</div>
-            <div class="stat-value gold" id="statTotal">0</div>
-            <div class="stat-sub">disponíveis para download</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Último Relatório</div>
-            <div class="stat-value" id="statLast" style="font-size:18px;">—</div>
-            <div class="stat-sub" id="statLastTitle">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Acesso em</div>
-            <div class="stat-value" id="statLogin" style="font-size:18px;">—</div>
-            <div class="stat-sub">horário de Brasília</div>
-          </div>
-        </div>
-
         <!-- ── VISÃO GERAL ── -->
         <div class="tab-panel active" id="panel-visao-geral">
-          <div class="period-banner" id="bannerVisaoGeral" style="display:none">
-            <div>
-              <div class="period-banner-label">Período de referência</div>
-              <div class="period-banner-value" id="periodLabelVisao">—</div>
-            </div>
-            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">Falaw Advogados · Gestão Jurídica</div>
-          </div>
           <div class="page-header">
             <div class="page-label">Visão Geral</div>
             <div class="page-title" id="pageTitle">Dashboard</div>
@@ -682,6 +681,27 @@
             <div class="analysis-block-header"><span class="analysis-label">Comentários do período</span></div>
             <div class="analysis-content" id="content-destaques"><div class="analysis-empty">Nenhum comentário para este período.</div></div>
           </div>
+        </div>
+
+        <!-- ── COMPARATIVO ── -->
+        <div class="tab-panel" id="panel-comparativo">
+          <div class="page-header">
+            <div class="page-label">Comparativo de Períodos</div>
+            <div class="page-title">O que mudou na carteira?</div>
+            <div class="page-subtitle">Selecione dois períodos para comparar os principais indicadores.</div>
+          </div>
+          <div class="comp-selectors">
+            <div>
+              <label>Período A (base)</label>
+              <select id="comp-period-a" onchange="renderComparativo()"></select>
+            </div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;color:var(--muted);padding-bottom:6px">→</div>
+            <div>
+              <label>Período B (atual)</label>
+              <select id="comp-period-b" onchange="renderComparativo()"></select>
+            </div>
+          </div>
+          <div id="comp-output"></div>
         </div>
 
       </div>
@@ -1232,7 +1252,7 @@ function apiBase() {
   return cfg.replace(/\/$/, '');
 }
 
-const DASH_TABS = ['visao-geral','ex_empregados','terceirizacao','destaques'];
+const DASH_TABS = ['visao-geral','ex_empregados','terceirizacao','destaques','comparativo'];
 let _dashClientId  = null;
 let _dashPeriods   = [];
 let _dashActiveTab = 'visao-geral';
@@ -1275,6 +1295,15 @@ async function loadClientDashData(clientId) {
   _dashPeriodId = _dashPeriods[0].id;
   _showDashControls(_dashPeriods, _dashPeriodId);
   document.getElementById('analyticsArea').style.display = 'none';
+  // Popular selects do comparativo
+  const _compA = document.getElementById('comp-period-a');
+  const _compB = document.getElementById('comp-period-b');
+  if (_compA && _compB) {
+    const opts = _dashPeriods.map(p => `<option value="${escHtml(p.id)}">${escHtml(p.label || p.id)}</option>`).join('');
+    _compA.innerHTML = opts;
+    _compB.innerHTML = opts;
+    if (_dashPeriods.length >= 2) { _compA.selectedIndex = 1; _compB.selectedIndex = 0; }
+  }
 
   // Show banner
   const banner = document.getElementById('bannerVisaoGeral');
@@ -1310,6 +1339,10 @@ async function renderApiDash(periodId, tabKey) {
 
   if (tabKey === 'destaques') {
     await _renderDestaques(periodId);
+    return;
+  }
+  if (tabKey === 'comparativo') {
+    await renderComparativo();
     return;
   }
 
@@ -1468,6 +1501,94 @@ function onDashPeriodChange(periodId) {
     if (lbl && sel) lbl.textContent = sel.options[sel.selectedIndex]?.text || periodId;
   }
   renderApiDash(periodId, _dashActiveTab);
+}
+
+/* ─── COMPARATIVO DE PERÍODOS ─────────────────────────────────────────────── */
+async function renderComparativo() {
+  const selA = document.getElementById('comp-period-a');
+  const selB = document.getElementById('comp-period-b');
+  const out  = document.getElementById('comp-output');
+  if (!selA || !selB || !out) return;
+  const pidA = selA.value;
+  const pidB = selB.value;
+  if (!pidA || !pidB || !_dashClientId) { out.innerHTML = '<div class="comp-empty">Selecione dois períodos para comparar.</div>'; return; }
+  if (pidA === pidB) { out.innerHTML = '<div class="comp-empty">Selecione dois períodos diferentes.</div>'; return; }
+
+  out.innerHTML = '<div class="comp-empty">Carregando…</div>';
+
+  const labelA = selA.options[selA.selectedIndex]?.text || pidA;
+  const labelB = selB.options[selB.selectedIndex]?.text || pidB;
+
+  const TABS = [
+    { key: 'visao-geral',    label: 'Visão Geral' },
+    { key: 'ex_empregados',  label: 'Ex-empregados' },
+    { key: 'terceirizacao',  label: 'Subsidiária' },
+  ];
+
+  const base = encodeURIComponent(_dashClientId);
+  // Buscar KPIs (somente cards, sem chart_data) dos dois períodos para cada aba
+  const fetches = TABS.flatMap(t => [
+    _cliDashGet(`/api/client-dash/${base}/kpis?periodId=${encodeURIComponent(pidA)}&tabKey=${encodeURIComponent(t.key)}`),
+    _cliDashGet(`/api/client-dash/${base}/kpis?periodId=${encodeURIComponent(pidB)}&tabKey=${encodeURIComponent(t.key)}`)
+  ]);
+  const results = await Promise.all(fetches);
+
+  let html = '';
+  TABS.forEach((t, i) => {
+    const kpisA = (Array.isArray(results[i*2])   ? results[i*2]   : []).filter(k => !k.chart_data);
+    const kpisB = (Array.isArray(results[i*2+1]) ? results[i*2+1] : []).filter(k => !k.chart_data);
+    if (!kpisA.length && !kpisB.length) return;
+
+    // Mapear por kpi_key
+    const mapA = Object.fromEntries(kpisA.map(k => [k.kpi_key, k]));
+    const mapB = Object.fromEntries(kpisB.map(k => [k.kpi_key, k]));
+    const allKeys = [...new Set([...Object.keys(mapA), ...Object.keys(mapB)])];
+
+    html += `<div class="comp-section-title">${escHtml(t.label)}</div>`;
+    html += `<table class="comp-kpi-table">
+      <thead><tr>
+        <th>Indicador</th>
+        <th>${escHtml(labelA)}</th>
+        <th>${escHtml(labelB)}</th>
+        <th>Variação</th>
+      </tr></thead><tbody>`;
+
+    allKeys.forEach(key => {
+      const kA = mapA[key];
+      const kB = mapB[key];
+      const label = (kB || kA).label || key;
+      const valA  = kA ? String(kA.value ?? '—') : '—';
+      const valB  = kB ? String(kB.value ?? '—') : '—';
+
+      // Tenta calcular delta numérico
+      const nA = parseFloat(String(valA).replace(/[^0-9,.-]/g, '').replace(',', '.'));
+      const nB = parseFloat(String(valB).replace(/[^0-9,.-]/g, '').replace(',', '.'));
+      let deltaHtml = '<span class="col-delta delta-flat">—</span>';
+      if (!isNaN(nA) && !isNaN(nB) && nA !== 0) {
+        const diff = nB - nA;
+        const pct  = ((diff / Math.abs(nA)) * 100).toFixed(1);
+        const sign = diff > 0 ? '+' : '';
+        const cls  = diff > 0 ? 'delta-up' : diff < 0 ? 'delta-down' : 'delta-flat';
+        const diffFmt = diff % 1 === 0 ? sign + diff.toLocaleString('pt-BR') : sign + diff.toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1});
+        deltaHtml = `<span class="col-delta ${cls}">${diffFmt} (${sign}${pct}%)</span>`;
+      } else if (!isNaN(nB - nA) && nA === 0 && nB !== 0) {
+        const cls = nB > 0 ? 'delta-up' : 'delta-down';
+        const sign = nB > 0 ? '+' : '';
+        deltaHtml = `<span class="col-delta ${cls}">${sign}${nB.toLocaleString('pt-BR')}</span>`;
+      }
+
+      html += `<tr>
+        <td class="col-label">${escHtml(label)}</td>
+        <td class="col-val">${escHtml(valA)}</td>
+        <td class="col-val">${escHtml(valB)}</td>
+        <td>${deltaHtml}</td>
+      </tr>`;
+    });
+
+    html += '</tbody></table>';
+  });
+
+  out.innerHTML = html || '<div class="comp-empty">Nenhum dado disponível para comparação.</div>';
 }
 
 function onDashTabChange(tabKey) {
