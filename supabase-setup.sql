@@ -50,14 +50,18 @@ CREATE TABLE IF NOT EXISTS articles (
 
 -- 5. Portal de Clientes
 CREATE TABLE IF NOT EXISTS clients (
-  id         TEXT PRIMARY KEY,
-  name       TEXT,
-  company    TEXT NOT NULL,
-  email      TEXT NOT NULL,
-  code       TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  reports    JSONB NOT NULL DEFAULT '[]'::jsonb
+  id           TEXT PRIMARY KEY,
+  name         TEXT,
+  company      TEXT NOT NULL,
+  email        TEXT NOT NULL,
+  notify_email TEXT,
+  code         TEXT NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  reports      JSONB NOT NULL DEFAULT '[]'::jsonb
 );
+
+-- Migração: adiciona notify_email se a tabela já existia sem a coluna
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS notify_email TEXT;
 
 -- 6. Configuracoes de Admin (senha compartilhada entre navegadores)
 CREATE TABLE IF NOT EXISTS admin_settings (

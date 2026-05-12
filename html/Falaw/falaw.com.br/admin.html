@@ -2449,6 +2449,7 @@ async function loadPortalFromSupabase() {
       name: (r.name || '').trim() || (r.company || '').trim(),
       company: (r.company || '').trim(),
       email: r.email,
+      notifyEmail: r.notify_email || '',
       code: r.code,
       createdAt: r.created_at,
       reports: apiReports.map(rep => {
@@ -2463,7 +2464,7 @@ async function loadPortalFromSupabase() {
 async function sbSaveClients(list) {
   const sb = getSB();
   if (!sb) { showToast('⚠️ Supabase não configurado. Configure nas Configurações.'); return false; }
-  const stripped = list.map(c => ({ id: c.id, name: c.name, company: c.company, email: c.email, code: c.code, created_at: c.createdAt || new Date().toISOString() }));
+  const stripped = list.map(c => ({ id: c.id, name: c.name, company: c.company, email: c.email, notify_email: c.notifyEmail || null, code: c.code, created_at: c.createdAt || new Date().toISOString() }));
   const { error } = await sb.from('clients').upsert(stripped);
   if (error) {
     console.warn('SB clients upsert:', error.message);
