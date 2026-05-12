@@ -6832,7 +6832,8 @@ function _xlParseClientActive(rawRows) {
     polo_passivo:    fi('POLO PASSIVO'),
     risco:           fi('RISCO DE PERDA','RISCO'),
     status:          fi('STATUS ATUAL','STATUS MENSAL','STATUS','PRINCIPAIS ANDAMENTOS'),
-    fase:            fi('FASE','INSTANCIA'),
+    fase:            fi('FASE'),
+    instancia:       fi('INSTANCIA','INSTÂNCIA'),
     uf:              fi('UF','CIDADE/UF','ESTADO','COMARCA'),
     vara:            fi('VARA','JUIZO'),
     turma:           fi('TURMA/CAMARA','TURMA / CAMARA','TURMA/CÂMARA','TURMA / CÂMARA','CÂMARA','CAMARA','TURMA'),
@@ -6914,6 +6915,7 @@ function _xlParseClientActive(rawRows) {
       polo_passivo: poloPassivo,
       risco:        normRisco(c(r, idx.risco)),
       status:       c(r, idx.status), fase: c(r, idx.fase) || c(r, idx.status),
+      instancia:    c(r, idx.instancia),
       uf:           c(r, idx.uf), vara: c(r, idx.vara),
       juiz:         c(r, idx.juiz), relator: c(r, idx.relator), turma: c(r, idx.turma),
       adv: c(r, idx.adv),
@@ -7006,7 +7008,7 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
 
   // Distribuição por Instância (1º Grau, 2º Grau, TST)
   const instC = {};
-  records.forEach(r => { const f = _normFase(r.fase); if (f) instC[f] = (instC[f]||0)+1; });
+  records.forEach(r => { const f = _normFase(r.instancia || r.fase); if (f) instC[f] = (instC[f]||0)+1; });
   const instTop = topN(instC, 10);
   if (instTop.length) push('visao-geral','chart_instancia_dist','Instância','','',
     _xlChartDoughnut(instTop.map(([l])=>l), instTop.map(([,v])=>v)),'Distribuição por Instância');
@@ -7178,7 +7180,7 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       _xlChartMultiBar(eeFaseTop.map(([l])=>l), eeFaseTop.map(([,v])=>v),'Processos'),
       'Distribuição por Fase — Ex-empregados');
     const eeInstC = {};
-    recsExEmp.forEach(r => { const f=_normFase(r.fase); if (f) eeInstC[f]=(eeInstC[f]||0)+1; });
+    recsExEmp.forEach(r => { const f=_normFase(r.instancia || r.fase); if (f) eeInstC[f]=(eeInstC[f]||0)+1; });
     const eeInstTop = topN(eeInstC, 6);
     if (eeInstTop.length) push('ex_empregados','ee_chart_instancia','Instância','','',
       _xlChartDoughnut(eeInstTop.map(([l])=>l), eeInstTop.map(([,v])=>v)),'Distribuição por Instância — Ex-empregados');
@@ -7240,7 +7242,7 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       _xlChartMultiBar(tcFaseTop.map(([l])=>l), tcFaseTop.map(([,v])=>v),'Processos'),
       'Distribuição por Fase — Subsidiária');
     const tcInstC = {};
-    recsTerc.forEach(r => { const f=_normFase(r.fase); if (f) tcInstC[f]=(tcInstC[f]||0)+1; });
+    recsTerc.forEach(r => { const f=_normFase(r.instancia || r.fase); if (f) tcInstC[f]=(tcInstC[f]||0)+1; });
     const tcInstTop = topN(tcInstC, 6);
     if (tcInstTop.length) push('terceirizacao','tc_chart_instancia','Instância','','',
       _xlChartDoughnut(tcInstTop.map(([l])=>l), tcInstTop.map(([,v])=>v)),'Distribuição por Instância — Subsidiária');
