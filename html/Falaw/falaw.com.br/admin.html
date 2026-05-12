@@ -1172,6 +1172,17 @@
               <small style="color:var(--c-muted)">Quando ativo, o cliente verá a aba Comparativo de Períodos no dashboard.</small>
             </div>
             <div class="form-field">
+              <label>Modelo de Relatório</label>
+              <select id="cli-dash-type" style="width:100%">
+                <option value="padrao">Padrão (modelo Frete / trabalhista)</option>
+                <option value="ifood">iFood</option>
+                <option value="apdata">APDATA</option>
+                <option value="cuidar">Cuidar.me</option>
+                <option value="buser">Buser</option>
+              </select>
+              <small style="color:var(--c-muted)">Define qual modelo de planilha Excel este cliente utiliza.</small>
+            </div>
+            <div class="form-field">
               <label>Código de Acesso *</label>
               <div style="display:flex;gap:8px">
                 <input id="cli-code" type="text" placeholder="Ex: FALAW2026@ABC" style="flex:1" />
@@ -5328,6 +5339,7 @@ function openClientModal(clientId) {
     document.getElementById('cli-email').value         = c.email;
     document.getElementById('cli-notify-email').value  = c.notifyEmail || '';
     document.getElementById('cli-comparativo-enabled').checked = c.comparativoEnabled || false;
+    document.getElementById('cli-dash-type').value = c.dashType || 'padrao';
     document.getElementById('cli-code').value          = c.code;
   } else {
     document.getElementById('clientModalTitle').textContent = 'Novo Cliente';
@@ -5336,7 +5348,7 @@ function openClientModal(clientId) {
     document.getElementById('cli-email').value          = '';
     document.getElementById('cli-notify-email').value   = '';
     document.getElementById('cli-comparativo-enabled').checked = false;
-    document.getElementById('cli-code').value           = '';
+    document.getElementById('cli-dash-type').value = 'padrao';
     genCode();
   }
 }
@@ -5348,6 +5360,7 @@ async function saveClient() {
   const email       = document.getElementById('cli-email').value.trim().toLowerCase();
   const notifyEmail = document.getElementById('cli-notify-email').value.trim().toLowerCase();
   const comparativoEnabled = document.getElementById('cli-comparativo-enabled').checked;
+  const dashType = document.getElementById('cli-dash-type').value || 'padrao';
   const code        = document.getElementById('cli-code').value.trim();
   const id          = document.getElementById('cli-id').value;
 
@@ -5357,9 +5370,9 @@ async function saveClient() {
 
   if (id) {
     const idx = clients.findIndex(c => c.id === id);
-    if (idx >= 0) clients[idx] = { ...clients[idx], name: company, company, email, notifyEmail, comparativoEnabled, code };
+    if (idx >= 0) clients[idx] = { ...clients[idx], name: company, company, email, notifyEmail, comparativoEnabled, dashType, code };
   } else {
-    clients.push({ id: cliUID(), name: company, company, email, notifyEmail, comparativoEnabled, code, createdAt: new Date().toISOString(), reports: [] });
+    clients.push({ id: cliUID(), name: company, company, email, notifyEmail, comparativoEnabled, dashType, code, createdAt: new Date().toISOString(), reports: [] });
   }
 
   const ok = await saveClients(clients);
@@ -6086,6 +6099,7 @@ function renderClients() {
           </div>
           <div class="client-actions">
             <span class="client-code-badge">${c.code}</span>
+            ${c.dashType && c.dashType !== 'padrao' ? `<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:#f0eee9;color:#666;font-family:var(--f-mono)">${escHtml(c.dashType.toUpperCase())}</span>` : ''}
             <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="event.stopPropagation();openClientModal('${c.id}')">Editar</button>
             <button class="btn-icon" onclick="event.stopPropagation();deleteClient('${c.id}')" title="Excluir cliente">🗑</button>
           </div>
