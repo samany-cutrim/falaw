@@ -568,10 +568,6 @@
         <span class="nav-icon">📊</span>
         Relatório
       </div>
-      <div class="nav-item" id="nav-comparativo" onclick="showTab('dashboard');onDashTabChange('comparativo');closeSidebar()">
-        <span class="nav-icon">📈</span>
-        Comparativo
-      </div>
       <a href="ifood.html" class="nav-item hidden" id="nav-ifood">
         <span class="nav-icon">📈</span>
         Dashboard iFood
@@ -1305,14 +1301,6 @@ async function loadClientDashData(clientId) {
     if (_dashPeriods.length >= 2) { _compA.selectedIndex = 1; _compB.selectedIndex = 0; }
   }
 
-  // Show banner
-  const banner = document.getElementById('bannerVisaoGeral');
-  if (banner) {
-    banner.style.display = '';
-    const lbl = document.getElementById('periodLabelVisao');
-    if (lbl) lbl.textContent = _dashPeriods[0].label || _dashPeriods[0].id;
-  }
-
   await renderApiDash(_dashPeriodId, _dashActiveTab);
   return true;
 }
@@ -1774,16 +1762,7 @@ function renderReports(reports) {
 
   count.textContent = reports.length + ' arquivo' + (reports.length !== 1 ? 's' : '');
 
-  /* stats row */
-  document.getElementById('statTotal').textContent = reports.length;
-  if (reports.length) {
-    const sorted = [...reports].sort((a,b) => new Date(b.uploadedAt)-new Date(a.uploadedAt));
-    document.getElementById('statLast').textContent      = formatDate(sorted[0].uploadedAt);
-    document.getElementById('statLastTitle').textContent = sorted[0].title;
-  } else {
-    document.getElementById('statLast').textContent      = '—';
-    document.getElementById('statLastTitle').textContent = '—';
-  }
+  /* stats row removed */
 
   if (!reports.length) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">📁</div><div class="empty-title">Nenhum relatório disponível</div><div class="empty-text">Seus relatórios aparecerão aqui assim que forem disponibilizados pelo escritório.</div></div>`;
@@ -1955,7 +1934,6 @@ async function init() {
   document.getElementById('pageSubtitle').textContent  = 'Visão geral dos processos de ' + (displayCompany !== '—' ? displayCompany : 'sua empresa') + '.';
 
   /* Login time + topbar date */
-  document.getElementById('statLogin').textContent   = formatTime(session.loginAt);
   document.getElementById('topbarDate').textContent  = new Date().toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
 
   /* Build sections */
