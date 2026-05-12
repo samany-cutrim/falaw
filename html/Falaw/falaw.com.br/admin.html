@@ -6839,6 +6839,10 @@ function _xlParseClientActive(rawRows) {
     turma:           fi('TURMA/CAMARA','TURMA / CAMARA','TURMA/CÂMARA','TURMA / CÂMARA','CÂMARA','CAMARA','TURMA'),
     relator:         fi('RELATOR','RELATORA','DESEMBARGADOR RELATOR','DESEMBARGADORA RELATORA'),
     juiz:            fi('JUIZ','JUIZA','MAGISTRADO','MAGISTRADA','RELATOR','RELATORA','DESEMBARGADOR','MINISTRO'),
+    julgador1g:      fi('JULGADOR 1 GRAU','JULGADOR DE 1 GRAU','JULGADOR 1o GRAU','JULGADOR 1º GRAU','JUIZ 1 GRAU','JUIZ DE 1 GRAU'),
+    julgador2g:      fi('JULGADOR 2 GRAU','JULGADOR DE 2 GRAU','JULGADOR 2o GRAU','JULGADOR 2º GRAU','JUIZ 2 GRAU','JUIZ DE 2 GRAU','DESEMBARGADOR RELATOR','RELATORA'),
+    vara1g:          fi('VARA 1 GRAU','VARA DE 1 GRAU','VARA 1o GRAU','ORGAO JULGADOR 1 GRAU'),
+    turma2g:         fi('TURMA 2 GRAU','TURMA DE 2 GRAU','ORGAO JULGADOR 2 GRAU','CAMARA 2 GRAU'),
     empresa_terceira:fi('EMPRESA TERCEIRA','EMPRESA TERCEIRIZADA','TOMADOR','TOMADORA'),
     adv:             fi('ADV. CONTRARIO','ADV CONTRARIO','ESCRITORIO DA PARTE CONTRARIA','ESCRITORIO','ADVOGADO CONTRARIO'),
     responsabilidade:fi('RESPONSABILIDADE','PAPEL DO AGENTE','PAPEL','TIPO DE RESPONSABILIDADE'),
@@ -6859,7 +6863,13 @@ function _xlParseClientActive(rawRows) {
   const normRisco = v => { const n = _xlN(v); if (n.includes('PROVAVEL')) return 'Provável'; if (n.includes('POSSIVEL')) return 'Possível'; if (n.includes('REMOTO')) return 'Remoto'; return v || ''; };
   const parseDate = v => { if (!v) return null; if (v instanceof Date) return v; if (typeof v === 'number') { const d = new Date(Math.round((v - 25569)*86400*1000)); return isNaN(d) ? null : d; } const s = String(v).trim(); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return new Date(+m[1],+m[2]-1,+m[3]); m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if (m) { const y = m[3].length===2?2000+Number(m[3]):+m[3]; return new Date(y,+m[2]-1,+m[1]); } return null; };
   const detectResp = r => {
-    // Primary: polo_passivo column — company name → subsidiária; "EX EMPREGADO" text → ex-empregado
+    // Primary: empresa_terceira column — if filled → subsidiária
+    if (idx.empresa_terceira >= 0) {
+      const etRaw = String(r[idx.empresa_terceira] ?? '').trim();
+      const et = _xlN(etRaw);
+      if (et && !et.startsWith('NAO SE APLICA') && !et.startsWith('NAO INFORMADO') && et.length > 3) return 'Subsidiária';
+    }
+    // Secondary: polo_passivo column — company name → subsidiária; "EX EMPREGADO" text → ex-empregado
     if (idx.polo_passivo >= 0) {
       const poloRaw = String(r[idx.polo_passivo] ?? '').trim();
       const polo = _xlN(poloRaw);
@@ -6918,6 +6928,8 @@ function _xlParseClientActive(rawRows) {
       instancia:    c(r, idx.instancia),
       uf:           c(r, idx.uf), vara: c(r, idx.vara),
       juiz:         c(r, idx.juiz), relator: c(r, idx.relator), turma: c(r, idx.turma),
+      julgador1g:   c(r, idx.julgador1g), julgador2g: c(r, idx.julgador2g),
+      vara1g:       c(r, idx.vara1g), turma2g: c(r, idx.turma2g),
       adv: c(r, idx.adv),
       empresa_terceira: c(r, idx.empresa_terceira),
       responsabilidade: detectResp(r), sentenca: c(r, idx.sentenca),
@@ -7081,14 +7093,26 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   const _isNA = v => { const n = _xlN(String(v||'')); return !n || n === 'N/A' || n === 'NAO SE APLICA' || n === 'NAO INFORMADO' || n.startsWith('AGUARDANDO'); };
   // Retorna true se o valor parece vara/local e não um nome de pessoa
   const _isVaraName = v => { const n = _xlN(String(v||'')); return n.includes('VARA DO TRABALHO') || n.includes('DO TRABALHO DE') || n.includes('JUIZO DO') || n.startsWith('VARA ') || n.startsWith('JCJ') || n.startsWith('MM.'); };
+  const _isNumericStr = v => /^[\d.,\s/\-R$%]+$/.test(String(v||'').trim());
   // Retorna { name, location } ou null se não aplicável
   const _getJulgInfo = r => {
+    const _ok = v => v && !_isNA(v) && !_isVaraName(v) && !_isNumericStr(v) && v.length >= 4;
+    // 1) Julgador 1º grau (específico)
+    const j1g  = String(r.julgador1g||'').trim();
+    const v1g  = String(r.vara1g||r.vara||'').trim();
+    if (_ok(j1g)) return { name: j1g, location: _isNA(v1g) ? null : v1g };
+    // 2) Julgador 2º grau (específico)
+    const j2g  = String(r.julgador2g||'').trim();
+    const t2g  = String(r.turma2g||r.turma||'').trim();
+    if (_ok(j2g)) return { name: j2g, location: _isNA(t2g) ? null : t2g };
+    // 3) Relator + turma (fallback)
     const relator = String(r.relator||'').trim();
     const turma   = String(r.turma||'').trim();
-    const juiz    = String(r.juiz||'').trim();
-    const vara    = String(r.vara||'').trim();
-    if (!_isNA(relator) && !_isVaraName(relator)) return { name: relator, location: _isNA(turma) ? null : turma };
-    if (!_isNA(juiz)    && !_isVaraName(juiz))    return { name: juiz,    location: _isNA(vara)  ? null : vara  };
+    if (_ok(relator)) return { name: relator, location: _isNA(turma) ? null : turma };
+    // 4) Juiz + vara (fallback)
+    const juiz = String(r.juiz||'').trim();
+    const vara = String(r.vara||'').trim();
+    if (_ok(juiz)) return { name: juiz, location: _isNA(vara) ? null : vara };
     return null;
   };
   const julgMap = {}; // name -> { count, location }
@@ -7113,18 +7137,14 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     if (!s || s === 'NAO SE APLICA' || s === 'NAO') return;
     if (s.includes('ACORDO')) { decAcordo++; decFav++; }
     else if (s.includes('FAVORAVEL') || s.includes('IMPROCEDENTE') || s.includes('EXCLUSAO')) decFav++;
-    else if (s.includes('DESFAVORAVEL') || s.includes('PROCEDENTE') || s.includes('CONDENADA') || s.includes('CONDENANDO')) decDesf++;
     else if (s.includes('PARCIAL')) decParc++;
+    else if (s.includes('DESFAVORAVEL') || s.includes('PROCEDENTE') || s.includes('CONDENADA') || s.includes('CONDENANDO')) decDesf++;
   });
   if (decFav + decDesf + decParc > 0) {
     push('visao-geral','decisoes_favoraveis',   'Favoráveis',  fmtBr(decFav),    '');
     push('visao-geral','decisoes_desfavoraveis','Desfavoráveis',fmtBr(decDesf),  '');
     if (decParc)   push('visao-geral','decisoes_parciais','Parciais',   fmtBr(decParc),   '');
     if (decAcordo) push('visao-geral','decisoes_acordos', 'Acordos',    fmtBr(decAcordo), '');
-    push('visao-geral','chart_decisoes','Decisões do Período','','',
-      _xlChartDoughnut(['Favorável','Desfavorável','Parcialmente Procedente','Acordo'].filter((_,i)=>[decFav,decDesf,decParc,decAcordo][i]>0),
-        [decFav,decDesf,decParc,decAcordo].filter(v=>v>0)),
-      'Resultado das Decisões Prolatadas');
   }
 
   // ── 11. Resultado por Instância (apenas 1º Grau, 2º Grau, TST) ───────
@@ -7164,8 +7184,8 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       const s = _xlN(r.sentenca||'');
       if (!s || s==='NAO SE APLICA'||s==='NAO') return;
       if (s.includes('FAVORAVEL')||s.includes('IMPROCEDENTE')||s.includes('EXCLUSAO')||s.includes('ACORDO')) eeFav++;
-      else if (s.includes('DESFAVORAVEL')||s.includes('PROCEDENTE')||s.includes('CONDENADA')||s.includes('CONDENANDO')) eeDesf++;
       else if (s.includes('PARCIAL')) eeParc++;
+      else if (s.includes('DESFAVORAVEL')||s.includes('PROCEDENTE')||s.includes('CONDENADA')||s.includes('CONDENANDO')) eeDesf++;
     });
     push('ex_empregados','ee_total',       'Total de Processos',      fmtBr(eeTotal),'processos');
     push('ex_empregados','ee_favoraveis',  'Decisões Favoráveis',     fmtBr(eeFav),  '');
@@ -7227,8 +7247,8 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       const s = _xlN(r.sentenca||'');
       if (!s||s==='NAO SE APLICA'||s==='NAO') return;
       if (s.includes('FAVORAVEL')||s.includes('IMPROCEDENTE')||s.includes('EXCLUSAO')||s.includes('ACORDO')) tcFav++;
-      else if (s.includes('DESFAVORAVEL')||s.includes('PROCEDENTE')||s.includes('CONDENADA')||s.includes('CONDENANDO')) tcDesf++;
       else if (s.includes('PARCIAL')) tcParc++;
+      else if (s.includes('DESFAVORAVEL')||s.includes('PROCEDENTE')||s.includes('CONDENADA')||s.includes('CONDENANDO')) tcDesf++;
     });
     push('terceirizacao','tc_total',       'Total de Processos',      fmtBr(tcTotal),'processos');
     push('terceirizacao','tc_favoraveis',  'Decisões Favoráveis',     fmtBr(tcFav),  '');
