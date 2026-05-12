@@ -653,14 +653,14 @@
         <!-- ── TERCEIRIZAÇÃO ── -->
         <div class="tab-panel" id="panel-terceirizacao">
           <div class="page-header">
-            <div class="page-label">Terceirização / Subsidiária</div>
-            <div class="page-title">Ações de Terceirização</div>
-            <div class="page-subtitle">Dados consolidados de processos com responsabilidade de Terceirização / Subsidiária.</div>
+            <div class="page-label">Subsidiária</div>
+            <div class="page-title">Subsidiária</div>
+            <div class="page-subtitle">Dados consolidados de processos com responsabilidade subsidiária.</div>
           </div>
           <div class="kpi-grid" id="kpis-terceirizacao"></div>
           <div class="charts-grid" id="charts-terceirizacao"></div>
           <div class="analysis-block" id="analysis-block-terceirizacao" style="display:none">
-            <div class="analysis-block-header"><span class="analysis-label">Análise — Terceirização</span></div>
+            <div class="analysis-block-header"><span class="analysis-label">Análise — Subsidiária</span></div>
             <div class="analysis-content" id="content-terceirizacao"><div class="analysis-empty">Nenhuma análise disponível para este período.</div></div>
           </div>
         </div>
@@ -1368,7 +1368,7 @@ function _buildKpiGrid(kpis, kpisEl, chartsEl, tabKey) {
       <div class="kpi-card">
         <div class="kpi-label">${escHtml(k.label || k.kpi_key || '')}</div>
         <div class="kpi-value" style="font-size:28px">${escHtml(String(k.value ?? '—'))}</div>
-        ${k.unit ? `<div class="kpi-unit">${escHtml(k.unit)}</div>` : ''}
+        ${k.unit && k.unit.trim() && k.unit.trim().toLowerCase() !== 'processos' ? `<div class="kpi-unit">${escHtml(k.unit)}</div>` : ''}
         ${tTxt ? `<div class="kpi-trend ${tDir}">${tIcon} ${tTxt}</div>` : ''}
       </div>`);
   });
