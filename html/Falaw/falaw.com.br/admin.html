@@ -7288,11 +7288,40 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
 
     // Top julgadores
     const eeJulgMap = {};
-    recsExEmp.forEach(r => { const info=_getJulgInfo(r); if (!info||info.name.length<4) return; if (!eeJulgMap[info.name]) eeJulgMap[info.name]={count:0,location:info.location}; eeJulgMap[info.name].count++; });
+    recsExEmp.forEach(r => {
+      const info = _getJulgInfo(r); if (!info||info.name.length<4) return;
+      if (!eeJulgMap[info.name]) eeJulgMap[info.name]={count:0,fav:0,desf:0,parc:0,location:info.location};
+      eeJulgMap[info.name].count++;
+      const s = _xlN(r.sentenca||'');
+      if (s && s!=='NAO SE APLICA' && s!=='NAO') {
+        if (s.includes('DESFAVORAVEL')||s.includes('CONDENADA')||s.includes('CONDENANDO')) eeJulgMap[info.name].desf++;
+        else if (s.includes('FAVORAVEL')||s.includes('IMPROCEDENTE')||s.includes('EXCLUSAO')||s.includes('ACORDO')) eeJulgMap[info.name].fav++;
+        else if (s.includes('PARCIAL')) eeJulgMap[info.name].parc++;
+        else if (s.includes('PROCEDENTE')) eeJulgMap[info.name].desf++;
+      }
+    });
     const eeJulgTop = topN(Object.fromEntries(Object.entries(eeJulgMap).map(([k,v])=>[k,v.count])), 10);
-    if (eeJulgTop.length) push('ex_empregados','ee_chart_julg','Top 10 Julgadores','','',
-      _xlChartBarTooltip(eeJulgTop.map(([l])=>l), eeJulgTop.map(([,v])=>v), eeJulgTop.map(([n])=>eeJulgMap[n].location||''),'Processos','#0F9E76'),
-      'Ranking Julgadores — Ex-empregados');
+    if (eeJulgTop.length) {
+      const eeJFav   = eeJulgTop.map(([n]) => eeJulgMap[n].fav);
+      const eeJDesf  = eeJulgTop.map(([n]) => eeJulgMap[n].desf);
+      const eeJParc  = eeJulgTop.map(([n]) => eeJulgMap[n].parc);
+      const eeJOther = eeJulgTop.map(([n]) => eeJulgMap[n].count - eeJulgMap[n].fav - eeJulgMap[n].desf - eeJulgMap[n].parc);
+      const eeJLocs  = eeJulgTop.map(([n]) => { const loc=eeJulgMap[n].location||''; return /TST/i.test(loc)?loc.replace(/^(\d+)[ªa°]?\s*[Tt]urma.*/,'$1ª Turma – TST').replace(/TST$/,'TST'):loc; });
+      const eeHasDec = eeJFav.some(v=>v>0)||eeJDesf.some(v=>v>0);
+      const eeJDatasets = eeHasDec ? [
+        { label:'Favorável',    data:eeJFav,   backgroundColor:'#0F9E76', borderRadius:2 },
+        { label:'Desfavorável', data:eeJDesf,  backgroundColor:'#7B1A2E', borderRadius:2 },
+        ...(eeJParc.some(v=>v>0)  ? [{ label:'Parcial',     data:eeJParc,  backgroundColor:'#F59E0B', borderRadius:2 }] : []),
+        ...(eeJOther.some(v=>v>0) ? [{ label:'Sem decisão', data:eeJOther, backgroundColor:'rgba(0,0,0,0.12)', borderRadius:2 }] : []),
+      ] : [{ label:'Processos', data:eeJulgTop.map(([,v])=>v), backgroundColor:'#0F9E76', borderRadius:2 }];
+      push('ex_empregados','ee_chart_julg','Top 10 Julgadores','','',{
+        type:'bar', data:{ labels:eeJulgTop.map(([l])=>l), datasets:eeJDatasets },
+        options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } },
+            tooltip:{ callbacks:{ title(items){ const i=items[0].dataIndex; const loc=eeJLocs[i]; return loc?[eeJulgTop[i][0],loc]:[eeJulgTop[i][0]]; } } } },
+          scales:{ x:{ stacked:true, beginAtZero:true, ticks:{ stepSize:1, font:{ family:'IBM Plex Mono', size:9 } }, grid:{ display:false } }, y:{ stacked:true, ticks:{ font:{ family:'IBM Plex Mono', size:9 } }, grid:{ display:false } } } }
+      }, 'Ranking Julgadores — Ex-empregados');
+    }
 
     // Pedidos mais frequentes — Ex-empregados
     const eePedC = {};
@@ -7343,11 +7372,40 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       'Ranking Advogados — Subsidiária');
 
     const tcJulgMap = {};
-    recsTerc.forEach(r => { const info=_getJulgInfo(r); if (!info||info.name.length<4) return; if (!tcJulgMap[info.name]) tcJulgMap[info.name]={count:0,location:info.location}; tcJulgMap[info.name].count++; });
+    recsTerc.forEach(r => {
+      const info = _getJulgInfo(r); if (!info||info.name.length<4) return;
+      if (!tcJulgMap[info.name]) tcJulgMap[info.name]={count:0,fav:0,desf:0,parc:0,location:info.location};
+      tcJulgMap[info.name].count++;
+      const s = _xlN(r.sentenca||'');
+      if (s && s!=='NAO SE APLICA' && s!=='NAO') {
+        if (s.includes('DESFAVORAVEL')||s.includes('CONDENADA')||s.includes('CONDENANDO')) tcJulgMap[info.name].desf++;
+        else if (s.includes('FAVORAVEL')||s.includes('IMPROCEDENTE')||s.includes('EXCLUSAO')||s.includes('ACORDO')) tcJulgMap[info.name].fav++;
+        else if (s.includes('PARCIAL')) tcJulgMap[info.name].parc++;
+        else if (s.includes('PROCEDENTE')) tcJulgMap[info.name].desf++;
+      }
+    });
     const tcJulgTop = topN(Object.fromEntries(Object.entries(tcJulgMap).map(([k,v])=>[k,v.count])), 10);
-    if (tcJulgTop.length) push('terceirizacao','tc_chart_julg','Top 10 Julgadores','','',
-      _xlChartBarTooltip(tcJulgTop.map(([l])=>l), tcJulgTop.map(([,v])=>v), tcJulgTop.map(([n])=>tcJulgMap[n].location||''),'Processos','#0F9E76'),
-      'Ranking Julgadores — Subsidiária');
+    if (tcJulgTop.length) {
+      const tcJFav   = tcJulgTop.map(([n]) => tcJulgMap[n].fav);
+      const tcJDesf  = tcJulgTop.map(([n]) => tcJulgMap[n].desf);
+      const tcJParc  = tcJulgTop.map(([n]) => tcJulgMap[n].parc);
+      const tcJOther = tcJulgTop.map(([n]) => tcJulgMap[n].count - tcJulgMap[n].fav - tcJulgMap[n].desf - tcJulgMap[n].parc);
+      const tcJLocs  = tcJulgTop.map(([n]) => { const loc=tcJulgMap[n].location||''; return /TST/i.test(loc)?loc.replace(/^(\d+)[ªa°]?\s*[Tt]urma.*/,'$1ª Turma – TST').replace(/TST$/,'TST'):loc; });
+      const tcHasDec = tcJFav.some(v=>v>0)||tcJDesf.some(v=>v>0);
+      const tcJDatasets = tcHasDec ? [
+        { label:'Favorável',    data:tcJFav,   backgroundColor:'#0F9E76', borderRadius:2 },
+        { label:'Desfavorável', data:tcJDesf,  backgroundColor:'#7B1A2E', borderRadius:2 },
+        ...(tcJParc.some(v=>v>0)  ? [{ label:'Parcial',     data:tcJParc,  backgroundColor:'#F59E0B', borderRadius:2 }] : []),
+        ...(tcJOther.some(v=>v>0) ? [{ label:'Sem decisão', data:tcJOther, backgroundColor:'rgba(0,0,0,0.12)', borderRadius:2 }] : []),
+      ] : [{ label:'Processos', data:tcJulgTop.map(([,v])=>v), backgroundColor:'#0F9E76', borderRadius:2 }];
+      push('terceirizacao','tc_chart_julg','Top 10 Julgadores','','',{
+        type:'bar', data:{ labels:tcJulgTop.map(([l])=>l), datasets:tcJDatasets },
+        options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } },
+            tooltip:{ callbacks:{ title(items){ const i=items[0].dataIndex; const loc=tcJLocs[i]; return loc?[tcJulgTop[i][0],loc]:[tcJulgTop[i][0]]; } } } },
+          scales:{ x:{ stacked:true, beginAtZero:true, ticks:{ stepSize:1, font:{ family:'IBM Plex Mono', size:9 } }, grid:{ display:false } }, y:{ stacked:true, ticks:{ font:{ family:'IBM Plex Mono', size:9 } }, grid:{ display:false } } } }
+      }, 'Ranking Julgadores — Subsidiária');
+    }
 
     // Ranking de empresas no polo passivo — subsidiária
     const tcEmpC = {};
