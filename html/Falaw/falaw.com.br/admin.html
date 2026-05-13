@@ -8513,6 +8513,31 @@ function _xlParseDecisoes(rawRows) {
 }
 
 function _xlParseNovos(rawRows) {
+  // Colunas esperadas: JULGADOR | TRT | VARA/TURMA | CAUSA RAIZ | FUNDAMENTOS FAVORÁVEIS | FUNDAMENTOS DESFAVORÁVEIS
+  // Detecta pelo cabeçalho (linha 0), com fallback posicional
+  const header = (rawRows[0] || []).map(c => _xlNormTxt(String(c || '')));
+  const findCol = (...terms) => { const i = header.findIndex(h => terms.some(t => h.includes(t))); return i >= 0 ? i : -1; };
+  const iJulg = findCol('JULGADOR','JUIZ','RELATOR','MAGISTRADO');
+  const iTRT  = findCol('TRT');
+  const iVT   = findCol('VARA','TURMA');
+  const iCR   = findCol('CAUSA','RAIZ','SEGMENTO');
+  const iFav  = findCol('FAVOR');
+  const iDesf = findCol('DESFAVOR');
+  const col = (r, idx, fb) => String(r[idx >= 0 ? idx : fb] ?? '').trim();
+  return rawRows.slice(1)
+    .filter(r => r && String(r[iJulg >= 0 ? iJulg : 0] ?? '').trim())
+    .map(r => ({
+      juiz_relator: col(r, iJulg, 0),
+      trt:          _xlNormalizeTRT(col(r, iTRT,  1)),
+      varaturma:    col(r, iVT,   2),
+      causa_raiz:   _xlCanonCR(col(r, iCR,   3)),
+      fund_fav:     col(r, iFav,  4),
+      fund_desf:    col(r, iDesf, 5),
+    }))
+    .filter(r => r.causa_raiz);
+}
+
+function _xlParseNovos(rawRows) {
   // Sheet has summary table: look for 'Causa Raiz' header row, then CR + count
   let total = 0, byCR = {}, inTable = false;
   for (const r of rawRows) {
@@ -8891,9 +8916,11 @@ function _xlChartOutcomeByGroup(labels, favData, desfData, detailTitle, favDetai
 
 function _xlFaseValida(fase) { return fase && !fase.toLowerCase().includes('arquiv'); }
 
-function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391, decisoesTabela) {
+function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391, decisoesTabela, julgadoresData) {
   // decisoesTabela: decisões do arquivo separado — aparecem apenas nas tabelas, não nos contadores
+  // julgadoresData: linhas da aba Julgadores — usadas para table_fund_vg
   decisoesTabela = decisoesTabela || [];
+  julgadoresData = julgadoresData || [];
   const rows = []; let so = 0;
   const push = (tabKey, kpiKey, label, value, unit, chartData, chartTitle) => {
     rows.push({ id:ifoodId(), period_id:periodId, tab_key:tabKey, kpi_key:kpiKey, label, value:String(value), unit:unit||'', chart_data:chartData||null, chart_title:chartTitle||'', sort_order:so++, trend_pct:null });
@@ -9108,39 +9135,42 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   // Ranking de Pedidos — apenas ex-foodlover (removido da visão geral iFood)
 
   // Tabela de fundamentos dos julgadores por Causa Raiz — Visão Geral
-  // Usa decisoes + decisoesTabela para as tabelas demonstrativas
-  // Mescla para tabelas: arquivo separado tem prioridade; deduplica por num_processo
+  // Fonte: aba Julgadores da planilha principal
+  // Mescla decisoes+decisoesTabela para deduplicação nas outras tabelas
   const _decTabelaMap = new Map();
   decisoes.forEach(d => _decTabelaMap.set(d.num_processo, d));
-  decisoesTabela.forEach(d => _decTabelaMap.set(d.num_processo, d)); // sobrescreve com dados do arquivo separado
+  decisoesTabela.forEach(d => _decTabelaMap.set(d.num_processo, d));
   const decisoesTodasTabelas = [..._decTabelaMap.values()];
-  {
+  if (julgadoresData.length) {
     const fundByCR = {};
-    decisoesTodasTabelas.forEach(d => {
+    julgadoresData.forEach(d => {
       const cr = _xlCanonCR(d.causa_raiz) || 'OUTROS';
-      if (!fundByCR[cr]) fundByCR[cr] = { fav: [], desf: [] };
-      if (d.fund_fav  && d.fund_fav.trim())  fundByCR[cr].fav.push(d.fund_fav.trim());
-      if (d.fund_desf && d.fund_desf.trim()) fundByCR[cr].desf.push(d.fund_desf.trim());
+      if (!fundByCR[cr]) fundByCR[cr] = { julgadores: new Map() };
+      const j = d.juiz_relator || 'Desconhecido';
+      if (!fundByCR[cr].julgadores.has(j))
+        fundByCR[cr].julgadores.set(j, { fav: d.fund_fav || '', desf: d.fund_desf || '', trt: d.trt || '', vt: d.varaturma || '' });
     });
     const crFundRows = _XL_CR_TABS.map(tab => {
       const data = fundByCR[tab.cr];
-      if (!data || (data.fav.length === 0 && data.desf.length === 0)) return null;
-      const decs = decisoesTodasTabelas.filter(d => _xlCanonCR(d.causa_raiz) === tab.cr);
-      const uniqueFav  = [...new Set(data.fav)];
-      const uniqueDesf = [...new Set(data.desf)];
+      if (!data || data.julgadores.size === 0) return null;
+      const julgList  = [...data.julgadores.entries()];
+      const decs      = decisoes.filter(d => _xlCanonCR(d.causa_raiz) === tab.cr);
+      const uniqueFav  = [...new Set(julgList.map(([,v]) => v.fav).filter(Boolean))];
+      const uniqueDesf = [...new Set(julgList.map(([,v]) => v.desf).filter(Boolean))];
       return {
-        label:      tab.label,
-        total_dec:  decs.length,
-        fav_dec:    decs.filter(d => _xlClassifyDec(d.resultado) === 'F').length,
-        desf_dec:   decs.filter(d => _xlClassifyDec(d.resultado) === 'D').length,
-        fav_funds:  uniqueFav,
-        desf_funds: uniqueDesf,
+        label:       tab.label,
+        total_dec:   decs.length,
+        fav_dec:     decs.filter(d => _xlClassifyDec(d.resultado) === 'F').length,
+        desf_dec:    decs.filter(d => _xlClassifyDec(d.resultado) === 'D').length,
+        fav_funds:   uniqueFav,
+        desf_funds:  uniqueDesf,
+        julgadores:  julgList.map(([nome, v]) => ({ nome, trt: v.trt, vt: v.vt, fund_fav: v.fav, fund_desf: v.desf })),
         status_fav:  uniqueFav.length  <= 1 ? 'Uniforme' : 'Divergente',
         status_desf: uniqueDesf.length <= 1 ? 'Uniforme' : 'Divergente',
       };
     }).filter(Boolean);
     if (crFundRows.length) {
-      push('visao-geral', 'table_fund_vg', 'Fundamentos dos Julgadores por Causa Raiz', '', '',
+      push('visao-geral', 'table_fund_vg', 'Análise de Fundamentos dos Julgadores por Causa Raiz', '', '',
         { type: 'table_fund_cr', rows: crFundRows },
         'Análise de Fundamentos dos Julgadores por Causa Raiz');
     }
@@ -9388,6 +9418,9 @@ async function ifoodSaveExcel() {
     const novosSh = findSh('Novos Casos Recebidos','Novos Casos','novos');
     const novos = novosSh ? _xlParseNovos(XLSX.utils.sheet_to_json(novosSh,{header:1,defval:''})) : { total:0, byCR:{} };
 
+    const julgadoresSh = findSh('Julgadores','julgadores','JULGADORES');
+    const julgadoresData = julgadoresSh ? _xlParseJulgadores(XLSX.utils.sheet_to_json(julgadoresSh,{header:1,defval:''})) : [];
+
     const susp1389Sh = findSh('Suspensos Tema 1389','1389','susp 1389');
     const susp1389 = susp1389Sh ? XLSX.utils.sheet_to_json(susp1389Sh,{header:1,defval:''}).slice(1) : [];
 
@@ -9395,7 +9428,7 @@ async function ifoodSaveExcel() {
     const susp1291 = susp1291Sh ? XLSX.utils.sheet_to_json(susp1291Sh,{header:1,defval:''}).slice(1) : [];
 
     setStatus(`Computando KPIs… (${decisoes.length} decisões, ${novos.total} novos casos)`);
-    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291, decisoesTabela);
+    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291, decisoesTabela, julgadoresData);
 
     // Upload do arquivo Excel bruto para Cockroach (quando API configurada)
     let ifoodExcelFileUrl = null;
