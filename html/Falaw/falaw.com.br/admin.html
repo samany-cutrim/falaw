@@ -8527,11 +8527,12 @@ function _xlParseJulgadores(rawRows) {
   const iJulg = findCol('JULGADOR','JUIZ','RELATOR','MAGISTRADO');
   const iTRT  = findCol('TRT');
   const iVT   = findCol('VARA','TURMA');
-  const iCR   = findCol('CAUSA','RAIZ','SEGMENTO');
-  const iFav  = findCol('FAVOR');
-  const iDesf = findCol('DESFAVOR');
+  const iCR   = findCol('CAUSA','RAIZ','SEGMENTO','CR');
+  const iFav  = findCol('FAVOR','FAV');
+  const iDesf = findCol('DESFAVOR','DESF');
+  console.log('[_xlParseJulgadores] header:', header, '| cols: julg='+iJulg+' trt='+iTRT+' vt='+iVT+' cr='+iCR+' fav='+iFav+' desf='+iDesf);
   const col = (r, idx, fb) => String(r[idx >= 0 ? idx : fb] ?? '').trim();
-  return rawRows.slice(1)
+  const parsed = rawRows.slice(1)
     .filter(r => r && String(r[iJulg >= 0 ? iJulg : 0] ?? '').trim())
     .map(r => ({
       juiz_relator: col(r, iJulg, 0),
@@ -8540,8 +8541,9 @@ function _xlParseJulgadores(rawRows) {
       causa_raiz:   _xlCanonCR(col(r, iCR,   3)),
       fund_fav:     col(r, iFav,  4),
       fund_desf:    col(r, iDesf, 5),
-    }))
-    .filter(r => r.causa_raiz);
+    }));
+  console.log('[_xlParseJulgadores] parsed total:', parsed.length, '| com causa_raiz:', parsed.filter(r=>r.causa_raiz).length, '| sample:', parsed.slice(0,3));
+  return parsed.filter(r => r.causa_raiz);
 }
 
 function _xlParseNovos(rawRows) {
