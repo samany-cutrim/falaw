@@ -1135,6 +1135,15 @@ async function renderCharts(tabKey, kpis) {
           </div>`;
         };
 
+        const judgeList = (julgadores) => {
+          if (!julgadores || !julgadores.length) return '<span style="color:#aaa">—</span>';
+          return julgadores.map(j => {
+            const trtBadge = j.trt ? `<span style="background:#E8EDF5;color:#0D2B5E;border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:5px">${escHtml(j.trt)}</span>` : '';
+            const vtBadge  = j.vt  ? `<span style="background:#F3F4F6;color:#555;border-radius:3px;padding:1px 6px;font-size:10px;margin-left:4px">${escHtml(j.vt)}</span>`  : '';
+            return `<div style="padding:4px 0;border-bottom:1px solid #eee;white-space:nowrap">${escHtml(j.nome)}${trtBadge}${vtBadge}</div>`;
+          }).join('');
+        };
+
         wrap.innerHTML = `
           <style>
             .fund-tbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12px}
@@ -1142,6 +1151,7 @@ async function renderCharts(tabKey, kpis) {
             .fund-tbl td{padding:10px 14px;border-bottom:1px solid #e8eaf0;vertical-align:middle}
             .fund-tbl tr:nth-child(even) td{background:#f8f9fc}
             .fund-tbl td:not(:first-child){text-align:center}
+            .fund-tbl td.left{text-align:left}
           </style>
           <div style="overflow-x:auto">
           <table class="fund-tbl">
@@ -1150,6 +1160,7 @@ async function renderCharts(tabKey, kpis) {
               <th>Decisões</th>
               <th>Favoráveis ✔</th>
               <th>Desfavoráveis ✘</th>
+              <th class="left">Julgadores</th>
               <th>Fund. Favorável</th>
               <th>Fund. Desfavorável</th>
             </tr></thead>
@@ -1159,6 +1170,7 @@ async function renderCharts(tabKey, kpis) {
                 <td style="font-weight:700">${r.total_dec}</td>
                 <td><span style="color:#1B7A4E;font-weight:700">${r.fav_dec}</span></td>
                 <td><span style="color:#C62828;font-weight:700">${r.desf_dec}</span></td>
+                <td class="left">${judgeList(r.julgadores)}</td>
                 <td>${statusBadge(r.status_fav,  r.fav_funds,  i, 'fav')}</td>
                 <td>${statusBadge(r.status_desf, r.desf_funds, i, 'desf')}</td>
               </tr>`).join('')}
