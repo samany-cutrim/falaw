@@ -1110,15 +1110,31 @@ async function renderCharts(tabKey, kpis) {
         const wrap = document.getElementById(canvasId);
         if (!wrap) return;
         const rows = cfg.rows || [];
-        const statusBadge = (s) => {
+        const uid = canvasId + '_fund';
+
+        const statusBadge = (s, funds, idx, side) => {
           if (!s) return '<span style="color:#aaa">—</span>';
           const uniforme = s === 'Uniforme';
-          const col = uniforme ? '#1B7A4E' : '#9C27B0';
-          const bg  = uniforme ? '#E8F5EE'  : '#F3E5F5';
+          const col  = uniforme ? '#1B7A4E' : '#9C27B0';
+          const bg   = uniforme ? '#E8F5EE' : '#F3E5F5';
           const icon = uniforme ? '✔' : '⚠';
-          const lbl = uniforme ? 'Manteve' : 'Mudou';
-          return `<span style="background:${bg};color:${col};border-radius:3px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap">${icon} ${lbl}</span>`;
+          const lbl  = uniforme ? 'Manteve' : 'Mudou';
+          const hasFunds = funds && funds.length > 0;
+          const detailId = `${uid}_${idx}_${side}`;
+          const btn = hasFunds
+            ? `<button onclick="(function(){var el=document.getElementById('${detailId}');el.style.display=el.style.display==='none'?'block':'none';})()" style="background:none;border:none;cursor:pointer;padding:0;margin-left:4px;font-size:10px;color:${col};text-decoration:underline">ver resumo</button>`
+            : '';
+          const detail = hasFunds
+            ? `<div id="${detailId}" style="display:none;margin-top:8px;text-align:left;max-width:520px">${
+                funds.map(f => `<div style="margin-bottom:8px;padding:10px 12px;background:#fff;border-left:3px solid ${col};border-radius:3px;font-size:11px;line-height:1.65;font-family:'IBM Plex Mono',monospace;color:#222;white-space:pre-wrap">${escHtml(f)}</div>`).join('')
+              }</div>`
+            : '';
+          return `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:2px">
+            <span style="background:${bg};color:${col};border-radius:3px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap">${icon} ${lbl}</span>
+            ${btn}${detail}
+          </div>`;
         };
+
         wrap.innerHTML = `
           <style>
             .fund-tbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12px}
@@ -1138,17 +1154,17 @@ async function renderCharts(tabKey, kpis) {
               <th>Fund. Desfavorável</th>
             </tr></thead>
             <tbody>
-              ${rows.map(r => `<tr>
+              ${rows.map((r, i) => `<tr>
                 <td><strong style="color:#0D2B5E">${escHtml(r.label)}</strong></td>
                 <td style="font-weight:700">${r.total_dec}</td>
                 <td><span style="color:#1B7A4E;font-weight:700">${r.fav_dec}</span></td>
                 <td><span style="color:#C62828;font-weight:700">${r.desf_dec}</span></td>
-                <td>${statusBadge(r.status_fav)}</td>
-                <td>${statusBadge(r.status_desf)}</td>
+                <td>${statusBadge(r.status_fav,  r.fav_funds,  i, 'fav')}</td>
+                <td>${statusBadge(r.status_desf, r.desf_funds, i, 'desf')}</td>
               </tr>`).join('')}
             </tbody>
           </table></div>
-          <div style="font-size:10px;color:#999;margin-top:8px">✔ Manteve = julgadores adotaram o mesmo fundamento. ⚠ Mudou = julgadores divergiram nos fundamentos.</div>`;
+          <div style="font-size:10px;color:#999;margin-top:8px">✔ Manteve = julgadores adotaram o mesmo fundamento. ⚠ Mudou = julgadores divergiram nos fundamentos. Clique em "ver resumo" para detalhes.</div>`;
         return;
       }
 
