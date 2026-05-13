@@ -8891,7 +8891,9 @@ function _xlChartOutcomeByGroup(labels, favData, desfData, detailTitle, favDetai
 
 function _xlFaseValida(fase) { return fase && !fase.toLowerCase().includes('arquiv'); }
 
-function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391) {
+function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391, decisoesTabela) {
+  // decisoesTabela: decisões do arquivo separado — aparecem apenas nas tabelas, não nos contadores
+  decisoesTabela = decisoesTabela || [];
   const rows = []; let so = 0;
   const push = (tabKey, kpiKey, label, value, unit, chartData, chartTitle) => {
     rows.push({ id:ifoodId(), period_id:periodId, tab_key:tabKey, kpi_key:kpiKey, label, value:String(value), unit:unit||'', chart_data:chartData||null, chart_title:chartTitle||'', sort_order:so++, trend_pct:null });
@@ -9106,9 +9108,11 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   // Ranking de Pedidos — apenas ex-foodlover (removido da visão geral iFood)
 
   // Tabela de fundamentos dos julgadores por Causa Raiz — Visão Geral
+  // Usa decisoes + decisoesTabela para as tabelas demonstrativas
+  const decisoesTodasTabelas = [...decisoes, ...decisoesTabela];
   {
     const fundByCR = {};
-    decisoes.forEach(d => {
+    decisoesTodasTabelas.forEach(d => {
       const cr = _xlCanonCR(d.causa_raiz) || 'OUTROS';
       if (!fundByCR[cr]) fundByCR[cr] = { fav: [], desf: [] };
       if (d.fund_fav  && d.fund_fav.trim())  fundByCR[cr].fav.push(d.fund_fav.trim());
@@ -9117,7 +9121,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     const crFundRows = _XL_CR_TABS.map(tab => {
       const data = fundByCR[tab.cr];
       if (!data || (data.fav.length === 0 && data.desf.length === 0)) return null;
-      const decs = decisoes.filter(d => _xlCanonCR(d.causa_raiz) === tab.cr);
+      const decs = decisoesTodasTabelas.filter(d => _xlCanonCR(d.causa_raiz) === tab.cr);
       const uniqueFav  = [...new Set(data.fav)];
       const uniqueDesf = [...new Set(data.desf)];
       return {
@@ -9304,7 +9308,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
 
     // Tabela demonstrativa de decisões — somente Ex-Foodlover
     if (tabKey === 'ex-foodlover') {
-      const exDecs = decisoes.filter(d => d.causa_raiz === 'EX-FOODLOVER');
+      const exDecs = decisoesTodasTabelas.filter(d => d.causa_raiz === 'EX-FOODLOVER');
       if (exDecs.length) {
         push(tabKey,'table_dec_exfl','Decisões do Período','','',{
           type:'table_decisions',
@@ -9357,14 +9361,14 @@ async function ifoodSaveExcel() {
     const decSh = findSh('Decisões','Decisoes','Decisão','Decisao');
 
     // Verifica se foi carregado arquivo de decisões separado
-    let decisoes = [];
+    // Decisões da planilha principal — usadas em contagens e gráficos
+    let decisoes = decSh
+      ? _xlParseDecisoes(XLSX.utils.sheet_to_json(decSh,{header:1,defval:''}).slice(1))
+      : [];
+    // Decisões do arquivo separado — apenas para tabelas demonstrativas (não contam nos KPIs)
+    let decisoesTabela = [];
     const decFileInput = document.getElementById('ifood-xl-decisoes');
     const decFile = decFileInput && decFileInput.files && decFileInput.files[0];
-    // Lê decisões da aba da planilha principal (se existir)
-    if (decSh) {
-      decisoes = _xlParseDecisoes(XLSX.utils.sheet_to_json(decSh,{header:1,defval:''}).slice(1));
-    }
-    // Lê decisões do arquivo separado e mescla (deduplicando por num_processo)
     if (decFile) {
       setStatus('Lendo arquivo de Decisões separado…');
       const decAb = await decFile.arrayBuffer();
@@ -9373,11 +9377,8 @@ async function ifoodSaveExcel() {
       const decRaw = XLSX.utils.sheet_to_json(decShSep, { header:1, defval:'' });
       const firstRow = decRaw[0] || [];
       const skipHeader = firstRow[0] && !/^\d/.test(String(firstRow[0]).trim());
-      const decisoesSep = _xlParseDecisoes(skipHeader ? decRaw.slice(1) : decRaw);
-      // Mescla: processos do arquivo separado têm prioridade; remove duplicatas por num_processo
-      const existingNums = new Set(decisoesSep.map(d => d.num_processo));
-      decisoes = [...decisoesSep, ...decisoes.filter(d => !existingNums.has(d.num_processo))];
-      setStatus(`Decisões mescladas: ${decisoes.length} (${decisoesSep.length} do arquivo separado)`);
+      decisoesTabela = _xlParseDecisoes(skipHeader ? decRaw.slice(1) : decRaw);
+      setStatus(`Decisões: ${decisoes.length} (planilha principal) + ${decisoesTabela.length} (arquivo separado — só tabela)`);
     }
 
     const novosSh = findSh('Novos Casos Recebidos','Novos Casos','novos');
@@ -9390,7 +9391,7 @@ async function ifoodSaveExcel() {
     const susp1291 = susp1291Sh ? XLSX.utils.sheet_to_json(susp1291Sh,{header:1,defval:''}).slice(1) : [];
 
     setStatus(`Computando KPIs… (${decisoes.length} decisões, ${novos.total} novos casos)`);
-    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291);
+    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291, decisoesTabela);
 
     // Upload do arquivo Excel bruto para Cockroach (quando API configurada)
     let ifoodExcelFileUrl = null;
