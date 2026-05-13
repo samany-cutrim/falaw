@@ -9428,7 +9428,9 @@ async function ifoodSaveExcel() {
     const novos = novosSh ? _xlParseNovos(XLSX.utils.sheet_to_json(novosSh,{header:1,defval:''})) : { total:0, byCR:{} };
 
     const julgadoresSh = findSh('Julgadores','julgadores','JULGADORES');
+    console.log('[ifoodSave] SheetNames:', wb.SheetNames, '| julgadoresSh encontrado:', !!julgadoresSh);
     const julgadoresData = julgadoresSh ? _xlParseJulgadores(XLSX.utils.sheet_to_json(julgadoresSh,{header:1,defval:''})) : [];
+    console.log('[ifoodSave] julgadoresData.length:', julgadoresData.length, julgadoresData.slice(0,2));
 
     const susp1389Sh = findSh('Suspensos Tema 1389','1389','susp 1389');
     const susp1389 = susp1389Sh ? XLSX.utils.sheet_to_json(susp1389Sh,{header:1,defval:''}).slice(1) : [];

@@ -1111,43 +1111,44 @@ async function renderCharts(tabKey, kpis) {
         if (!wrap) return;
         const rows = cfg.rows || [];
         const statusBadge = (s) => {
-          const col = s === 'Uniforme' ? '#1B7A4E' : '#9C27B0';
-          const bg  = s === 'Uniforme' ? '#E8F5EE'  : '#F3E5F5';
-          const icon = s === 'Uniforme' ? '✔' : '⚠';
-          return `<span style="background:${bg};color:${col};border-radius:3px;padding:2px 7px;font-size:10px;font-weight:700;white-space:nowrap">${icon} ${escHtml(s)}</span>`;
+          if (!s) return '<span style="color:#aaa">—</span>';
+          const uniforme = s === 'Uniforme';
+          const col = uniforme ? '#1B7A4E' : '#9C27B0';
+          const bg  = uniforme ? '#E8F5EE'  : '#F3E5F5';
+          const icon = uniforme ? '✔' : '⚠';
+          const lbl = uniforme ? 'Manteve' : 'Mudou';
+          return `<span style="background:${bg};color:${col};border-radius:3px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap">${icon} ${lbl}</span>`;
         };
-        const fundList = (arr) => arr.length === 0
-          ? `<span style="color:#aaa">—</span>`
-          : arr.map(f => `<div style="margin-bottom:4px;padding:4px 8px;background:#f8f9fc;border-left:3px solid #ccc;border-radius:2px;font-size:11px;line-height:1.5">${escHtml(f)}</div>`).join('');
         wrap.innerHTML = `
           <style>
             .fund-tbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12px}
-            .fund-tbl th{padding:9px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#fff;background:#0D2B5E;white-space:nowrap}
-            .fund-tbl td{padding:9px 12px;border-bottom:1px solid #e8eaf0;vertical-align:top}
+            .fund-tbl th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#fff;background:#0D2B5E;white-space:nowrap}
+            .fund-tbl td{padding:10px 14px;border-bottom:1px solid #e8eaf0;vertical-align:middle}
             .fund-tbl tr:nth-child(even) td{background:#f8f9fc}
+            .fund-tbl td:not(:first-child){text-align:center}
           </style>
           <div style="overflow-x:auto">
           <table class="fund-tbl">
             <thead><tr>
               <th>Segmento</th>
-              <th style="text-align:center">Dec.</th>
-              <th style="min-width:260px">Fundamentos Favoráveis</th>
-              <th style="text-align:center">Status</th>
-              <th style="min-width:260px">Fundamentos Desfavoráveis</th>
-              <th style="text-align:center">Status</th>
+              <th>Decisões</th>
+              <th>Favoráveis ✔</th>
+              <th>Desfavoráveis ✘</th>
+              <th>Fund. Favorável</th>
+              <th>Fund. Desfavorável</th>
             </tr></thead>
             <tbody>
               ${rows.map(r => `<tr>
-                <td><strong style="color:#0D2B5E">${escHtml(r.label)}</strong><br><span style="font-size:10px;color:#888">${r.fav_dec}✔ / ${r.desf_dec}✘</span></td>
-                <td style="text-align:center;font-weight:700">${r.total_dec}</td>
-                <td>${fundList(r.fav_funds)}</td>
-                <td style="text-align:center">${statusBadge(r.status_fav)}</td>
-                <td>${fundList(r.desf_funds)}</td>
-                <td style="text-align:center">${statusBadge(r.status_desf)}</td>
+                <td><strong style="color:#0D2B5E">${escHtml(r.label)}</strong></td>
+                <td style="font-weight:700">${r.total_dec}</td>
+                <td><span style="color:#1B7A4E;font-weight:700">${r.fav_dec}</span></td>
+                <td><span style="color:#C62828;font-weight:700">${r.desf_dec}</span></td>
+                <td>${statusBadge(r.status_fav)}</td>
+                <td>${statusBadge(r.status_desf)}</td>
               </tr>`).join('')}
             </tbody>
           </table></div>
-          <div style="font-size:10px;color:#999;margin-top:8px">✔ Uniforme = todos as decisões do segmento usam o mesmo fundamento. ⚠ Divergente = julgadores adotaram fundamentos distintos.</div>`;
+          <div style="font-size:10px;color:#999;margin-top:8px">✔ Manteve = julgadores adotaram o mesmo fundamento. ⚠ Mudou = julgadores divergiram nos fundamentos.</div>`;
         return;
       }
 
