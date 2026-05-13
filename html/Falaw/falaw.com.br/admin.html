@@ -9451,7 +9451,18 @@ async function ifoodSaveExcel() {
     if (existingKpisErr) throw new Error('Erro ao ler KPIs existentes: ' + existingKpisErr.message);
     const existingKpis = Array.isArray(existingKpisResp) ? existingKpisResp : [];
     const autoKeySet = new Set(kpiRows.map(r => r.tab_key + '||' + r.kpi_key));
-    const manualKpis = (existingKpis || []).filter(k => !autoKeySet.has(k.tab_key + '||' + k.kpi_key));
+    // Chaves sempre geradas automaticamente — nunca preservar como manuais mesmo se ausentes
+    const alwaysAutoKeys = new Set([
+      'visao-geral||table_fund_vg',
+      'visao-geral||table_cr_consolidado',
+      'visao-geral||chart_dist_2026',
+      'visao-geral||chart_dist_ano',
+      'ex-foodlover||table_dec_exfl',
+    ]);
+    const manualKpis = (existingKpis || []).filter(k => {
+      const key = k.tab_key + '||' + k.kpi_key;
+      return !autoKeySet.has(key) && !alwaysAutoKeys.has(key);
+    });
 
     setStatus('Removendo KPIs gerados automaticamente…');
     const { error: delErr } = await ifoodApi('/api/ifood/kpis/by-period/' + encodeURIComponent(periodId), { method: 'DELETE' });
