@@ -6981,9 +6981,10 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
         if (r.data_sentenca.getFullYear() !== refAno || r.data_sentenca.getMonth()+1 !== refMes) return;
       }
       total++;
-      if (s.includes('FAVORAVEL')||s.includes('IMPROCEDENTE')||s.includes('EXCLUSAO')||s.includes('ACORDO')) fav++;
+      if (s.includes('DESFAVORAVEL')||s.includes('CONDENADA')||s.includes('CONDENANDO')) desf++;
+      else if (s.includes('FAVORAVEL')||s.includes('IMPROCEDENTE')||s.includes('EXCLUSAO')||s.includes('ACORDO')) fav++;
       else if (s.includes('PARCIAL')) parc++;
-      else if (s.includes('DESFAVORAVEL')||s.includes('PROCEDENTE')||s.includes('CONDENADA')||s.includes('CONDENANDO')) desf++;
+      else if (s.includes('PROCEDENTE')) desf++;
     });
     return { fav, desf, parc, total };
   };
@@ -7161,12 +7162,13 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     if (!info || info.name.length < 4 || /^\d[\d.,/\- ]*$/.test(info.name)) return;
     if (!julgMap[info.name]) julgMap[info.name] = { count: 0, fav: 0, desf: 0, parc: 0, location: info.location };
     julgMap[info.name].count++;
-    // Classificar decisão deste processo
+    // Classificar decisão deste processo (checar DESFAVORAVEL antes de FAVORAVEL pois é substring)
     const s = _xlN(r.sentenca||'');
     if (s && s !== 'NAO SE APLICA' && s !== 'NAO') {
-      if (s.includes('FAVORAVEL')||s.includes('IMPROCEDENTE')||s.includes('EXCLUSAO')||s.includes('ACORDO')) julgMap[info.name].fav++;
+      if (s.includes('DESFAVORAVEL')||s.includes('CONDENADA')||s.includes('CONDENANDO')) julgMap[info.name].desf++;
+      else if (s.includes('FAVORAVEL')||s.includes('IMPROCEDENTE')||s.includes('EXCLUSAO')||s.includes('ACORDO')) julgMap[info.name].fav++;
       else if (s.includes('PARCIAL')) julgMap[info.name].parc++;
-      else if (s.includes('DESFAVORAVEL')||s.includes('PROCEDENTE')||s.includes('CONDENADA')||s.includes('CONDENANDO')) julgMap[info.name].desf++;
+      else if (s.includes('PROCEDENTE')) julgMap[info.name].desf++;
     }
   });
   const julgTop = topN(Object.fromEntries(Object.entries(julgMap).map(([k,v])=>[k,v.count])), 10);
@@ -7204,9 +7206,8 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
               title(items) {
                 const idx = items[0].dataIndex;
                 const loc = julgLocations[idx];
-                return loc ? `${julgLabels[idx]}\n${loc}` : julgLabels[idx];
-              },
-              afterTitle(items) { return ''; }
+                return loc ? [julgLabels[idx], loc] : [julgLabels[idx]];
+              }
             }
           }
         },
