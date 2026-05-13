@@ -9109,7 +9109,11 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
 
   // Tabela de fundamentos dos julgadores por Causa Raiz — Visão Geral
   // Usa decisoes + decisoesTabela para as tabelas demonstrativas
-  const decisoesTodasTabelas = [...decisoes, ...decisoesTabela];
+  // Mescla para tabelas: arquivo separado tem prioridade; deduplica por num_processo
+  const _decTabelaMap = new Map();
+  decisoes.forEach(d => _decTabelaMap.set(d.num_processo, d));
+  decisoesTabela.forEach(d => _decTabelaMap.set(d.num_processo, d)); // sobrescreve com dados do arquivo separado
+  const decisoesTodasTabelas = [..._decTabelaMap.values()];
   {
     const fundByCR = {};
     decisoesTodasTabelas.forEach(d => {
