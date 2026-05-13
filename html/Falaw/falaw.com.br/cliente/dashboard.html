@@ -1426,6 +1426,21 @@ function _buildKpiGrid(kpis, kpisEl, chartsEl, tabKey) {
       };
     }
 
+    // Restore tooltip title with judge location (_judge_locs array saved by admin)
+    if (Array.isArray(cfg._judge_locs)) {
+      const locs = cfg._judge_locs;
+      const labels = cfg.data?.labels || [];
+      cfg.options = cfg.options || {};
+      cfg.options.plugins = cfg.options.plugins || {};
+      cfg.options.plugins.tooltip = cfg.options.plugins.tooltip || {};
+      cfg.options.plugins.tooltip.callbacks = cfg.options.plugins.tooltip.callbacks || {};
+      cfg.options.plugins.tooltip.callbacks.title = items => {
+        const i = items[0].dataIndex;
+        const loc = locs[i];
+        return loc ? [labels[i], loc] : [labels[i]];
+      };
+    }
+
     const isHorizontal = cfg.options && cfg.options.indexAxis === 'y';
     const height = isHorizontal
       ? Math.max(180, ((cfg.data?.labels?.length) || 6) * 32 + 40)

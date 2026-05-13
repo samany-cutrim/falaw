@@ -7204,20 +7204,12 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     push('visao-geral','chart_julgadores','Top 10 Julgadores','','',{
       type:'bar',
       data:{ labels: julgLabels, datasets },
+      _judge_locs: julgLocations,
       options:{
         indexAxis:'y',
         responsive:true, maintainAspectRatio:false,
         plugins:{
-          legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } },
-          tooltip:{
-            callbacks:{
-              title(items) {
-                const idx = items[0].dataIndex;
-                const loc = julgLocations[idx];
-                return loc ? [julgLabels[idx], loc] : [julgLabels[idx]];
-              }
-            }
-          }
+          legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } }
         },
         scales:{
           x:{ stacked:true, beginAtZero:true, ticks:{ stepSize:1, font:{ family:'IBM Plex Mono', size:9 } }, grid:{ display:false } },
@@ -7324,9 +7316,9 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       ] : [{ label:'Processos', data:eeJulgTop.map(([,v])=>v), backgroundColor:'#0F9E76', borderRadius:2 }];
       push('ex_empregados','ee_chart_julg','Top 10 Julgadores','','',{
         type:'bar', data:{ labels:eeJulgTop.map(([l])=>l), datasets:eeJDatasets },
+        _judge_locs: eeJLocs,
         options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
-          plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } },
-            tooltip:{ callbacks:{ title(items){ const i=items[0].dataIndex; const loc=eeJLocs[i]; return loc?[eeJulgTop[i][0],loc]:[eeJulgTop[i][0]]; } } } },
+          plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
           scales:{ x:{ stacked:true, beginAtZero:true, ticks:{ stepSize:1, font:{ family:'IBM Plex Mono', size:9 } }, grid:{ display:false } }, y:{ stacked:true, ticks:{ font:{ family:'IBM Plex Mono', size:9 } }, grid:{ display:false } } } }
       }, 'Ranking Julgadores — Ex-empregados');
     }
@@ -7408,9 +7400,9 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       ] : [{ label:'Processos', data:tcJulgTop.map(([,v])=>v), backgroundColor:'#0F9E76', borderRadius:2 }];
       push('terceirizacao','tc_chart_julg','Top 10 Julgadores','','',{
         type:'bar', data:{ labels:tcJulgTop.map(([l])=>l), datasets:tcJDatasets },
+        _judge_locs: tcJLocs,
         options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
-          plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } },
-            tooltip:{ callbacks:{ title(items){ const i=items[0].dataIndex; const loc=tcJLocs[i]; return loc?[tcJulgTop[i][0],loc]:[tcJulgTop[i][0]]; } } } },
+          plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
           scales:{ x:{ stacked:true, beginAtZero:true, ticks:{ stepSize:1, font:{ family:'IBM Plex Mono', size:9 } }, grid:{ display:false } }, y:{ stacked:true, ticks:{ font:{ family:'IBM Plex Mono', size:9 } }, grid:{ display:false } } } }
       }, 'Ranking Julgadores — Subsidiária');
     }
