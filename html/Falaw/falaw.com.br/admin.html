@@ -1593,8 +1593,13 @@
             </select>
           </div>
           <div class="form-field" style="margin:0;flex:1;min-width:200px">
-            <label>Arquivo Excel (.xlsx / .xls) *</label>
+            <label>Arquivo Excel principal (.xlsx / .xls) *</label>
             <input type="file" id="ifood-xl-file" accept=".xlsx,.xls" onchange="ifoodPreviewExcel(this)" style="padding:10px 14px;border:1px solid var(--c-divider);border-radius:2px;width:100%;background:#fafaf8;" />
+          </div>
+          <div class="form-field" style="margin:0;flex:1;min-width:200px">
+            <label>Planilha de Decisões (opcional) *</label>
+            <input type="file" id="ifood-xl-decisoes" accept=".xlsx,.xls" style="padding:10px 14px;border:1px solid var(--c-divider);border-radius:2px;width:100%;background:#fafaf8;" />
+            <p style="font-size:11px;color:var(--c-muted);margin:4px 0 0">Colunas: Nº Processo · Reclamante · TRT · Causa Raiz · Resultado · Juiz · Vara/Turma · Fund. Fav. · Fund. Desf.</p>
           </div>
         </div>
         <div id="ifood-xl-preview" style="display:none;margin-bottom:16px">
@@ -9317,7 +9322,25 @@ async function ifoodSaveExcel() {
 
     setStatus(`Lendo Decisões… (${records.length} processos)`);
     const decSh = findSh('Decisões','Decisoes','Decisão','Decisao');
-    const decisoes = decSh ? _xlParseDecisoes(XLSX.utils.sheet_to_json(decSh,{header:1,defval:''}).slice(1)) : [];
+
+    // Verifica se foi carregado arquivo de decisões separado
+    let decisoes = [];
+    const decFileInput = document.getElementById('ifood-xl-decisoes');
+    const decFile = decFileInput && decFileInput.files && decFileInput.files[0];
+    if (decFile) {
+      setStatus('Lendo arquivo de Decisões separado…');
+      const decAb = await decFile.arrayBuffer();
+      const decWb = XLSX.read(decAb, { type:'array' });
+      const decShSep = decWb.Sheets[decWb.SheetNames[0]];
+      const decRaw = XLSX.utils.sheet_to_json(decShSep, { header:1, defval:'' });
+      // Pula linha de cabeçalho se a primeira coluna for texto (não número de processo)
+      const firstRow = decRaw[0] || [];
+      const skipHeader = firstRow[0] && !/^\d/.test(String(firstRow[0]).trim());
+      decisoes = _xlParseDecisoes(skipHeader ? decRaw.slice(1) : decRaw);
+      setStatus(`Decisões carregadas do arquivo separado: ${decisoes.length}`);
+    } else if (decSh) {
+      decisoes = _xlParseDecisoes(XLSX.utils.sheet_to_json(decSh,{header:1,defval:''}).slice(1));
+    }
 
     const novosSh = findSh('Novos Casos Recebidos','Novos Casos','novos');
     const novos = novosSh ? _xlParseNovos(XLSX.utils.sheet_to_json(novosSh,{header:1,defval:''})) : { total:0, byCR:{} };
