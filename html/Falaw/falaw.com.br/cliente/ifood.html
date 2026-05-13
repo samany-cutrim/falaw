@@ -1234,7 +1234,7 @@ async function renderCharts(tabKey, kpis) {
                   <td style="text-align:center;font-size:12px;${arrow}">${hasFunds ? '▸' : ''}</td>
                   <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#555;white-space:nowrap">${escHtml(r.num_processo)}</td>
                   <td style="font-weight:600">${escHtml(r.reclamante || '—')}</td>
-                  <td><span style="background:#EDE7F6;color:#6A1B9A;border-radius:3px;padding:1px 6px;font-weight:700;font-size:10px">TRT-${escHtml(String(r.trt||''))}</span></td>
+                  <td><span style="background:#EDE7F6;color:#6A1B9A;border-radius:3px;padding:1px 6px;font-weight:700;font-size:10px">${escHtml(String(r.trt||'').replace(/^TRT-?/i,'TRT-'))}</span></td>
                   <td>${badge(r.classe, resTxt)}</td>
                   <td>${escHtml(r.juiz_relator || '—')}</td>
                   <td style="font-size:10px;color:#666">${escHtml(r.varaturma || '—')}</td>
