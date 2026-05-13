@@ -398,11 +398,14 @@
     .sidebar-overlay {
 
     /* ── COMPARATIVO ── */
-    .comp-selectors { display:flex; gap:20px; flex-wrap:wrap; align-items:flex-end; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:20px 24px; margin-bottom:32px; }
+    .comp-selectors { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:20px 24px; margin-bottom:32px; }
+    .comp-sel-group { display:flex; flex-direction:column; }
     .comp-selectors label { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:8px; }
     .comp-selectors select { border:1px solid var(--border); border-radius:6px; padding:10px 16px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text); background:var(--bg); outline:none; min-width:180px; cursor:pointer; transition:border-color .15s; }
     .comp-selectors select:hover, .comp-selectors select:focus { border-color:var(--accent); }
-    .comp-arrow { font-family:'IBM Plex Mono',monospace; font-size:18px; color:var(--muted); padding-bottom:2px; align-self:flex-end; }
+    .comp-arrow { font-family:'IBM Plex Mono',monospace; font-size:20px; color:var(--muted); line-height:1; padding-bottom:10px; }
+    .comp-btn { align-self:flex-end; background:var(--accent); color:#fff; border:none; border-radius:6px; padding:10px 22px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; transition:opacity .15s; white-space:nowrap; }
+    .comp-btn:hover { opacity:.85; }
     .comp-card { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:24px; }
     .comp-card-header { padding:14px 20px; border-bottom:1px solid var(--border); }
     .comp-section-title { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:400; margin:0; }
@@ -692,15 +695,16 @@
             <div class="page-subtitle">Selecione dois períodos para comparar os principais indicadores.</div>
           </div>
           <div class="comp-selectors">
-            <div>
+            <div class="comp-sel-group">
               <label>Período A (base)</label>
               <select id="comp-period-a" onchange="renderComparativo()"></select>
             </div>
             <div class="comp-arrow">→</div>
-            <div>
+            <div class="comp-sel-group">
               <label>Período B (atual)</label>
               <select id="comp-period-b" onchange="renderComparativo()"></select>
             </div>
+            <button class="comp-btn" onclick="renderComparativo()">Comparar</button>
           </div>
           <div id="comp-output"></div>
         </div>

@@ -1206,7 +1206,6 @@
           <div class="ifood-sub-tab"        onclick="cliDashSubTab('content')">✍️ Textos das Abas</div>
           <div class="ifood-sub-tab"        onclick="cliDashSubTab('highlights')">⭐ Destaques do Mês</div>
           <div class="ifood-sub-tab"        onclick="cliDashSubTab('excel')">📁 Upload Excel</div>
-          <div class="ifood-sub-tab"        onclick="cliDashSubTab('comparativo')">📈 Comparativo</div>
         </div>
 
         <!-- Sub: Períodos -->
@@ -1302,23 +1301,6 @@
           <button type="button" class="btn btn-primary" onclick="cliDashSaveExcel()">Salvar dados no Cockroach</button>
         </div>
 
-        <!-- Sub: Comparativo -->
-        <div id="cli-dash-sub-comparativo" style="display:none">
-          <p style="font-size:13px;color:var(--c-muted);margin-bottom:20px;">Compare dois períodos para visualizar o que mudou na carteira do cliente.</p>
-          <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-bottom:20px">
-            <div class="form-field" style="margin:0;flex:1;min-width:180px">
-              <label>Período A (base)</label>
-              <select id="adm-comp-period-a" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none"><option value="">— Selecione —</option></select>
-            </div>
-            <div style="font-size:18px;color:var(--c-muted);padding-bottom:10px">→</div>
-            <div class="form-field" style="margin:0;flex:1;min-width:180px">
-              <label>Período B (atual)</label>
-              <select id="adm-comp-period-b" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none"><option value="">— Selecione —</option></select>
-            </div>
-            <button type="button" class="btn btn-primary" onclick="admRenderComparativo()" style="margin-bottom:0">Comparar</button>
-          </div>
-          <div id="adm-comp-output"></div>
-        </div>
 
         <div id="cli-dash-sub-highlights" style="display:none">
           <div class="form-field" style="margin-bottom:20px">
@@ -6242,7 +6224,7 @@ async function ifoodApi(path, options) {
 ══════════════════════════════════════ */
 let _cliDashClientId = null;
 let _cliDashPeriods  = [];
-const CLI_DASH_SUBS  = ['periods','kpis','content','highlights','excel','comparativo'];
+const CLI_DASH_SUBS  = ['periods','kpis','content','highlights','excel'];
 const CLI_DASH_TABS  = [
   { key: 'ex_empregados', label: 'Ações de Ex-empregados' },
   { key: 'terceirizacao', label: 'Subsidiária' }
