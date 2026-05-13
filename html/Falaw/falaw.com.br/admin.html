@@ -8512,7 +8512,7 @@ function _xlParseDecisoes(rawRows) {
   }).filter(r => r.causa_raiz);
 }
 
-function _xlParseNovos(rawRows) {
+function _xlParseJulgadores(rawRows) {
   // Colunas esperadas: JULGADOR | TRT | VARA/TURMA | CAUSA RAIZ | FUNDAMENTOS FAVORÁVEIS | FUNDAMENTOS DESFAVORÁVEIS
   // Detecta pelo cabeçalho (linha 0), com fallback posicional
   const header = (rawRows[0] || []).map(c => _xlNormTxt(String(c || '')));
