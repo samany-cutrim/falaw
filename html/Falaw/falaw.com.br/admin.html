@@ -8912,7 +8912,18 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   // Gráfico de linha: distribuições em 2026 por mês
   {
     const _MONTHS_LABELS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    const _parseYM = d => { const m=String(d||'').match(/(\d{4})[-\/](\d{1,2})/); return m?{y:m[1],mo:parseInt(m[2],10)}:null; };
+    const _parseYM = d => {
+      const s = String(d||'');
+      // YYYY-MM-DD ou YYYY/MM/DD
+      let m = s.match(/^(\d{4})[-\/](\d{1,2})/);
+      if(m) return { y:m[1], mo:parseInt(m[2],10) };
+      // DD/MM/YYYY ou DD-MM-YYYY
+      m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+      if(m) return { y:m[3], mo:parseInt(m[2],10) };
+      // objeto Date serializado (número serial Excel ou ISO)
+      if(d instanceof Date && !isNaN(d)) return { y:String(d.getFullYear()), mo:d.getMonth()+1 };
+      return null;
+    };
     const _byMonthAll  = {};
     const _byMonthCR   = {};
     records.forEach(r => {
