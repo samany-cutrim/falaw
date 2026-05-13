@@ -8949,8 +8949,9 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
       const y = _parseYear(r.data_distrib);
       if(!y || y<'2015' || y>'2030') return;
       _byYearAll[y]  = (_byYearAll[y]||0) + 1;
-      _byYearCR[r.causa_raiz] = _byYearCR[r.causa_raiz] || {};
-      _byYearCR[r.causa_raiz][y] = (_byYearCR[r.causa_raiz][y]||0) + 1;
+      const crKey = _xlCanonCR(r.causa_raiz) || r.causa_raiz;
+      _byYearCR[crKey] = _byYearCR[crKey] || {};
+      _byYearCR[crKey][y] = (_byYearCR[crKey][y]||0) + 1;
     });
     const _years = Object.keys(_byYearAll).sort();
     if(_years.length >= 2) {
@@ -8990,18 +8991,19 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
       if(!ym || ym.y !== '2026') return;
       const mo = ym.mo;
       _byMonthAll[mo]  = (_byMonthAll[mo]||0) + 1;
-      _byMonthCR[r.causa_raiz] = _byMonthCR[r.causa_raiz] || {};
-      _byMonthCR[r.causa_raiz][mo] = (_byMonthCR[r.causa_raiz][mo]||0) + 1;
+      const crKey = _xlCanonCR(r.causa_raiz) || r.causa_raiz;
+      _byMonthCR[crKey] = _byMonthCR[crKey] || {};
+      _byMonthCR[crKey][mo] = (_byMonthCR[crKey][mo]||0) + 1;
     });
     const _months = Object.keys(_byMonthAll).map(Number).sort((a,b)=>a-b);
     if(_months.length >= 1) {
       const _labels = _months.map(m => _MONTHS_LABELS[m-1]);
       const _datasets2026 = [{ label:'Total', data:_months.map(m=>_byMonthAll[m]||0) }];
       for(const { cr, label: crLabel } of _XL_CR_TABS) {
-        const moCounts = _byMonthCR[cr];
-        if(!moCounts) continue;
-        const monthsWithData = Object.keys(moCounts).map(Number).filter(m=>_months.includes(m));
-        if(monthsWithData.length < 1) continue;
+        const moCounts = _byMonthCR[cr] || {};
+        // Inclui a série se houver ao menos 1 registro no período, mesmo que zero em alguns meses
+        const hasAny = _months.some(m => (moCounts[m]||0) > 0);
+        if(!hasAny) continue;
         _datasets2026.push({ label: crLabel, data:_months.map(m=>(moCounts[m]||0)) });
       }
       push('visao-geral','chart_dist_2026','Distribuídos em 2026 por Mês','','',
