@@ -398,21 +398,26 @@
     .sidebar-overlay {
 
     /* ── COMPARATIVO ── */
-    .comp-selectors { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end; margin-bottom:28px; }
-    .comp-selectors label { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:6px; }
-    .comp-selectors select { border:1px solid var(--border); border-radius:4px; padding:8px 14px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text); background:var(--bg-card); outline:none; min-width:160px; }
-    .comp-kpi-table { width:100%; border-collapse:collapse; font-size:13px; margin-bottom:32px; }
-    .comp-kpi-table th { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); padding:10px 14px; border-bottom:1px solid var(--border); text-align:left; font-weight:400; }
-    .comp-kpi-table td { padding:12px 14px; border-bottom:1px solid rgba(0,0,0,0.05); vertical-align:middle; }
-    .comp-kpi-table tr:last-child td { border-bottom:none; }
+    .comp-selectors { display:flex; gap:20px; flex-wrap:wrap; align-items:flex-end; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:20px 24px; margin-bottom:32px; }
+    .comp-selectors label { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:8px; }
+    .comp-selectors select { border:1px solid var(--border); border-radius:6px; padding:10px 16px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text); background:var(--bg); outline:none; min-width:180px; cursor:pointer; transition:border-color .15s; }
+    .comp-selectors select:hover, .comp-selectors select:focus { border-color:var(--accent); }
+    .comp-arrow { font-family:'IBM Plex Mono',monospace; font-size:18px; color:var(--muted); padding-bottom:2px; align-self:flex-end; }
+    .comp-card { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:24px; }
+    .comp-card-header { padding:14px 20px; border-bottom:1px solid var(--border); }
+    .comp-section-title { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:400; margin:0; }
+    .comp-kpi-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .comp-kpi-table th { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); padding:10px 20px; border-bottom:1px solid var(--border); text-align:left; font-weight:400; background:var(--bg); }
+    .comp-kpi-table td { padding:13px 20px; border-bottom:1px solid rgba(0,0,0,0.04); vertical-align:middle; }
+    .comp-kpi-table tbody tr:last-child td { border-bottom:none; }
+    .comp-kpi-table tbody tr:hover td { background:rgba(0,0,0,0.02); }
     .comp-kpi-table .col-label { font-weight:600; color:var(--text); }
     .comp-kpi-table .col-val { font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text); }
-    .comp-kpi-table .col-delta { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; padding:3px 8px; border-radius:3px; display:inline-block; }
+    .comp-kpi-table .col-delta { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; display:inline-block; }
     .comp-kpi-table .delta-up   { color:#0F9E76; background:rgba(15,158,118,0.1); }
     .comp-kpi-table .delta-down { color:#C0392B; background:rgba(192,57,43,0.1); }
     .comp-kpi-table .delta-flat { color:var(--muted); background:rgba(0,0,0,0.05); }
-    .comp-section-title { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:28px 0 12px; }
-    .comp-empty { padding:40px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted-l); }
+    .comp-empty { padding:48px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted-l); }
 
     /* ── SIDEBAR OVERLAY ── */
     .sidebar-overlay {
@@ -691,7 +696,7 @@
               <label>Período A (base)</label>
               <select id="comp-period-a" onchange="renderComparativo()"></select>
             </div>
-            <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;color:var(--muted);padding-bottom:6px">→</div>
+            <div class="comp-arrow">→</div>
             <div>
               <label>Período B (atual)</label>
               <select id="comp-period-b" onchange="renderComparativo()"></select>
@@ -1552,8 +1557,9 @@ async function renderComparativo() {
     const mapB = Object.fromEntries(kpisB.map(k => [k.kpi_key, k]));
     const allKeys = [...new Set([...Object.keys(mapA), ...Object.keys(mapB)])];
 
-    html += `<div class="comp-section-title">${escHtml(t.label)}</div>`;
-    html += `<table class="comp-kpi-table">
+    html += `<div class="comp-card">
+      <div class="comp-card-header"><div class="comp-section-title">${escHtml(t.label)}</div></div>
+      <table class="comp-kpi-table">
       <thead><tr>
         <th>Indicador</th>
         <th>${escHtml(labelA)}</th>
@@ -1593,7 +1599,7 @@ async function renderComparativo() {
       </tr>`;
     });
 
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
   });
 
   out.innerHTML = html || '<div class="comp-empty">Nenhum dado disponível para comparação.</div>';
@@ -1950,9 +1956,9 @@ async function init() {
     document.getElementById('nav-ifood').classList.remove('hidden');
   }
 
-  /* Aba Comparativo: só mostrar se habilitado no admin */
+  /* Aba Comparativo: sempre visível */
   const compBtn = document.querySelector('#dashTabBar .tab-btn[data-tab="comparativo"]');
-  if (compBtn) compBtn.style.display = client.comparativoEnabled ? '' : 'none';
+  if (compBtn) compBtn.style.display = '';
 
   /* Page title */
   document.getElementById('pageTitle').textContent     = 'Olá, ' + displayName.split(' ')[0];

@@ -1165,24 +1165,6 @@
               <small style="color:var(--c-muted)">Receberá aviso automático ao incluir um novo relatório. Se em branco, usa o e-mail de acesso.</small>
             </div>
             <div class="form-field">
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-                <input type="checkbox" id="cli-comparativo-enabled" />
-                Habilitar aba "Comparativo" para este cliente
-              </label>
-              <small style="color:var(--c-muted)">Quando ativo, o cliente verá a aba Comparativo de Períodos no dashboard.</small>
-            </div>
-            <div class="form-field">
-              <label>Modelo de Relatório</label>
-              <select id="cli-dash-type" style="width:100%">
-                <option value="padrao">Padrão (modelo Frete / trabalhista)</option>
-                <option value="ifood">iFood</option>
-                <option value="apdata">APDATA</option>
-                <option value="cuidar">Cuidar.me</option>
-                <option value="buser">Buser</option>
-              </select>
-              <small style="color:var(--c-muted)">Define qual modelo de planilha Excel este cliente utiliza.</small>
-            </div>
-            <div class="form-field">
               <label>Código de Acesso *</label>
               <div style="display:flex;gap:8px">
                 <input id="cli-code" type="text" placeholder="Ex: FALAW2026@ABC" style="flex:1" />
@@ -1502,7 +1484,6 @@
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('content')">✍️ Textos das Abas</div>
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('highlights')">⭐ Destaques do Mês</div>
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('excel')">📁 Upload Excel</div>
-        <div class="ifood-sub-tab"        onclick="ifoodSubTab('comparativo')">📊 Comparativo</div>
       </div>
 
       <!-- SUB: PERÍODOS -->
@@ -1645,32 +1626,7 @@
         <button type="button" class="btn btn-primary" onclick="ifoodSaveExcel()">Salvar dados no Cockroach</button>
       </div>
 
-      <div id="ifood-sub-comparativo" style="display:none">
-        <p style="font-size:13px;color:var(--c-muted);margin-bottom:20px;">Configure a comparação de dois períodos. Ao salvar, uma aba <strong>Comparativo</strong> aparecerá automaticamente no dashboard do cliente quando o período B estiver selecionado.</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-          <div class="form-field" style="margin:0">
-            <label>Período A (base / mais antigo) *</label>
-            <select id="ifood-comp-a" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;">
-              <option value="">— Selecione —</option>
-            </select>
-          </div>
-          <div class="form-field" style="margin:0">
-            <label>Período B (atual / mais recente) *</label>
-            <select id="ifood-comp-b" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;">
-              <option value="">— Selecione —</option>
-            </select>
-          </div>
-        </div>
-        <div id="ifood-comp-preview" style="display:none;margin-bottom:16px;padding:14px 18px;background:#f3faf6;border:1px solid #b7e0cb;border-radius:6px;font-size:13px;color:#1B7A4E"></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <button type="button" class="btn btn-primary" onclick="ifoodSaveComparativo()">Salvar Comparativo</button>
-          <button type="button" class="btn btn-ghost" onclick="ifoodRemoveComparativo()">Remover Comparativo</button>
-        </div>
-        <div style="margin-top:28px">
-          <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:12px">Comparativos Configurados</div>
-          <div id="ifood-comp-list"><div style="color:var(--c-muted);font-size:13px">Nenhum configurado.</div></div>
-        </div>
-      </div>
+
 
       <!-- MODAL: Período -->
       <div class="modal-overlay" id="ifoodPeriodModal" onclick="if(event.target===this)ifoodClosePeriodModal()">
@@ -5338,8 +5294,6 @@ function openClientModal(clientId) {
     document.getElementById('cli-company').value      = c.company || c.name || '';
     document.getElementById('cli-email').value         = c.email;
     document.getElementById('cli-notify-email').value  = c.notifyEmail || '';
-    document.getElementById('cli-comparativo-enabled').checked = c.comparativoEnabled || false;
-    document.getElementById('cli-dash-type').value = c.dashType || 'padrao';
     document.getElementById('cli-code').value          = c.code;
   } else {
     document.getElementById('clientModalTitle').textContent = 'Novo Cliente';
@@ -5347,8 +5301,6 @@ function openClientModal(clientId) {
     document.getElementById('cli-company').value        = '';
     document.getElementById('cli-email').value          = '';
     document.getElementById('cli-notify-email').value   = '';
-    document.getElementById('cli-comparativo-enabled').checked = false;
-    document.getElementById('cli-dash-type').value = 'padrao';
     genCode();
   }
 }
@@ -5359,8 +5311,8 @@ async function saveClient() {
   const company     = document.getElementById('cli-company').value.trim();
   const email       = document.getElementById('cli-email').value.trim().toLowerCase();
   const notifyEmail = document.getElementById('cli-notify-email').value.trim().toLowerCase();
-  const comparativoEnabled = document.getElementById('cli-comparativo-enabled').checked;
-  const dashType = document.getElementById('cli-dash-type').value || 'padrao';
+  const comparativoEnabled = true;
+  const dashType = 'padrao';
   const code        = document.getElementById('cli-code').value.trim();
   const id          = document.getElementById('cli-id').value;
 
@@ -7762,7 +7714,7 @@ async function loadIfoodAdmin() {
 }
 
 // ── sub-tab switch ────────────────────
-const IFOOD_SUBS = ['periods','kpis','content','highlights','excel','comparativo'];
+const IFOOD_SUBS = ['periods','kpis','content','highlights','excel'];
 function ifoodSubTab(name) {
   const nav = document.getElementById('ifoodSubNav');
   nav.querySelectorAll('.ifood-sub-tab').forEach((t, i) => {
