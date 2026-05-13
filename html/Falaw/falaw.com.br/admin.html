@@ -8520,30 +8520,51 @@ function _xlParseDecisoes(rawRows) {
 }
 
 function _xlParseJulgadores(rawRows) {
-  // Colunas esperadas: JULGADOR | TRT | VARA/TURMA | CAUSA RAIZ | FUNDAMENTOS FAVORÁVEIS | FUNDAMENTOS DESFAVORÁVEIS
-  // Detecta pelo cabeçalho (linha 0), com fallback posicional
+  // Formato real: 1 linha por julgador, colunas separadas por CR
+  // TRT | JUIZ/RELATOR | VARA/TURMA | DECISÕES | PENDENTES |
+  // ENTENDIMENTO FAVORÁVEL NUVEM | ENTENDIMENTO DESFAVORÁVEL NUVEM |
+  // ENTENDIMENTO FAVORÁVEL OL | ENTENDIMENTO DESFAVORÁVEL OL |
+  // ENTENDIMENTO FAVORÁVEL EXFL | ENTENDIMENTO DESFAVORÁVEL EXFL | ...
   const header = (rawRows[0] || []).map(c => _xlNormTxt(String(c || '')));
-  const findCol = (...terms) => { const i = header.findIndex(h => terms.some(t => h.includes(t))); return i >= 0 ? i : -1; };
-  const iJulg = findCol('JULGADOR','JUIZ','RELATOR','MAGISTRADO');
-  const iTRT  = findCol('TRT');
-  const iVT   = findCol('VARA','TURMA');
-  const iCR   = findCol('CAUSA','RAIZ','SEGMENTO','CR');
-  const iFav  = findCol('FAVOR','FAV');
-  const iDesf = findCol('DESFAVOR','DESF');
-  console.log('[_xlParseJulgadores] header:', header, '| cols: julg='+iJulg+' trt='+iTRT+' vt='+iVT+' cr='+iCR+' fav='+iFav+' desf='+iDesf);
-  const col = (r, idx, fb) => String(r[idx >= 0 ? idx : fb] ?? '').trim();
-  const parsed = rawRows.slice(1)
-    .filter(r => r && String(r[iJulg >= 0 ? iJulg : 0] ?? '').trim())
-    .map(r => ({
-      juiz_relator: col(r, iJulg, 0),
-      trt:          _xlNormalizeTRT(col(r, iTRT,  1)),
-      varaturma:    col(r, iVT,   2),
-      causa_raiz:   _xlCanonCR(col(r, iCR,   3)),
-      fund_fav:     col(r, iFav,  4),
-      fund_desf:    col(r, iDesf, 5),
-    }));
-  console.log('[_xlParseJulgadores] parsed total:', parsed.length, '| com causa_raiz:', parsed.filter(r=>r.causa_raiz).length, '| sample:', parsed.slice(0,3));
-  return parsed.filter(r => r.causa_raiz);
+  const iTRT  = header.findIndex(h => h === 'TRT');
+  const iJulg = header.findIndex(h => h.includes('JUIZ') || h.includes('RELATOR'));
+  const iVT   = header.findIndex(h => h.includes('VARA') || h.includes('TURMA'));
+
+  // Detecta pares (fav, desf) por CR nas colunas do cabeçalho
+  const crSignals = [
+    { cr: 'ENTREGADOR NUVEM',         sig: 'NUVEM'     },
+    { cr: 'ENTREGADOR OL',            sig: ' OL'       },
+    { cr: 'EX-FOODLOVER',             sig: 'EXFL'      },
+    { cr: 'TERCEIRIZAÇÃO',            sig: 'TERC'      },
+    { cr: 'ENTREGADOR - MARKETPLACE', sig: 'MARKET'    },
+    { cr: 'RESTAURANTES - CONTRATO',  sig: 'RESTAUR'   },
+  ];
+  const crCols = crSignals.map(({ cr, sig }) => {
+    const iFav  = header.findIndex(h => h.includes(sig) && h.includes('FAVORAV') && !h.includes('DESFAVOR'));
+    const iDesf = header.findIndex(h => h.includes(sig) && h.includes('DESFAVOR'));
+    return { cr, iFav, iDesf };
+  }).filter(c => c.iFav >= 0 || c.iDesf >= 0);
+
+  console.log('[_xlParseJulgadores] header:', header, '| crCols:', JSON.stringify(crCols));
+
+  const result = [];
+  for (const row of rawRows.slice(1)) {
+    if (!row) continue;
+    const juiz = String(row[iJulg >= 0 ? iJulg : 1] ?? '').trim();
+    if (!juiz) continue;
+    const trt = _xlNormalizeTRT(String(row[iTRT >= 0 ? iTRT : 0] ?? ''));
+    const vt  = String(row[iVT  >= 0 ? iVT  : 2] ?? '').trim();
+    for (const { cr, iFav, iDesf } of crCols) {
+      const fav  = iFav  >= 0 ? String(row[iFav]  ?? '').trim() : '';
+      const desf = iDesf >= 0 ? String(row[iDesf] ?? '').trim() : '';
+      const favClean  = (fav  && fav  !== 'N/A' && fav  !== 'n/a') ? fav  : '';
+      const desfClean = (desf && desf !== 'N/A' && desf !== 'n/a') ? desf : '';
+      if (!favClean && !desfClean) continue;
+      result.push({ juiz_relator: juiz, trt, varaturma: vt, causa_raiz: cr, fund_fav: favClean, fund_desf: desfClean });
+    }
+  }
+  console.log('[_xlParseJulgadores] parsed total:', result.length, '| sample:', result.slice(0,2));
+  return result;
 }
 
 function _xlParseNovos(rawRows) {
