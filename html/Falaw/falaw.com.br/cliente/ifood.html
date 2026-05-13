@@ -981,8 +981,9 @@ async function renderCharts(tabKey, kpis) {
   const hasChoropleth = false; // geo simulation — no external fetch needed
   const brazilGeo = null;
 
-  const wideKeys    = new Set(['chart_dist_ano', 'chart_dist_2026', 'table_cr_consolidado']);
+  const wideKeys    = new Set(['chart_dist_ano', 'chart_dist_2026', 'table_cr_consolidado', 'table_dec_exfl']);
   const tableKeys    = new Set(['table_cr_consolidado']);
+  const tableDecKeys = new Set(['table_dec_exfl']);
   const featureKeys  = new Set(['chart_cr_dist','chart_novos_cr']);
   const tallKeys     = new Set(['chart_trt_overview','chart_dec_vt','chart_dec_julgador','chart_coreus','chart_julg_fav','chart_julg_desf','chart_radar_cr','chart_julgadores']);
   const treemapKeys  = new Set([]);
@@ -990,7 +991,8 @@ async function renderCharts(tabKey, kpis) {
 
   el.innerHTML = withCharts.map((k, i) => {
     let cfg; try { cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; } catch(e) { cfg = {}; }
-    const isTable  = cfg.type === 'table_cr' || tableKeys.has(k.kpi_key);
+    const isTable    = cfg.type === 'table_cr' || tableKeys.has(k.kpi_key);
+    const isTableDec = cfg.type === 'table_decisions' || tableDecKeys.has(k.kpi_key);
     const isChoropleth = cfg.type === 'choropleth' || mapKeys.has(k.kpi_key);
     const isTreemap = cfg.type === 'treemap' || treemapKeys.has(k.kpi_key);
     const isBubble = cfg.type === 'bubble';
@@ -1001,11 +1003,11 @@ async function renderCharts(tabKey, kpis) {
     const isHoriz  = cfg.options && cfg.options.indexAxis === 'y';
     const isWide   = wideKeys.has(k.kpi_key);
     const isTall   = tallKeys.has(k.kpi_key);
-    const h = isTable ? 'auto' : isChoropleth ? '420px' : isTreemap ? '360px' : isBubble ? '400px' : isRadar ? '340px' : isLine ? '300px' : isPolar ? '310px' : isDonut ? '290px' : k.kpi_key === 'chart_julgadores' ? '480px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
+    const h = (isTable || isTableDec) ? 'auto' : isChoropleth ? '420px' : isTreemap ? '360px' : isBubble ? '400px' : isRadar ? '340px' : isLine ? '300px' : isPolar ? '310px' : isDonut ? '290px' : k.kpi_key === 'chart_julgadores' ? '480px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
     const classes = ['chart-card'];
-    if (isWide || isTable) classes.push('wide');
+    if (isWide || isTable || isTableDec) classes.push('wide');
     if (featureKeys.has(k.kpi_key)) classes.push('featured');
-    const inner = isTable
+    const inner = (isTable || isTableDec)
       ? `<div class="chart-table-wrap" id="chart-${tabKey}-${i}"></div>`
       : `<div class="chart-wrap" style="height:${h}"><canvas id="chart-${tabKey}-${i}"></canvas></div>`;
     return `<div class="${classes.join(' ')}" data-kpi-key="${escHtml(k.kpi_key || '')}">
@@ -1100,6 +1102,76 @@ async function renderCharts(tabKey, kpis) {
             </tfoot>
           </table>
         </div>`;
+        return;
+      }
+
+      // ── Tabela de decisões do período ────────────────────────────────────────
+      if (cfg.type === 'table_decisions') {
+        const wrap = document.getElementById(canvasId);
+        if (!wrap) return;
+        const rows = cfg.rows || [];
+        const nFav  = rows.filter(r => r.classe === 'F').length;
+        const nDesf = rows.filter(r => r.classe === 'D').length;
+        const nParc = rows.filter(r => r.classe === 'P').length;
+        const badge = (cls, txt) => {
+          const s = cls === 'F' ? 'background:#E8F5EE;color:#1B7A4E' : cls === 'D' ? 'background:#FFEBEE;color:#C62828' : 'background:#FFF3E0;color:#E65100';
+          return `<span style="display:inline-block;${s};border-radius:3px;padding:2px 7px;font-size:10px;font-weight:700">${escHtml(txt)}</span>`;
+        };
+        const uid = canvasId + '_dec';
+        wrap.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:6px">
+            <span style="font-size:12px;color:#555">${rows.length} decis${rows.length===1?'ão':'ões'} registradas</span>
+            <div style="display:flex;gap:6px">
+              ${nFav  ? `<span style="background:#E8F5EE;color:#1B7A4E;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700">${nFav} Favoráv${nFav===1?'el':'eis'}</span>` : ''}
+              ${nDesf ? `<span style="background:#FFEBEE;color:#C62828;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700">${nDesf} Desfavoráv${nDesf===1?'el':'eis'}</span>` : ''}
+              ${nParc ? `<span style="background:#FFF3E0;color:#E65100;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700">${nParc} Parcial${nParc>1?'is':''}</span>` : ''}
+            </div>
+          </div>
+          <style>
+            .dec-tbl{width:100%;border-collapse:collapse;font-size:11px;font-family:'IBM Plex Mono',monospace}
+            .dec-tbl th{padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#4A0080;border-bottom:2px solid #CE93D8;background:#F3E5F5;white-space:nowrap}
+            .dec-tbl td{padding:8px 10px;border-bottom:1px solid #F3E5F5;vertical-align:top;line-height:1.5}
+            .dec-tbl tr:hover td{background:#FCF4FF;cursor:pointer}
+            .dec-tbl tr:last-child td{border-bottom:none}
+            .dec-expand-row-d{display:none;background:#FAFAFA}
+            .dec-expand-row-d.open{display:table-row}
+            .dec-expand-row-d td{padding:10px 14px;font-size:11px;line-height:1.8;border-bottom:1px solid #F3E5F5}
+          </style>
+          <div style="overflow-x:auto">
+          <table class="dec-tbl" id="${uid}">
+            <thead><tr>
+              <th style="width:14px"></th>
+              <th>Processo</th>
+              <th>Reclamante</th>
+              <th>TRT</th>
+              <th>Resultado</th>
+              <th>Juiz/Relator</th>
+              <th>Vara/Turma</th>
+            </tr></thead>
+            <tbody>
+              ${rows.map((r, ri) => {
+                const rowBg = r.classe === 'F' ? 'background:#F3FBF7' : '';
+                const arrow = r.classe === 'F' ? 'color:#1B7A4E' : r.classe === 'D' ? 'color:#9C27B0' : 'color:#E65100';
+                const resTxt = r.resultado.replace(/acórdão\s*[-–]/i,'Acórdão ').replace(/sentença\s*[-–]/i,'Sentença ');
+                const hasFunds = r.fund_fav || r.fund_desf;
+                const expandId = uid + '_exp_' + ri;
+                return `<tr style="${rowBg}" onclick="document.getElementById('${expandId}').classList.toggle('open')">
+                  <td style="text-align:center;font-size:12px;${arrow}">${hasFunds ? '▸' : ''}</td>
+                  <td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#555;white-space:nowrap">${escHtml(r.num_processo)}</td>
+                  <td style="font-weight:600">${escHtml(r.reclamante || '—')}</td>
+                  <td><span style="background:#EDE7F6;color:#6A1B9A;border-radius:3px;padding:1px 6px;font-weight:700;font-size:10px">TRT-${escHtml(String(r.trt||''))}</span></td>
+                  <td>${badge(r.classe, resTxt)}</td>
+                  <td>${escHtml(r.juiz_relator || '—')}</td>
+                  <td style="font-size:10px;color:#666">${escHtml(r.varaturma || '—')}</td>
+                </tr>
+                ${hasFunds ? `<tr class="dec-expand-row-d" id="${expandId}"><td colspan="7">
+                  ${r.fund_fav ? `<div style="margin-bottom:${r.fund_desf?'10px':'0'}"><strong style="color:#1B7A4E">✅ Favoráveis:</strong> ${escHtml(r.fund_fav)}</div>` : ''}
+                  ${r.fund_desf ? `<div><strong style="color:#C62828">⚠ Desfavoráveis:</strong> ${escHtml(r.fund_desf)}</div>` : ''}
+                </td></tr>` : ''}`;
+              }).join('')}
+            </tbody>
+          </table></div>
+          <div style="font-size:10px;color:#999;margin-top:8px">▸ Clique em qualquer linha para expandir os fundamentos.</div>`;
         return;
       }
 

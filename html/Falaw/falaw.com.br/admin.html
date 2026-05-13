@@ -8469,17 +8469,42 @@ function _xlParseIfood(rawRows) {
 }
 
 function _xlParseDecisoes(rawRows) {
-  // Sheet: 0=N°Processo, 1=TRT, 2=CAUSA RAIZ, 3=RESULTADO DA DECISÃO, 4=JUIZ/RELATOR, 5=VARATURMA
+  // Detecta colunas pelo cabeçalho (row 0) ou usa fallback por posição
+  // Formato com RECLAMANTE: 0=N°Processo, 1=RECLAMANTE, 2=TRT, 3=CAUSA RAIZ, 4=RESULTADO, 5=JUIZ, 6=VARA, 7=FUND_FAV, 8=FUND_DESF
+  // Formato legado:          0=N°Processo, 1=TRT, 2=CAUSA RAIZ, 3=RESULTADO, 4=JUIZ, 5=VARA
   const c = (r, i) => String(r[i] ?? '').trim();
-  return rawRows.filter(r => r && r[0] && String(r[0]).trim() && c(r,2)).map(r => ({
-    num_processo: c(r,0),
-    trt:          _xlNormalizeTRT(c(r,1)),
-    causa_raiz:   _xlCanonCR(c(r,2)),
-    resultado:    c(r,3),
-    tipo:         _xlExtractDecTipo(c(r,3)),
-    juiz_relator: c(r,4),
-    varaturma:    c(r,5),
-  }));
+  // Detecta formato pelo primeiro dado: se col 2 parece TRT (número) ou causa raiz (texto)
+  const firstData = rawRows.find(r => r && r[0] && String(r[0]).trim());
+  const hasReclamante = firstData && /^\d+$/.test(String(firstData[2]||'').trim().replace(/[^\d]/g,'').slice(0,4));
+  return rawRows.filter(r => r && r[0] && String(r[0]).trim()).map(r => {
+    if (hasReclamante) {
+      return {
+        num_processo: c(r,0),
+        reclamante:   c(r,1),
+        trt:          _xlNormalizeTRT(c(r,2)),
+        causa_raiz:   _xlCanonCR(c(r,3)),
+        resultado:    c(r,4),
+        tipo:         _xlExtractDecTipo(c(r,4)),
+        juiz_relator: c(r,5),
+        varaturma:    c(r,6),
+        fund_fav:     c(r,7),
+        fund_desf:    c(r,8),
+      };
+    } else {
+      return {
+        num_processo: c(r,0),
+        reclamante:   '',
+        trt:          _xlNormalizeTRT(c(r,1)),
+        causa_raiz:   _xlCanonCR(c(r,2)),
+        resultado:    c(r,3),
+        tipo:         _xlExtractDecTipo(c(r,3)),
+        juiz_relator: c(r,4),
+        varaturma:    c(r,5),
+        fund_fav:     '',
+        fund_desf:    '',
+      };
+    }
+  }).filter(r => r.causa_raiz);
 }
 
 function _xlParseNovos(rawRows) {
@@ -9238,6 +9263,28 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     }
 
 
+
+    // Tabela demonstrativa de decisões — somente Ex-Foodlover
+    if (tabKey === 'ex-foodlover') {
+      const exDecs = decisoes.filter(d => d.causa_raiz === 'EX-FOODLOVER');
+      if (exDecs.length) {
+        push(tabKey,'table_dec_exfl','Decisões do Período','','',{
+          type:'table_decisions',
+          rows: exDecs.map(d => ({
+            num_processo: d.num_processo,
+            reclamante:   d.reclamante,
+            trt:          d.trt,
+            resultado:    d.resultado,
+            tipo:         d.tipo,
+            classe:       _xlClassifyDec(d.resultado),
+            juiz_relator: d.juiz_relator,
+            varaturma:    d.varaturma,
+            fund_fav:     d.fund_fav || '',
+            fund_desf:    d.fund_desf || '',
+          }))
+        }, 'Tabela Demonstrativa — Decisões do Período');
+      }
+    }
 
     // Pedidos ranking — somente Ex-Foodlover
     if (tabKey === 'ex-foodlover') {
