@@ -8463,7 +8463,14 @@ function _xlParseIfood(rawRows) {
       juiz_sentenca: c(r, idx.juizSent, c(r, 16)),
       fase: c(r, idx.fase, c(r, 22)),
       arquivado: c(r, idx.arquivado, c(r, 35)),
-      data_distrib: idx.dataDistrib >= 0 ? c(r, idx.dataDistrib) : c(r, 0),
+      data_distrib: (() => {
+        const raw = idx.dataDistrib >= 0 ? r[idx.dataDistrib] : r[0];
+        if (raw instanceof Date && !isNaN(raw)) {
+          const y = raw.getFullYear(), mo = raw.getMonth()+1, d = raw.getDate();
+          return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        }
+        return String(raw ?? '').trim();
+      })(),
       autor_recurso: c(r, idx.autorRec, c(r, 43)),
       resultado_final: c(r, idx.resFinal, c(r, 51)),
       julgador: c(r, idx.julgador, c(r, 58)),
