@@ -7149,19 +7149,49 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     if (_ok(juiz)) return { name: juiz, location: _isNA(vara) ? null : vara };
     return null;
   };
-  const julgMap = {}; // name -> { count, location }
+  const julgMap = {}; // name -> { count, fav, desf, parc, location }
   records.forEach(r => {
     const info = _getJulgInfo(r);
     if (!info || info.name.length < 4 || /^\d[\d.,/\- ]*$/.test(info.name)) return;
-    if (!julgMap[info.name]) julgMap[info.name] = { count: 0, location: info.location };
+    if (!julgMap[info.name]) julgMap[info.name] = { count: 0, fav: 0, desf: 0, parc: 0, location: info.location };
     julgMap[info.name].count++;
+    // Classificar decisão deste processo
+    const s = _xlN(r.sentenca||'');
+    if (s && s !== 'NAO SE APLICA' && s !== 'NAO') {
+      if (s.includes('FAVORAVEL')||s.includes('IMPROCEDENTE')||s.includes('EXCLUSAO')||s.includes('ACORDO')) julgMap[info.name].fav++;
+      else if (s.includes('PARCIAL')) julgMap[info.name].parc++;
+      else if (s.includes('DESFAVORAVEL')||s.includes('PROCEDENTE')||s.includes('CONDENADA')||s.includes('CONDENANDO')) julgMap[info.name].desf++;
+    }
   });
   const julgTop = topN(Object.fromEntries(Object.entries(julgMap).map(([k,v])=>[k,v.count])), 10);
   if (julgTop.length) {
-    const julgTooltips = julgTop.map(([name]) => julgMap[name].location || '');
-    push('visao-geral','chart_julgadores','Top 10 Julgadores','','',
-      _xlChartBarTooltip(julgTop.map(([l])=>l), julgTop.map(([,v])=>v), julgTooltips,'Processos','#0F9E76'),
-      'Ranking de Julgadores');
+    const julgLabels = julgTop.map(([name]) => name);
+    const julgFav    = julgTop.map(([name]) => julgMap[name].fav);
+    const julgDesf   = julgTop.map(([name]) => julgMap[name].desf);
+    const julgParc   = julgTop.map(([name]) => julgMap[name].parc);
+    const julgOther  = julgTop.map(([name]) => julgMap[name].count - julgMap[name].fav - julgMap[name].desf - julgMap[name].parc);
+    const hasDecisoes = julgFav.some(v=>v>0) || julgDesf.some(v=>v>0);
+    const datasets = hasDecisoes ? [
+      { label:'Favorável',    data:julgFav,   backgroundColor:'#0F9E76', borderRadius:2 },
+      { label:'Desfavorável', data:julgDesf,  backgroundColor:'#7B1A2E', borderRadius:2 },
+      ...(julgParc.some(v=>v>0)  ? [{ label:'Parcial',       data:julgParc,  backgroundColor:'#F59E0B', borderRadius:2 }] : []),
+      ...(julgOther.some(v=>v>0) ? [{ label:'Sem decisão',   data:julgOther, backgroundColor:'rgba(0,0,0,0.12)', borderRadius:2 }] : []),
+    ] : [
+      { label:'Processos', data:julgTop.map(([,v])=>v), backgroundColor:'#0F9E76', borderRadius:2 }
+    ];
+    push('visao-geral','chart_julgadores','Top 10 Julgadores','','',{
+      type:'bar',
+      data:{ labels: julgLabels, datasets },
+      options:{
+        indexAxis:'y',
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
+        scales:{
+          x:{ stacked:true, beginAtZero:true, ticks:{ stepSize:1, font:{ family:'IBM Plex Mono', size:9 } }, grid:{ display:false } },
+          y:{ stacked:true, ticks:{ font:{ family:'IBM Plex Mono', size:9 } }, grid:{ display:false } }
+        }
+      }
+    }, 'Ranking de Julgadores');
   }
 
   // ── 10. Decisões do mês de referência ───────────────────────────────
