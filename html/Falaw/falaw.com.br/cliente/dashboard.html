@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -6,7 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Portal do Cliente — Falaw Advogados</title>
+  <!-- v202605131318 -->
+<title>Portal do Cliente â€” Falaw Advogados</title>
   <link rel="icon" type="image/png" href="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https:; img-src 'self' data: https:; frame-ancestors 'none';" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
@@ -47,10 +48,10 @@
 
     html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
 
-    /* ── LAYOUT ── */
+    /* â”€â”€ LAYOUT â”€â”€ */
     .layout { display: flex; min-height: 100vh; }
 
-    /* ── SIDEBAR ── */
+    /* â”€â”€ SIDEBAR â”€â”€ */
     .sidebar {
       width: var(--sidebar-w);
       background: linear-gradient(175deg, #0D2B5E 0%, #3D0F1D 100%);
@@ -157,10 +158,10 @@
     }
     .btn-logout:hover { border-color: rgba(255,120,120,0.5); color: #ff9999; }
 
-    /* ── MAIN ── */
+    /* â”€â”€ MAIN â”€â”€ */
     .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
 
-    /* ── TOPBAR ── */
+    /* â”€â”€ TOPBAR â”€â”€ */
     .topbar {
       background: linear-gradient(90deg, #0D2B5E 0%, #3D0F1D 100%);
       border-bottom: none;
@@ -178,20 +179,20 @@
     .topbar-right { display: flex; align-items: center; gap: 16px; font-size: 12px; color: rgba(255,255,255,0.6); }
     .status-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; display: inline-block; margin-right: 4px; box-shadow: 0 0 6px var(--green); }
 
-    /* ── CONTENT ── */
+    /* â”€â”€ CONTENT â”€â”€ */
     .content { flex: 1; padding: 40px 32px; max-width: 1100px; }
 
-    /* ── SECTION (tab views) ── */
+    /* â”€â”€ SECTION (tab views) â”€â”€ */
     .tab-section { display: none; }
     .tab-section.active { display: block; }
 
-    /* ── PAGE HEADER ── */
+    /* â”€â”€ PAGE HEADER â”€â”€ */
     .page-header { margin-bottom: 32px; }
     .page-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
     .page-title { font-family: 'Sora', sans-serif; font-size: clamp(22px, 3vw, 32px); font-weight: 800; color: var(--text); letter-spacing: -.02em; line-height: 1.1; margin-bottom: 8px; }
     .page-subtitle { font-size: 14px; color: var(--muted); }
 
-    /* ── STAT CARDS ── */
+    /* â”€â”€ STAT CARDS â”€â”€ */
     .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 36px; }
     .stat-card {
       background: var(--bg-card);
@@ -213,7 +214,7 @@
     .stat-value.gold { color: var(--gold); }
     .stat-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
-    /* ── KPI CARDS (analytics) ── */
+    /* â”€â”€ KPI CARDS (analytics) â”€â”€ */
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 14px; margin-bottom: 32px; }
     .kpi-card {
       background: var(--bg-card);
@@ -247,7 +248,7 @@
     .kpi-label { font-size: 11px; color: var(--muted); }
     .kpi-period { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--muted-l); margin-top: 3px; }
 
-    /* ── CHARTS ── */
+    /* â”€â”€ CHARTS â”€â”€ */
     .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
     @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
     .chart-card {
@@ -302,7 +303,7 @@
       margin-bottom: 20px;
     }
 
-    /* ── REPORTS GRID ── */
+    /* â”€â”€ REPORTS GRID â”€â”€ */
     .reports-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
     .reports-title { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); }
     .reports-count { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted-l); }
@@ -369,13 +370,13 @@
     }
     .btn-download:hover { background: rgba(184,149,42,0.18); border-color: rgba(184,149,42,0.45); }
 
-    /* ── EMPTY STATE ── */
+    /* â”€â”€ EMPTY STATE â”€â”€ */
     .empty-state { text-align: center; padding: 80px 32px; color: var(--muted); }
     .empty-icon { font-size: 48px; margin-bottom: 20px; opacity: .4; }
     .empty-title { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 700; color: rgba(232,235,240,0.5); margin-bottom: 8px; }
     .empty-text { font-size: 13px; line-height: 1.6; }
 
-    /* ── HAMBURGER ── */
+    /* â”€â”€ HAMBURGER â”€â”€ */
     .hamburger {
       display: none;
       flex-direction: column;
@@ -397,10 +398,10 @@
       transition: transform .25s, opacity .25s;
     }
 
-    /* ── SIDEBAR OVERLAY ── */
+    /* â”€â”€ SIDEBAR OVERLAY â”€â”€ */
     .sidebar-overlay {
 
-    /* ── COMPARATIVO ── */
+    /* â”€â”€ COMPARATIVO â”€â”€ */
     .comp-selectors { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:24px; margin-bottom:32px; }
     .comp-selectors-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
     @media(max-width:600px){ .comp-selectors-grid { grid-template-columns:1fr; } }
@@ -426,7 +427,7 @@
     .comp-kpi-table .delta-flat { color:var(--muted); background:rgba(0,0,0,0.05); }
     .comp-empty { padding:48px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted-l); }
 
-    /* ── SIDEBAR OVERLAY ── */
+    /* â”€â”€ SIDEBAR OVERLAY â”€â”€ */
     .sidebar-overlay {
       display: none;
       position: fixed;
@@ -436,7 +437,7 @@
     }
     .sidebar-overlay.open { display: block; }
 
-    /* ── MOBILE ── */
+    /* â”€â”€ MOBILE â”€â”€ */
     @media (max-width: 768px) {
       .hamburger { display: flex; }
       .topbar { padding: 0 16px; }
@@ -475,7 +476,7 @@
       .kpi-grid { grid-template-columns: 1fr; }
     }
 
-    /* ── API DASH SUB-TABS ── */
+    /* â”€â”€ API DASH SUB-TABS â”€â”€ */
     .tab-bar {
       background: var(--bg-card);
       border-bottom: 1px solid var(--border);
@@ -498,7 +499,7 @@
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    /* ── PERIOD BANNER ── */
+    /* â”€â”€ PERIOD BANNER â”€â”€ */
     .period-banner {
       display: flex; align-items: center; justify-content: space-between;
       background: linear-gradient(90deg, rgba(13,43,94,0.06), rgba(123,26,46,0.06));
@@ -508,7 +509,7 @@
     .period-banner-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
     .period-banner-value { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
 
-    /* ── HIGHLIGHTS ── */
+    /* â”€â”€ HIGHLIGHTS â”€â”€ */
     .highlights-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 20px; margin-bottom: 32px; }
     .highlight-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; transition: box-shadow .25s, transform .25s; }
     .highlight-card:hover { box-shadow: 0 10px 36px rgba(123,26,46,0.13); transform: translateY(-3px); }
@@ -525,7 +526,7 @@
     .highlights-section-rule { flex: 1; height: 1px; background: var(--border); }
     .highlights-section-count { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .1em; color: var(--muted-l); white-space: nowrap; }
 
-    /* ── ANALYSIS ── */
+    /* â”€â”€ ANALYSIS â”€â”€ */
     .analysis-block { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 28px 32px; margin-bottom: 24px; }
     .analysis-block-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
     .analysis-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); }
@@ -534,7 +535,7 @@
     .analysis-content p:last-child { margin-bottom: 0; }
     .analysis-empty { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-l); text-align: center; padding: 24px 0; }
 
-    /* ── PERIOD SELECT IN TOPBAR ── */
+    /* â”€â”€ PERIOD SELECT IN TOPBAR â”€â”€ */
     .period-select {
       font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .08em;
       background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
@@ -552,7 +553,7 @@
     }
     .btn-export:hover { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.5); color: #fff; }
 
-    /* ── NO DATA ── */
+    /* â”€â”€ NO DATA â”€â”€ */
     .no-data { text-align: center; padding: 80px 32px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-l); }
     .no-data .no-data-icon { font-size: 40px; display: block; margin-bottom: 16px; opacity: .3; }
   </style>
@@ -571,27 +572,27 @@
         <img loading="lazy" src="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-branco.png" alt="Falaw Advogados" />
       </div>
       <span class="sidebar-client-badge">Portal do Cliente</span>
-      <div class="sidebar-client-name" id="sidebarName">—</div>
-      <div class="sidebar-client-email" id="sidebarEmail">—</div>
+      <div class="sidebar-client-name" id="sidebarName">â€”</div>
+      <div class="sidebar-client-email" id="sidebarEmail">â€”</div>
     </div>
 
     <nav class="sidebar-nav">
       <div class="nav-item active" id="nav-dashboard" onclick="showTab('dashboard');closeSidebar()">
-        <span class="nav-icon">📊</span>
-        Relatório
+        <span class="nav-icon">ðŸ“Š</span>
+        RelatÃ³rio
       </div>
       <a href="ifood.html" class="nav-item hidden" id="nav-ifood">
-        <span class="nav-icon">📈</span>
+        <span class="nav-icon">ðŸ“ˆ</span>
         Dashboard iFood
       </a>
     </nav>
 
     <div class="sidebar-bottom">
       <a href="../index.html" class="btn-back-site">
-        ← Voltar ao site
+        â† Voltar ao site
       </a>
       <button type="button" class="btn-logout" onclick="logout()">
-        ⎋ Sair da conta
+        âŽ‹ Sair da conta
       </button>
     </div>
   </aside>
@@ -604,80 +605,80 @@
       <button type="button" class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
         <span></span><span></span><span></span>
       </button>
-      <span class="topbar-title">Falaw Advogados · <span id="topbarCompany">Portal</span></span>
+      <span class="topbar-title">Falaw Advogados Â· <span id="topbarCompany">Portal</span></span>
       <div class="topbar-right" id="topbarRight">
-        <span><span class="status-dot"></span>Sessão ativa</span>
+        <span><span class="status-dot"></span>SessÃ£o ativa</span>
         <span id="topbarDate" style="font-family:'IBM Plex Mono',monospace;font-size:11px;"></span>
       </div>
     </div>
 
-    <!-- TAB BAR (dashboard tabs — sticky, hidden until data loads) -->
+    <!-- TAB BAR (dashboard tabs â€” sticky, hidden until data loads) -->
     <nav class="tab-bar" id="dashTabBar" style="display:none">
-      <button class="tab-btn active" data-tab="visao-geral" onclick="onDashTabChange('visao-geral')">Visão Geral</button>
+      <button class="tab-btn active" data-tab="visao-geral" onclick="onDashTabChange('visao-geral')">VisÃ£o Geral</button>
       <button class="tab-btn" data-tab="ex_empregados" onclick="onDashTabChange('ex_empregados')">Ex-empregados</button>
-      <button class="tab-btn" data-tab="terceirizacao" onclick="onDashTabChange('terceirizacao')">Subsidiária</button>
-      <button class="tab-btn" data-tab="destaques" onclick="onDashTabChange('destaques')">Destaques do Mês</button>
+      <button class="tab-btn" data-tab="terceirizacao" onclick="onDashTabChange('terceirizacao')">SubsidiÃ¡ria</button>
+      <button class="tab-btn" data-tab="destaques" onclick="onDashTabChange('destaques')">Destaques do MÃªs</button>
       <button class="tab-btn" data-tab="comparativo" onclick="onDashTabChange('comparativo')">Comparativo</button>
     </nav>
 
     <!-- CONTENT -->
     <div class="content" id="mainContent">
 
-      <!-- ═══ DASHBOARD TAB ═══ -->
+      <!-- â•â•â• DASHBOARD TAB â•â•â• -->
       <div id="tab-dashboard" class="tab-section active">
 
-        <!-- ── VISÃO GERAL ── -->
+        <!-- â”€â”€ VISÃƒO GERAL â”€â”€ -->
         <div class="tab-panel active" id="panel-visao-geral">
           <div class="page-header">
-            <div class="page-label">Visão Geral</div>
+            <div class="page-label">VisÃ£o Geral</div>
             <div class="page-title" id="pageTitle">Dashboard</div>
             <div class="page-subtitle" id="pageSubtitle">Panorama consolidado dos seus processos.</div>
           </div>
           <div class="kpi-grid" id="kpis-visao-geral"></div>
           <div class="charts-grid" id="charts-visao-geral"></div>
           <div class="analysis-block" id="analysis-block-visao-geral" style="display:none">
-            <div class="analysis-block-header"><span class="analysis-label">Análise — Visão Geral</span></div>
-            <div class="analysis-content" id="content-visao-geral"><div class="analysis-empty">Nenhuma análise disponível para este período.</div></div>
+            <div class="analysis-block-header"><span class="analysis-label">AnÃ¡lise â€” VisÃ£o Geral</span></div>
+            <div class="analysis-content" id="content-visao-geral"><div class="analysis-empty">Nenhuma anÃ¡lise disponÃ­vel para este perÃ­odo.</div></div>
           </div>
           <div id="analyticsArea"></div>
         </div>
 
-        <!-- ── EX-EMPREGADOS ── -->
+        <!-- â”€â”€ EX-EMPREGADOS â”€â”€ -->
         <div class="tab-panel" id="panel-ex_empregados">
           <div class="page-header">
             <div class="page-label">Ex-empregados</div>
-            <div class="page-title">Ações de Ex-empregados</div>
+            <div class="page-title">AÃ§Ãµes de Ex-empregados</div>
             <div class="page-subtitle">Dados consolidados dos processos movidos por ex-empregados.</div>
           </div>
           <div class="kpi-grid" id="kpis-ex_empregados"></div>
           <div class="charts-grid" id="charts-ex_empregados"></div>
           <div class="analysis-block" id="analysis-block-ex_empregados" style="display:none">
-            <div class="analysis-block-header"><span class="analysis-label">Análise — Ex-empregados</span></div>
-            <div class="analysis-content" id="content-ex_empregados"><div class="analysis-empty">Nenhuma análise disponível para este período.</div></div>
+            <div class="analysis-block-header"><span class="analysis-label">AnÃ¡lise â€” Ex-empregados</span></div>
+            <div class="analysis-content" id="content-ex_empregados"><div class="analysis-empty">Nenhuma anÃ¡lise disponÃ­vel para este perÃ­odo.</div></div>
           </div>
         </div>
 
-        <!-- ── SUBSIDIÁRIA ── -->
+        <!-- â”€â”€ SUBSIDIÃRIA â”€â”€ -->
         <div class="tab-panel" id="panel-terceirizacao">
           <div class="page-header">
-            <div class="page-label">Subsidiária</div>
-            <div class="page-title">Subsidiária</div>
-            <div class="page-subtitle">Dados consolidados de processos com responsabilidade subsidiária.</div>
+            <div class="page-label">SubsidiÃ¡ria</div>
+            <div class="page-title">SubsidiÃ¡ria</div>
+            <div class="page-subtitle">Dados consolidados de processos com responsabilidade subsidiÃ¡ria.</div>
           </div>
           <div class="kpi-grid" id="kpis-terceirizacao"></div>
           <div class="charts-grid" id="charts-terceirizacao"></div>
           <div class="analysis-block" id="analysis-block-terceirizacao" style="display:none">
-            <div class="analysis-block-header"><span class="analysis-label">Análise — Subsidiária</span></div>
-            <div class="analysis-content" id="content-terceirizacao"><div class="analysis-empty">Nenhuma análise disponível para este período.</div></div>
+            <div class="analysis-block-header"><span class="analysis-label">AnÃ¡lise â€” SubsidiÃ¡ria</span></div>
+            <div class="analysis-content" id="content-terceirizacao"><div class="analysis-empty">Nenhuma anÃ¡lise disponÃ­vel para este perÃ­odo.</div></div>
           </div>
         </div>
 
-        <!-- ── DESTAQUES ── -->
+        <!-- â”€â”€ DESTAQUES â”€â”€ -->
         <div class="tab-panel" id="panel-destaques">
           <div class="page-header">
-            <div class="page-label">Destaques do Mês</div>
-            <div class="page-title">Principais conquistas — <span id="destaquesMonth">—</span></div>
-            <div class="page-subtitle">Resultados, marcos e fatos relevantes do período em destaque.</div>
+            <div class="page-label">Destaques do MÃªs</div>
+            <div class="page-title">Principais conquistas â€” <span id="destaquesMonth">â€”</span></div>
+            <div class="page-subtitle">Resultados, marcos e fatos relevantes do perÃ­odo em destaque.</div>
           </div>
           <div class="highlights-section-header">
             <span class="highlights-section-label">Destaques</span>
@@ -686,26 +687,26 @@
           </div>
           <div class="highlights-grid" id="highlights-grid"></div>
           <div class="analysis-block" id="analysis-block-destaques" style="display:none">
-            <div class="analysis-block-header"><span class="analysis-label">Comentários do período</span></div>
-            <div class="analysis-content" id="content-destaques"><div class="analysis-empty">Nenhum comentário para este período.</div></div>
+            <div class="analysis-block-header"><span class="analysis-label">ComentÃ¡rios do perÃ­odo</span></div>
+            <div class="analysis-content" id="content-destaques"><div class="analysis-empty">Nenhum comentÃ¡rio para este perÃ­odo.</div></div>
           </div>
         </div>
 
-        <!-- ── COMPARATIVO ── -->
+        <!-- â”€â”€ COMPARATIVO â”€â”€ -->
         <div class="tab-panel" id="panel-comparativo">
           <div class="page-header">
-            <div class="page-label">Comparativo de Períodos</div>
+            <div class="page-label">Comparativo de PerÃ­odos</div>
             <div class="page-title">O que mudou na carteira?</div>
-            <div class="page-subtitle">Selecione dois períodos para comparar os principais indicadores.</div>
+            <div class="page-subtitle">Selecione dois perÃ­odos para comparar os principais indicadores.</div>
           </div>
           <div class="comp-selectors">
             <div class="comp-selectors-grid">
               <div>
-                <label>Período A (base / mais antigo)</label>
+                <label>PerÃ­odo A (base / mais antigo)</label>
                 <select id="comp-period-a" onchange="renderComparativo()"></select>
               </div>
               <div>
-                <label>Período B (atual / mais recente)</label>
+                <label>PerÃ­odo B (atual / mais recente)</label>
                 <select id="comp-period-b" onchange="renderComparativo()"></select>
               </div>
             </div>
@@ -718,17 +719,17 @@
 
       </div>
 
-      <!-- ═══ RELATÓRIOS TAB ═══ -->
+      <!-- â•â•â• RELATÃ“RIOS TAB â•â•â• -->
       <div id="tab-relatorios" class="tab-section">
 
         <div class="page-header">
-          <div class="page-label">Área do Cliente · Falaw Advogados</div>
-          <h1 class="page-title">Relatórios</h1>
-          <p class="page-subtitle">Documentos e análises preparados exclusivamente pelo escritório.</p>
+          <div class="page-label">Ãrea do Cliente Â· Falaw Advogados</div>
+          <h1 class="page-title">RelatÃ³rios</h1>
+          <p class="page-subtitle">Documentos e anÃ¡lises preparados exclusivamente pelo escritÃ³rio.</p>
         </div>
 
         <div class="reports-header">
-          <span class="reports-title">Arquivos Disponíveis</span>
+          <span class="reports-title">Arquivos DisponÃ­veis</span>
           <span class="reports-count" id="reportsCount">0 arquivos</span>
         </div>
 
@@ -741,13 +742,13 @@
 </div><!-- /layout -->
 
 <script>
-/* ─── UTILS ─────────────────────────────────────────── */
+/* â”€â”€â”€ UTILS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function formatDate(iso) {
-  if (!iso) return '—';
+  if (!iso) return 'â€”';
   return new Date(iso).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
 }
 function formatTime(iso) {
-  if (!iso) return '—';
+  if (!iso) return 'â€”';
   return new Date(iso).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 }
 function formatSize(bytes) {
@@ -760,7 +761,7 @@ function isNew(iso) {
   return iso && (Date.now() - new Date(iso).getTime()) < 7*24*3600*1000;
 }
 function fmt(n) {
-  return (n === null || n === undefined) ? '—' : Number(n).toLocaleString('pt-BR');
+  return (n === null || n === undefined) ? 'â€”' : Number(n).toLocaleString('pt-BR');
 }
 function logout() {
   sessionStorage.removeItem('falaw_session');
@@ -775,7 +776,7 @@ function closeSidebar() {
   document.getElementById('sidebarOverlay').classList.remove('open');
 }
 
-// Timeout de sessão: 30 min de inatividade → logout automático
+// Timeout de sessÃ£o: 30 min de inatividade â†’ logout automÃ¡tico
 (function() {
   const _TIMEOUT = 30 * 60 * 1000;
   let _timer;
@@ -792,7 +793,7 @@ function closeSidebar() {
   _reset();
 })();
 
-/* ─── TAB SWITCHING ─────────────────────────────────── */
+/* â”€â”€â”€ TAB SWITCHING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function showTab(name) {
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -800,10 +801,10 @@ function showTab(name) {
   document.getElementById('nav-' + name).classList.add('active');
 }
 
-/* ─── DOWNLOAD ──────────────────────────────────────── */
+/* â”€â”€â”€ DOWNLOAD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function downloadReport(report) {
   if (report.fileData) {
-    // Download local (mais rápido, sem rede)
+    // Download local (mais rÃ¡pido, sem rede)
     const a = document.createElement('a');
     a.href = report.fileData;
     a.download = report.fileName || 'relatorio.xlsx';
@@ -821,7 +822,7 @@ async function downloadReport(report) {
       setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch { alert('Erro ao baixar o arquivo. Tente novamente.'); }
   } else {
-    alert('Arquivo não disponível.');
+    alert('Arquivo nÃ£o disponÃ­vel.');
   }
 }
 
@@ -844,18 +845,18 @@ async function downloadReportPDF(report) {
   doc.text('Falaw Advogados', 14, 12);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('Relatório Jurídico', 14, 20);
+  doc.text('RelatÃ³rio JurÃ­dico', 14, 20);
   y = 38;
 
   doc.setTextColor(26, 10, 13);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text(report.title || 'Relatório', 14, y); y += 8;
+  doc.text(report.title || 'RelatÃ³rio', 14, y); y += 8;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 100, 100);
-  if (report.period) { doc.text('Período: ' + report.period, 14, y); y += 6; }
+  if (report.period) { doc.text('PerÃ­odo: ' + report.period, 14, y); y += 6; }
   doc.text('Cliente: ' + company, 14, y); y += 6;
   doc.text('Data: ' + new Date(report.uploadedAt || Date.now()).toLocaleDateString('pt-BR'), 14, y); y += 10;
 
@@ -874,8 +875,8 @@ async function downloadReportPDF(report) {
     doc.setTextColor(13, 43, 94);
     doc.text('Indicadores', 14, y); y += 7;
     const KPI_LABELS = {
-      processos: 'Processos Ativos', favoraveis: 'Favoráveis', desfavoraveis: 'Desfavoráveis',
-      novas: 'Novas Ações', encerrados: 'Encerrados', andamento: 'Em Andamento'
+      processos: 'Processos Ativos', favoraveis: 'FavorÃ¡veis', desfavoraveis: 'DesfavorÃ¡veis',
+      novas: 'Novas AÃ§Ãµes', encerrados: 'Encerrados', andamento: 'Em Andamento'
     };
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(26, 10, 13);
@@ -888,7 +889,7 @@ async function downloadReportPDF(report) {
   // Footer
   doc.setFontSize(8);
   doc.setTextColor(160, 160, 160);
-  doc.text('Gerado por Falaw Advogados — falaw.com.br', 14, doc.internal.pageSize.getHeight() - 8);
+  doc.text('Gerado por Falaw Advogados â€” falaw.com.br', 14, doc.internal.pageSize.getHeight() - 8);
 
   doc.save((report.fileName || 'relatorio').replace(/\.[^.]+$/, '') + '.pdf');
 }
@@ -901,24 +902,24 @@ async function downloadReportPPT(report) {
   const company = (window._clientData && window._clientData.company) || 'Cliente';
   pptx.layout = 'LAYOUT_WIDE';
 
-  // Slide 1 — Capa
+  // Slide 1 â€” Capa
   const slide1 = pptx.addSlide();
   slide1.background = { color: '0D2B5E' };
   slide1.addText('Falaw Advogados', { x: 0.5, y: 1.2, w: 12, h: 0.8, fontSize: 36, bold: true, color: 'FFFFFF', fontFace: 'Calibri' });
-  slide1.addText(report.title || 'Relatório Jurídico', { x: 0.5, y: 2.2, w: 12, h: 0.6, fontSize: 22, color: 'D4AD3A', fontFace: 'Calibri' });
+  slide1.addText(report.title || 'RelatÃ³rio JurÃ­dico', { x: 0.5, y: 2.2, w: 12, h: 0.6, fontSize: 22, color: 'D4AD3A', fontFace: 'Calibri' });
   slide1.addText('Cliente: ' + company, { x: 0.5, y: 3, w: 12, h: 0.4, fontSize: 14, color: 'CCCCCC' });
-  if (report.period) slide1.addText('Período: ' + report.period, { x: 0.5, y: 3.5, w: 12, h: 0.4, fontSize: 14, color: 'CCCCCC' });
+  if (report.period) slide1.addText('PerÃ­odo: ' + report.period, { x: 0.5, y: 3.5, w: 12, h: 0.4, fontSize: 14, color: 'CCCCCC' });
   slide1.addText('falaw.com.br', { x: 0.5, y: 6.8, w: 12, h: 0.3, fontSize: 10, color: '888888', align: 'right' });
 
-  // Slide 2 — KPIs
+  // Slide 2 â€” KPIs
   const stats = report.stats;
   if (stats && typeof stats === 'object') {
     const slide2 = pptx.addSlide();
     slide2.background = { color: 'F4F2EF' };
     slide2.addText('Indicadores', { x: 0.5, y: 0.3, w: 12, h: 0.5, fontSize: 20, bold: true, color: '0D2B5E' });
     const KPI_LABELS = {
-      processos: 'Processos Ativos', favoraveis: 'Favoráveis', desfavoraveis: 'Desfavoráveis',
-      novas: 'Novas Ações', encerrados: 'Encerrados', andamento: 'Em Andamento'
+      processos: 'Processos Ativos', favoraveis: 'FavorÃ¡veis', desfavoraveis: 'DesfavorÃ¡veis',
+      novas: 'Novas AÃ§Ãµes', encerrados: 'Encerrados', andamento: 'Em Andamento'
     };
     const KPI_COLORS = { processos: 'D4AD3A', favoraveis: '2DD4A0', desfavoraveis: 'F87171', novas: '60A5FA', encerrados: 'A78BFA', andamento: 'FBBF24' };
     const entries = Object.entries(stats);
@@ -934,11 +935,11 @@ async function downloadReportPPT(report) {
     });
   }
 
-  // Slide 3 — Descrição
+  // Slide 3 â€” DescriÃ§Ã£o
   if (report.description) {
     const slide3 = pptx.addSlide();
     slide3.background = { color: 'FFFFFF' };
-    slide3.addText('Observações', { x: 0.5, y: 0.3, w: 12, h: 0.5, fontSize: 20, bold: true, color: '0D2B5E' });
+    slide3.addText('ObservaÃ§Ãµes', { x: 0.5, y: 0.3, w: 12, h: 0.5, fontSize: 20, bold: true, color: '0D2B5E' });
     slide3.addText(report.description, { x: 0.5, y: 1.1, w: 12, h: 4.5, fontSize: 14, color: '333333', wrap: true, valign: 'top' });
   }
 
@@ -946,14 +947,14 @@ async function downloadReportPPT(report) {
   await pptx.writeFile({ fileName });
 }
 
-/* ─── DASHBOARD EXPORT (Excel / PDF / PPT) ──────────────────────────────── */
+/* â”€â”€â”€ DASHBOARD EXPORT (Excel / PDF / PPT) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function downloadDashboardExcel() {
-  // Tenta encontrar o relatório Excel associado ao período selecionado
+  // Tenta encontrar o relatÃ³rio Excel associado ao perÃ­odo selecionado
   const periodId = _dashPeriodId;
   const reports  = window._allReports || [];
   // Procura pelo dashPeriodId correspondente, ou pega o mais recente
   const report = reports.find(r => r.dashPeriodId === periodId) || reports[0];
-  if (!report) { alert('Nenhum arquivo Excel disponível para este período.'); return; }
+  if (!report) { alert('Nenhum arquivo Excel disponÃ­vel para este perÃ­odo.'); return; }
   await downloadReport(report);
 }
 
@@ -965,7 +966,7 @@ async function downloadDashboardPDF() {
   const tabKey      = _dashActiveTab || 'visao-geral';
   const company     = (window._clientData && window._clientData.company) || 'Cliente';
   const periodLabel = _dashLastPeriodLabel || '';
-  const tabLabels   = { 'visao-geral': 'Visão Geral', 'ex_empregados': 'Ex-empregados', 'terceirizacao': 'Subsidiária', 'destaques': 'Destaques' };
+  const tabLabels   = { 'visao-geral': 'VisÃ£o Geral', 'ex_empregados': 'Ex-empregados', 'terceirizacao': 'SubsidiÃ¡ria', 'destaques': 'Destaques' };
   const tabLabel    = tabLabels[tabKey] || tabKey;
 
   // Read KPI cards from DOM
@@ -977,7 +978,7 @@ async function downloadDashboardPDF() {
   const H = doc.internal.pageSize.getHeight();
   let y = 0;
 
-  // ── Header band ──────────────────────────────────────────────────────
+  // â”€â”€ Header band â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   doc.setFillColor(13, 43, 94);
   doc.rect(0, 0, W, 34, 'F');
 
@@ -1005,10 +1006,10 @@ async function downloadDashboardPDF() {
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(212, 173, 58);
-  doc.text('Dashboard Jurídico', 38, 23);
+  doc.text('Dashboard JurÃ­dico', 38, 23);
   y = 46;
 
-  // ── Title block ───────────────────────────────────────────────────────
+  // â”€â”€ Title block â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(13, 43, 94);
@@ -1017,7 +1018,7 @@ async function downloadDashboardPDF() {
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 100, 100);
-  if (periodLabel) { doc.text('Período: ' + periodLabel, 14, y); y += 5; }
+  if (periodLabel) { doc.text('PerÃ­odo: ' + periodLabel, 14, y); y += 5; }
   doc.text('Aba: ' + tabLabel, 14, y); y += 5;
   doc.text('Exportado em: ' + new Date().toLocaleDateString('pt-BR'), 14, y); y += 10;
 
@@ -1025,7 +1026,7 @@ async function downloadDashboardPDF() {
   doc.setDrawColor(220, 220, 220);
   doc.line(14, y, W - 14, y); y += 8;
 
-  // ── KPI Cards ─────────────────────────────────────────────────────────
+  // â”€â”€ KPI Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (kpiCardEls.length) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
@@ -1043,7 +1044,7 @@ async function downloadDashboardPDF() {
 
       const el  = kpiCardEls[i];
       const lbl = (el.querySelector('.kpi-label')?.textContent || '').trim().toUpperCase();
-      const val = (el.querySelector('.kpi-value')?.textContent || '—').trim();
+      const val = (el.querySelector('.kpi-value')?.textContent || 'â€”').trim();
       const unit = (el.querySelector('.kpi-unit')?.textContent || '').trim();
       const rx  = 14 + col * colW;
 
@@ -1074,7 +1075,7 @@ async function downloadDashboardPDF() {
     y += 8;
   }
 
-  // ── Charts ────────────────────────────────────────────────────────────
+  // â”€â”€ Charts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   for (const chartEl of chartCardEls) {
     const canvas = chartEl.querySelector('canvas');
     const title  = (chartEl.querySelector('.chart-card-title')?.textContent || '').trim();
@@ -1097,7 +1098,7 @@ async function downloadDashboardPDF() {
     } catch(e) { /* skip failed chart */ }
   }
 
-  // ── Highlights (destaques tab) ────────────────────────────────────────
+  // â”€â”€ Highlights (destaques tab) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (tabKey === 'destaques') {
     const hlCards = document.querySelectorAll('#highlights-grid .highlight-card');
     hlCards.forEach(hEl => {
@@ -1125,7 +1126,7 @@ async function downloadDashboardPDF() {
     });
   }
 
-  // ── Footer on each page ───────────────────────────────────────────────
+  // â”€â”€ Footer on each page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const totalPages = doc.internal.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
@@ -1134,7 +1135,7 @@ async function downloadDashboardPDF() {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     doc.setTextColor(180, 180, 180);
-    doc.text('falaw.com.br  ·  Confidencial', 14, H - 4);
+    doc.text('falaw.com.br  Â·  Confidencial', 14, H - 4);
     doc.text(p + '/' + totalPages, W - 14, H - 4, { align: 'right' });
   }
 
@@ -1149,7 +1150,7 @@ async function downloadDashboardPPT() {
   const tabKey      = _dashActiveTab || 'visao-geral';
   const company     = (window._clientData && window._clientData.company) || 'Cliente';
   const periodLabel = _dashLastPeriodLabel || '';
-  const tabLabels   = { 'visao-geral': 'Visão Geral', 'ex_empregados': 'Ex-empregados', 'terceirizacao': 'Subsidiária', 'destaques': 'Destaques' };
+  const tabLabels   = { 'visao-geral': 'VisÃ£o Geral', 'ex_empregados': 'Ex-empregados', 'terceirizacao': 'SubsidiÃ¡ria', 'destaques': 'Destaques' };
   const tabLabel    = tabLabels[tabKey] || tabKey;
 
   // Read DOM
@@ -1169,19 +1170,19 @@ async function downloadDashboardPPT() {
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_WIDE';
 
-  // Slide 1 — Capa
+  // Slide 1 â€” Capa
   const slide1 = pptx.addSlide();
   slide1.background = { color: '0D2B5E' };
   if (logoB64) slide1.addImage({ data: logoB64, x: 0.4, y: 0.3, w: 1.4, h: 1.4 });
   slide1.addText('Falaw Advogados', { x: 0.5, y: 1.9, w: 12, h: 0.8, fontSize: 34, bold: true, color: 'FFFFFF', fontFace: 'Calibri' });
-  slide1.addText('Dashboard Jurídico', { x: 0.5, y: 2.85, w: 12, h: 0.6, fontSize: 20, color: 'D4AD3A', fontFace: 'Calibri' });
+  slide1.addText('Dashboard JurÃ­dico', { x: 0.5, y: 2.85, w: 12, h: 0.6, fontSize: 20, color: 'D4AD3A', fontFace: 'Calibri' });
   slide1.addShape(pptx.ShapeType.rect, { x: 0.5, y: 3.55, w: 12, h: 0.04, fill: { color: 'D4AD3A' } });
   slide1.addText(company, { x: 0.5, y: 3.75, w: 12, h: 0.45, fontSize: 15, bold: true, color: 'FFFFFF' });
-  if (periodLabel) slide1.addText('Período: ' + periodLabel, { x: 0.5, y: 4.25, w: 12, h: 0.4, fontSize: 13, color: 'CCCCCC' });
+  if (periodLabel) slide1.addText('PerÃ­odo: ' + periodLabel, { x: 0.5, y: 4.25, w: 12, h: 0.4, fontSize: 13, color: 'CCCCCC' });
   slide1.addText(tabLabel, { x: 0.5, y: 4.7, w: 12, h: 0.35, fontSize: 12, color: 'D4AD3A' });
   slide1.addText('falaw.com.br', { x: 0.5, y: 6.8, w: 12, h: 0.3, fontSize: 10, color: '555555', align: 'right' });
 
-  // Slide(s) — KPI cards (read from DOM)
+  // Slide(s) â€” KPI cards (read from DOM)
   if (kpiCardEls.length) {
     const COLS = 4; const ROWS_PER_SLIDE = 3;
     const cardW = 2.8; const cardH = 1.35;
@@ -1192,14 +1193,14 @@ async function downloadDashboardPPT() {
       const slideK = pptx.addSlide();
       slideK.background = { color: 'F4F2EF' };
       slideK.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.65, fill: { color: '0D2B5E' } });
-      slideK.addText('INDICADORES — ' + tabLabel.toUpperCase(), { x: 0.5, y: 0.1, w: 10, h: 0.45, fontSize: 14, bold: true, color: 'FFFFFF' });
+      slideK.addText('INDICADORES â€” ' + tabLabel.toUpperCase(), { x: 0.5, y: 0.1, w: 10, h: 0.45, fontSize: 14, bold: true, color: 'FFFFFF' });
       if (logoB64) slideK.addImage({ data: logoB64, x: 12.0, y: 0.05, w: 0.8, h: 0.55 });
 
       kpiCardEls.slice(s, s + perSlide).forEach((el, i) => {
         const col = i % COLS; const row = Math.floor(i / COLS);
         const x = startX + col * (cardW + 0.18);
         const y = startY + row * (cardH + 0.15);
-        const val  = (el.querySelector('.kpi-value')?.textContent || '—').trim();
+        const val  = (el.querySelector('.kpi-value')?.textContent || 'â€”').trim();
         const lbl  = (el.querySelector('.kpi-label')?.textContent || '').trim().toUpperCase();
         const unit = (el.querySelector('.kpi-unit')?.textContent || '').trim();
 
@@ -1211,7 +1212,7 @@ async function downloadDashboardPPT() {
     }
   }
 
-  // Slide(s) — Charts from DOM canvases
+  // Slide(s) â€” Charts from DOM canvases
   for (const chartEl of chartCardEls) {
     const canvas = chartEl.querySelector('canvas');
     const title  = (chartEl.querySelector('.chart-card-title')?.textContent || '').trim();
@@ -1230,13 +1231,13 @@ async function downloadDashboardPPT() {
     } catch(e) { /* skip */ }
   }
 
-  // Slide — Highlights (read from DOM)
+  // Slide â€” Highlights (read from DOM)
   const hlEls = Array.from(document.querySelectorAll('#highlights-grid .highlight-card'));
   if (hlEls.length) {
     const slideH = pptx.addSlide();
     slideH.background = { color: '0D2B5E' };
     if (logoB64) slideH.addImage({ data: logoB64, x: 12.0, y: 0.05, w: 0.8, h: 0.55 });
-    slideH.addText('Destaques do Período', { x: 0.5, y: 0.1, w: 11, h: 0.55, fontSize: 18, bold: true, color: 'D4AD3A' });
+    slideH.addText('Destaques do PerÃ­odo', { x: 0.5, y: 0.1, w: 11, h: 0.55, fontSize: 18, bold: true, color: 'D4AD3A' });
     hlEls.slice(0, 6).forEach((el, i) => {
       const col = i % 2; const row = Math.floor(i / 2);
       const x = 0.4 + col * 6.5; const y = 0.85 + row * 1.95;
@@ -1258,7 +1259,7 @@ function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ─── CLIENT DASH API ─────────────────────────────── */
+/* â”€â”€â”€ CLIENT DASH API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function apiBase() {
   const cfg = (localStorage.getItem('fa_backend_api_url') || window.BACKEND_API_URL || '').trim();
   return cfg.replace(/\/$/, '');
@@ -1283,7 +1284,7 @@ async function _cliDashGet(path) {
   } catch { return null; }
 }
 
-/* ─── Activate tab bar in topbar when dashboard loads ─ */
+/* â”€â”€â”€ Activate tab bar in topbar when dashboard loads â”€ */
 function _showDashControls(periods, activePeriodId) {
   // Show tab bar
   document.getElementById('dashTabBar').style.display = '';
@@ -1293,9 +1294,9 @@ function _showDashControls(periods, activePeriodId) {
     <select class="period-select" id="dashPeriodSelect" onchange="onDashPeriodChange(this.value)">
       ${periods.map(p=>`<option value="${escHtml(p.id)}"${p.id===activePeriodId?' selected':''}>${escHtml(p.label||p.id)}</option>`).join('')}
     </select>
-    <button class="btn-export" onclick="downloadDashboardExcel()">⬇ Excel</button>
-    <button class="btn-export" onclick="downloadDashboardPDF()">⬇ PDF</button>
-    <button class="btn-export" onclick="downloadDashboardPPT()">⬇ PPT</button>`;
+    <button class="btn-export" onclick="downloadDashboardExcel()">â¬‡ Excel</button>
+    <button class="btn-export" onclick="downloadDashboardPDF()">â¬‡ PDF</button>
+    <button class="btn-export" onclick="downloadDashboardPPT()">â¬‡ PPT</button>`;
 }
 
 async function loadClientDashData(clientId) {
@@ -1321,7 +1322,7 @@ async function loadClientDashData(clientId) {
   return true;
 }
 
-/* ─── Rendering ─────────────────────────────────────── */
+/* â”€â”€â”€ Rendering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function renderApiDash(periodId, tabKey) {
   _dashActiveTab = tabKey;
   _dashPeriodId  = periodId;
@@ -1360,7 +1361,7 @@ async function renderApiDash(periodId, tabKey) {
   // Avoid re-fetching if already rendered for this period
   if (kpisEl.dataset.period === periodId && chartsEl.dataset.period === periodId) return;
 
-  kpisEl.innerHTML   = '<div style="grid-column:1/-1;padding:24px;text-align:center;font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--muted-l)">A carregar…</div>';
+  kpisEl.innerHTML   = '<div style="grid-column:1/-1;padding:24px;text-align:center;font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--muted-l)">A carregarâ€¦</div>';
   chartsEl.innerHTML = '';
 
   const [kpis, content] = await Promise.all([
@@ -1391,7 +1392,7 @@ function _buildKpiGrid(kpis, kpisEl, chartsEl, tabKey) {
   const charts = list.filter(k => !!k.chart_data);
 
   if (!list.length) {
-    kpisEl.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;font-family:\'IBM Plex Mono\',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted-l)">Sem dados para este período.</div>';
+    kpisEl.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;font-family:\'IBM Plex Mono\',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted-l)">Sem dados para este perÃ­odo.</div>';
     return;
   }
 
@@ -1399,18 +1400,18 @@ function _buildKpiGrid(kpis, kpisEl, chartsEl, tabKey) {
   cards.forEach(k => {
     const trend = parseFloat(k.trend_pct);
     const tDir  = isNaN(trend) ? 'flat' : trend > 0 ? 'up' : trend < 0 ? 'down' : 'flat';
-    const tIcon = tDir === 'up' ? '▲' : tDir === 'down' ? '▼' : '—';
+    const tIcon = tDir === 'up' ? 'â–²' : tDir === 'down' ? 'â–¼' : 'â€”';
     const tTxt  = isNaN(trend) ? '' : Math.abs(trend).toFixed(1) + '%';
     kpisEl.insertAdjacentHTML('beforeend', `
       <div class="kpi-card">
         <div class="kpi-label">${escHtml(k.label || k.kpi_key || '')}</div>
-        <div class="kpi-value" style="font-size:28px">${escHtml(String(k.value ?? '—'))}</div>
+        <div class="kpi-value" style="font-size:28px">${escHtml(String(k.value ?? 'â€”'))}</div>
         ${k.unit && k.unit.trim() && k.unit.trim().toLowerCase() !== 'processos' ? `<div class="kpi-unit">${escHtml(k.unit)}</div>` : ''}
         ${tTxt ? `<div class="kpi-trend ${tDir}">${tIcon} ${tTxt}</div>` : ''}
       </div>`);
   });
 
-  // Charts — rendered in pairs (2-column grid)
+  // Charts â€” rendered in pairs (2-column grid)
   charts.forEach((k, i) => {
     let cfg;
     try { cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; } catch(e) { return; }
@@ -1427,7 +1428,7 @@ function _buildKpiGrid(kpis, kpisEl, chartsEl, tabKey) {
         label: ctx => {
           const loc = tips[ctx.dataIndex];
           const base = dsLabel + ': ' + ctx.parsed.x;
-          return loc ? base + '  —  ' + loc : base;
+          return loc ? base + '  â€”  ' + loc : base;
         }
       };
     }
@@ -1487,7 +1488,7 @@ async function _renderDestaques(periodId) {
   if (count) count.textContent = _dashLastHighlights.length ? _dashLastHighlights.length + ' item' + (_dashLastHighlights.length !== 1 ? 's' : '') : '';
 
   if (!_dashLastHighlights.length) {
-    grid.innerHTML = '<div class="no-data"><span class="no-data-icon">⭐</span>Sem destaques para este período.</div>';
+    grid.innerHTML = '<div class="no-data"><span class="no-data-icon">â­</span>Sem destaques para este perÃ­odo.</div>';
     return;
   }
 
@@ -1527,7 +1528,7 @@ function onDashPeriodChange(periodId) {
   renderApiDash(periodId, _dashActiveTab);
 }
 
-/* ─── COMPARATIVO DE PERÍODOS ─────────────────────────────────────────────── */
+/* â”€â”€â”€ COMPARATIVO DE PERÃODOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function renderComparativo() {
   const selA = document.getElementById('comp-period-a');
   const selB = document.getElementById('comp-period-b');
@@ -1535,22 +1536,22 @@ async function renderComparativo() {
   if (!selA || !selB || !out) return;
   const pidA = selA.value;
   const pidB = selB.value;
-  if (!pidA || !pidB || !_dashClientId) { out.innerHTML = '<div class="comp-empty">Selecione dois períodos para comparar.</div>'; return; }
-  if (pidA === pidB) { out.innerHTML = '<div class="comp-empty">Selecione dois períodos diferentes.</div>'; return; }
+  if (!pidA || !pidB || !_dashClientId) { out.innerHTML = '<div class="comp-empty">Selecione dois perÃ­odos para comparar.</div>'; return; }
+  if (pidA === pidB) { out.innerHTML = '<div class="comp-empty">Selecione dois perÃ­odos diferentes.</div>'; return; }
 
-  out.innerHTML = '<div class="comp-empty">Carregando…</div>';
+  out.innerHTML = '<div class="comp-empty">Carregandoâ€¦</div>';
 
   const labelA = selA.options[selA.selectedIndex]?.text || pidA;
   const labelB = selB.options[selB.selectedIndex]?.text || pidB;
 
   const TABS = [
-    { key: 'visao-geral',    label: 'Visão Geral' },
+    { key: 'visao-geral',    label: 'VisÃ£o Geral' },
     { key: 'ex_empregados',  label: 'Ex-empregados' },
-    { key: 'terceirizacao',  label: 'Subsidiária' },
+    { key: 'terceirizacao',  label: 'SubsidiÃ¡ria' },
   ];
 
   const base = encodeURIComponent(_dashClientId);
-  // Buscar KPIs (somente cards, sem chart_data) dos dois períodos para cada aba
+  // Buscar KPIs (somente cards, sem chart_data) dos dois perÃ­odos para cada aba
   const fetches = TABS.flatMap(t => [
     _cliDashGet(`/api/client-dash/${base}/kpis?periodId=${encodeURIComponent(pidA)}&tabKey=${encodeURIComponent(t.key)}`),
     _cliDashGet(`/api/client-dash/${base}/kpis?periodId=${encodeURIComponent(pidB)}&tabKey=${encodeURIComponent(t.key)}`)
@@ -1575,20 +1576,20 @@ async function renderComparativo() {
         <th>Indicador</th>
         <th>${escHtml(labelA)}</th>
         <th>${escHtml(labelB)}</th>
-        <th>Variação</th>
+        <th>VariaÃ§Ã£o</th>
       </tr></thead><tbody>`;
 
     allKeys.forEach(key => {
       const kA = mapA[key];
       const kB = mapB[key];
       const label = (kB || kA).label || key;
-      const valA  = kA ? String(kA.value ?? '—') : '—';
-      const valB  = kB ? String(kB.value ?? '—') : '—';
+      const valA  = kA ? String(kA.value ?? 'â€”') : 'â€”';
+      const valB  = kB ? String(kB.value ?? 'â€”') : 'â€”';
 
-      // Tenta calcular delta numérico
+      // Tenta calcular delta numÃ©rico
       const nA = parseFloat(String(valA).replace(/[^0-9,.-]/g, '').replace(',', '.'));
       const nB = parseFloat(String(valB).replace(/[^0-9,.-]/g, '').replace(',', '.'));
-      let deltaHtml = '<span class="col-delta delta-flat">—</span>';
+      let deltaHtml = '<span class="col-delta delta-flat">â€”</span>';
       if (!isNaN(nA) && !isNaN(nB) && nA !== 0) {
         const diff = nB - nA;
         const pct  = ((diff / Math.abs(nA)) * 100).toFixed(1);
@@ -1613,7 +1614,7 @@ async function renderComparativo() {
     html += '</tbody></table></div>';
   });
 
-  out.innerHTML = html || '<div class="comp-empty">Nenhum dado disponível para comparação.</div>';
+  out.innerHTML = html || '<div class="comp-empty">Nenhum dado disponÃ­vel para comparaÃ§Ã£o.</div>';
 }
 
 function onDashTabChange(tabKey) {
@@ -1634,7 +1635,7 @@ const tickColor = 'rgba(26,10,13,0.45)';
 function buildAnalytics(reports) {
   const area = document.getElementById('analyticsArea');
 
-  // Apenas relatórios com dados reais (Python ou preenchidos manualmente)
+  // Apenas relatÃ³rios com dados reais (Python ou preenchidos manualmente)
   const withData = reports.filter(r =>
     r._pythonAnalyzed || (r.stats && Object.values(r.stats).some(v => v !== null))
   );
@@ -1650,18 +1651,18 @@ function buildAnalytics(reports) {
             <line x1="16" y1="17" x2="8" y2="17"/>
           </svg>
         </div>
-        <div class="analytics-pending-title">Aguardando análise do relatório</div>
+        <div class="analytics-pending-title">Aguardando anÃ¡lise do relatÃ³rio</div>
         <div class="analytics-pending-text">
-          Os indicadores e gráficos serão exibidos assim que o escritório processar o relatório enviado.<br/>
+          Os indicadores e grÃ¡ficos serÃ£o exibidos assim que o escritÃ³rio processar o relatÃ³rio enviado.<br/>
           <span style="color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:11px;margin-top:10px;display:block;">
-            Acesse "Relatórios" para fazer o download do arquivo disponível.
+            Acesse "RelatÃ³rios" para fazer o download do arquivo disponÃ­vel.
           </span>
         </div>
       </div>`;
     return;
   }
 
-  // Ordena cronologicamente para os gráficos de tendência
+  // Ordena cronologicamente para os grÃ¡ficos de tendÃªncia
   const sorted = [...withData].sort((a,b) => new Date(a.uploadedAt) - new Date(b.uploadedAt));
   const latest = sorted[sorted.length - 1];
 
@@ -1678,15 +1679,15 @@ function buildAnalytics(reports) {
   let html = '';
   if (latest._pythonAnalyzed && latest._pythonDate) {
     const when = new Date(latest._pythonDate).toLocaleString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-    html += `<div class="pending-badge" style="color:var(--green);background:var(--green-dim);border-color:rgba(45,212,160,0.25)">✓ Dados atualizados automaticamente · ${when}</div>`;
+    html += `<div class="pending-badge" style="color:var(--green);background:var(--green-dim);border-color:rgba(45,212,160,0.25)">âœ“ Dados atualizados automaticamente Â· ${when}</div>`;
   }
 
   /* KPI cards */
   const kpis = [
     { label:'Processos Ativos', value: ls.processos,     cls:'c-gold',   icon:`<svg width="16" height="16" fill="none" stroke="#9B2238" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>` },
-    { label:'Favoráveis',        value: ls.favoraveis,   cls:'c-green',  icon:`<svg width="16" height="16" fill="none" stroke="#2DD4A0" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>` },
-    { label:'Desfavoráveis',     value: ls.desfavoraveis,cls:'c-red',    icon:`<svg width="16" height="16" fill="none" stroke="#F87171" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>` },
-    { label:'Novas Ações',       value: ls.novas,        cls:'c-blue',   icon:`<svg width="16" height="16" fill="none" stroke="#60A5FA" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>` },
+    { label:'FavorÃ¡veis',        value: ls.favoraveis,   cls:'c-green',  icon:`<svg width="16" height="16" fill="none" stroke="#2DD4A0" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>` },
+    { label:'DesfavorÃ¡veis',     value: ls.desfavoraveis,cls:'c-red',    icon:`<svg width="16" height="16" fill="none" stroke="#F87171" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>` },
+    { label:'Novas AÃ§Ãµes',       value: ls.novas,        cls:'c-blue',   icon:`<svg width="16" height="16" fill="none" stroke="#60A5FA" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>` },
     { label:'Encerrados',        value: ls.encerrados,   cls:'c-purple', icon:`<svg width="16" height="16" fill="none" stroke="#A78BFA" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>` },
     { label:'Em Andamento',      value: ls.andamento,    cls:'c-amber',  icon:`<svg width="16" height="16" fill="none" stroke="#9B2238" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>` },
   ].filter(k => k.value !== null && k.value !== undefined);
@@ -1701,8 +1702,8 @@ function buildAnalytics(reports) {
 
   /* Donut */
   const donutData = [
-    { label:'Favoráveis',    value: ls.favoraveis    || 0, color:'#2DD4A0' },
-    { label:'Desfavoráveis', value: ls.desfavoraveis || 0, color:'#F87171' },
+    { label:'FavorÃ¡veis',    value: ls.favoraveis    || 0, color:'#2DD4A0' },
+    { label:'DesfavorÃ¡veis', value: ls.desfavoraveis || 0, color:'#F87171' },
     { label:'Em Andamento',  value: ls.andamento     || 0, color:'#60A5FA' },
     { label:'Encerrados',    value: ls.encerrados    || 0, color:'#A78BFA' },
   ].filter(d => d.value > 0);
@@ -1712,8 +1713,8 @@ function buildAnalytics(reports) {
 
   html += `
   <div class="chart-card">
-    <div class="chart-card-title">Composição Atual</div>
-    <div class="chart-card-sub">Distribuição do portfólio — ${latest.period||'último período'}</div>
+    <div class="chart-card-title">ComposiÃ§Ã£o Atual</div>
+    <div class="chart-card-sub">DistribuiÃ§Ã£o do portfÃ³lio â€” ${latest.period||'Ãºltimo perÃ­odo'}</div>
     <div class="donut-layout" style="margin-top:8px">
       <div class="donut-canvas-wrap">
         <canvas id="chartDonut"></canvas>
@@ -1737,22 +1738,22 @@ function buildAnalytics(reports) {
 
   html += `
   <div class="chart-card">
-    <div class="chart-card-title">Decisões por Período</div>
-    <div class="chart-card-sub">Favoráveis × Desfavoráveis</div>
+    <div class="chart-card-title">DecisÃµes por PerÃ­odo</div>
+    <div class="chart-card-sub">FavorÃ¡veis Ã— DesfavorÃ¡veis</div>
     <div class="chart-wrap"><canvas id="chartBar"></canvas></div>
   </div>`;
 
   html += `
   <div class="chart-card">
-    <div class="chart-card-title">Evolução de Processos</div>
-    <div class="chart-card-sub">Processos ativos ao longo dos períodos</div>
+    <div class="chart-card-title">EvoluÃ§Ã£o de Processos</div>
+    <div class="chart-card-sub">Processos ativos ao longo dos perÃ­odos</div>
     <div class="chart-wrap"><canvas id="chartLine"></canvas></div>
   </div>`;
 
   html += `
   <div class="chart-card">
-    <div class="chart-card-title">Movimentação</div>
-    <div class="chart-card-sub">Novas ações × Encerrados por período</div>
+    <div class="chart-card-title">MovimentaÃ§Ã£o</div>
+    <div class="chart-card-sub">Novas aÃ§Ãµes Ã— Encerrados por perÃ­odo</div>
     <div class="chart-wrap"><canvas id="chartMovimento"></canvas></div>
   </div>`;
 
@@ -1771,8 +1772,8 @@ function buildAnalytics(reports) {
     new Chart(document.getElementById('chartBar'), {
       type: 'bar',
       data: { labels, datasets: [
-        { label:'Favoráveis',    data:favoraveis,    backgroundColor:'rgba(45,212,160,0.7)',  borderRadius:4 },
-        { label:'Desfavoráveis', data:desfavoraveis, backgroundColor:'rgba(248,113,113,0.7)', borderRadius:4 }
+        { label:'FavorÃ¡veis',    data:favoraveis,    backgroundColor:'rgba(45,212,160,0.7)',  borderRadius:4 },
+        { label:'DesfavorÃ¡veis', data:desfavoraveis, backgroundColor:'rgba(248,113,113,0.7)', borderRadius:4 }
       ]},
       options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:tickColor, boxWidth:10 } } }, scales:{ x:{ grid:{ color:gridColor }, ticks:{ color:tickColor } }, y:{ grid:{ color:gridColor }, ticks:{ color:tickColor }, beginAtZero:true } } }
     });
@@ -1784,7 +1785,7 @@ function buildAnalytics(reports) {
     new Chart(document.getElementById('chartMovimento'), {
       type: 'bar',
       data: { labels, datasets: [
-        { label:'Novas Ações', data:novas,      backgroundColor:'rgba(96,165,250,0.7)',  borderRadius:4 },
+        { label:'Novas AÃ§Ãµes', data:novas,      backgroundColor:'rgba(96,165,250,0.7)',  borderRadius:4 },
         { label:'Encerrados',  data:encerrados, backgroundColor:'rgba(167,139,250,0.7)', borderRadius:4 }
       ]},
       options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:tickColor, boxWidth:10 } } }, scales:{ x:{ grid:{ color:gridColor }, ticks:{ color:tickColor } }, y:{ grid:{ color:gridColor }, ticks:{ color:tickColor }, beginAtZero:true } } }
@@ -1792,7 +1793,7 @@ function buildAnalytics(reports) {
   });
 }
 
-/* ─── REPORTS GRID ──────────────────────────────────── */
+/* â”€â”€â”€ REPORTS GRID â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function renderReports(reports) {
   const grid = document.getElementById('reportsGrid');
   const count = document.getElementById('reportsCount');
@@ -1802,7 +1803,7 @@ function renderReports(reports) {
   /* stats row removed */
 
   if (!reports.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">📁</div><div class="empty-title">Nenhum relatório disponível</div><div class="empty-text">Seus relatórios aparecerão aqui assim que forem disponibilizados pelo escritório.</div></div>`;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">ðŸ“</div><div class="empty-title">Nenhum relatÃ³rio disponÃ­vel</div><div class="empty-text">Seus relatÃ³rios aparecerÃ£o aqui assim que forem disponibilizados pelo escritÃ³rio.</div></div>`;
     return;
   }
 
@@ -1812,7 +1813,7 @@ function renderReports(reports) {
   grid.innerHTML = sorted.map((r, i) => `
     <div class="report-card">
       <div class="report-card-top">
-        <div class="report-icon">📈</div>
+        <div class="report-icon">ðŸ“ˆ</div>
         ${isNew(r.uploadedAt) ? '<span class="badge-new">Novo</span>' : ''}
       </div>
       ${r.period ? `<div class="report-period">${r.period}</div>` : ''}
@@ -1824,22 +1825,22 @@ function renderReports(reports) {
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
         <button type="button" class="btn-download" onclick="downloadReport(window._allReports[${i}])" title="Baixar Excel/PDF original">
-          ⬇ Excel
+          â¬‡ Excel
         </button>
         <button type="button" class="btn-download" style="background:rgba(13,43,94,.07);border-color:rgba(13,43,94,.25);color:#0D2B5E" onclick="downloadReportPDF(window._allReports[${i}])" title="Exportar como PDF">
-          📄 PDF
+          ðŸ“„ PDF
         </button>
         <button type="button" class="btn-download" style="background:rgba(214,55,55,.07);border-color:rgba(214,55,55,.25);color:#d63737" onclick="downloadReportPPT(window._allReports[${i}])" title="Exportar como PowerPoint">
-          📊 PPT
+          ðŸ“Š PPT
         </button>
       </div>
     </div>`).join('');
 }
 
-/* ─── INJECT PYTHON STATS ───────────────────────────── */
+/* â”€â”€â”€ INJECT PYTHON STATS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 /**
  * Tenta carregar data/stats.json (gerado por analyze_report.py).
- * Se encontrar stats para o relatório mais recente, injeta nos reports
+ * Se encontrar stats para o relatÃ³rio mais recente, injeta nos reports
  * antes de renderizar, substituindo os dados de placeholder.
  */
 async function loadPythonStats(reports) {
@@ -1848,10 +1849,10 @@ async function loadPythonStats(reports) {
     if (!res.ok) return reports;
     const json = await res.json();
 
-    // Percorre todas as entradas do JSON (exceto "latest") para montar mapa por período/arquivo
+    // Percorre todas as entradas do JSON (exceto "latest") para montar mapa por perÃ­odo/arquivo
     const entries = Object.values(json).filter(e => e && e.stats && e.generated);
 
-    // Ordena entradas do Python pela data de geração (mais recente primeiro)
+    // Ordena entradas do Python pela data de geraÃ§Ã£o (mais recente primeiro)
     entries.sort((a, b) => new Date(b.generated) - new Date(a.generated));
 
     if (!entries.length) return reports;
@@ -1861,9 +1862,9 @@ async function loadPythonStats(reports) {
       let match = entries.find(e => e.reportId && e.reportId === r.id);
       // 2. Tenta bater pelo nome do arquivo
       if (!match) match = entries.find(e => e.sourceFile && r.fileName && e.sourceFile === r.fileName);
-      // 3. Tenta bater pelo período
+      // 3. Tenta bater pelo perÃ­odo
       if (!match) match = entries.find(e => e.period && r.period && e.period === r.period);
-      // 4. Aplica o mais recente ao relatório mais recente (i === 0)
+      // 4. Aplica o mais recente ao relatÃ³rio mais recente (i === 0)
       if (!match && i === 0) match = entries[0];
 
       if (match) {
@@ -1879,7 +1880,7 @@ async function loadPythonStats(reports) {
   }
 }
 
-/* ─── INIT ──────────────────────────────────────────── */
+/* â”€â”€â”€ INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function init() {
   const raw = sessionStorage.getItem('falaw_session');
   if (!raw) { window.location.href = 'index.html'; return; }
@@ -1899,7 +1900,7 @@ async function init() {
     }
   }
 
-  // Cliente continua no Supabase; relatórios/dashboards vêm da Cockroach API
+  // Cliente continua no Supabase; relatÃ³rios/dashboards vÃªm da Cockroach API
   let client = null;
   const sbUrl = (window.SB_URL || '').trim();
   const sbKey = (window.SB_KEY || '').trim();
@@ -1911,8 +1912,8 @@ async function init() {
         const local = (function(){ try { return JSON.parse(localStorage.getItem('falaw_portal'))||[]; } catch { return []; } })();
         const lc = local.find(l => l.id === data.id);
         const apiReports = await loadReportsFromApi(data.id);
-        // Perfil/acesso vem do Supabase; relatórios vêm do Cockroach API.
-        // Preserva só fileData local (binários offline)
+        // Perfil/acesso vem do Supabase; relatÃ³rios vÃªm do Cockroach API.
+        // Preserva sÃ³ fileData local (binÃ¡rios offline)
         client = {
           id: data.id,
           name: (data.name || '').trim() || (data.company || '').trim() || session.name || '',
@@ -1934,20 +1935,20 @@ async function init() {
     } catch(e) { console.warn('SB dashboard:', e.message); }
   }
 
-  // Fallback: cache local (caso Supabase indisponível)
+  // Fallback: cache local (caso Supabase indisponÃ­vel)
   if (!client) {
     const local = (function(){ try { return JSON.parse(localStorage.getItem('falaw_portal'))||[]; } catch { return []; } })();
     client = local.find(c => c.id === session.id);
   }
 
-  // Último recurso: cria objeto a partir da sessão (sem relatórios)
+  // Ãšltimo recurso: cria objeto a partir da sessÃ£o (sem relatÃ³rios)
   if (!client) {
     client = { id: session.id, name: session.name || '', company: session.company || '', email: session.email || '', reports: [] };
   }
 
   // Usa session como fallback para campos em branco
-  const displayCompany = (client.company || '').trim() || (session.company || '').trim() || (client.name || '').trim() || (session.name || '').trim() || '—';
-  const displayEmail   = (client.email  || '').trim() || (session.email  || '').trim() || '—';
+  const displayCompany = (client.company || '').trim() || (session.company || '').trim() || (client.name || '').trim() || (session.name || '').trim() || 'â€”';
+  const displayEmail   = (client.email  || '').trim() || (session.email  || '').trim() || 'â€”';
   const displayName    = (client.name   || '').trim() || (session.name   || '').trim() || displayCompany;
   window._clientData = { ...client, company: displayCompany, email: displayEmail };
 
@@ -1967,13 +1968,13 @@ async function init() {
     document.getElementById('nav-ifood').classList.remove('hidden');
   }
 
-  /* Aba Comparativo: sempre visível */
+  /* Aba Comparativo: sempre visÃ­vel */
   const compBtn = document.querySelector('#dashTabBar .tab-btn[data-tab="comparativo"]');
   if (compBtn) compBtn.style.display = '';
 
   /* Page title */
-  document.getElementById('pageTitle').textContent     = 'Olá, ' + displayName.split(' ')[0];
-  document.getElementById('pageSubtitle').textContent  = 'Visão geral dos processos de ' + (displayCompany !== '—' ? displayCompany : 'sua empresa') + '.';
+  document.getElementById('pageTitle').textContent     = 'OlÃ¡, ' + displayName.split(' ')[0];
+  document.getElementById('pageSubtitle').textContent  = 'VisÃ£o geral dos processos de ' + (displayCompany !== 'â€”' ? displayCompany : 'sua empresa') + '.';
 
   /* Login time + topbar date */
   document.getElementById('topbarDate').textContent  = new Date().toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
@@ -2001,3 +2002,4 @@ init();
 
 </body>
 </html>
+
