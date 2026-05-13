@@ -6830,6 +6830,8 @@ function _xlParseClientActive(rawRows) {
   }
 
   const fi = (...pats) => { for (const p of pats) { const k = _xlN(p); const i = header.findIndex(h => h.includes(k)); if (i >= 0) return i; } return -1; };
+  // Like fi, but searches only from column `from+1` onwards (for duplicate column names)
+  const fiFrom = (from, ...pats) => { for (const p of pats) { const k = _xlN(p); const i = header.findIndex((h,ci) => ci > from && h.includes(k)); if (i >= 0) return i; } return -1; };
   const idx = {
     proc:            fi('NUMERO DO PROCESSO','PROCESSO N','PROCESSO'),
     trt:             fi('TRT','ORGAO'),
@@ -6858,6 +6860,8 @@ function _xlParseClientActive(rawRows) {
     data_sentenca:   fi('DATA DA SENTENCA','DATA DO ACORDAO','DATA DO JULGAMENTO','DATA DA DECISAO','DATA DA SENTENÇA','DATA DO ACÓRDÃO'),
     objeto:          fi('OBJETO','ASSUNTO','MATERIA','PEDIDOS'),
   };
+  // turma3g = TURMA column immediately after JULGADOR DO 3º GRAU (second TURMA column)
+  idx.turma3g = idx.julgador3g >= 0 ? fiFrom(idx.julgador3g, 'TURMA','CAMARA') : -1;
 
   // Helper: get cell as string, skip if value is a raw number (Excel serial or numeric column)
   const c = (r, i) => {
@@ -6938,7 +6942,7 @@ function _xlParseClientActive(rawRows) {
       uf:           c(r, idx.uf), vara: c(r, idx.vara),
       juiz:         c(r, idx.juiz), relator: c(r, idx.relator), turma: c(r, idx.turma),
       julgador1g:   c(r, idx.julgador1g), julgador2g: c(r, idx.julgador2g), julgador3g: c(r, idx.julgador3g),
-      vara1g:       c(r, idx.vara1g), turma2g: c(r, idx.turma2g),
+      vara1g:       c(r, idx.vara1g), turma2g: c(r, idx.turma2g), turma3g: c(r, idx.turma3g),
       adv: c(r, idx.adv),
       empresa_terceira: c(r, idx.empresa_terceira),
       responsabilidade: detectResp(r), sentenca: c(r, idx.sentenca),
@@ -7145,7 +7149,11 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     if (_ok(j2g)) return { name: j2g, location: _isNA(t2g) ? null : t2g };
     // 3) Julgador 3º grau / TST
     const j3g  = String(r.julgador3g||'').trim();
-    if (_ok(j3g)) return { name: j3g, location: 'TST' };
+    const t3g  = String(r.turma3g||'').trim();
+    if (_ok(j3g)) {
+      const loc3 = _ok(t3g) ? t3g.replace(/^(\d+)[ªa°]?\s*([Tt]urma)?.*$/, '$1ª Turma') + ' – TST' : 'TST';
+      return { name: j3g, location: loc3 };
+    }
     // 3) Relator + turma (fallback)
     const relator = String(r.relator||'').trim();
     const turma   = String(r.turma||'').trim();
