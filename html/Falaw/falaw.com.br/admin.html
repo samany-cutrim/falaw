@@ -7176,6 +7176,12 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     const julgDesf   = julgTop.map(([name]) => julgMap[name].desf);
     const julgParc   = julgTop.map(([name]) => julgMap[name].parc);
     const julgOther  = julgTop.map(([name]) => julgMap[name].count - julgMap[name].fav - julgMap[name].desf - julgMap[name].parc);
+    const julgLocations = julgTop.map(([name]) => {
+      const loc = julgMap[name].location || '';
+      // Format TST turma nicely
+      if (/TST/i.test(loc)) return loc.replace(/^(\d+)[ªa°]?\s*[Tt]urma.*/,'$1ª Turma – TST').replace(/TST$/,'TST');
+      return loc;
+    });
     const hasDecisoes = julgFav.some(v=>v>0) || julgDesf.some(v=>v>0);
     const datasets = hasDecisoes ? [
       { label:'Favorável',    data:julgFav,   backgroundColor:'#0F9E76', borderRadius:2 },
@@ -7191,7 +7197,19 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       options:{
         indexAxis:'y',
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } } },
+        plugins:{
+          legend:{ position:'top', labels:{ font:{ family:'IBM Plex Mono', size:10 } } },
+          tooltip:{
+            callbacks:{
+              title(items) {
+                const idx = items[0].dataIndex;
+                const loc = julgLocations[idx];
+                return loc ? `${julgLabels[idx]}\n${loc}` : julgLabels[idx];
+              },
+              afterTitle(items) { return ''; }
+            }
+          }
+        },
         scales:{
           x:{ stacked:true, beginAtZero:true, ticks:{ stepSize:1, font:{ family:'IBM Plex Mono', size:9 } }, grid:{ display:false } },
           y:{ stacked:true, ticks:{ font:{ family:'IBM Plex Mono', size:9 } }, grid:{ display:false } }
