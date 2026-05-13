@@ -7109,15 +7109,7 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     _xlChartMultiBar(mes26Keys.map(k => MONTHS_PT[parseInt(k,10)-1]), mes26Keys.map(k=>mes2026C[k]),'Processos'),
     'Casos Distribuídos em 2026 (por Mês)');
 
-  // ── Pedidos (objeto) mais frequentes — visão geral
-  {
-    const pedC = {};
-    records.forEach(r => { Object.entries(_xlParsePedidos(r.objeto)).forEach(([k,v]) => { pedC[k]=(pedC[k]||0)+v; }); });
-    const pedTop = topN(pedC, 15);
-    if (pedTop.length) push('visao-geral','chart_pedidos','Pedidos mais Frequentes','','',
-      _xlChartBar(pedTop.map(([l])=>l), pedTop.map(([,v])=>v),'Ocorrências','#0D2B5E',true),
-      'Ranking de Pedidos — Geral');
-  }
+  // Ranking de Pedidos — apenas ex-foodlover (removido da visão geral)
 
   // ── 8. Top advogados adversários ─────────────────────────────────────
   const advC = {};
@@ -7420,13 +7412,7 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       _xlChartBar(tcEmpTop.map(([l])=>l), tcEmpTop.map(([,v])=>v),'Processos','#7B1A2E',true),
       'Ranking de Empresas — Subsidiária');
 
-    // Pedidos mais frequentes — Subsidiária
-    const tcPedC = {};
-    recsTerc.forEach(r => { Object.entries(_xlParsePedidos(r.objeto)).forEach(([k,v]) => { tcPedC[k]=(tcPedC[k]||0)+v; }); });
-    const tcPedTop = topN(tcPedC, 15);
-    if (tcPedTop.length) push('terceirizacao','tc_chart_pedidos','Pedidos mais Frequentes','','',
-      _xlChartBar(tcPedTop.map(([l])=>l), tcPedTop.map(([,v])=>v),'Ocorrências','#0D2B5E',true),
-      'Ranking de Pedidos — Subsidiária');
+    // Ranking de Pedidos — apenas ex-foodlover (removido da subsidiária)
 
     if (tcFav+tcDesf+tcParc > 0) push('terceirizacao','tc_chart_dec','Resultado das Decisões do Mês','','',
       _xlChartDoughnut(['Favorável','Desfavorável','Parcialmente Procedente'].filter((_,i)=>[tcFav,tcDesf,tcParc][i]>0),
@@ -9076,14 +9062,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   if(coReusAllTop.length) push('visao-geral','chart_coreus_geral','Top 10 Empresas Co-réus','','',
     _xlChartBar(coReusAllTop.map(([l])=>l), coReusAllTop.map(([,v])=>v), 'Processos', '#0D2B5E', true), 'Top 10 Empresas Co-réus');
 
-  // Pedidos mais frequentes — visão geral iFood
-  {
-    const allPedC = {};
-    records.forEach(r=>{ Object.entries(_xlParsePedidos(r.assunto)).forEach(([k,v])=>{ allPedC[k]=(allPedC[k]||0)+v; }); });
-    const allPedTop = _xlTopN(allPedC, 15);
-    if(allPedTop.length) push('visao-geral','chart_pedidos','Pedidos mais Frequentes','','',
-      _xlChartBar(allPedTop.map(([l])=>l), allPedTop.map(([,v])=>v),'Ocorrências','#0D2B5E',true), 'Ranking de Pedidos — Geral');
-  }
+  // Ranking de Pedidos — apenas ex-foodlover (removido da visão geral iFood)
 
   // Tabela consolidada — comparativo entre segmentos (causa raiz)
   {
@@ -9249,8 +9228,8 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
 
 
 
-    // Pedidos ranking — todas as abas
-    {
+    // Pedidos ranking — somente Ex-Foodlover
+    if (tabKey === 'ex-foodlover') {
       const pedC = {};
       recs.forEach(r=>{ Object.entries(_xlParsePedidos(r.assunto)).forEach(([k,v])=>{ pedC[k]=(pedC[k]||0)+v; }); });
       const pedTop = _xlTopN(pedC,15);
