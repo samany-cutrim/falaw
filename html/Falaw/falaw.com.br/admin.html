@@ -6080,7 +6080,7 @@ function renderClients() {
   list.innerHTML = clients.map(c => {
     const reports = c.reports || [];
     const reportsHtml = reports.length === 0
-      ? '<div style="padding:14px 0;color:var(--c-muted);font-size:13px">Nenhum relatório enviado ainda.</div>'
+      ? ''
       : reports.map(r => `
           <div class="report-item">
             <div class="report-item-info">
