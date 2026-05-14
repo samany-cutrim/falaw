@@ -3138,14 +3138,17 @@ function _renderCalLista(items) {
     const tipoCfg   = CAL_TIPO_CFG[it.tipo]   || CAL_TIPO_CFG.post;
     const statusCfg = CAL_STATUS_CFG[it.status] || CAL_STATUS_CFG.planejado;
     const [y, m, d] = it.data.split('-');
-    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid #e8eaf0;border-radius:4px;margin-bottom:6px;background:#fff;cursor:pointer" onclick="editarPublicacao('${it.id}')">
+    const publicado  = it.status === 'publicado';
+    const checkBtn   = `<button onclick="event.stopPropagation();togglePublicado('${it.id}')" title="${publicado ? 'Desmarcar como publicado' : 'Marcar como publicado'}" style="width:30px;height:30px;border-radius:50%;border:2px solid ${publicado ? '#1B7A4E' : '#ddd'};background:${publicado ? '#1B7A4E' : '#fff'};color:${publicado ? '#fff' : '#bbb'};font-size:14px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s">&#10003;</button>`;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid ${publicado ? '#A5D6A7' : '#e8eaf0'};border-radius:4px;margin-bottom:6px;background:${publicado ? '#F9FFF9' : '#fff'};cursor:pointer" onclick="editarPublicacao('${it.id}')">
+      ${checkBtn}
       <div style="min-width:36px;text-align:center">
-        <div style="font-size:18px;font-weight:700;color:#0D2B5E;line-height:1">${d}</div>
+        <div style="font-size:18px;font-weight:700;color:${publicado ? '#aaa' : '#0D2B5E'};line-height:1;${publicado ? 'text-decoration:line-through' : ''}">${d}</div>
         <div style="font-size:9px;color:var(--c-muted);text-transform:uppercase">${MESES_PT[Number(m)-1].slice(0,3)}</div>
       </div>
       <div style="width:3px;height:36px;border-radius:2px;background:${tipoCfg.color};flex-shrink:0"></div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:700;color:#0D2B5E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.titulo || '(sem título)'}</div>
+        <div style="font-size:12px;font-weight:700;color:${publicado ? '#aaa' : '#0D2B5E'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${publicado ? 'text-decoration:line-through' : ''}">${it.titulo || '(sem título)'}</div>
         <div style="font-size:10px;color:var(--c-muted);margin-top:2px">${it.autor ? `Por ${it.autor}` : ''}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
@@ -3160,6 +3163,15 @@ function navegarCalendario(dir) {
   _calMes += dir;
   if (_calMes > 11) { _calMes = 0;  _calAno++; }
   if (_calMes < 0)  { _calMes = 11; _calAno--; }
+  renderCalendario();
+}
+
+function togglePublicado(id) {
+  const items = _calLoad();
+  const it = items.find(i => i.id === id);
+  if (!it) return;
+  it.status = it.status === 'publicado' ? 'planejado' : 'publicado';
+  _calSave(items);
   renderCalendario();
 }
 
