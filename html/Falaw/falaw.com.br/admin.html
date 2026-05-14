@@ -926,6 +926,7 @@
           <div class="admin-dropdown-item" id="ditem-contato" onclick="switchTab('contato')"><span>Contato</span><span class="notif-badge" id="badge-contato" style="display:none"></span></div>
           <div class="admin-dropdown-item" id="ditem-curriculos" onclick="switchTab('curriculos')"><span>Currículos</span><span class="notif-badge" id="badge-curriculos" style="display:none"></span></div>
           <div class="admin-dropdown-item" id="ditem-comentarios" onclick="switchTab('comentarios')"><span>Comentários</span><span class="notif-badge" id="badge-comentarios" style="display:none"></span></div>
+          <div class="admin-dropdown-item" id="ditem-calendario" onclick="switchTab('calendario')"><span>Calendário</span></div>
         </div>
       </div>
       <!-- Grupo Gestão -->
@@ -1787,6 +1788,88 @@
       </div>
       <div class="stats-bar" id="comentarios-stats"></div>
       <div class="item-list" id="comentarios-list"></div>
+    </section>
+
+    <!-- ── CALENDÁRIO ── -->
+    <section id="tab-calendario" class="admin-section">
+      <div class="section-header">
+        <h2>Calendário de Publicações</h2>
+        <button class="btn btn-primary" onclick="abrirModalCalendario(null)">+ Nova Publicação</button>
+      </div>
+
+      <!-- Navegação mês/ano -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <button class="btn btn-ghost" id="cal-prev" onclick="navegarCalendario(-1)">‹ Anterior</button>
+        <span id="cal-titulo" style="font-family:var(--f-mono);font-size:14px;font-weight:700;min-width:160px;text-align:center"></span>
+        <button class="btn btn-ghost" id="cal-next" onclick="navegarCalendario(1)">Próximo ›</button>
+        <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+          <span style="background:#E8F5EE;color:#1B7A4E;border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700">● Post Blog</span>
+          <span style="background:#E3F2FD;color:#1565C0;border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700">● Artigo</span>
+          <span style="background:#FFF3E0;color:#E65100;border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700">● Newsletter</span>
+          <span style="background:#F3E5F5;color:#6A1B9A;border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700">● Social</span>
+        </div>
+      </div>
+
+      <!-- Grid do calendário -->
+      <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px"></div>
+
+      <!-- Lista do mês atual -->
+      <div style="margin-top:24px">
+        <h3 style="font-family:var(--f-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--c-muted);margin-bottom:12px">Publicações do Mês</h3>
+        <div id="cal-lista"></div>
+      </div>
+
+      <!-- Modal nova/editar publicação -->
+      <div id="cal-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center">
+        <div style="background:#fff;border-radius:6px;padding:28px 32px;width:100%;max-width:480px;font-family:var(--f-mono);box-shadow:0 8px 40px rgba(0,0,0,.25)">
+          <h3 style="margin:0 0 20px;font-size:14px;color:#0D2B5E" id="cal-modal-titulo">Nova Publicação</h3>
+          <input type="hidden" id="cal-edit-id" />
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div>
+              <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#555">Título</label>
+              <input id="cal-f-titulo" type="text" placeholder="Título do post ou artigo" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-family:var(--f-mono);font-size:12px;box-sizing:border-box" />
+            </div>
+            <div style="display:flex;gap:12px">
+              <div style="flex:1">
+                <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#555">Tipo</label>
+                <select id="cal-f-tipo" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-family:var(--f-mono);font-size:12px">
+                  <option value="post">Post Blog</option>
+                  <option value="artigo">Artigo</option>
+                  <option value="newsletter">Newsletter</option>
+                  <option value="social">Social</option>
+                </select>
+              </div>
+              <div style="flex:1">
+                <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#555">Status</label>
+                <select id="cal-f-status" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-family:var(--f-mono);font-size:12px">
+                  <option value="planejado">Planejado</option>
+                  <option value="em_producao">Em produção</option>
+                  <option value="publicado">Publicado</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#555">Data de Publicação</label>
+              <input id="cal-f-data" type="date" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-family:var(--f-mono);font-size:12px;box-sizing:border-box" />
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#555">Responsável</label>
+              <input id="cal-f-autor" type="text" placeholder="Nome do autor" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-family:var(--f-mono);font-size:12px;box-sizing:border-box" />
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#555">Observações</label>
+              <textarea id="cal-f-obs" rows="2" placeholder="Notas, links, tags..." style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-family:var(--f-mono);font-size:12px;resize:vertical;box-sizing:border-box"></textarea>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:20px;gap:8px">
+            <button class="btn btn-ghost" id="cal-modal-del" onclick="deletarPublicacao()" style="color:#C62828;display:none">Excluir</button>
+            <div style="display:flex;gap:8px;margin-left:auto">
+              <button class="btn btn-ghost" onclick="fecharModalCalendario()">Cancelar</button>
+              <button class="btn btn-primary" onclick="salvarPublicacao()">Salvar</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ── CONFIG ── -->
@@ -2949,7 +3032,7 @@ function getSbCreds() {
   return { sbUrl, sbKey };
 }
 
-const CONTEUDO_TABS   = ['blog','newsletter','contato','curriculos','comentarios'];
+const CONTEUDO_TABS   = ['blog','newsletter','contato','curriculos','comentarios','calendario'];
 const GESTAO_TABS     = ['equipe','clientes'];
 const DASH_TABS       = ['ifood','cli-dash'];
 const STANDALONE_TABS = ['config'];
@@ -2968,6 +3051,183 @@ document.addEventListener('click', function(e) {
     document.querySelectorAll('.admin-tab-group').forEach(g => g.classList.remove('open'));
   }
 });
+
+/* ══════════════════════════════════════
+   CALENDÁRIO DE PUBLICAÇÕES
+══════════════════════════════════════ */
+const CAL_STORE_KEY = 'falaw_calendario_v1';
+let _calAno  = new Date().getFullYear();
+let _calMes  = new Date().getMonth(); // 0-based
+
+function _calLoad() {
+  try { return JSON.parse(localStorage.getItem(CAL_STORE_KEY) || '[]'); } catch { return []; }
+}
+function _calSave(items) {
+  localStorage.setItem(CAL_STORE_KEY, JSON.stringify(items));
+}
+
+const CAL_TIPO_CFG = {
+  post:       { label: 'Post Blog',    bg: '#E8F5EE', color: '#1B7A4E' },
+  artigo:     { label: 'Artigo',       bg: '#E3F2FD', color: '#1565C0' },
+  newsletter: { label: 'Newsletter',   bg: '#FFF3E0', color: '#E65100' },
+  social:     { label: 'Social',       bg: '#F3E5F5', color: '#6A1B9A' },
+};
+const CAL_STATUS_CFG = {
+  planejado:    { label: 'Planejado',      bg: '#F3F4F6', color: '#555' },
+  em_producao:  { label: 'Em produção',    bg: '#FFF8E1', color: '#F57F17' },
+  publicado:    { label: 'Publicado',      bg: '#E8F5EE', color: '#1B7A4E' },
+};
+
+const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DIAS_PT  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+function renderCalendario() {
+  const items = _calLoad();
+  const titulo = document.getElementById('cal-titulo');
+  if (titulo) titulo.textContent = `${MESES_PT[_calMes]} ${_calAno}`;
+  _renderCalGrid(items);
+  _renderCalLista(items);
+}
+
+function _renderCalGrid(items) {
+  const grid = document.getElementById('cal-grid');
+  if (!grid) return;
+  const primeiroDia = new Date(_calAno, _calMes, 1).getDay();
+  const totalDias   = new Date(_calAno, _calMes + 1, 0).getDate();
+
+  let html = DIAS_PT.map(d =>
+    `<div style="text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--c-muted);padding:4px 0">${d}</div>`
+  ).join('');
+
+  // células vazias antes do dia 1
+  for (let i = 0; i < primeiroDia; i++)
+    html += `<div></div>`;
+
+  for (let d = 1; d <= totalDias; d++) {
+    const dataStr = `${_calAno}-${String(_calMes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const diaItems = items.filter(it => it.data === dataStr);
+    const isHoje = dataStr === new Date().toISOString().slice(0,10);
+    const dots = diaItems.map(it => {
+      const cfg = CAL_TIPO_CFG[it.tipo] || CAL_TIPO_CFG.post;
+      return `<div style="width:6px;height:6px;border-radius:50%;background:${cfg.color};flex-shrink:0"></div>`;
+    }).join('');
+    html += `<div onclick="abrirModalCalendario('${dataStr}')" style="min-height:54px;border:1px solid ${isHoje?'#0D2B5E':'#e8eaf0'};border-radius:4px;padding:5px 6px;cursor:pointer;background:${isHoje?'#EEF2FF':'#fff'};transition:background .15s" onmouseenter="this.style.background='#f5f7ff'" onmouseleave="this.style.background='${isHoje?'#EEF2FF':'#fff'}'">
+      <div style="font-size:11px;font-weight:${isHoje?'700':'400'};color:${isHoje?'#0D2B5E':'#333'};margin-bottom:3px">${d}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px">${dots}</div>
+    </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function _renderCalLista(items) {
+  const lista = document.getElementById('cal-lista');
+  if (!lista) return;
+  const mesItems = items
+    .filter(it => {
+      const [y, m] = it.data.split('-').map(Number);
+      return y === _calAno && m === _calMes + 1;
+    })
+    .sort((a, b) => a.data.localeCompare(b.data));
+
+  if (!mesItems.length) {
+    lista.innerHTML = `<div style="color:var(--c-muted);font-size:12px;padding:12px 0">Nenhuma publicação agendada para este mês.</div>`;
+    return;
+  }
+
+  lista.innerHTML = mesItems.map(it => {
+    const tipoCfg   = CAL_TIPO_CFG[it.tipo]   || CAL_TIPO_CFG.post;
+    const statusCfg = CAL_STATUS_CFG[it.status] || CAL_STATUS_CFG.planejado;
+    const [y, m, d] = it.data.split('-');
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid #e8eaf0;border-radius:4px;margin-bottom:6px;background:#fff;cursor:pointer" onclick="editarPublicacao('${it.id}')">
+      <div style="min-width:36px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:#0D2B5E;line-height:1">${d}</div>
+        <div style="font-size:9px;color:var(--c-muted);text-transform:uppercase">${MESES_PT[Number(m)-1].slice(0,3)}</div>
+      </div>
+      <div style="width:3px;height:36px;border-radius:2px;background:${tipoCfg.color};flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:#0D2B5E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.titulo || '(sem título)'}</div>
+        <div style="font-size:10px;color:var(--c-muted);margin-top:2px">${it.autor ? `Por ${it.autor}` : ''}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <span style="background:${tipoCfg.bg};color:${tipoCfg.color};border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700">${tipoCfg.label}</span>
+        <span style="background:${statusCfg.bg};color:${statusCfg.color};border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700">${statusCfg.label}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function navegarCalendario(dir) {
+  _calMes += dir;
+  if (_calMes > 11) { _calMes = 0;  _calAno++; }
+  if (_calMes < 0)  { _calMes = 11; _calAno--; }
+  renderCalendario();
+}
+
+function abrirModalCalendario(data) {
+  const modal = document.getElementById('cal-modal');
+  document.getElementById('cal-edit-id').value  = '';
+  document.getElementById('cal-f-titulo').value  = '';
+  document.getElementById('cal-f-tipo').value    = 'post';
+  document.getElementById('cal-f-status').value  = 'planejado';
+  document.getElementById('cal-f-data').value    = data && data.length === 10 ? data : '';
+  document.getElementById('cal-f-autor').value   = '';
+  document.getElementById('cal-f-obs').value     = '';
+  document.getElementById('cal-modal-titulo').textContent = 'Nova Publicação';
+  document.getElementById('cal-modal-del').style.display = 'none';
+  modal.style.display = 'flex';
+}
+
+function editarPublicacao(id) {
+  const items = _calLoad();
+  const it = items.find(i => i.id === id);
+  if (!it) return;
+  document.getElementById('cal-edit-id').value  = it.id;
+  document.getElementById('cal-f-titulo').value  = it.titulo  || '';
+  document.getElementById('cal-f-tipo').value    = it.tipo    || 'post';
+  document.getElementById('cal-f-status').value  = it.status  || 'planejado';
+  document.getElementById('cal-f-data').value    = it.data    || '';
+  document.getElementById('cal-f-autor').value   = it.autor   || '';
+  document.getElementById('cal-f-obs').value     = it.obs     || '';
+  document.getElementById('cal-modal-titulo').textContent = 'Editar Publicação';
+  document.getElementById('cal-modal-del').style.display = 'inline-flex';
+  document.getElementById('cal-modal').style.display = 'flex';
+}
+
+function fecharModalCalendario() {
+  document.getElementById('cal-modal').style.display = 'none';
+}
+
+function salvarPublicacao() {
+  const id     = document.getElementById('cal-edit-id').value;
+  const titulo = document.getElementById('cal-f-titulo').value.trim();
+  const tipo   = document.getElementById('cal-f-tipo').value;
+  const status = document.getElementById('cal-f-status').value;
+  const data   = document.getElementById('cal-f-data').value;
+  const autor  = document.getElementById('cal-f-autor').value.trim();
+  const obs    = document.getElementById('cal-f-obs').value.trim();
+
+  if (!data) { alert('Informe a data de publicação.'); return; }
+
+  const items = _calLoad();
+  if (id) {
+    const idx = items.findIndex(i => i.id === id);
+    if (idx !== -1) items[idx] = { id, titulo, tipo, status, data, autor, obs };
+  } else {
+    items.push({ id: Date.now().toString(), titulo, tipo, status, data, autor, obs });
+  }
+  _calSave(items);
+  fecharModalCalendario();
+  renderCalendario();
+}
+
+function deletarPublicacao() {
+  const id = document.getElementById('cal-edit-id').value;
+  if (!id || !confirm('Excluir esta publicação?')) return;
+  const items = _calLoad().filter(i => i.id !== id);
+  _calSave(items);
+  fecharModalCalendario();
+  renderCalendario();
+}
 
 function switchTab(name) {
   // Update standalone tab active states
@@ -3011,6 +3271,7 @@ function switchTab(name) {
   if (name === 'ifood')         { loadIfoodAdmin(); }
   if (name === 'cli-dash')      { loadPortalFromSupabase().then(cliDashTabInit); }
   if (name === 'comentarios')   { clearBadge('comentarios'); loadComentariosAdmin('all'); }
+  if (name === 'calendario')    { renderCalendario(); }
 }
 
 /* ══════════════════════════════════════
