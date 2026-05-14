@@ -1126,10 +1126,8 @@ async function renderCharts(tabKey, kpis) {
             const vtBadge  = j.vt  ? `<span style="background:#F3F4F6;color:#555;border-radius:3px;padding:1px 6px;font-size:10px;margin-left:4px">${escHtml(j.vt)}</span>` : '';
             const favCount  = j.fav_count  || 0;
             const desfCount = j.desf_count || 0;
-            const hasFav  = j.fund_fav  && fav_funds  && fav_funds.length;
-            const hasDesf = j.fund_desf && desf_funds && desf_funds.length;
-            const favDetId  = `${uid}_${rowIdx}_${ji}_fav`;
-            const desfDetId = `${uid}_${rowIdx}_${ji}_desf`;
+            const hasFav  = !!j.fund_fav;
+            const hasDesf = !!j.fund_desf;
             const resumoId  = `${uid}_${rowIdx}_${ji}_res`;
             const toggleBtn = (hasFav || hasDesf)
               ? `<button onclick="(function(){var el=document.getElementById('${resumoId}');el.style.display=el.style.display==='none'?'flex':'none';})()"
@@ -1137,15 +1135,13 @@ async function renderCharts(tabKey, kpis) {
               : '';
             const resumoPanel = (hasFav || hasDesf)
               ? `<div id="${resumoId}" style="display:none;flex-direction:row;gap:16px;margin-top:10px;flex-wrap:wrap">
-                  ${hasFav  ? `<div style="flex:1;min-width:200px"><div style="font-size:10px;font-weight:700;color:#1B7A4E;margin-bottom:4px;text-transform:uppercase">Fundamento Favorável</div>${fundDetail(fav_funds,'#1B7A4E',favDetId).replace('style="display:none;','style="display:block;')}</div>` : ''}
-                  ${hasDesf ? `<div style="flex:1;min-width:200px"><div style="font-size:10px;font-weight:700;color:#C62828;margin-bottom:4px;text-transform:uppercase">Fundamento Desfavorável</div>${fundDetail(desf_funds,'#C62828',desfDetId).replace('style="display:none;','style="display:block;')}</div>` : ''}
+                  ${hasFav  ? `<div style="flex:1;min-width:200px"><div style="font-size:10px;font-weight:700;color:#1B7A4E;margin-bottom:4px;text-transform:uppercase">Fundamento Favorável</div><div style="padding:10px 12px;background:#fff;border-left:3px solid #1B7A4E;border-radius:3px;font-size:11px;line-height:1.65;font-family:'IBM Plex Mono',monospace;color:#222;white-space:pre-wrap">${escHtml(j.fund_fav)}</div></div>` : ''}
+                  ${hasDesf ? `<div style="flex:1;min-width:200px"><div style="font-size:10px;font-weight:700;color:#C62828;margin-bottom:4px;text-transform:uppercase">Fundamento Desfavorável</div><div style="padding:10px 12px;background:#fff;border-left:3px solid #C62828;border-radius:3px;font-size:11px;line-height:1.65;font-family:'IBM Plex Mono',monospace;color:#222;white-space:pre-wrap">${escHtml(j.fund_desf)}</div></div>` : ''}
                 </div>`
               : '';
             return `<div style="padding:6px 0;border-bottom:1px solid #eee">
               <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
                 <span style="font-weight:700;color:#0D2B5E">${escHtml(j.nome)}</span>${trtBadge}${vtBadge}
-                <span style="margin-left:8px;background:#E8F5EE;color:#1B7A4E;border-radius:3px;padding:1px 7px;font-size:10px;font-weight:700">✔ ${favCount}</span>
-                <span style="background:#FFEBEE;color:#C62828;border-radius:3px;padding:1px 7px;font-size:10px;font-weight:700">✘ ${desfCount}</span>
                 ${toggleBtn}
               </div>
               ${resumoPanel}
@@ -1174,17 +1170,11 @@ async function renderCharts(tabKey, kpis) {
           <table class="fund-tbl">
             <thead><tr>
               <th>Segmento</th>
-              <th style="text-align:center">Decisões</th>
-              <th style="text-align:center">Favoráveis ✔</th>
-              <th style="text-align:center">Desfavoráveis ✘</th>
               <th>Julgadores</th>
             </tr></thead>
             <tbody>
               ${rows.map((r, i) => `<tr>
                 <td><strong style="color:#0D2B5E">${escHtml(r.label)}</strong><br><div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">${statusBadge(r.status_fav)}${statusBadge(r.status_desf)}</div></td>
-                <td style="font-weight:700;text-align:center">${r.total_dec}</td>
-                <td style="text-align:center"><span style="color:#1B7A4E;font-weight:700">${r.fav_dec}</span></td>
-                <td style="text-align:center"><span style="color:#C62828;font-weight:700">${r.desf_dec}</span></td>
                 <td>${judgeRows(r.julgadores, i, r.fav_funds, r.desf_funds)}</td>
               </tr>`).join('')}
             </tbody>
