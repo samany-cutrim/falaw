@@ -1112,71 +1112,84 @@ async function renderCharts(tabKey, kpis) {
         const rows = cfg.rows || [];
         const uid = canvasId + '_fund';
 
-        const statusBadge = (s, funds, idx, side) => {
-          if (!s) return '<span style="color:#aaa">—</span>';
-          const uniforme = s === 'Uniforme';
-          const col  = uniforme ? '#1B7A4E' : '#9C27B0';
-          const bg   = uniforme ? '#E8F5EE' : '#F3E5F5';
-          const icon = uniforme ? '✔' : '⚠';
-          const lbl  = uniforme ? 'Manteve' : 'Mudou';
-          const hasFunds = funds && funds.length > 0;
-          const detailId = `${uid}_${idx}_${side}`;
-          const btn = hasFunds
-            ? `<button onclick="(function(){var el=document.getElementById('${detailId}');el.style.display=el.style.display==='none'?'block':'none';})()" style="background:none;border:none;cursor:pointer;padding:0;margin-left:4px;font-size:10px;color:${col};text-decoration:underline">ver resumo</button>`
-            : '';
-          const detail = hasFunds
-            ? `<div id="${detailId}" style="display:none;margin-top:8px;text-align:left;max-width:520px">${
-                funds.map(f => `<div style="margin-bottom:8px;padding:10px 12px;background:#fff;border-left:3px solid ${col};border-radius:3px;font-size:11px;line-height:1.65;font-family:'IBM Plex Mono',monospace;color:#222;white-space:pre-wrap">${escHtml(f)}</div>`).join('')
-              }</div>`
-            : '';
-          return `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:2px">
-            <span style="background:${bg};color:${col};border-radius:3px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap">${icon} ${lbl}</span>
-            ${btn}${detail}
-          </div>`;
+        const fundDetail = (funds, col, detailId) => {
+          if (!funds || !funds.length) return '';
+          return `<div id="${detailId}" style="display:none;margin-top:8px;font-size:11px;line-height:1.65;font-family:'IBM Plex Mono',monospace">${
+            funds.map(f => `<div style="margin-bottom:8px;padding:10px 12px;background:#fff;border-left:3px solid ${col};border-radius:3px;color:#222;white-space:pre-wrap">${escHtml(f)}</div>`).join('')
+          }</div>`;
         };
 
-        const judgeList = (julgadores) => {
+        const judgeRows = (julgadores, rowIdx, fav_funds, desf_funds) => {
           if (!julgadores || !julgadores.length) return '<span style="color:#aaa">—</span>';
-          return julgadores.map(j => {
+          return julgadores.map((j, ji) => {
             const trtBadge = j.trt ? `<span style="background:#E8EDF5;color:#0D2B5E;border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:5px">${escHtml(j.trt)}</span>` : '';
-            const vtBadge  = j.vt  ? `<span style="background:#F3F4F6;color:#555;border-radius:3px;padding:1px 6px;font-size:10px;margin-left:4px">${escHtml(j.vt)}</span>`  : '';
-            return `<div style="padding:4px 0;border-bottom:1px solid #eee;white-space:nowrap">${escHtml(j.nome)}${trtBadge}${vtBadge}</div>`;
+            const vtBadge  = j.vt  ? `<span style="background:#F3F4F6;color:#555;border-radius:3px;padding:1px 6px;font-size:10px;margin-left:4px">${escHtml(j.vt)}</span>` : '';
+            const favCount  = j.fav_count  || 0;
+            const desfCount = j.desf_count || 0;
+            const hasFav  = j.fund_fav  && fav_funds  && fav_funds.length;
+            const hasDesf = j.fund_desf && desf_funds && desf_funds.length;
+            const favDetId  = `${uid}_${rowIdx}_${ji}_fav`;
+            const desfDetId = `${uid}_${rowIdx}_${ji}_desf`;
+            const resumoId  = `${uid}_${rowIdx}_${ji}_res`;
+            const toggleBtn = (hasFav || hasDesf)
+              ? `<button onclick="(function(){var el=document.getElementById('${resumoId}');el.style.display=el.style.display==='none'?'flex':'none';})()"
+                  style="background:none;border:none;cursor:pointer;padding:0;margin-left:8px;font-size:10px;color:#0D2B5E;text-decoration:underline">ver resumo</button>`
+              : '';
+            const resumoPanel = (hasFav || hasDesf)
+              ? `<div id="${resumoId}" style="display:none;flex-direction:row;gap:16px;margin-top:10px;flex-wrap:wrap">
+                  ${hasFav  ? `<div style="flex:1;min-width:200px"><div style="font-size:10px;font-weight:700;color:#1B7A4E;margin-bottom:4px;text-transform:uppercase">Fundamento Favorável</div>${fundDetail(fav_funds,'#1B7A4E',favDetId).replace('style="display:none;','style="display:block;')}</div>` : ''}
+                  ${hasDesf ? `<div style="flex:1;min-width:200px"><div style="font-size:10px;font-weight:700;color:#C62828;margin-bottom:4px;text-transform:uppercase">Fundamento Desfavorável</div>${fundDetail(desf_funds,'#C62828',desfDetId).replace('style="display:none;','style="display:block;')}</div>` : ''}
+                </div>`
+              : '';
+            return `<div style="padding:6px 0;border-bottom:1px solid #eee">
+              <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+                <span style="font-weight:700;color:#0D2B5E">${escHtml(j.nome)}</span>${trtBadge}${vtBadge}
+                <span style="margin-left:8px;background:#E8F5EE;color:#1B7A4E;border-radius:3px;padding:1px 7px;font-size:10px;font-weight:700">✔ ${favCount}</span>
+                <span style="background:#FFEBEE;color:#C62828;border-radius:3px;padding:1px 7px;font-size:10px;font-weight:700">✘ ${desfCount}</span>
+                ${toggleBtn}
+              </div>
+              ${resumoPanel}
+            </div>`;
           }).join('');
+        };
+
+        const statusBadge = (s) => {
+          if (!s) return '';
+          const uniforme = s === 'Uniforme';
+          const col = uniforme ? '#1B7A4E' : '#9C27B0';
+          const bg  = uniforme ? '#E8F5EE' : '#F3E5F5';
+          const icon = uniforme ? '✔' : '⚠';
+          const lbl  = uniforme ? 'Uniforme' : 'Divergente';
+          return `<span style="background:${bg};color:${col};border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap">${icon} ${lbl}</span>`;
         };
 
         wrap.innerHTML = `
           <style>
             .fund-tbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:12px}
             .fund-tbl th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#fff;background:#0D2B5E;white-space:nowrap}
-            .fund-tbl td{padding:10px 14px;border-bottom:1px solid #e8eaf0;vertical-align:middle}
+            .fund-tbl td{padding:10px 14px;border-bottom:1px solid #e8eaf0;vertical-align:top}
             .fund-tbl tr:nth-child(even) td{background:#f8f9fc}
-            .fund-tbl td:not(:first-child){text-align:center}
-            .fund-tbl td.left{text-align:left}
           </style>
           <div style="overflow-x:auto">
           <table class="fund-tbl">
             <thead><tr>
               <th>Segmento</th>
-              <th>Decisões</th>
-              <th>Favoráveis ✔</th>
-              <th>Desfavoráveis ✘</th>
-              <th class="left">Julgadores</th>
-              <th>Fund. Favorável</th>
-              <th>Fund. Desfavorável</th>
+              <th style="text-align:center">Decisões</th>
+              <th style="text-align:center">Favoráveis ✔</th>
+              <th style="text-align:center">Desfavoráveis ✘</th>
+              <th>Julgadores</th>
             </tr></thead>
             <tbody>
               ${rows.map((r, i) => `<tr>
-                <td><strong style="color:#0D2B5E">${escHtml(r.label)}</strong></td>
-                <td style="font-weight:700">${r.total_dec}</td>
-                <td><span style="color:#1B7A4E;font-weight:700">${r.fav_dec}</span></td>
-                <td><span style="color:#C62828;font-weight:700">${r.desf_dec}</span></td>
-                <td class="left">${judgeList(r.julgadores)}</td>
-                <td>${statusBadge(r.status_fav,  r.fav_funds,  i, 'fav')}</td>
-                <td>${statusBadge(r.status_desf, r.desf_funds, i, 'desf')}</td>
+                <td><strong style="color:#0D2B5E">${escHtml(r.label)}</strong><br><div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">${statusBadge(r.status_fav)}${statusBadge(r.status_desf)}</div></td>
+                <td style="font-weight:700;text-align:center">${r.total_dec}</td>
+                <td style="text-align:center"><span style="color:#1B7A4E;font-weight:700">${r.fav_dec}</span></td>
+                <td style="text-align:center"><span style="color:#C62828;font-weight:700">${r.desf_dec}</span></td>
+                <td>${judgeRows(r.julgadores, i, r.fav_funds, r.desf_funds)}</td>
               </tr>`).join('')}
             </tbody>
           </table></div>
-          <div style="font-size:10px;color:#999;margin-top:8px">✔ Manteve = julgadores adotaram o mesmo fundamento. ⚠ Mudou = julgadores divergiram nos fundamentos. Clique em "ver resumo" para detalhes.</div>`;
+          <div style="font-size:10px;color:#999;margin-top:8px">✔ Uniforme = julgadores adotaram o mesmo fundamento. ⚠ Divergente = julgadores divergiram. Clique em "ver resumo" para ver os fundamentos lado a lado.</div>`;
         return;
       }
 

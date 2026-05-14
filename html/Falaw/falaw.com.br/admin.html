@@ -9180,7 +9180,13 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
       if (!fundByCR[cr]) fundByCR[cr] = { julgadores: new Map() };
       const j = d.juiz_relator || 'Desconhecido';
       if (!fundByCR[cr].julgadores.has(j))
-        fundByCR[cr].julgadores.set(j, { fav: d.fund_fav || '', desf: d.fund_desf || '', trt: d.trt || '', vt: d.varaturma || '' });
+        fundByCR[cr].julgadores.set(j, { fav: d.fund_fav || '', desf: d.fund_desf || '', trt: d.trt || '', vt: d.varaturma || '', fav_count: 0, desf_count: 0 });
+      const entry = fundByCR[cr].julgadores.get(j);
+      const cls = _xlClassifyDec(d.resultado);
+      if (cls === 'F') entry.fav_count++;
+      else if (cls === 'D') entry.desf_count++;
+      if (!entry.fav  && d.fund_fav)  entry.fav  = d.fund_fav;
+      if (!entry.desf && d.fund_desf) entry.desf = d.fund_desf;
     });
     const crFundRows = _XL_CR_TABS.map(tab => {
       const data = fundByCR[tab.cr];
@@ -9196,7 +9202,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
         desf_dec:    decs.filter(d => _xlClassifyDec(d.resultado) === 'D').length,
         fav_funds:   uniqueFav,
         desf_funds:  uniqueDesf,
-        julgadores:  julgList.map(([nome, v]) => ({ nome, trt: v.trt, vt: v.vt, fund_fav: v.fav, fund_desf: v.desf })),
+        julgadores:  julgList.map(([nome, v]) => ({ nome, trt: v.trt, vt: v.vt, fund_fav: v.fav, fund_desf: v.desf, fav_count: v.fav_count, desf_count: v.desf_count })),
         status_fav:  uniqueFav.length  <= 1 ? 'Uniforme' : 'Divergente',
         status_desf: uniqueDesf.length <= 1 ? 'Uniforme' : 'Divergente',
       };
