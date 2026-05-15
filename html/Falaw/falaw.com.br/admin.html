@@ -3044,14 +3044,17 @@ async function doLogin() {
         sessionStorage.setItem('fa_admin_session', String(Date.now()));
         sessionStorage.setItem('fa_admin_supabase_auth', '1');
         // Busca papel do usuário na tabela admin_users
+        sessionStorage.setItem('fa_admin_role', 'superadmin'); // default seguro
         try {
           const { data: usr } = await sb.auth.getUser();
           if (usr && usr.user) {
-            const { data: adminRow } = await sb.from('admin_users').select('role').eq('user_id', usr.user.id).single();
-            const role = (adminRow && adminRow.role) || 'superadmin';
-            sessionStorage.setItem('fa_admin_role', role);
+            const { data: adminRow, error: roleErr } = await sb.from('admin_users').select('role').eq('user_id', usr.user.id).maybeSingle();
+            if (roleErr) console.warn('admin_users query error:', roleErr.message);
+            if (adminRow && adminRow.role) {
+              sessionStorage.setItem('fa_admin_role', adminRow.role);
+            }
           }
-        } catch(_) {}
+        } catch(roleEx) { console.warn('role fetch failed:', roleEx.message); }
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('admin-shell').style.display = 'block';
         errEl.style.display = 'none';
