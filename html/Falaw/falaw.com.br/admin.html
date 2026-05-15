@@ -1803,10 +1803,9 @@
         <span id="cal-titulo" style="font-family:var(--f-mono);font-size:14px;font-weight:700;min-width:160px;text-align:center"></span>
         <button class="btn btn-ghost" id="cal-next" onclick="navegarCalendario(1)">Próximo ›</button>
         <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
-          <span style="background:#E8F5EE;color:#1B7A4E;border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700">● Post Blog</span>
-          <span style="background:#E3F2FD;color:#1565C0;border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700">● Artigo</span>
+          <span style="background:#E8F5EE;color:#1B7A4E;border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700">● Informativo</span>
           <span style="background:#FFF3E0;color:#E65100;border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700">● Newsletter</span>
-          <span style="background:#F3E5F5;color:#6A1B9A;border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700">● Social</span>
+          <span style="background:#F3E5F5;color:#6A1B9A;border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700">● Redes sociais</span>
         </div>
       </div>
 
@@ -1833,10 +1832,9 @@
               <div style="flex:1">
                 <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#555">Tipo</label>
                 <select id="cal-f-tipo" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-family:var(--f-mono);font-size:12px">
-                  <option value="post">Post Blog</option>
-                  <option value="artigo">Artigo</option>
+                  <option value="informativo">Informativo</option>
                   <option value="newsletter">Newsletter</option>
-                  <option value="social">Social</option>
+                  <option value="redes_sociais">Redes sociais</option>
                 </select>
               </div>
               <div style="flex:1">
@@ -3067,10 +3065,9 @@ function _calSave(items) {
 }
 
 const CAL_TIPO_CFG = {
-  post:       { label: 'Post Blog',    bg: '#E8F5EE', color: '#1B7A4E' },
-  artigo:     { label: 'Artigo',       bg: '#E3F2FD', color: '#1565C0' },
-  newsletter: { label: 'Newsletter',   bg: '#FFF3E0', color: '#E65100' },
-  social:     { label: 'Social',       bg: '#F3E5F5', color: '#6A1B9A' },
+  informativo:  { label: 'Informativo',   bg: '#E8F5EE', color: '#1B7A4E' },
+  newsletter:   { label: 'Newsletter',    bg: '#FFF3E0', color: '#E65100' },
+  redes_sociais:{ label: 'Redes sociais', bg: '#F3E5F5', color: '#6A1B9A' },
 };
 const CAL_STATUS_CFG = {
   planejado:    { label: 'Planejado',      bg: '#F3F4F6', color: '#555' },
