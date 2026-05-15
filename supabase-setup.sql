@@ -158,16 +158,38 @@ CREATE POLICY "auth read own" ON admin_users FOR SELECT TO authenticated USING (
 -- 9. Pauta de Audiências
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pauta_audiencias (
-  id              TEXT PRIMARY KEY,
-  data_hora       TIMESTAMPTZ NOT NULL,
-  processo        TEXT NOT NULL DEFAULT '',
-  vara            TEXT NOT NULL DEFAULT '',
-  reclamante      TEXT NOT NULL DEFAULT '',
-  reclamada       TEXT NOT NULL DEFAULT '',
-  advogado        TEXT NOT NULL DEFAULT '',
-  status          TEXT NOT NULL DEFAULT 'agendada' CHECK (status IN ('agendada','realizada','adiada')),
-  observacoes     TEXT NOT NULL DEFAULT '',
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id                    TEXT PRIMARY KEY,
+  -- Data / tempo
+  data_audiencia        DATE NOT NULL,
+  horario               TEXT NOT NULL DEFAULT '',
+  -- Tipo (ex: "INICIAL - VIRTUAL") — dividido nos dois campos abaixo
+  tipo_audiencia        TEXT NOT NULL DEFAULT '' CHECK (tipo_audiencia IN ('INICIAL','INSTRUÇÃO','CONCILIAÇÃO','UNA','')),
+  modalidade            TEXT NOT NULL DEFAULT '' CHECK (modalidade IN ('VIRTUAL','PRESENCIAL','HÍBRIDA','')),
+  -- Acesso
+  id_senha              TEXT NOT NULL DEFAULT '',
+  link                  TEXT NOT NULL DEFAULT '',
+  -- Partes e responsáveis
+  processo              TEXT NOT NULL DEFAULT '',
+  vara                  TEXT NOT NULL DEFAULT '',
+  cliente               TEXT NOT NULL DEFAULT '',
+  reclamante            TEXT NOT NULL DEFAULT '',
+  reclamada             TEXT NOT NULL DEFAULT '',
+  tipo_responsabilidade TEXT NOT NULL DEFAULT '',
+  responsavel_conducao  TEXT NOT NULL DEFAULT '',
+  advogado              TEXT NOT NULL DEFAULT '',
+  -- Testemunha
+  testemunha_necessaria BOOLEAN NOT NULL DEFAULT FALSE,
+  testemunhas           TEXT NOT NULL DEFAULT '',
+  -- Preposto
+  observacoes_preposto  TEXT NOT NULL DEFAULT '',
+  dados_preposto        TEXT NOT NULL DEFAULT '',
+  -- Extra
+  comentarios           TEXT NOT NULL DEFAULT '',
+  orientacao            TEXT NOT NULL DEFAULT '',
+  status                TEXT NOT NULL DEFAULT 'agendada' CHECK (status IN ('agendada','realizada','adiada','cancelada')),
+  origem                TEXT NOT NULL DEFAULT 'manual' CHECK (origem IN ('manual','excel','pje')),
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE pauta_audiencias ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "anon full access" ON pauta_audiencias;

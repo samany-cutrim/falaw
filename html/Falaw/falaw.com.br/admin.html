@@ -1421,82 +1421,206 @@
     </section>
 
     <!-- ── PAUTA DE AUDIÊNCIAS ── -->
+    <!-- ── PAUTA DE AUDIÊNCIAS ── -->
     <section id="tab-audiencias" class="admin-section">
-      <div class="section-header">
-        <h2>Pauta de Audiências</h2>
-        <button type="button" class="btn btn-primary" onclick="openAudienciaModal()">+ Nova Audiência</button>
+
+      <!-- Topbar da seção -->
+      <div class="section-header" style="flex-wrap:wrap;gap:10px">
+        <div>
+          <h2 style="margin-bottom:2px">Pauta de Audiências</h2>
+          <p style="font-size:12px;color:var(--c-muted);margin:0">Sincronize via PJe ou importe a planilha Excel</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button type="button" id="pje-sync-btn" class="btn btn-primary" onclick="pjeSyncStart()" style="display:flex;align-items:center;gap:6px">
+            <span id="pje-sync-icon">⟳</span> Sincronizar PJe
+          </button>
+          <label class="btn btn-ghost" style="cursor:pointer;display:flex;align-items:center;gap:6px" title="Importar planilha Excel (.xlsx)">
+            📁 Importar Excel
+            <input type="file" id="aud-xl-input" accept=".xlsx,.xls" style="display:none" onchange="audImportExcel(this)" />
+          </label>
+          <button type="button" class="btn btn-ghost" onclick="openAudienciaModal()">+ Manual</button>
+        </div>
       </div>
 
+      <!-- Barra de progresso PJe -->
+      <div id="pje-progress-wrap" style="display:none;margin-bottom:16px;background:#EEF2FF;border:1px solid #c7d2fe;border-radius:6px;padding:14px 18px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <span style="font-family:var(--f-mono);font-size:11px;font-weight:700;color:#3730a3">SINCRONIZANDO PJe</span>
+          <span id="pje-prog-text" style="font-size:12px;color:#4338ca;flex:1"></span>
+          <button type="button" class="btn btn-ghost btn-sm" style="font-size:10px" onclick="document.getElementById('pje-progress-wrap').style.display='none'">✕</button>
+        </div>
+        <div style="background:#c7d2fe;border-radius:99px;height:6px;overflow:hidden">
+          <div id="pje-prog-bar" style="background:#4338ca;height:100%;width:0%;transition:width .4s"></div>
+        </div>
+        <div id="pje-log-box" style="margin-top:10px;background:#fff;border:1px solid #c7d2fe;border-radius:4px;padding:10px;font-family:var(--f-mono);font-size:10px;color:#4338ca;max-height:120px;overflow-y:auto;white-space:pre-wrap"></div>
+      </div>
+
+      <!-- Stats rápidas -->
+      <div id="aud-stats-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px"></div>
+
       <!-- Filtros -->
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
-        <select id="aud-filter-status" onchange="loadAudiencias()"
-          style="border:1px solid var(--c-divider);border-radius:2px;padding:8px 12px;font-family:var(--f-body);font-size:13px;color:var(--c-dark);background:#fafaf8;outline:none">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center;background:#fafaf8;border:1px solid var(--c-divider);border-radius:4px;padding:12px 16px">
+        <select id="aud-filter-tipo" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none">
+          <option value="">Todos os tipos</option>
+          <option value="INICIAL">Inicial</option>
+          <option value="INSTRUÇÃO">Instrução</option>
+          <option value="CONCILIAÇÃO">Conciliação</option>
+          <option value="UNA">Una</option>
+        </select>
+        <select id="aud-filter-modalidade" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none">
+          <option value="">Todas as modalidades</option>
+          <option value="VIRTUAL">Virtual</option>
+          <option value="PRESENCIAL">Presencial</option>
+          <option value="HÍBRIDA">Híbrida</option>
+        </select>
+        <select id="aud-filter-status" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none">
           <option value="">Todos os status</option>
           <option value="agendada">Agendada</option>
           <option value="realizada">Realizada</option>
           <option value="adiada">Adiada</option>
+          <option value="cancelada">Cancelada</option>
         </select>
-        <input type="month" id="aud-filter-mes" onchange="loadAudiencias()"
-          style="border:1px solid var(--c-divider);border-radius:2px;padding:8px 12px;font-family:var(--f-body);font-size:13px;color:var(--c-dark);background:#fafaf8;outline:none" />
-        <button type="button" class="btn btn-ghost" onclick="document.getElementById('aud-filter-status').value='';document.getElementById('aud-filter-mes').value='';loadAudiencias()">Limpar filtros</button>
-        <span id="aud-count" style="font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-left:auto"></span>
+        <input type="month" id="aud-filter-mes" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
+        <input type="text" id="aud-filter-busca" placeholder="Buscar processo, reclamante…" oninput="loadAudiencias()" style="flex:1;min-width:160px;border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
+        <button type="button" class="btn btn-ghost btn-sm" onclick="audLimparFiltros()">Limpar</button>
+        <span id="aud-count" style="font-family:var(--f-mono);font-size:11px;color:var(--c-muted);white-space:nowrap"></span>
       </div>
 
-      <div id="audiencias-list" class="item-list"></div>
+      <!-- Cards de audiências -->
+      <div id="audiencias-list"></div>
 
-      <!-- Modal -->
+      <!-- ─── MODAL AUDIÊNCIA ─── -->
       <div class="modal-overlay" id="audienciaModal" onclick="if(event.target===this)closeAudienciaModal()">
-        <div class="modal" style="max-width:580px">
+        <div class="modal" style="max-width:700px;max-height:90vh;overflow-y:auto">
           <div class="modal-header">
             <h3 id="audienciaModalTitle">Nova Audiência</h3>
             <button class="modal-close" onclick="closeAudienciaModal()">×</button>
           </div>
           <div class="modal-body">
             <input type="hidden" id="aud-id" />
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div style="display:grid;grid-template-columns:140px 100px 1fr 1fr;gap:12px">
               <div class="form-field">
-                <label>Data e Hora *</label>
-                <input id="aud-data-hora" type="datetime-local" />
+                <label>Data *</label>
+                <input id="aud-data" type="date" />
               </div>
               <div class="form-field">
-                <label>Status</label>
-                <select id="aud-status" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
-                  <option value="agendada">Agendada</option>
-                  <option value="realizada">Realizada</option>
-                  <option value="adiada">Adiada</option>
+                <label>Horário *</label>
+                <input id="aud-horario" type="time" />
+              </div>
+              <div class="form-field">
+                <label>Tipo de Audiência</label>
+                <select id="aud-tipo" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:13px;color:var(--c-dark);background:#fafaf8;outline:none">
+                  <option value="">—</option>
+                  <option value="INICIAL">Inicial</option>
+                  <option value="INSTRUÇÃO">Instrução</option>
+                  <option value="CONCILIAÇÃO">Conciliação</option>
+                  <option value="UNA">Una</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Modalidade</label>
+                <select id="aud-modalidade" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:13px;color:var(--c-dark);background:#fafaf8;outline:none">
+                  <option value="">—</option>
+                  <option value="VIRTUAL">Virtual</option>
+                  <option value="PRESENCIAL">Presencial</option>
+                  <option value="HÍBRIDA">Híbrida</option>
                 </select>
               </div>
             </div>
-            <div class="form-field">
-              <label>Nº do Processo *</label>
-              <input id="aud-processo" type="text" placeholder="0000000-00.0000.0.00.0000" />
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-field">
+                <label>Nº do Processo *</label>
+                <input id="aud-processo" type="text" placeholder="0000000-00.0000.0.00.0000" />
+              </div>
+              <div class="form-field">
+                <label>Vara / Juízo</label>
+                <input id="aud-vara" type="text" placeholder="Ex: 3ª Vara do Trabalho de SP" />
+              </div>
             </div>
-            <div class="form-field">
-              <label>Vara / Juízo</label>
-              <input id="aud-vara" type="text" placeholder="Ex: 3ª Vara do Trabalho de São Paulo" />
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+              <div class="form-field">
+                <label>Link da Audiência Virtual</label>
+                <input id="aud-link" type="url" placeholder="https://…zoom.us/…" />
+              </div>
+              <div class="form-field">
+                <label>ID / Senha da Reunião</label>
+                <input id="aud-idsena" type="text" placeholder="ID: 000 · Senha: abc" />
+              </div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
               <div class="form-field">
                 <label>Reclamante</label>
                 <input id="aud-reclamante" type="text" placeholder="Nome do reclamante" />
               </div>
               <div class="form-field">
                 <label>Reclamada</label>
-                <input id="aud-reclamada" type="text" placeholder="Nome da empresa reclamada" />
+                <input id="aud-reclamada" type="text" placeholder="Empresa reclamada" />
+              </div>
+              <div class="form-field">
+                <label>Cliente Falaw</label>
+                <input id="aud-cliente" type="text" placeholder="Ex: iFood, Inter Pag…" />
               </div>
             </div>
-            <div class="form-field">
-              <label>Advogado Responsável</label>
-              <input id="aud-advogado" type="text" placeholder="Nome do advogado" />
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+              <div class="form-field">
+                <label>Tipo de Responsabilidade</label>
+                <input id="aud-tipo-resp" type="text" placeholder="SUBSIDIÁRIA, EX-FUNCIONÁRIO…" />
+              </div>
+              <div class="form-field">
+                <label>Responsável pela Condução</label>
+                <input id="aud-responsavel" type="text" placeholder="Sigla / nome" />
+              </div>
+              <div class="form-field">
+                <label>Advogado Resp. pelo Caso</label>
+                <input id="aud-advogado" type="text" placeholder="Sigla / nome" />
+              </div>
             </div>
-            <div class="form-field">
-              <label>Observações</label>
-              <textarea id="aud-obs" rows="3" placeholder="Informações adicionais…"></textarea>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-field">
+                <label>Observações / Preposto</label>
+                <input id="aud-preposto-obs" type="text" placeholder="Notas sobre o preposto" />
+              </div>
+              <div class="form-field">
+                <label>Dados do Preposto</label>
+                <input id="aud-dados-preposto" type="text" placeholder="Nome do preposto" />
+              </div>
+            </div>
+            <div style="margin:8px 0 12px;padding:12px 16px;background:#fffbeb;border:1px solid #fde68a;border-radius:4px">
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;font-size:13px;color:#92400e">
+                <input type="checkbox" id="aud-testemunha-check" onchange="audToggleTestemunha(this.checked)" style="width:16px;height:16px" />
+                Necessidade de Testemunha?
+              </label>
+              <div id="aud-testemunha-fields" style="display:none;margin-top:12px">
+                <div class="form-field" style="margin-bottom:0">
+                  <label>Dados das Testemunhas (nome, telefone)</label>
+                  <textarea id="aud-testemunhas" rows="3" placeholder="Ex: João Silva — (11) 9 9999-0000&#10;Maria Souza — (11) 9 8888-1111"></textarea>
+                </div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 120px;gap:12px">
+              <div class="form-field">
+                <label>Comentários</label>
+                <input id="aud-comentarios" type="text" placeholder="Observações internas" />
+              </div>
+              <div class="form-field">
+                <label>Orientação</label>
+                <input id="aud-orientacao" type="text" placeholder="Orientação ao advogado" />
+              </div>
+              <div class="form-field">
+                <label>Status</label>
+                <select id="aud-status" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:13px;color:var(--c-dark);background:#fafaf8;outline:none">
+                  <option value="agendada">Agendada</option>
+                  <option value="realizada">Realizada</option>
+                  <option value="adiada">Adiada</option>
+                  <option value="cancelada">Cancelada</option>
+                </select>
+              </div>
             </div>
           </div>
           <div class="modal-footer">
+            <button id="aud-modal-del" class="btn btn-ghost" style="color:#C62828;display:none" onclick="deleteAudiencia(document.getElementById('aud-id').value)">Excluir</button>
             <button class="btn btn-ghost" onclick="closeAudienciaModal()">Cancelar</button>
-            <button class="btn btn-primary" onclick="saveAudiencia()">Salvar</button>
+            <button class="btn btn-primary" onclick="saveAudiencia()">Salvar Audiência</button>
           </div>
         </div>
       </div>
@@ -10006,78 +10130,244 @@ async function ifoodSaveExcel() {
 }
 
 /* ─── PAUTA DE AUDIÊNCIAS ─────────────────────────────────── */
-const AUD_STORE_KEY = 'falaw_audiencias_v1';
-const AUD_STATUS_LABEL = { agendada: 'Agendada', realizada: 'Realizada', adiada: 'Adiada' };
-const AUD_STATUS_COLOR = { agendada: '#1B7A4E', realizada: '#0D2B5E', adiada: '#C62828' };
-const AUD_STATUS_BG    = { agendada: '#E8F5EE', realizada: '#EEF2FF', adiada: '#FFF0F0' };
+function _escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+const AUD_STORE_KEY    = 'falaw_audiencias_v1';
+const PJE_SERVER       = 'http://localhost:7777';
 
+const AUD_TIPO_LABEL   = { INICIAL:'Inicial', 'INSTRUÇÃO':'Instrução', 'CONCILIAÇÃO':'Conciliação', UNA:'Una' };
+const AUD_TIPO_COLOR   = { INICIAL:'#0D2B5E', 'INSTRUÇÃO':'#6D28D9', 'CONCILIAÇÃO':'#1B7A4E', UNA:'#92400e' };
+const AUD_TIPO_BG      = { INICIAL:'#EEF2FF', 'INSTRUÇÃO':'#F5F3FF', 'CONCILIAÇÃO':'#E8F5EE', UNA:'#fffbeb' };
+const AUD_MOD_LABEL    = { VIRTUAL:'Virtual', PRESENCIAL:'Presencial', 'HÍBRIDA':'Híbrida' };
+const AUD_MOD_ICON     = { VIRTUAL:'🖥', PRESENCIAL:'🏛', 'HÍBRIDA':'🔀' };
+const AUD_STATUS_LABEL = { agendada:'Agendada', realizada:'Realizada', adiada:'Adiada', cancelada:'Cancelada' };
+const AUD_STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62828', cancelada:'#6B7280' };
+const AUD_STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#F3F4F6' };
+
+/* helpers */
+function _audParseDate(v) {
+  if (!v) return null;
+  if (typeof v === 'object' && v instanceof Date) return v;
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s + 'T00:00:00');
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return new Date(`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}T00:00:00`);
+  return null;
+}
+function _audFmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' });
+}
+function _audParseTipo(raw) {
+  const s = (raw || '').toUpperCase();
+  let tipo = '', mod = '';
+  for (const t of ['INSTRUÇÃO','INSTRUCAO','CONCILIAÇÃO','CONCILIACAO','INICIAL','UNA']) {
+    if (s.includes(t)) { tipo = t.replace('INSTRUCAO','INSTRUÇÃO').replace('CONCILIACAO','CONCILIAÇÃO'); break; }
+  }
+  for (const m of ['VIRTUAL','PRESENCIAL','HÍBRIDA','HIBRIDA']) {
+    if (s.includes(m)) { mod = m === 'HIBRIDA' ? 'HÍBRIDA' : m; break; }
+  }
+  return [tipo, mod];
+}
+function _audMakeId(proc, data, hora) {
+  const raw = `${proc}-${data}-${hora}`;
+  let h = 0;
+  for (let i = 0; i < raw.length; i++) { h = (Math.imul(31, h) + raw.charCodeAt(i)) | 0; }
+  return 'aud-' + Math.abs(h).toString(16).padStart(8,'0') + '-' + Date.now().toString(36);
+}
+
+/* ── render stats ── */
+function _audRenderStats(items) {
+  const today = new Date().toISOString().slice(0,10);
+  const hoje   = items.filter(a => a.data_audiencia === today).length;
+  const future = items.filter(a => a.data_audiencia > today && a.status === 'agendada').length;
+  const testem = items.filter(a => a.testemunha_necessaria).length;
+  const virtual = items.filter(a => a.modalidade === 'VIRTUAL').length;
+  const cards = [
+    { label:'Hoje',        val: hoje,    icon:'📅', color:'#0D2B5E', bg:'#EEF2FF' },
+    { label:'Agendadas',   val: future,  icon:'⏳', color:'#1B7A4E', bg:'#E8F5EE' },
+    { label:'c/ Testemunha', val: testem, icon:'👥', color:'#92400e', bg:'#fffbeb' },
+    { label:'Virtuais',    val: virtual, icon:'🖥', color:'#6D28D9', bg:'#F5F3FF' },
+  ];
+  document.getElementById('aud-stats-row').innerHTML = cards.map(c =>
+    `<div style="background:${c.bg};border:1px solid rgba(0,0,0,.06);border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:12px">
+      <span style="font-size:22px">${c.icon}</span>
+      <div>
+        <div style="font-family:var(--f-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.5);margin-bottom:4px">${c.label}</div>
+        <div style="font-family:var(--f-body);font-size:26px;font-weight:700;color:${c.color};line-height:1">${c.val}</div>
+      </div>
+    </div>`
+  ).join('');
+}
+
+/* ── render card ── */
+function _audCard(a) {
+  const tipoLabel = AUD_TIPO_LABEL[a.tipo_audiencia]  || a.tipo_audiencia || '—';
+  const tipoBg    = AUD_TIPO_BG[a.tipo_audiencia]     || '#f3f4f6';
+  const tipoColor = AUD_TIPO_COLOR[a.tipo_audiencia]  || '#374151';
+  const modIcon   = AUD_MOD_ICON[a.modalidade]        || '';
+  const modLabel  = AUD_MOD_LABEL[a.modalidade]       || a.modalidade || '';
+  const stLabel   = AUD_STATUS_LABEL[a.status]        || a.status;
+  const stColor   = AUD_STATUS_COLOR[a.status]        || '#374151';
+  const stBg      = AUD_STATUS_BG[a.status]           || '#f3f4f6';
+  const today     = new Date().toISOString().slice(0,10);
+  const isHoje    = a.data_audiencia === today;
+  const linkHtml  = (a.link && a.link !== 'NÃO SE APLICA' && a.link.startsWith('http'))
+    ? `<a href="${_escHtml(a.link)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:#0D2B5E;color:#fff;font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:3px;text-decoration:none;margin-top:4px">🔗 Entrar na Audiência</a>`
+    : '';
+
+  return `<div class="item-card" style="border-left:4px solid ${tipoColor};padding:18px 20px;${isHoje?'background:#fffef0;':''}" data-aud-id="${_escHtml(a.id)}">
+    <!-- linha topo -->
+    <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
+      <!-- data/hora bloco -->
+      <div style="text-align:center;min-width:64px;background:${isHoje?'#0D2B5E':'#f3f4f6'};border-radius:6px;padding:8px 10px;flex-shrink:0">
+        <div style="font-family:var(--f-mono);font-size:11px;font-weight:700;color:${isHoje?'#fde68a':'var(--c-muted)'};letter-spacing:.06em;text-transform:uppercase">${_audFmtDate(a.data_audiencia).split(',')[0]}</div>
+        <div style="font-family:var(--f-body);font-size:20px;font-weight:800;color:${isHoje?'#fff':'var(--c-dark)'};line-height:1.1;margin-top:2px">${(a.data_audiencia||'').slice(8,10)}<span style="font-size:11px;opacity:.6">/${(a.data_audiencia||'').slice(5,7)}</span></div>
+        <div style="font-family:var(--f-mono);font-size:13px;font-weight:600;color:${isHoje?'#fde68a':'var(--c-accent)'};margin-top:3px">${a.horario || '—'}</div>
+      </div>
+      <!-- conteúdo central -->
+      <div style="flex:1;min-width:200px">
+        <!-- tags -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+          <span style="background:${tipoBg};color:${tipoColor};font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${tipoLabel}</span>
+          ${modLabel ? `<span style="background:#f3f4f6;color:#374151;font-family:var(--f-mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${modIcon} ${modLabel}</span>` : ''}
+          <span style="background:${stBg};color:${stColor};font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${stLabel}</span>
+          ${isHoje ? '<span style="background:#FEF9C3;color:#92400E;font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px;animation:pulse 2s infinite">● HOJE</span>' : ''}
+        </div>
+        <!-- processo e vara -->
+        <div style="font-family:var(--f-mono);font-size:12px;font-weight:700;color:var(--c-dark);letter-spacing:.02em;margin-bottom:3px">${_escHtml(a.processo || '—')}</div>
+        <div style="font-size:12px;color:var(--c-muted);margin-bottom:8px">${_escHtml(a.vara || '')}</div>
+        <!-- partes -->
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin-bottom:6px">
+          ${a.reclamante ? `<span><span style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted)">Reclamante</span><br/><strong>${_escHtml(a.reclamante)}</strong></span>` : ''}
+          ${a.reclamada  ? `<span><span style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted)">Reclamada</span><br/><strong>${_escHtml(a.reclamada)}</strong></span>` : ''}
+          ${a.cliente    ? `<span><span style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted)">Cliente</span><br/><strong>${_escHtml(a.cliente)}</strong></span>` : ''}
+        </div>
+        <!-- responsáveis -->
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--c-muted);margin-bottom:4px">
+          ${a.advogado         ? `<span>👨‍⚖️ Adv: <strong style="color:var(--c-dark)">${_escHtml(a.advogado)}</strong></span>` : ''}
+          ${a.responsavel_conducao ? `<span>🎤 Condução: <strong style="color:var(--c-dark)">${_escHtml(a.responsavel_conducao)}</strong></span>` : ''}
+          ${a.dados_preposto   ? `<span>🪪 Preposto: <strong style="color:var(--c-dark)">${_escHtml(a.dados_preposto)}</strong></span>` : ''}
+        </div>
+        <!-- testemunha -->
+        ${a.testemunha_necessaria ? `<div style="margin-top:6px;padding:6px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;font-size:11px;color:#92400e"><strong>⚠ Testemunha necessária</strong>${a.testemunhas ? ' — ' + _escHtml(a.testemunhas) : ''}</div>` : ''}
+        <!-- link -->
+        ${linkHtml}
+        <!-- id/senha e comentários -->
+        ${(a.id_senha && a.id_senha !== '-') ? `<div style="margin-top:6px;font-family:var(--f-mono);font-size:10px;color:var(--c-muted)">🔑 ${_escHtml(a.id_senha)}</div>` : ''}
+        ${a.comentarios ? `<div style="margin-top:4px;font-size:11px;color:var(--c-muted);font-style:italic">${_escHtml(a.comentarios)}</div>` : ''}
+        ${a.orientacao  ? `<div style="margin-top:4px;font-size:11px;color:#0D2B5E;background:#EEF2FF;padding:4px 8px;border-radius:3px">📌 ${_escHtml(a.orientacao)}</div>` : ''}
+      </div>
+      <!-- ações -->
+      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+        <button class="btn btn-ghost btn-sm" onclick="editAudiencia('${_escHtml(a.id)}')">Editar</button>
+        <button class="btn btn-ghost btn-sm" style="color:#C62828" onclick="deleteAudiencia('${_escHtml(a.id)}')">Excluir</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── load / filter ── */
 async function loadAudiencias() {
   const listEl = document.getElementById('audiencias-list');
-  const countEl = document.getElementById('aud-count');
-  listEl.innerHTML = '<p style="color:var(--c-muted);font-size:13px">Carregando…</p>';
+  if (!listEl) return;
+  listEl.innerHTML = '<p style="color:var(--c-muted);font-size:13px;padding:20px 0">Carregando…</p>';
   const { sbUrl, sbKey } = getSbCreds();
   let items = [];
   if (sbUrl && sbKey) {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
-      let q = sb.from('pauta_audiencias').select('*').order('data_hora', { ascending: true });
-      const filterStatus = (document.getElementById('aud-filter-status').value || '').trim();
-      const filterMes = (document.getElementById('aud-filter-mes').value || '').trim();
-      if (filterStatus) q = q.eq('status', filterStatus);
-      if (filterMes) {
-        const [yr, mo] = filterMes.split('-').map(Number);
-        const from = new Date(yr, mo - 1, 1).toISOString();
-        const to   = new Date(yr, mo, 1).toISOString();
-        q = q.gte('data_hora', from).lt('data_hora', to);
-      }
+      const today = new Date().toISOString().slice(0,10);
+      let q = sb.from('pauta_audiencias').select('*')
+        .gte('data_audiencia', today)
+        .order('data_audiencia', { ascending: true })
+        .order('horario',       { ascending: true });
       const { data, error } = await q;
       if (!error && data) items = data;
     } catch(e) { console.warn('audiencias load:', e.message); }
   }
-  // fallback local
-  if (!items.length && !sbUrl) {
+  if (!items.length) {
     items = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]');
   }
-  countEl.textContent = items.length + ' audiência(s)';
-  if (!items.length) {
-    listEl.innerHTML = '<div class="empty-state"><p>Nenhuma audiência encontrada.</p><p>Clique em "+ Nova Audiência" para registrar.</p></div>';
+
+  // filtros client-side
+  const fTipo  = document.getElementById('aud-filter-tipo')?.value      || '';
+  const fMod   = document.getElementById('aud-filter-modalidade')?.value|| '';
+  const fSt    = document.getElementById('aud-filter-status')?.value    || '';
+  const fMes   = document.getElementById('aud-filter-mes')?.value       || '';
+  const fBusca = (document.getElementById('aud-filter-busca')?.value    || '').toLowerCase().trim();
+
+  const filtered = items.filter(a => {
+    if (fTipo && a.tipo_audiencia !== fTipo) return false;
+    if (fMod  && a.modalidade    !== fMod)  return false;
+    if (fSt   && a.status        !== fSt)   return false;
+    if (fMes) {
+      if (!a.data_audiencia || !a.data_audiencia.startsWith(fMes)) return false;
+    }
+    if (fBusca) {
+      const haystack = [a.processo, a.reclamante, a.reclamada, a.vara, a.cliente, a.advogado].join(' ').toLowerCase();
+      if (!haystack.includes(fBusca)) return false;
+    }
+    return true;
+  });
+
+  _audRenderStats(items);
+  const countEl = document.getElementById('aud-count');
+  if (countEl) countEl.textContent = `${filtered.length} audiência(s)`;
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="empty-state"><p>Nenhuma audiência encontrada.</p><p>Importe o Excel, sincronize o PJe ou clique em "+ Manual".</p></div>';
     return;
   }
-  listEl.innerHTML = items.map(a => {
-    const dt = new Date(a.data_hora);
-    const dtStr = dt.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
-    const statusColor = AUD_STATUS_COLOR[a.status] || '#333';
-    const statusBg    = AUD_STATUS_BG[a.status]    || '#eee';
-    const statusLabel = AUD_STATUS_LABEL[a.status] || a.status;
-    return `<div class="item-card" style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
-      <div style="flex:1;min-width:200px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
-          <span style="font-family:var(--f-mono);font-size:12px;font-weight:600;color:var(--c-dark)">${_escHtml(dtStr)}</span>
-          <span style="background:${statusBg};color:${statusColor};font-size:10px;font-weight:700;font-family:var(--f-mono);letter-spacing:.06em;padding:2px 8px;border-radius:3px;text-transform:uppercase">${statusLabel}</span>
-        </div>
-        <div style="font-size:14px;font-weight:600;color:var(--c-dark);margin-bottom:4px">${_escHtml(a.processo || '—')}</div>
-        <div style="font-size:12px;color:var(--c-muted);margin-bottom:2px">${_escHtml(a.vara || '')}</div>
-        <div style="font-size:12px;color:var(--c-muted)">
-          <span style="color:var(--c-dark)">${_escHtml(a.reclamante || '')}</span>
-          ${a.reclamante && a.reclamada ? ' <span style="color:var(--c-muted)">vs</span> ' : ''}
-          <span style="color:var(--c-dark)">${_escHtml(a.reclamada || '')}</span>
-        </div>
-        ${a.advogado ? `<div style="font-size:11px;color:var(--c-muted);margin-top:4px">Adv: ${_escHtml(a.advogado)}</div>` : ''}
-        ${a.observacoes ? `<div style="font-size:11px;color:var(--c-muted);margin-top:4px;font-style:italic">${_escHtml(a.observacoes)}</div>` : ''}
-      </div>
-      <div style="display:flex;gap:6px;flex-shrink:0">
-        <button class="btn btn-ghost btn-sm" onclick="editAudiencia('${_escHtml(a.id)}')">Editar</button>
-        <button class="btn btn-ghost btn-sm" style="color:#C62828" onclick="deleteAudiencia('${_escHtml(a.id)}')">Excluir</button>
-      </div>
-    </div>`;
-  }).join('');
+
+  // Agrupa por data
+  const byDate = {};
+  filtered.forEach(a => {
+    const k = a.data_audiencia || 'sem-data';
+    if (!byDate[k]) byDate[k] = [];
+    byDate[k].push(a);
+  });
+
+  let html = '';
+  Object.keys(byDate).sort().forEach(d => {
+    const label = _audFmtDate(d);
+    const today = new Date().toISOString().slice(0,10);
+    const isHoje = d === today;
+    html += `<div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:${isHoje?'#0D2B5E':'var(--c-muted)'};margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--c-divider);font-weight:${isHoje?'700':'500'}">${isHoje?'● HOJE — ':''} ${label}</div>`;
+    byDate[d].forEach(a => { html += _audCard(a); });
+  });
+  listEl.innerHTML = html;
 }
 
-function _escHtml(str) {
-  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+function audLimparFiltros() {
+  ['aud-filter-tipo','aud-filter-modalidade','aud-filter-status','aud-filter-mes'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const b = document.getElementById('aud-filter-busca'); if (b) b.value = '';
+  loadAudiencias();
 }
 
-let _audItems = [];
+/* ── modal open/close ── */
+function openAudienciaModal() {
+  const fields = ['aud-id','aud-data','aud-horario','aud-tipo','aud-modalidade','aud-processo','aud-vara','aud-link','aud-idsena','aud-reclamante','aud-reclamada','aud-cliente','aud-tipo-resp','aud-responsavel','aud-advogado','aud-preposto-obs','aud-dados-preposto','aud-comentarios','aud-orientacao','aud-testemunhas'];
+  fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('aud-status').value = 'agendada';
+  document.getElementById('aud-testemunha-check').checked = false;
+  audToggleTestemunha(false);
+  document.getElementById('aud-modal-del').style.display = 'none';
+  document.getElementById('audienciaModalTitle').textContent = 'Nova Audiência';
+  document.getElementById('audienciaModal').style.display = 'flex';
+}
+
+function closeAudienciaModal() { document.getElementById('audienciaModal').style.display = 'none'; }
+
+function audToggleTestemunha(on) {
+  document.getElementById('aud-testemunha-fields').style.display = on ? '' : 'none';
+}
+
+/* ── edit ── */
 async function editAudiencia(id) {
   const { sbUrl, sbKey } = getSbCreds();
   let a = null;
@@ -10088,57 +10378,70 @@ async function editAudiencia(id) {
       if (data) a = data;
     } catch(e) {}
   }
-  if (!a) {
-    const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]');
-    a = local.find(x => x.id === id);
-  }
+  if (!a) { const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY)||'[]'); a = local.find(x=>x.id===id); }
   if (!a) return;
-  document.getElementById('aud-id').value = a.id;
-  document.getElementById('aud-data-hora').value = a.data_hora ? a.data_hora.slice(0,16) : '';
-  document.getElementById('aud-status').value = a.status || 'agendada';
-  document.getElementById('aud-processo').value = a.processo || '';
-  document.getElementById('aud-vara').value = a.vara || '';
-  document.getElementById('aud-reclamante').value = a.reclamante || '';
-  document.getElementById('aud-reclamada').value = a.reclamada || '';
-  document.getElementById('aud-advogado').value = a.advogado || '';
-  document.getElementById('aud-obs').value = a.observacoes || '';
+
+  document.getElementById('aud-id').value           = a.id;
+  document.getElementById('aud-data').value         = a.data_audiencia || '';
+  document.getElementById('aud-horario').value      = (a.horario || '').slice(0,5);
+  document.getElementById('aud-tipo').value         = a.tipo_audiencia || '';
+  document.getElementById('aud-modalidade').value   = a.modalidade || '';
+  document.getElementById('aud-processo').value     = a.processo || '';
+  document.getElementById('aud-vara').value         = a.vara || '';
+  document.getElementById('aud-link').value         = a.link || '';
+  document.getElementById('aud-idsena').value       = a.id_senha || '';
+  document.getElementById('aud-reclamante').value   = a.reclamante || '';
+  document.getElementById('aud-reclamada').value    = a.reclamada || '';
+  document.getElementById('aud-cliente').value      = a.cliente || '';
+  document.getElementById('aud-tipo-resp').value    = a.tipo_responsabilidade || '';
+  document.getElementById('aud-responsavel').value  = a.responsavel_conducao || '';
+  document.getElementById('aud-advogado').value     = a.advogado || '';
+  document.getElementById('aud-preposto-obs').value = a.observacoes_preposto || '';
+  document.getElementById('aud-dados-preposto').value = a.dados_preposto || '';
+  document.getElementById('aud-comentarios').value  = a.comentarios || '';
+  document.getElementById('aud-orientacao').value   = a.orientacao || '';
+  document.getElementById('aud-status').value       = a.status || 'agendada';
+  const testem = !!(a.testemunha_necessaria);
+  document.getElementById('aud-testemunha-check').checked = testem;
+  audToggleTestemunha(testem);
+  document.getElementById('aud-testemunhas').value  = a.testemunhas || '';
+  document.getElementById('aud-modal-del').style.display = '';
   document.getElementById('audienciaModalTitle').textContent = 'Editar Audiência';
   document.getElementById('audienciaModal').style.display = 'flex';
 }
 
-function openAudienciaModal() {
-  document.getElementById('aud-id').value = '';
-  document.getElementById('aud-data-hora').value = '';
-  document.getElementById('aud-status').value = 'agendada';
-  document.getElementById('aud-processo').value = '';
-  document.getElementById('aud-vara').value = '';
-  document.getElementById('aud-reclamante').value = '';
-  document.getElementById('aud-reclamada').value = '';
-  document.getElementById('aud-advogado').value = '';
-  document.getElementById('aud-obs').value = '';
-  document.getElementById('audienciaModalTitle').textContent = 'Nova Audiência';
-  document.getElementById('audienciaModal').style.display = 'flex';
-}
-
-function closeAudienciaModal() {
-  document.getElementById('audienciaModal').style.display = 'none';
-}
-
+/* ── save ── */
 async function saveAudiencia() {
-  const dataHora = document.getElementById('aud-data-hora').value;
-  const processo = document.getElementById('aud-processo').value.trim();
-  if (!dataHora || !processo) { showToast('Preencha Data/Hora e Nº do Processo.'); return; }
-  const id = document.getElementById('aud-id').value || uid();
+  const data = document.getElementById('aud-data').value;
+  const proc = document.getElementById('aud-processo').value.trim();
+  if (!data || !proc) { showToast('Preencha Data e Nº do Processo.'); return; }
+  const id = document.getElementById('aud-id').value || _audMakeId(proc, data, document.getElementById('aud-horario').value);
+  const testem = document.getElementById('aud-testemunha-check').checked;
   const row = {
     id,
-    data_hora:   new Date(dataHora).toISOString(),
-    processo,
-    vara:        document.getElementById('aud-vara').value.trim(),
-    reclamante:  document.getElementById('aud-reclamante').value.trim(),
-    reclamada:   document.getElementById('aud-reclamada').value.trim(),
-    advogado:    document.getElementById('aud-advogado').value.trim(),
-    status:      document.getElementById('aud-status').value,
-    observacoes: document.getElementById('aud-obs').value.trim(),
+    data_audiencia:        data,
+    horario:               document.getElementById('aud-horario').value,
+    tipo_audiencia:        document.getElementById('aud-tipo').value,
+    modalidade:            document.getElementById('aud-modalidade').value,
+    processo:              proc,
+    vara:                  document.getElementById('aud-vara').value.trim(),
+    link:                  document.getElementById('aud-link').value.trim(),
+    id_senha:              document.getElementById('aud-idsena').value.trim(),
+    reclamante:            document.getElementById('aud-reclamante').value.trim(),
+    reclamada:             document.getElementById('aud-reclamada').value.trim(),
+    cliente:               document.getElementById('aud-cliente').value.trim(),
+    tipo_responsabilidade: document.getElementById('aud-tipo-resp').value.trim(),
+    responsavel_conducao:  document.getElementById('aud-responsavel').value.trim(),
+    advogado:              document.getElementById('aud-advogado').value.trim(),
+    observacoes_preposto:  document.getElementById('aud-preposto-obs').value.trim(),
+    dados_preposto:        document.getElementById('aud-dados-preposto').value.trim(),
+    comentarios:           document.getElementById('aud-comentarios').value.trim(),
+    orientacao:            document.getElementById('aud-orientacao').value.trim(),
+    status:                document.getElementById('aud-status').value,
+    testemunha_necessaria: testem,
+    testemunhas:           testem ? document.getElementById('aud-testemunhas').value.trim() : '',
+    origem:                'manual',
+    updated_at:            new Date().toISOString(),
   };
   const { sbUrl, sbKey } = getSbCreds();
   if (sbUrl && sbKey) {
@@ -10148,8 +10451,7 @@ async function saveAudiencia() {
       if (error) throw error;
     } catch(e) { showToast('Erro ao salvar: ' + e.message); return; }
   } else {
-    // fallback local
-    const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]');
+    const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY)||'[]');
     const idx = local.findIndex(x => x.id === id);
     if (idx >= 0) local[idx] = row; else local.push(row);
     localStorage.setItem(AUD_STORE_KEY, JSON.stringify(local));
@@ -10159,6 +10461,7 @@ async function saveAudiencia() {
   loadAudiencias();
 }
 
+/* ── delete ── */
 async function deleteAudiencia(id) {
   if (!confirm('Excluir esta audiência?')) return;
   const { sbUrl, sbKey } = getSbCreds();
@@ -10168,12 +10471,178 @@ async function deleteAudiencia(id) {
       await sb.from('pauta_audiencias').delete().eq('id', id);
     } catch(e) { showToast('Erro ao excluir: ' + e.message); return; }
   } else {
-    const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]').filter(x => x.id !== id);
+    const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY)||'[]').filter(x => x.id !== id);
     localStorage.setItem(AUD_STORE_KEY, JSON.stringify(local));
   }
+  closeAudienciaModal();
   showToast('Audiência excluída.');
   loadAudiencias();
 }
+
+/* ─── IMPORT EXCEL ─────────────────────────────────────────── */
+async function audImportExcel(inputEl) {
+  const file = inputEl.files[0];
+  if (!file) return;
+  inputEl.value = '';
+  showToast('Lendo planilha…');
+  try {
+    const ab = await file.arrayBuffer();
+    const wb = XLSX.read(ab, { type: 'array', cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+    if (raw.length < 2) { showToast('Planilha vazia ou sem dados.'); return; }
+
+    const headers = (raw[0] || []).map(h => String(h||'').trim().toUpperCase());
+    const idx = {
+      data:        headers.findIndex(h => h.includes('DATA') || h === "',8"),
+      horario:     headers.findIndex(h => h.includes('HORÁRIO') || h.includes('HORARIO')),
+      tipo:        headers.findIndex(h => h === 'TIPO'),
+      idsenha:     headers.findIndex(h => h.includes('ID') && h.includes('SENHA')),
+      link:        headers.findIndex(h => h.includes('LINK')),
+      tipoResp:    headers.findIndex(h => h.includes('RESPONSABILIDADE')),
+      respCond:    headers.findIndex(h => h.includes('CONDUZIR') || h.includes('CONDUÇÃO')),
+      advogado:    headers.findIndex(h => h.includes('ADV') && h.includes('RESP')),
+      vara:        headers.findIndex(h => h === 'VARA'),
+      processo:    headers.findIndex(h => h.includes('PROCESSO') || h.includes('Nº')),
+      cliente:     headers.findIndex(h => h === 'CLIENTE'),
+      reclamante:  headers.findIndex(h => h === 'RECLAMANTE'),
+      testemNec:   headers.findIndex(h => h.includes('TESTEMUNHA') && h.includes('NECESSIDADE')),
+      testemunhas: headers.findIndex(h => h === 'TESTEMUNHAS'),
+      prepObs:     headers.findIndex(h => h.includes('OBSERV') && h.includes('PREPOSTO')),
+      prepDados:   headers.findIndex(h => h.includes('DADOS') && h.includes('PREPOSTO')),
+      coment:      headers.findIndex(h => h === 'COMENTÁRIOS' || h === 'COMENTARIOS'),
+      orient:      headers.findIndex(h => h === 'ORIENTAÇÃO' || h === 'ORIENTACAO'),
+    };
+
+    function _cell(row, i) { return i >= 0 && i < row.length ? String(row[i] || '').trim() : ''; }
+
+    const today = new Date().toISOString().slice(0,10);
+    const rows = [];
+    for (let r = 1; r < raw.length; r++) {
+      const row = raw[r];
+      const dataRaw = _cell(row, idx.data);
+      if (!dataRaw) continue;
+      const dt = _audParseDate(dataRaw);
+      if (!dt) continue;
+      const dataIso = dt.toISOString().slice(0,10);
+      if (dataIso < today) continue; // apenas hoje e futuras
+
+      const proc    = _cell(row, idx.processo);
+      const horario = _cell(row, idx.horario);
+      const tipoRaw = _cell(row, idx.tipo);
+      const [tipoAud, modalidade] = _audParseTipo(tipoRaw);
+      const testemNec = (_cell(row, idx.testemNec).toUpperCase() === 'SIM');
+
+      rows.push({
+        id:                    _audMakeId(proc, dataIso, horario),
+        data_audiencia:        dataIso,
+        horario,
+        tipo_audiencia:        tipoAud,
+        modalidade,
+        id_senha:              _cell(row, idx.idsenha),
+        link:                  _cell(row, idx.link),
+        processo:              proc,
+        vara:                  _cell(row, idx.vara),
+        cliente:               _cell(row, idx.cliente),
+        reclamante:            _cell(row, idx.reclamante),
+        reclamada:             '',
+        tipo_responsabilidade: _cell(row, idx.tipoResp),
+        responsavel_conducao:  _cell(row, idx.respCond),
+        advogado:              _cell(row, idx.advogado),
+        testemunha_necessaria: testemNec,
+        testemunhas:           _cell(row, idx.testemunhas),
+        observacoes_preposto:  _cell(row, idx.prepObs),
+        dados_preposto:        _cell(row, idx.prepDados),
+        comentarios:           _cell(row, idx.coment),
+        orientacao:            _cell(row, idx.orient),
+        status:                'agendada',
+        origem:                'excel',
+        updated_at:            new Date().toISOString(),
+      });
+    }
+
+    if (!rows.length) { showToast('Nenhuma audiência futura encontrada na planilha.'); return; }
+    showToast(`${rows.length} audiências lidas. Salvando…`);
+
+    const { sbUrl, sbKey } = getSbCreds();
+    if (sbUrl && sbKey) {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { error } = await sb.from('pauta_audiencias').upsert(rows);
+      if (error) { showToast('Erro ao salvar: ' + error.message); return; }
+    } else {
+      const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY)||'[]');
+      rows.forEach(r => {
+        const idx2 = local.findIndex(x => x.id === r.id);
+        if (idx2 >= 0) local[idx2] = r; else local.push(r);
+      });
+      localStorage.setItem(AUD_STORE_KEY, JSON.stringify(local));
+    }
+    showToast(`✓ ${rows.length} audiências importadas com sucesso!`);
+    loadAudiencias();
+  } catch(e) {
+    console.error(e);
+    showToast('Erro ao ler planilha: ' + e.message);
+  }
+}
+
+/* ─── PJe SYNC ─────────────────────────────────────────────── */
+let _pjeEvtSource = null;
+
+async function pjeSyncStart() {
+  // Verifica se o servidor local está online
+  try {
+    const test = await fetch(PJE_SERVER + '/status', { signal: AbortSignal.timeout(2000) });
+    if (!test.ok) throw new Error();
+  } catch(_) {
+    showToast('⚠ Servidor PJe não encontrado. Abra o arquivo pje-scraper/INICIAR_SERVIDOR.bat primeiro.');
+    document.getElementById('pje-progress-wrap').style.display = 'block';
+    document.getElementById('pje-prog-text').textContent = 'Servidor offline — execute INICIAR_SERVIDOR.bat';
+    document.getElementById('pje-prog-bar').style.width = '0%';
+    document.getElementById('pje-log-box').textContent = 'O servidor Python precisa estar rodando em http://localhost:7777\n\nInstruções:\n1. Abra a pasta pje-scraper/\n2. Dê duplo clique em INICIAR_SERVIDOR.bat\n3. Aguarde a janela abrir\n4. Clique em "Sincronizar PJe" novamente';
+    return;
+  }
+
+  document.getElementById('pje-progress-wrap').style.display = 'block';
+  document.getElementById('pje-log-box').textContent = '';
+  document.getElementById('pje-prog-bar').style.width = '0%';
+  document.getElementById('pje-sync-btn').disabled = true;
+  document.getElementById('pje-sync-icon').textContent = '⟳';
+
+  // Dispara o job
+  await fetch(PJE_SERVER + '/sync', { method: 'POST' }).catch(() => {});
+
+  // Acompanha via SSE
+  if (_pjeEvtSource) _pjeEvtSource.close();
+  _pjeEvtSource = new EventSource(PJE_SERVER + '/stream');
+  _pjeEvtSource.onmessage = e => {
+    const d = JSON.parse(e.data);
+    document.getElementById('pje-prog-text').textContent = d.message || '';
+    const pct = d.total ? Math.round((d.progress / d.total) * 100) : 0;
+    document.getElementById('pje-prog-bar').style.width = pct + '%';
+    const logBox = document.getElementById('pje-log-box');
+    if (d.newLines && d.newLines.length) {
+      logBox.textContent += d.newLines.join('\n') + '\n';
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+    if (!d.running) {
+      _pjeEvtSource.close();
+      document.getElementById('pje-sync-btn').disabled = false;
+      document.getElementById('pje-sync-icon').textContent = '✓';
+      if (!d.erro) {
+        showToast('✓ Pauta sincronizada com PJe!');
+        loadAudiencias();
+      } else {
+        showToast('Erro na sincronização: ' + d.erro);
+      }
+    }
+  };
+  _pjeEvtSource.onerror = () => {
+    _pjeEvtSource.close();
+    document.getElementById('pje-sync-btn').disabled = false;
+    document.getElementById('pje-sync-icon').textContent = '⟳';
+  };
+}
+
 
 </script>
 
