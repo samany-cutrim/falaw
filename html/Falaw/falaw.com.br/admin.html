@@ -935,6 +935,7 @@
         <div class="admin-dropdown">
           <div class="admin-dropdown-item" id="ditem-equipe" onclick="switchTab('equipe')"><span>Equipe</span></div>
           <div class="admin-dropdown-item" id="ditem-clientes" onclick="switchTab('clientes')"><span>Clientes</span></div>
+          <div class="admin-dropdown-item" id="ditem-audiencias" onclick="switchTab('audiencias')"><span>Pauta de Audiências</span></div>
         </div>
       </div>
       <!-- Grupo Dashboards -->
@@ -1414,6 +1415,88 @@
           <div class="modal-footer">
             <button class="btn btn-ghost" onclick="cliDashCloseHlModal()">Cancelar</button>
             <button class="btn btn-primary" onclick="cliDashSaveHighlight()">Salvar</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── PAUTA DE AUDIÊNCIAS ── -->
+    <section id="tab-audiencias" class="admin-section">
+      <div class="section-header">
+        <h2>Pauta de Audiências</h2>
+        <button type="button" class="btn btn-primary" onclick="openAudienciaModal()">+ Nova Audiência</button>
+      </div>
+
+      <!-- Filtros -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
+        <select id="aud-filter-status" onchange="loadAudiencias()"
+          style="border:1px solid var(--c-divider);border-radius:2px;padding:8px 12px;font-family:var(--f-body);font-size:13px;color:var(--c-dark);background:#fafaf8;outline:none">
+          <option value="">Todos os status</option>
+          <option value="agendada">Agendada</option>
+          <option value="realizada">Realizada</option>
+          <option value="adiada">Adiada</option>
+        </select>
+        <input type="month" id="aud-filter-mes" onchange="loadAudiencias()"
+          style="border:1px solid var(--c-divider);border-radius:2px;padding:8px 12px;font-family:var(--f-body);font-size:13px;color:var(--c-dark);background:#fafaf8;outline:none" />
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('aud-filter-status').value='';document.getElementById('aud-filter-mes').value='';loadAudiencias()">Limpar filtros</button>
+        <span id="aud-count" style="font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-left:auto"></span>
+      </div>
+
+      <div id="audiencias-list" class="item-list"></div>
+
+      <!-- Modal -->
+      <div class="modal-overlay" id="audienciaModal" onclick="if(event.target===this)closeAudienciaModal()">
+        <div class="modal" style="max-width:580px">
+          <div class="modal-header">
+            <h3 id="audienciaModalTitle">Nova Audiência</h3>
+            <button class="modal-close" onclick="closeAudienciaModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="aud-id" />
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="form-field">
+                <label>Data e Hora *</label>
+                <input id="aud-data-hora" type="datetime-local" />
+              </div>
+              <div class="form-field">
+                <label>Status</label>
+                <select id="aud-status" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                  <option value="agendada">Agendada</option>
+                  <option value="realizada">Realizada</option>
+                  <option value="adiada">Adiada</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Nº do Processo *</label>
+              <input id="aud-processo" type="text" placeholder="0000000-00.0000.0.00.0000" />
+            </div>
+            <div class="form-field">
+              <label>Vara / Juízo</label>
+              <input id="aud-vara" type="text" placeholder="Ex: 3ª Vara do Trabalho de São Paulo" />
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="form-field">
+                <label>Reclamante</label>
+                <input id="aud-reclamante" type="text" placeholder="Nome do reclamante" />
+              </div>
+              <div class="form-field">
+                <label>Reclamada</label>
+                <input id="aud-reclamada" type="text" placeholder="Nome da empresa reclamada" />
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Advogado Responsável</label>
+              <input id="aud-advogado" type="text" placeholder="Nome do advogado" />
+            </div>
+            <div class="form-field">
+              <label>Observações</label>
+              <textarea id="aud-obs" rows="3" placeholder="Informações adicionais…"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeAudienciaModal()">Cancelar</button>
+            <button class="btn btn-primary" onclick="saveAudiencia()">Salvar</button>
           </div>
         </div>
       </div>
@@ -2836,9 +2919,19 @@ async function doLogin() {
         _setLock({ attempts: 0, lockedUntil: 0 });
         sessionStorage.setItem('fa_admin_session', String(Date.now()));
         sessionStorage.setItem('fa_admin_supabase_auth', '1');
+        // Busca papel do usuário na tabela admin_users
+        try {
+          const { data: usr } = await sb.auth.getUser();
+          if (usr && usr.user) {
+            const { data: adminRow } = await sb.from('admin_users').select('role').eq('user_id', usr.user.id).single();
+            const role = (adminRow && adminRow.role) || 'superadmin';
+            sessionStorage.setItem('fa_admin_role', role);
+          }
+        } catch(_) {}
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('admin-shell').style.display = 'block';
         errEl.style.display = 'none';
+        applyRoleRestrictions();
         seedData();
         loadArticlesFromGitHub().then(renderBlog);
         renderEquipe();
@@ -2906,6 +2999,34 @@ function _resetAdminTimer() {
   document.addEventListener(ev, _resetAdminTimer, { passive: true })
 );
 
+/* ─── CONTROLE DE ACESSO POR PAPEL ──────────────────────────
+   role = 'superadmin' → acesso total (padrão, sem restrições)
+   role = 'restrito'   → apenas abas Clientes e Pauta de Audiências
+───────────────────────────────────────────────────────────── */
+function applyRoleRestrictions() {
+  const role = sessionStorage.getItem('fa_admin_role') || 'superadmin';
+  if (role !== 'restrito') return; // superadmin: nenhuma restrição
+
+  // Ocultar grupos Conteúdo e Dashboards inteiros
+  const groupConteudo   = document.getElementById('group-conteudo');
+  const groupDashboards = document.getElementById('group-dashboards');
+  if (groupConteudo)   groupConteudo.style.display   = 'none';
+  if (groupDashboards) groupDashboards.style.display = 'none';
+
+  // No grupo Gestão, ocultar item Equipe
+  const itemEquipe = document.getElementById('ditem-equipe');
+  if (itemEquipe) itemEquipe.style.display = 'none';
+
+  // Ocultar botão Configurações
+  const btnConfig = document.getElementById('tab-btn-config');
+  if (btnConfig) btnConfig.style.display = 'none';
+
+  // Abrir o grupo Gestão e ir direto para Clientes
+  const groupGestao = document.getElementById('group-gestao');
+  if (groupGestao) groupGestao.classList.add('open');
+  switchTab('clientes');
+}
+
 function doLogout() {
   const sb = getSB();
   if (sb && sessionStorage.getItem('fa_admin_supabase_auth') === '1') {
@@ -2913,6 +3034,9 @@ function doLogout() {
   }
   sessionStorage.removeItem('fa_admin_session');
   sessionStorage.removeItem('fa_admin_supabase_auth');
+  sessionStorage.removeItem('fa_admin_role');
+  // Restaura visibilidade de todos os itens de nav
+  document.querySelectorAll('.admin-tab-group, .admin-tab, .admin-dropdown-item').forEach(el => { el.style.display = ''; });
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('admin-shell').style.display = 'none';
   document.getElementById('login-pwd').value = '';
@@ -3031,7 +3155,7 @@ function getSbCreds() {
 }
 
 const CONTEUDO_TABS   = ['blog','newsletter','contato','curriculos','comentarios','calendario'];
-const GESTAO_TABS     = ['equipe','clientes'];
+const GESTAO_TABS     = ['equipe','clientes','audiencias'];
 const DASH_TABS       = ['ifood','cli-dash'];
 const STANDALONE_TABS = ['config'];
 
@@ -3281,6 +3405,7 @@ function switchTab(name) {
   if (name === 'cli-dash')      { loadPortalFromSupabase().then(cliDashTabInit); }
   if (name === 'comentarios')   { clearBadge('comentarios'); loadComentariosAdmin('all'); }
   if (name === 'calendario')    { renderCalendario(); }
+  if (name === 'audiencias')    { loadAudiencias(); }
 }
 
 /* ══════════════════════════════════════
@@ -9878,6 +10003,176 @@ async function ifoodSaveExcel() {
     console.error(e);
     showToast('Erro ao processar Excel.');
   }
+}
+
+/* ─── PAUTA DE AUDIÊNCIAS ─────────────────────────────────── */
+const AUD_STORE_KEY = 'falaw_audiencias_v1';
+const AUD_STATUS_LABEL = { agendada: 'Agendada', realizada: 'Realizada', adiada: 'Adiada' };
+const AUD_STATUS_COLOR = { agendada: '#1B7A4E', realizada: '#0D2B5E', adiada: '#C62828' };
+const AUD_STATUS_BG    = { agendada: '#E8F5EE', realizada: '#EEF2FF', adiada: '#FFF0F0' };
+
+async function loadAudiencias() {
+  const listEl = document.getElementById('audiencias-list');
+  const countEl = document.getElementById('aud-count');
+  listEl.innerHTML = '<p style="color:var(--c-muted);font-size:13px">Carregando…</p>';
+  const { sbUrl, sbKey } = getSbCreds();
+  let items = [];
+  if (sbUrl && sbKey) {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      let q = sb.from('pauta_audiencias').select('*').order('data_hora', { ascending: true });
+      const filterStatus = (document.getElementById('aud-filter-status').value || '').trim();
+      const filterMes = (document.getElementById('aud-filter-mes').value || '').trim();
+      if (filterStatus) q = q.eq('status', filterStatus);
+      if (filterMes) {
+        const [yr, mo] = filterMes.split('-').map(Number);
+        const from = new Date(yr, mo - 1, 1).toISOString();
+        const to   = new Date(yr, mo, 1).toISOString();
+        q = q.gte('data_hora', from).lt('data_hora', to);
+      }
+      const { data, error } = await q;
+      if (!error && data) items = data;
+    } catch(e) { console.warn('audiencias load:', e.message); }
+  }
+  // fallback local
+  if (!items.length && !sbUrl) {
+    items = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]');
+  }
+  countEl.textContent = items.length + ' audiência(s)';
+  if (!items.length) {
+    listEl.innerHTML = '<div class="empty-state"><p>Nenhuma audiência encontrada.</p><p>Clique em "+ Nova Audiência" para registrar.</p></div>';
+    return;
+  }
+  listEl.innerHTML = items.map(a => {
+    const dt = new Date(a.data_hora);
+    const dtStr = dt.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const statusColor = AUD_STATUS_COLOR[a.status] || '#333';
+    const statusBg    = AUD_STATUS_BG[a.status]    || '#eee';
+    const statusLabel = AUD_STATUS_LABEL[a.status] || a.status;
+    return `<div class="item-card" style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
+          <span style="font-family:var(--f-mono);font-size:12px;font-weight:600;color:var(--c-dark)">${_escHtml(dtStr)}</span>
+          <span style="background:${statusBg};color:${statusColor};font-size:10px;font-weight:700;font-family:var(--f-mono);letter-spacing:.06em;padding:2px 8px;border-radius:3px;text-transform:uppercase">${statusLabel}</span>
+        </div>
+        <div style="font-size:14px;font-weight:600;color:var(--c-dark);margin-bottom:4px">${_escHtml(a.processo || '—')}</div>
+        <div style="font-size:12px;color:var(--c-muted);margin-bottom:2px">${_escHtml(a.vara || '')}</div>
+        <div style="font-size:12px;color:var(--c-muted)">
+          <span style="color:var(--c-dark)">${_escHtml(a.reclamante || '')}</span>
+          ${a.reclamante && a.reclamada ? ' <span style="color:var(--c-muted)">vs</span> ' : ''}
+          <span style="color:var(--c-dark)">${_escHtml(a.reclamada || '')}</span>
+        </div>
+        ${a.advogado ? `<div style="font-size:11px;color:var(--c-muted);margin-top:4px">Adv: ${_escHtml(a.advogado)}</div>` : ''}
+        ${a.observacoes ? `<div style="font-size:11px;color:var(--c-muted);margin-top:4px;font-style:italic">${_escHtml(a.observacoes)}</div>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-ghost btn-sm" onclick="editAudiencia('${_escHtml(a.id)}')">Editar</button>
+        <button class="btn btn-ghost btn-sm" style="color:#C62828" onclick="deleteAudiencia('${_escHtml(a.id)}')">Excluir</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+let _audItems = [];
+async function editAudiencia(id) {
+  const { sbUrl, sbKey } = getSbCreds();
+  let a = null;
+  if (sbUrl && sbKey) {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { data } = await sb.from('pauta_audiencias').select('*').eq('id', id).single();
+      if (data) a = data;
+    } catch(e) {}
+  }
+  if (!a) {
+    const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]');
+    a = local.find(x => x.id === id);
+  }
+  if (!a) return;
+  document.getElementById('aud-id').value = a.id;
+  document.getElementById('aud-data-hora').value = a.data_hora ? a.data_hora.slice(0,16) : '';
+  document.getElementById('aud-status').value = a.status || 'agendada';
+  document.getElementById('aud-processo').value = a.processo || '';
+  document.getElementById('aud-vara').value = a.vara || '';
+  document.getElementById('aud-reclamante').value = a.reclamante || '';
+  document.getElementById('aud-reclamada').value = a.reclamada || '';
+  document.getElementById('aud-advogado').value = a.advogado || '';
+  document.getElementById('aud-obs').value = a.observacoes || '';
+  document.getElementById('audienciaModalTitle').textContent = 'Editar Audiência';
+  document.getElementById('audienciaModal').style.display = 'flex';
+}
+
+function openAudienciaModal() {
+  document.getElementById('aud-id').value = '';
+  document.getElementById('aud-data-hora').value = '';
+  document.getElementById('aud-status').value = 'agendada';
+  document.getElementById('aud-processo').value = '';
+  document.getElementById('aud-vara').value = '';
+  document.getElementById('aud-reclamante').value = '';
+  document.getElementById('aud-reclamada').value = '';
+  document.getElementById('aud-advogado').value = '';
+  document.getElementById('aud-obs').value = '';
+  document.getElementById('audienciaModalTitle').textContent = 'Nova Audiência';
+  document.getElementById('audienciaModal').style.display = 'flex';
+}
+
+function closeAudienciaModal() {
+  document.getElementById('audienciaModal').style.display = 'none';
+}
+
+async function saveAudiencia() {
+  const dataHora = document.getElementById('aud-data-hora').value;
+  const processo = document.getElementById('aud-processo').value.trim();
+  if (!dataHora || !processo) { showToast('Preencha Data/Hora e Nº do Processo.'); return; }
+  const id = document.getElementById('aud-id').value || uid();
+  const row = {
+    id,
+    data_hora:   new Date(dataHora).toISOString(),
+    processo,
+    vara:        document.getElementById('aud-vara').value.trim(),
+    reclamante:  document.getElementById('aud-reclamante').value.trim(),
+    reclamada:   document.getElementById('aud-reclamada').value.trim(),
+    advogado:    document.getElementById('aud-advogado').value.trim(),
+    status:      document.getElementById('aud-status').value,
+    observacoes: document.getElementById('aud-obs').value.trim(),
+  };
+  const { sbUrl, sbKey } = getSbCreds();
+  if (sbUrl && sbKey) {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { error } = await sb.from('pauta_audiencias').upsert(row);
+      if (error) throw error;
+    } catch(e) { showToast('Erro ao salvar: ' + e.message); return; }
+  } else {
+    // fallback local
+    const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]');
+    const idx = local.findIndex(x => x.id === id);
+    if (idx >= 0) local[idx] = row; else local.push(row);
+    localStorage.setItem(AUD_STORE_KEY, JSON.stringify(local));
+  }
+  closeAudienciaModal();
+  showToast('Audiência salva!');
+  loadAudiencias();
+}
+
+async function deleteAudiencia(id) {
+  if (!confirm('Excluir esta audiência?')) return;
+  const { sbUrl, sbKey } = getSbCreds();
+  if (sbUrl && sbKey) {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      await sb.from('pauta_audiencias').delete().eq('id', id);
+    } catch(e) { showToast('Erro ao excluir: ' + e.message); return; }
+  } else {
+    const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]').filter(x => x.id !== id);
+    localStorage.setItem(AUD_STORE_KEY, JSON.stringify(local));
+  }
+  showToast('Audiência excluída.');
+  loadAudiencias();
 }
 
 </script>

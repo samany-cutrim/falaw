@@ -130,3 +130,45 @@ CREATE POLICY "anon full access" ON admin_settings FOR ALL TO anon USING (true) 
 -- CREATE POLICY "anon upload curriculos" ON storage.objects FOR INSERT TO anon WITH CHECK (bucket_id = 'curriculos');
 -- CREATE POLICY "anon read curriculos"   ON storage.objects FOR SELECT TO anon USING (bucket_id = 'curriculos');
 -- CREATE POLICY "anon delete curriculos" ON storage.objects FOR DELETE TO anon USING (bucket_id = 'curriculos');
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 8. Perfis de admin com controle de acesso por papel (role)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Crie usuários normalmente no Supabase Auth (Authentication > Users > Add user).
+-- Depois insira aqui o UUID do usuário e defina o papel:
+--   'superadmin' → acesso completo ao painel
+--   'restrito'   → acesso apenas às abas Clientes e Pauta de Audiências
+--
+-- Exemplo:
+--   INSERT INTO admin_users (user_id, role) VALUES ('uuid-do-usuario', 'restrito');
+
+CREATE TABLE IF NOT EXISTS admin_users (
+  user_id   UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  role      TEXT NOT NULL DEFAULT 'superadmin' CHECK (role IN ('superadmin','restrito')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon full access" ON admin_users;
+CREATE POLICY "anon full access" ON admin_users FOR ALL TO anon USING (true) WITH CHECK (true);
+-- Permite que o próprio usuário autenticado leia seu registro
+DROP POLICY IF EXISTS "auth read own" ON admin_users;
+CREATE POLICY "auth read own" ON admin_users FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 9. Pauta de Audiências
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pauta_audiencias (
+  id              TEXT PRIMARY KEY,
+  data_hora       TIMESTAMPTZ NOT NULL,
+  processo        TEXT NOT NULL DEFAULT '',
+  vara            TEXT NOT NULL DEFAULT '',
+  reclamante      TEXT NOT NULL DEFAULT '',
+  reclamada       TEXT NOT NULL DEFAULT '',
+  advogado        TEXT NOT NULL DEFAULT '',
+  status          TEXT NOT NULL DEFAULT 'agendada' CHECK (status IN ('agendada','realizada','adiada')),
+  observacoes     TEXT NOT NULL DEFAULT '',
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE pauta_audiencias ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon full access" ON pauta_audiencias;
+CREATE POLICY "anon full access" ON pauta_audiencias FOR ALL TO anon USING (true) WITH CHECK (true);
