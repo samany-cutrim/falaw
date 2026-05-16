@@ -10,19 +10,20 @@ import json
 import time
 import logging
 import os
+import requests
 from pathlib import Path
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
-load_dotenv()
+_HERE = Path(__file__).parent
+load_dotenv(_HERE / ".env")
 
 CHROME_DEBUG_PORT = int(os.getenv("CHROME_DEBUG_PORT", "9222"))
-CERT_NAME         = os.getenv("WHOM_CERT_NAME", "")          # Ex: "Tatiana Guimaraes Ferraz Andrade"
-CHROME_PROFILE    = os.getenv("CHROME_PROFILE", "Default")   # Perfil onde o Whom está instalado
+CERT_NAME         = os.getenv("WHOM_CERT_NAME", "")
+CHROME_PROFILE    = os.getenv("CHROME_PROFILE", "Default")
 
-# TRTs que o escritório usa — edite conforme necessário no .env (WHOM_TRTS)
-# Formato: "TRTn Pje - 1º grau" e/ou "TRTn Pje - 2º grau"
-# Separe por vírgula no .env: WHOM_TRTS=TRT1 Pje - 1º grau,TRT2 Pje - 1º grau,...
+# TRTs configurados — edite WHOM_TRTS no .env para restringir
+# Formato: "TRT1 Pje - 1º grau,TRT1 Pje - 2º grau,..."
 _WHOM_TRTS_ENV = os.getenv("WHOM_TRTS", "")
 WHOM_TRTS = [t.strip() for t in _WHOM_TRTS_ENV.split(",") if t.strip()] if _WHOM_TRTS_ENV else [
     "TRT1 Pje - 1º grau",  "TRT1 Pje - 2º grau",
@@ -52,29 +53,27 @@ WHOM_TRTS = [t.strip() for t in _WHOM_TRTS_ENV.split(",") if t.strip()] if _WHOM
     "TST Pje",
 ]
 
-Path("logs").mkdir(exist_ok=True)
+_LOG_DIR = _HERE / "logs"
+_LOG_DIR.mkdir(exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler("logs/whom_auth.log", encoding="utf-8"),
+        logging.FileHandler(_LOG_DIR / "whom_auth.log", encoding="utf-8"),
         logging.StreamHandler(),
     ],
 )
 log = logging.getLogger(__name__)
 
+CDP_BASE = f"http://127.0.0.1:{CHROME_DEBUG_PORT}"
+
 
 # ── Detectar extensão Whom ────────────────────────────────────────────────────
 
 def encontrar_whom() -> tuple[str, str]:
-    """
-    Varre a pasta de extensões do Chrome em busca do Whom.
-    Retorna (extension_id, popup_filename) ou ("", "").
-    """
-    possiveis_data_dirs = []
-
-    # Caminhos padrão do Chrome no Windows
+    """Varre a pasta de extensões do Chrome e retorna (extension_id, popup_filename)."""
     appdata = Path(os.environ.get("LOCALAPPDATA", ""))
+    possiveis_data_dirs = []
     for canal in ["Google/Chrome", "Google/Chrome Beta", "Google/Chrome Dev", "Chromium"]:
         d = appdata / canal / "User Data"
         if d.exists():
@@ -84,7 +83,6 @@ def encontrar_whom() -> tuple[str, str]:
         log.error("Diretório do Chrome não encontrado.")
         return "", ""
 
-    # Perfis a verificar
     perfis = ["Default", CHROME_PROFILE] + [f"Profile {i}" for i in range(1, 25)]
 
     for data_dir in possiveis_data_dirs:
@@ -95,7 +93,6 @@ def encontrar_whom() -> tuple[str, str]:
             for ext_id_dir in ext_base.iterdir():
                 if not ext_id_dir.is_dir():
                     continue
-                # Cada extensão tem uma subpasta por versão
                 for versao_dir in sorted(ext_id_dir.iterdir(), reverse=True):
                     manifest_path = versao_dir / "manifest.json"
                     if not manifest_path.exists():
@@ -120,127 +117,162 @@ def encontrar_whom() -> tuple[str, str]:
     return "", ""
 
 
+# ── Helpers CDP ────────────────────────────────────────────────────────────────
+
+def _fechar_abas_whom(ext_id: str) -> None:
+    try:
+        for t in requests.get(f"{CDP_BASE}/json/list", timeout=5).json():
+            if ext_id in t.get("url", ""):
+                requests.get(f"{CDP_BASE}/json/close/{t['id']}", timeout=5)
+    except Exception:
+        pass
+
+
 # ── Automação da interface do Whom ────────────────────────────────────────────
 
-def autenticar_sistema(ctx, ext_url: str, cert_name: str, sistema: str) -> bool:
+def autenticar_sistema(browser, ext_id: str, popup: str, sistema: str) -> bool:
     """
-    Abre a página do Whom via window.open() (bypassa ERR_BLOCKED_BY_CLIENT),
-    seleciona o certificado e autentica no sistema informado.
+    Abre o popup do Whom via CDP /json/new usando ctx.expect_page() para capturar
+    corretamente a nova aba sem interferência do Playwright.
     Retorna True se conseguiu clicar em Acessar.
     """
+    ext_url = f"chrome-extension://{ext_id}/{popup}"
+
+    _fechar_abas_whom(ext_id)
+    time.sleep(0.5)
+
+    # Capturar nova aba usando expect_page (forma correta quando Playwright já está conectado)
+    page = None
+    for ctx in browser.contexts:
+        try:
+            with ctx.expect_page(timeout=8000) as page_info:
+                requests.put(f"{CDP_BASE}/json/new?{ext_url}", timeout=5)
+            page = page_info.value
+            break
+        except Exception:
+            continue
+
+    if not page:
+        # Fallback: abrir sem captura de evento e procurar pelo URL
+        requests.put(f"{CDP_BASE}/json/new?{ext_url}", timeout=5)
+        time.sleep(3)
+        for ctx in browser.contexts:
+            for pg in ctx.pages:
+                if ext_id in pg.url:
+                    page = pg
+                    break
+            if page:
+                break
+
+    if not page:
+        log.warning(f"[{sistema}] Página do Whom não encontrada após abertura")
+        return False
+
     try:
-        # Abre a extensão via window.open() a partir de uma aba neutra
-        # Isso bypassa o ERR_BLOCKED_BY_CLIENT que ocorre com page.goto()
-        bridge = ctx.new_page()
-        bridge.goto("about:blank", timeout=5000)
-
-        with ctx.expect_page(timeout=10000) as popup_info:
-            bridge.evaluate(f"window.open('{ext_url}', '_blank', 'width=400,height=600')")
-
-        page = popup_info.value
         page.wait_for_load_state("domcontentloaded", timeout=10000)
         time.sleep(1.5)
+    except Exception:
+        pass
 
-        # ── Campo de certificado ──────────────────────────────────────────────
-        cert_sels = [
-            'input[placeholder*="certificado" i]',
-            'input[placeholder*="Busque" i]',
-            'input[aria-label*="certificado" i]',
-            '.certificate-search input',
-            'input:first-of-type',
-        ]
-        cert_input = None
-        for sel in cert_sels:
-            c = page.locator(sel).first
-            if c.count() > 0 and c.is_visible():
-                cert_input = c
-                break
+    try:
+        # ── Fechar NPS se aparecer ────────────────────────────────────────────
+        try:
+            nps = page.locator("button:has-text('Responder depois')")
+            nps.wait_for(state="visible", timeout=2500)
+            nps.click()
+            time.sleep(1)
+            log.debug("NPS fechado")
+        except PWTimeout:
+            pass
 
-        if not cert_input:
-            log.warning(f"Campo de certificado não encontrado para {sistema}")
-            page.close(); bridge.close()
-            return False
+        # ── Selecionar certificado ────────────────────────────────────────────
+        # Verifica se o campo de sistema já está visível (cert já selecionado)
+        si_loc = page.locator("input[placeholder*='sistema' i], input[placeholder*='Digite' i]")
+        sistema_visivel = False
+        try:
+            si_loc.first.wait_for(state="visible", timeout=1500)
+            sistema_visivel = True
+        except PWTimeout:
+            pass
 
-        cert_input.click()
-        time.sleep(0.3)
-
-        if cert_name:
-            cert_input.fill(cert_name)
-            time.sleep(0.8)
-            sugestao = page.locator(f"li:has-text('{cert_name}'), [role='option']:has-text('{cert_name}'), .option:has-text('{cert_name}')").first
-            if sugestao.count() > 0:
-                sugestao.click()
-                time.sleep(0.5)
-            else:
-                primeira = page.locator("li[role='option'], .suggestion-item, .list-item").first
-                if primeira.count() > 0:
-                    primeira.click()
-                    time.sleep(0.5)
-
-        # ── Campo de sistema ──────────────────────────────────────────────────
-        sistema_sels = [
-            'input[placeholder*="sistema" i]',
-            'input[placeholder*="Buscar" i]:last-of-type',
-            'input[aria-label*="sistema" i]',
-            '.system-search input',
-            'input:nth-of-type(2)',
-        ]
-        sistema_input = None
-        for sel in sistema_sels:
-            c = page.locator(sel).first
-            if c.count() > 0 and c.is_visible():
-                sistema_input = c
-                break
-
-        if not sistema_input:
-            log.warning(f"Campo de sistema não encontrado para {sistema}")
-            page.close(); bridge.close()
-            return False
-
-        sistema_input.click()
-        time.sleep(0.3)
-        sistema_input.fill(sistema)
-        time.sleep(1.2)
-
-        opcao = page.locator(
-            f"li:has-text('{sistema}'), [role='option']:has-text('{sistema}'), .option:has-text('{sistema}')"
-        ).first
-        if opcao.count() > 0:
-            opcao.click()
-            time.sleep(0.5)
-        else:
-            trecho = sistema.split()[0]
-            opcao_parcial = page.locator(
-                f"li:has-text('{sistema}'), [role='option']:has-text('{sistema}')"
-            ).first
-            if opcao_parcial.count() > 0:
-                opcao_parcial.click()
-                time.sleep(0.5)
-            else:
-                log.warning(f"Sistema '{sistema}' não encontrado no Whom")
-                page.close(); bridge.close()
+        if not sistema_visivel:
+            cert_item = page.locator("[role='menuitem']:not([disabled])").first
+            try:
+                cert_item.wait_for(state="visible", timeout=5000)
+                cert_item.click()
+                time.sleep(2)
+            except PWTimeout:
+                log.warning(f"[{sistema}] Certificado não encontrado no Whom")
+                page.close()
                 return False
 
+        # ── Campo de sistema ──────────────────────────────────────────────────
+        si = page.locator("input[placeholder*='sistema' i], input[placeholder*='Digite' i]").first
+        try:
+            si.wait_for(state="visible", timeout=5000)
+        except PWTimeout:
+            log.warning(f"[{sistema}] Campo de sistema não ficou visível")
+            page.close()
+            return False
+
+        si.click()
+        si.fill(sistema)
+        time.sleep(1.2)
+
+        # ── Selecionar sistema no dropdown ────────────────────────────────────
+        opcao = page.locator(f"[role='menuitem']:has-text('{sistema}')").first
+        try:
+            opcao.wait_for(state="visible", timeout=3000)
+            opcao.click()
+            time.sleep(0.5)
+        except PWTimeout:
+            log.warning(f"[{sistema}] Sistema não encontrado no dropdown do Whom")
+            page.close()
+            return False
+
         # ── Botão Acessar ─────────────────────────────────────────────────────
-        acessar = page.locator("button:has-text('Acessar'), input[value='Acessar']").first
-        if acessar.count() == 0 or not acessar.is_enabled():
-            log.warning(f"Botão Acessar não habilitado para {sistema}")
-            page.close(); bridge.close()
+        acessar = page.locator("button:has-text('Acessar')").first
+        try:
+            acessar.wait_for(state="visible", timeout=3000)
+        except PWTimeout:
+            log.warning(f"[{sistema}] Botão Acessar não apareceu")
+            page.close()
+            return False
+
+        if not acessar.is_enabled():
+            log.warning(f"[{sistema}] Botão Acessar desabilitado")
+            page.close()
             return False
 
         acessar.click()
-        log.info(f"Acessar clicado: {sistema}")
+        log.info(f"[OK] {sistema}")
         time.sleep(3)
 
+        # Fechar aba da extensão
         page.close()
-        bridge.close()
+
+        # Fechar abas do PJe abertas pelo Whom (não queremos poluir o Chrome)
+        ctx = browser.contexts[0] if browser.contexts else None
+        if ctx:
+            for pg in ctx.pages:
+                url = pg.url
+                if any(k in url for k in ["trt", "tst", "pje"]) and "chrome-extension" not in url:
+                    try:
+                        pg.close()
+                    except Exception:
+                        pass
+
         return True
 
-    except PWTimeout:
-        log.warning(f"Timeout ao autenticar {sistema}")
+    except PWTimeout as e:
+        log.warning(f"[{sistema}] Timeout: {e}")
+        try: page.close()
+        except Exception: pass
         return False
     except Exception as e:
-        log.error(f"Erro ao autenticar {sistema}: {e}")
+        log.error(f"[{sistema}] Erro inesperado: {e}")
+        try: page.close()
+        except Exception: pass
         return False
 
 
@@ -256,53 +288,41 @@ def main():
         log.error("Exemplo: WHOM_CERT_NAME=Tatiana Guimaraes Ferraz Andrade")
         return
 
-    # Detectar Whom
     ext_id, popup_file = encontrar_whom()
     if not ext_id:
         log.error("Não foi possível encontrar a extensão Whom. Abortando.")
         return
 
-    ext_url = f"chrome-extension://{ext_id}/{popup_file}"
-    log.info(f"URL do Whom: {ext_url}")
+    log.info(f"URL do Whom: chrome-extension://{ext_id}/{popup_file}")
 
     with sync_playwright() as p:
         try:
-            browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{CHROME_DEBUG_PORT}")
+            browser = p.chromium.connect_over_cdp(CDP_BASE)
             log.info(f"Conectado ao Chrome (porta {CHROME_DEBUG_PORT})")
         except Exception as e:
             log.error(f"Não foi possível conectar ao Chrome: {e}")
             log.error("Abra o Chrome com 1_abrir_chrome.bat antes de executar.")
             return
 
-        ctx = browser.contexts[0] if browser.contexts else browser.new_context()
-
         ok = []
         nao_encontrado = []
-        erro = []
 
         for sistema in WHOM_TRTS:
             log.info(f"Autenticando: {sistema}")
-            sucesso = autenticar_sistema(ctx, ext_url, CERT_NAME, sistema)
+            sucesso = autenticar_sistema(browser, ext_id, popup_file, sistema)
             if sucesso:
                 ok.append(sistema)
-                # Fecha abas extras abertas pelo Acessar (mantém só as do PJe)
-                time.sleep(1)
-                for pg in ctx.pages:
-                    if "chrome-extension" not in pg.url and pg.url not in ("about:blank", ""):
-                        try:
-                            if any(k in pg.url for k in ["trt", "tst", "pje"]):
-                                pg.close()  # fecha aba do PJe aberta pelo Whom
-                        except Exception:
-                            pass
             else:
                 nao_encontrado.append(sistema)
+            # Pequena pausa entre sistemas para não sobrecarregar
+            time.sleep(0.5)
 
     log.info("\n" + "=" * 60)
     log.info("RESULTADO")
     log.info("=" * 60)
     log.info(f"Autenticados ({len(ok)}): {', '.join(ok) if ok else '—'}")
     if nao_encontrado:
-        log.warning(f"Não encontrados ({len(nao_encontrado)}): {', '.join(nao_encontrado)}")
+        log.warning(f"Não autenticados ({len(nao_encontrado)}): {', '.join(nao_encontrado)}")
     log.info("=" * 60)
     log.info("Sessões ativas. Execute scraper.py para coletar as audiências.")
 

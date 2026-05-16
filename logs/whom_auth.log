@@ -1,0 +1,387 @@
+2026-05-15 22:41:56,055 [INFO] ============================================================
+2026-05-15 22:41:56,056 [INFO] Whom Auth — Detectando extensão e autenticando TRTs
+2026-05-15 22:41:56,057 [INFO] ============================================================
+2026-05-15 22:41:56,094 [INFO] Whom encontrado: ID=lnidijeaekolpfeckelhkomndglcglhh | popup=index.html | perfil=Profile 9
+2026-05-15 22:41:56,095 [INFO] URL do Whom: chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+2026-05-15 22:41:57,365 [INFO] Conectado ao Chrome (porta 9222)
+2026-05-15 22:41:57,470 [INFO] Autenticando: TRT1 Pje - 1º grau
+2026-05-15 22:41:57,567 [ERROR] Erro ao autenticar TRT1 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:57,628 [INFO] Autenticando: TRT1 Pje - 2º grau
+2026-05-15 22:41:57,649 [ERROR] Erro ao autenticar TRT1 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:57,695 [INFO] Autenticando: TRT2 Pje - 1º grau
+2026-05-15 22:41:57,716 [ERROR] Erro ao autenticar TRT2 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:57,766 [INFO] Autenticando: TRT2 Pje - 2º grau
+2026-05-15 22:41:57,797 [ERROR] Erro ao autenticar TRT2 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:57,837 [INFO] Autenticando: TRT3 Pje - 1º grau
+2026-05-15 22:41:57,861 [ERROR] Erro ao autenticar TRT3 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:57,906 [INFO] Autenticando: TRT3 Pje - 2º grau
+2026-05-15 22:41:57,929 [ERROR] Erro ao autenticar TRT3 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:57,964 [INFO] Autenticando: TRT4 Pje - 1º grau
+2026-05-15 22:41:57,984 [ERROR] Erro ao autenticar TRT4 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:58,027 [INFO] Autenticando: TRT4 Pje - 2º grau
+2026-05-15 22:41:58,052 [ERROR] Erro ao autenticar TRT4 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:58,094 [INFO] Autenticando: TRT5 Pje - 1º grau
+2026-05-15 22:41:58,115 [ERROR] Erro ao autenticar TRT5 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:58,153 [INFO] Autenticando: TRT5 Pje - 2º grau
+2026-05-15 22:41:58,197 [ERROR] Erro ao autenticar TRT5 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:58,240 [INFO] Autenticando: TRT6 Pje - 1º grau
+2026-05-15 22:41:58,274 [ERROR] Erro ao autenticar TRT6 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:58,317 [INFO] Autenticando: TRT6 Pje - 2º grau
+2026-05-15 22:41:58,345 [ERROR] Erro ao autenticar TRT6 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:58,392 [INFO] Autenticando: TRT7 Pje - 1º grau
+2026-05-15 22:41:58,429 [ERROR] Erro ao autenticar TRT7 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:58,471 [INFO] Autenticando: TRT7 Pje - 2º grau
+2026-05-15 22:41:58,492 [ERROR] Erro ao autenticar TRT7 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:58,541 [INFO] Autenticando: TRT8 Pje - 1º grau
+2026-05-15 22:41:58,561 [ERROR] Erro ao autenticar TRT8 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:58,625 [INFO] Autenticando: TRT8 Pje - 2º grau
+2026-05-15 22:41:58,660 [ERROR] Erro ao autenticar TRT8 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:58,697 [INFO] Autenticando: TRT9 Pje - 1º grau
+2026-05-15 22:41:58,721 [ERROR] Erro ao autenticar TRT9 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:58,760 [INFO] Autenticando: TRT9 Pje - 2º grau
+2026-05-15 22:41:58,793 [ERROR] Erro ao autenticar TRT9 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:58,819 [INFO] Autenticando: TRT10 Pje - 1º grau
+2026-05-15 22:41:58,846 [ERROR] Erro ao autenticar TRT10 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:58,895 [INFO] Autenticando: TRT10 Pje - 2º grau
+2026-05-15 22:41:58,915 [ERROR] Erro ao autenticar TRT10 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:58,965 [INFO] Autenticando: TRT11 Pje - 1º grau
+2026-05-15 22:41:58,985 [ERROR] Erro ao autenticar TRT11 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:59,034 [INFO] Autenticando: TRT11 Pje - 2º grau
+2026-05-15 22:41:59,058 [ERROR] Erro ao autenticar TRT11 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:59,111 [INFO] Autenticando: TRT12 Pje - 1º grau
+2026-05-15 22:41:59,133 [ERROR] Erro ao autenticar TRT12 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:59,174 [INFO] Autenticando: TRT12 Pje - 2º grau
+2026-05-15 22:41:59,199 [ERROR] Erro ao autenticar TRT12 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:59,242 [INFO] Autenticando: TRT13 Pje - 1º grau
+2026-05-15 22:41:59,264 [ERROR] Erro ao autenticar TRT13 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:59,305 [INFO] Autenticando: TRT13 Pje - 2º grau
+2026-05-15 22:41:59,328 [ERROR] Erro ao autenticar TRT13 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:59,364 [INFO] Autenticando: TRT14 Pje - 1º grau
+2026-05-15 22:41:59,401 [ERROR] Erro ao autenticar TRT14 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:59,436 [INFO] Autenticando: TRT14 Pje - 2º grau
+2026-05-15 22:41:59,467 [ERROR] Erro ao autenticar TRT14 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:59,528 [INFO] Autenticando: TRT15 Pje - 1º grau
+2026-05-15 22:41:59,547 [ERROR] Erro ao autenticar TRT15 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:59,623 [INFO] Autenticando: TRT15 Pje - 2º grau
+2026-05-15 22:41:59,646 [ERROR] Erro ao autenticar TRT15 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:59,681 [INFO] Autenticando: TRT16 Pje - 1º grau
+2026-05-15 22:41:59,711 [ERROR] Erro ao autenticar TRT16 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:59,751 [INFO] Autenticando: TRT16 Pje - 2º grau
+2026-05-15 22:41:59,774 [ERROR] Erro ao autenticar TRT16 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:59,814 [INFO] Autenticando: TRT17 Pje - 1º grau
+2026-05-15 22:41:59,834 [ERROR] Erro ao autenticar TRT17 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:59,879 [INFO] Autenticando: TRT17 Pje - 2º grau
+2026-05-15 22:41:59,904 [ERROR] Erro ao autenticar TRT17 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:41:59,944 [INFO] Autenticando: TRT18 Pje - 1º grau
+2026-05-15 22:41:59,965 [ERROR] Erro ao autenticar TRT18 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:00,010 [INFO] Autenticando: TRT18 Pje - 2º grau
+2026-05-15 22:42:00,032 [ERROR] Erro ao autenticar TRT18 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:00,072 [INFO] Autenticando: TRT19 Pje - 1º grau
+2026-05-15 22:42:00,143 [ERROR] Erro ao autenticar TRT19 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:00,182 [INFO] Autenticando: TRT19 Pje - 2º grau
+2026-05-15 22:42:00,213 [ERROR] Erro ao autenticar TRT19 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:00,236 [INFO] Autenticando: TRT20 Pje - 1º grau
+2026-05-15 22:42:00,261 [ERROR] Erro ao autenticar TRT20 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:00,303 [INFO] Autenticando: TRT20 Pje - 2º grau
+2026-05-15 22:42:00,327 [ERROR] Erro ao autenticar TRT20 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:00,363 [INFO] Autenticando: TRT21 Pje - 1º grau
+2026-05-15 22:42:00,390 [ERROR] Erro ao autenticar TRT21 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:00,437 [INFO] Autenticando: TRT21 Pje - 2º grau
+2026-05-15 22:42:00,459 [ERROR] Erro ao autenticar TRT21 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:00,496 [INFO] Autenticando: TRT22 Pje - 1º grau
+2026-05-15 22:42:00,522 [ERROR] Erro ao autenticar TRT22 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:00,561 [INFO] Autenticando: TRT22 Pje - 2º grau
+2026-05-15 22:42:00,616 [ERROR] Erro ao autenticar TRT22 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:00,641 [INFO] Autenticando: TRT23 Pje - 1º grau
+2026-05-15 22:42:00,662 [ERROR] Erro ao autenticar TRT23 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:00,682 [INFO] Autenticando: TRT23 Pje - 2º grau
+2026-05-15 22:42:00,723 [ERROR] Erro ao autenticar TRT23 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:00,765 [INFO] Autenticando: TRT24 Pje - 1º grau
+2026-05-15 22:42:00,789 [ERROR] Erro ao autenticar TRT24 Pje - 1º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:00,828 [INFO] Autenticando: TRT24 Pje - 2º grau
+2026-05-15 22:42:00,850 [ERROR] Erro ao autenticar TRT24 Pje - 2º grau: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:00,890 [INFO] Autenticando: TST Pje
+2026-05-15 22:42:00,919 [ERROR] Erro ao autenticar TST Pje: Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html", waiting until "domcontentloaded"
+
+2026-05-15 22:42:01,061 [INFO] 
+============================================================
+2026-05-15 22:42:01,062 [INFO] RESULTADO
+2026-05-15 22:42:01,063 [INFO] ============================================================
+2026-05-15 22:42:01,063 [INFO] Autenticados (0): —
+2026-05-15 22:42:01,063 [WARNING] Não encontrados (49): TRT1 Pje - 1º grau, TRT1 Pje - 2º grau, TRT2 Pje - 1º grau, TRT2 Pje - 2º grau, TRT3 Pje - 1º grau, TRT3 Pje - 2º grau, TRT4 Pje - 1º grau, TRT4 Pje - 2º grau, TRT5 Pje - 1º grau, TRT5 Pje - 2º grau, TRT6 Pje - 1º grau, TRT6 Pje - 2º grau, TRT7 Pje - 1º grau, TRT7 Pje - 2º grau, TRT8 Pje - 1º grau, TRT8 Pje - 2º grau, TRT9 Pje - 1º grau, TRT9 Pje - 2º grau, TRT10 Pje - 1º grau, TRT10 Pje - 2º grau, TRT11 Pje - 1º grau, TRT11 Pje - 2º grau, TRT12 Pje - 1º grau, TRT12 Pje - 2º grau, TRT13 Pje - 1º grau, TRT13 Pje - 2º grau, TRT14 Pje - 1º grau, TRT14 Pje - 2º grau, TRT15 Pje - 1º grau, TRT15 Pje - 2º grau, TRT16 Pje - 1º grau, TRT16 Pje - 2º grau, TRT17 Pje - 1º grau, TRT17 Pje - 2º grau, TRT18 Pje - 1º grau, TRT18 Pje - 2º grau, TRT19 Pje - 1º grau, TRT19 Pje - 2º grau, TRT20 Pje - 1º grau, TRT20 Pje - 2º grau, TRT21 Pje - 1º grau, TRT21 Pje - 2º grau, TRT22 Pje - 1º grau, TRT22 Pje - 2º grau, TRT23 Pje - 1º grau, TRT23 Pje - 2º grau, TRT24 Pje - 1º grau, TRT24 Pje - 2º grau, TST Pje
+2026-05-15 22:42:01,064 [INFO] ============================================================
+2026-05-15 22:42:01,065 [INFO] Sessões ativas. Execute scraper.py para coletar as audiências.
+2026-05-15 22:43:41,697 [INFO] ============================================================
+2026-05-15 22:43:41,698 [INFO] Whom Auth — Detectando extensão e autenticando TRTs
+2026-05-15 22:43:41,698 [INFO] ============================================================
+2026-05-15 22:43:41,742 [INFO] Whom encontrado: ID=lnidijeaekolpfeckelhkomndglcglhh | popup=index.html | perfil=Profile 9
+2026-05-15 22:43:41,743 [INFO] URL do Whom: chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+2026-05-15 22:43:42,821 [INFO] Conectado ao Chrome (porta 9222)
+2026-05-15 22:43:42,822 [INFO] Autenticando: TRT1 Pje - 1º grau
+2026-05-15 22:43:44,985 [WARNING] Campo de certificado não encontrado para TRT1 Pje - 1º grau
+2026-05-15 22:43:45,055 [INFO] Autenticando: TRT1 Pje - 2º grau
+2026-05-15 22:43:46,984 [WARNING] Campo de certificado não encontrado para TRT1 Pje - 2º grau
+2026-05-15 22:43:47,044 [INFO] Autenticando: TRT2 Pje - 1º grau
+2026-05-15 22:43:48,951 [WARNING] Campo de certificado não encontrado para TRT2 Pje - 1º grau
+2026-05-15 22:43:49,015 [INFO] Autenticando: TRT2 Pje - 2º grau
+2026-05-15 22:43:50,938 [WARNING] Campo de certificado não encontrado para TRT2 Pje - 2º grau
+2026-05-15 22:43:50,999 [INFO] Autenticando: TRT3 Pje - 1º grau
+2026-05-15 22:43:53,147 [WARNING] Campo de certificado não encontrado para TRT3 Pje - 1º grau
+2026-05-15 22:43:53,227 [INFO] Autenticando: TRT3 Pje - 2º grau
+2026-05-15 22:43:55,310 [WARNING] Campo de certificado não encontrado para TRT3 Pje - 2º grau
+2026-05-15 22:43:55,370 [INFO] Autenticando: TRT4 Pje - 1º grau
+2026-05-15 22:43:57,373 [WARNING] Campo de certificado não encontrado para TRT4 Pje - 1º grau
+2026-05-15 22:43:57,444 [INFO] Autenticando: TRT4 Pje - 2º grau
+2026-05-15 22:43:58,700 [ERROR] Erro ao autenticar TRT4 Pje - 2º grau: Target page, context or browser has been closed
+=========================== logs ===========================
+"load" event fired
+"networkidle" event fired
+============================================================
+2026-05-15 22:43:58,700 [INFO] Autenticando: TRT5 Pje - 1º grau
+2026-05-15 22:44:00,694 [WARNING] Campo de certificado não encontrado para TRT5 Pje - 1º grau
+2026-05-15 22:44:00,767 [INFO] Autenticando: TRT5 Pje - 2º grau
+2026-05-15 22:44:02,757 [WARNING] Campo de certificado não encontrado para TRT5 Pje - 2º grau
+2026-05-15 22:44:02,777 [INFO] Autenticando: TRT6 Pje - 1º grau
+2026-05-15 22:44:02,802 [ERROR] Erro ao autenticar TRT6 Pje - 1º grau: BrowserContext.new_page: Protocol error (Target.createTarget): Failed to open a new tab
+2026-05-15 22:44:02,803 [INFO] Autenticando: TRT6 Pje - 2º grau
+2026-05-15 22:44:02,901 [ERROR] Erro ao autenticar TRT6 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,901 [INFO] Autenticando: TRT7 Pje - 1º grau
+2026-05-15 22:44:02,919 [ERROR] Erro ao autenticar TRT7 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,919 [INFO] Autenticando: TRT7 Pje - 2º grau
+2026-05-15 22:44:02,923 [ERROR] Erro ao autenticar TRT7 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,924 [INFO] Autenticando: TRT8 Pje - 1º grau
+2026-05-15 22:44:02,927 [ERROR] Erro ao autenticar TRT8 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,927 [INFO] Autenticando: TRT8 Pje - 2º grau
+2026-05-15 22:44:02,930 [ERROR] Erro ao autenticar TRT8 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,930 [INFO] Autenticando: TRT9 Pje - 1º grau
+2026-05-15 22:44:02,933 [ERROR] Erro ao autenticar TRT9 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,934 [INFO] Autenticando: TRT9 Pje - 2º grau
+2026-05-15 22:44:02,937 [ERROR] Erro ao autenticar TRT9 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,938 [INFO] Autenticando: TRT10 Pje - 1º grau
+2026-05-15 22:44:02,942 [ERROR] Erro ao autenticar TRT10 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,942 [INFO] Autenticando: TRT10 Pje - 2º grau
+2026-05-15 22:44:02,945 [ERROR] Erro ao autenticar TRT10 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,945 [INFO] Autenticando: TRT11 Pje - 1º grau
+2026-05-15 22:44:02,948 [ERROR] Erro ao autenticar TRT11 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,948 [INFO] Autenticando: TRT11 Pje - 2º grau
+2026-05-15 22:44:02,951 [ERROR] Erro ao autenticar TRT11 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,952 [INFO] Autenticando: TRT12 Pje - 1º grau
+2026-05-15 22:44:02,955 [ERROR] Erro ao autenticar TRT12 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,955 [INFO] Autenticando: TRT12 Pje - 2º grau
+2026-05-15 22:44:02,958 [ERROR] Erro ao autenticar TRT12 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,958 [INFO] Autenticando: TRT13 Pje - 1º grau
+2026-05-15 22:44:02,961 [ERROR] Erro ao autenticar TRT13 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,961 [INFO] Autenticando: TRT13 Pje - 2º grau
+2026-05-15 22:44:02,963 [ERROR] Erro ao autenticar TRT13 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,964 [INFO] Autenticando: TRT14 Pje - 1º grau
+2026-05-15 22:44:02,966 [ERROR] Erro ao autenticar TRT14 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,967 [INFO] Autenticando: TRT14 Pje - 2º grau
+2026-05-15 22:44:02,971 [ERROR] Erro ao autenticar TRT14 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,971 [INFO] Autenticando: TRT15 Pje - 1º grau
+2026-05-15 22:44:02,974 [ERROR] Erro ao autenticar TRT15 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,975 [INFO] Autenticando: TRT15 Pje - 2º grau
+2026-05-15 22:44:02,978 [ERROR] Erro ao autenticar TRT15 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,978 [INFO] Autenticando: TRT16 Pje - 1º grau
+2026-05-15 22:44:02,981 [ERROR] Erro ao autenticar TRT16 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,981 [INFO] Autenticando: TRT16 Pje - 2º grau
+2026-05-15 22:44:02,985 [ERROR] Erro ao autenticar TRT16 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,986 [INFO] Autenticando: TRT17 Pje - 1º grau
+2026-05-15 22:44:02,989 [ERROR] Erro ao autenticar TRT17 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,989 [INFO] Autenticando: TRT17 Pje - 2º grau
+2026-05-15 22:44:02,991 [ERROR] Erro ao autenticar TRT17 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,992 [INFO] Autenticando: TRT18 Pje - 1º grau
+2026-05-15 22:44:02,994 [ERROR] Erro ao autenticar TRT18 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,995 [INFO] Autenticando: TRT18 Pje - 2º grau
+2026-05-15 22:44:02,997 [ERROR] Erro ao autenticar TRT18 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:02,997 [INFO] Autenticando: TRT19 Pje - 1º grau
+2026-05-15 22:44:03,001 [ERROR] Erro ao autenticar TRT19 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:03,001 [INFO] Autenticando: TRT19 Pje - 2º grau
+2026-05-15 22:44:03,004 [ERROR] Erro ao autenticar TRT19 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:03,005 [INFO] Autenticando: TRT20 Pje - 1º grau
+2026-05-15 22:44:03,007 [ERROR] Erro ao autenticar TRT20 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:03,007 [INFO] Autenticando: TRT20 Pje - 2º grau
+2026-05-15 22:44:03,010 [ERROR] Erro ao autenticar TRT20 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:03,010 [INFO] Autenticando: TRT21 Pje - 1º grau
+2026-05-15 22:44:03,013 [ERROR] Erro ao autenticar TRT21 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:03,013 [INFO] Autenticando: TRT21 Pje - 2º grau
+2026-05-15 22:44:03,016 [ERROR] Erro ao autenticar TRT21 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:03,016 [INFO] Autenticando: TRT22 Pje - 1º grau
+2026-05-15 22:44:03,019 [ERROR] Erro ao autenticar TRT22 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:03,020 [INFO] Autenticando: TRT22 Pje - 2º grau
+2026-05-15 22:44:03,022 [ERROR] Erro ao autenticar TRT22 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:03,023 [INFO] Autenticando: TRT23 Pje - 1º grau
+2026-05-15 22:44:03,025 [ERROR] Erro ao autenticar TRT23 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:03,026 [INFO] Autenticando: TRT23 Pje - 2º grau
+2026-05-15 22:44:03,028 [ERROR] Erro ao autenticar TRT23 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:03,028 [INFO] Autenticando: TRT24 Pje - 1º grau
+2026-05-15 22:44:03,031 [ERROR] Erro ao autenticar TRT24 Pje - 1º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:03,031 [INFO] Autenticando: TRT24 Pje - 2º grau
+2026-05-15 22:44:03,034 [ERROR] Erro ao autenticar TRT24 Pje - 2º grau: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:03,035 [INFO] Autenticando: TST Pje
+2026-05-15 22:44:03,038 [ERROR] Erro ao autenticar TST Pje: BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-15 22:44:03,062 [INFO] 
+============================================================
+2026-05-15 22:44:03,062 [INFO] RESULTADO
+2026-05-15 22:44:03,062 [INFO] ============================================================
+2026-05-15 22:44:03,062 [INFO] Autenticados (0): —
+2026-05-15 22:44:03,062 [WARNING] Não encontrados (49): TRT1 Pje - 1º grau, TRT1 Pje - 2º grau, TRT2 Pje - 1º grau, TRT2 Pje - 2º grau, TRT3 Pje - 1º grau, TRT3 Pje - 2º grau, TRT4 Pje - 1º grau, TRT4 Pje - 2º grau, TRT5 Pje - 1º grau, TRT5 Pje - 2º grau, TRT6 Pje - 1º grau, TRT6 Pje - 2º grau, TRT7 Pje - 1º grau, TRT7 Pje - 2º grau, TRT8 Pje - 1º grau, TRT8 Pje - 2º grau, TRT9 Pje - 1º grau, TRT9 Pje - 2º grau, TRT10 Pje - 1º grau, TRT10 Pje - 2º grau, TRT11 Pje - 1º grau, TRT11 Pje - 2º grau, TRT12 Pje - 1º grau, TRT12 Pje - 2º grau, TRT13 Pje - 1º grau, TRT13 Pje - 2º grau, TRT14 Pje - 1º grau, TRT14 Pje - 2º grau, TRT15 Pje - 1º grau, TRT15 Pje - 2º grau, TRT16 Pje - 1º grau, TRT16 Pje - 2º grau, TRT17 Pje - 1º grau, TRT17 Pje - 2º grau, TRT18 Pje - 1º grau, TRT18 Pje - 2º grau, TRT19 Pje - 1º grau, TRT19 Pje - 2º grau, TRT20 Pje - 1º grau, TRT20 Pje - 2º grau, TRT21 Pje - 1º grau, TRT21 Pje - 2º grau, TRT22 Pje - 1º grau, TRT22 Pje - 2º grau, TRT23 Pje - 1º grau, TRT23 Pje - 2º grau, TRT24 Pje - 1º grau, TRT24 Pje - 2º grau, TST Pje
+2026-05-15 22:44:03,062 [INFO] ============================================================
+2026-05-15 22:44:03,063 [INFO] Sessões ativas. Execute scraper.py para coletar as audiências.
+2026-05-16 09:42:30,862 [INFO] ============================================================
+2026-05-16 09:42:30,862 [INFO] Whom Auth — Detectando extensão e autenticando TRTs
+2026-05-16 09:42:30,863 [INFO] ============================================================
+2026-05-16 09:42:30,996 [INFO] Whom encontrado: ID=lnidijeaekolpfeckelhkomndglcglhh | popup=index.html | perfil=Profile 9
+2026-05-16 09:42:30,996 [INFO] URL do Whom: chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+2026-05-16 09:45:32,111 [ERROR] Não foi possível conectar ao Chrome: BrowserType.connect_over_cdp: Timeout 180000ms exceeded.
+Call log:
+  - <ws preparing> retrieving websocket url from http://127.0.0.1:9222
+  - <ws connecting> ws://127.0.0.1:9222/devtools/browser/10decb20-e3a0-4293-ba41-8f8442295874
+  - <ws connected> ws://127.0.0.1:9222/devtools/browser/10decb20-e3a0-4293-ba41-8f8442295874
+
+2026-05-16 09:45:32,111 [ERROR] Abra o Chrome com 1_abrir_chrome.bat antes de executar.

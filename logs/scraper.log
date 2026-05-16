@@ -1,0 +1,25 @@
+2026-05-15 22:46:26,576 [INFO] ============================================================
+2026-05-15 22:46:26,577 [INFO] Iniciando coleta — 15/05/2026 22:46
+2026-05-15 22:46:26,578 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-15 22:46:26,578 [INFO] ============================================================
+2026-05-15 22:46:31,247 [INFO] Conectado ao Chrome (porta 9222)
+2026-05-15 22:46:47,113 [INFO] Sessão ativa (sem tabela visível): https://pje.trt1.jus.br
+2026-05-15 22:46:48,511 [INFO] TRT-1: extraindo página 1…
+2026-05-15 22:46:48,580 [INFO] TRT-1: nenhuma linha na página 1, finalizando
+2026-05-15 22:47:05,459 [INFO] Sessão ativa (sem tabela visível): https://pje.trt2.jus.br
+2026-05-15 22:47:06,540 [INFO] TRT-2: extraindo página 1…
+2026-05-15 22:47:06,565 [INFO] TRT-2: nenhuma linha na página 1, finalizando
+2026-05-15 22:47:07,344 [ERROR] Erro verificar auth https://pje.trt3.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:47:08,127 [ERROR] Erro verificar auth https://pje.trt4.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:47:08,830 [ERROR] Erro verificar auth https://pje.trt5.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:47:09,698 [ERROR] Erro verificar auth https://pje.trt6.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:47:10,963 [ERROR] Erro verificar auth https://pje.trt7.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:47:11,759 [ERROR] Erro verificar auth https://pje.trt8.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:47:12,519 [ERROR] Erro verificar auth https://pje.trt9.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:47:13,338 [ERROR] Erro verificar auth https://pje.trt10.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:47:14,415 [ERROR] Erro verificar auth https://pje.trt11.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:47:16,806 [ERROR] Erro verificar auth https://pje.trt12.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:47:18,752 [ERROR] Erro verificar auth https://pje.trt13.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:47:20,447 [ERROR] Erro verificar auth https://pje.trt14.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:47:21,722 [ERROR] Erro verificar auth https://pje.trt15.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:47:22,810 [ERROR] Erro verificar auth https://pje.trt16.jus.br: Page.goto: Target page, context or browser has been closed

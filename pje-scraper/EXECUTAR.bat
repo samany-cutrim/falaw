@@ -11,7 +11,7 @@ echo  ╚═══════════════════════�
 echo.
 echo  Este script vai:
 echo   1. Abrir o Chrome com depuracao remota
-echo   2. Autenticar os TRTs via Whom
+echo   2. Autenticar os TRTs via Whom (automatico)
 echo   3. Coletar as audiencias e salvar no Supabase
 echo.
 echo  Pressione qualquer tecla para iniciar (ou feche para cancelar)...
@@ -25,7 +25,7 @@ if exist "..\\.venv\\Scripts\\activate.bat" (
 REM ── Verificar se Chrome já está na porta 9222 ───────────────────────────────
 echo.
 echo [0/3] Verificando Chrome...
-curl -s --max-time 2 http://localhost:9222/json/version > nul 2>&1
+curl -s --max-time 2 http://127.0.0.1:9222/json/version > nul 2>&1
 if %errorlevel% equ 0 (
     echo  Chrome ja esta rodando na porta 9222. Reutilizando sessao existente.
     goto :autenticar
@@ -46,32 +46,36 @@ if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" set "CHROME=C:\
 if exist "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" set "CHROME=C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
 if not defined CHROME (
     echo  ERRO: Chrome nao encontrado nos caminhos padrao.
-    echo  Caminhos testados:
-    echo    C:\Program Files\Google\Chrome\Application\chrome.exe
-    echo    C:\Program Files (x86)\Google\Chrome\Application\chrome.exe
     pause
     exit /b 1
 )
-echo  Chrome encontrado em: %CHROME%
 
 start "" "%CHROME%" --remote-debugging-port=9222 "--user-data-dir=C:\Users\manyc\AppData\Local\Google\Chrome\User Data" "--profile-directory=Profile 9" --no-first-run --no-default-browser-check --disable-session-crashed-bubble --restore-last-session
 
 echo  Aguardando Chrome inicializar (8 segundos)...
 timeout /t 8 /nobreak > nul
+
+REM Confirmar que Chrome subiu na porta correta
+curl -s --max-time 5 http://127.0.0.1:9222/json/version > nul 2>&1
+if %errorlevel% neq 0 (
+    echo  ERRO: Chrome nao respondeu na porta 9222. Verifique se o perfil nao esta em uso.
+    pause
+    exit /b 1
+)
 echo  Chrome pronto!
 
 :autenticar
-REM ── Instrucoes para autenticar via Whom ──────────────────────────────────────
+REM ── Autenticar via Whom (automatico) ─────────────────────────────────────────
 echo.
-echo [1/2] Autenticar via Whom (necessario fazer manualmente)
-echo.
-echo  1. Clique no icone do Whom na barra do Chrome (canto superior direito)
-echo  2. Selecione o certificado: Tatiana Guimaraes Ferraz Andrade
-echo  3. Selecione cada TRT e clique em Acessar
-echo  4. Repita para todos os TRTs do escritorio
-echo.
-echo  Quando terminar de autenticar, pressione qualquer tecla para iniciar a coleta...
-pause > nul
+echo [1/2] Autenticando TRTs via Whom...
+python whom_auth.py
+if %errorlevel% neq 0 (
+    echo.
+    echo  AVISO: whom_auth.py retornou erro. Verifique logs\whom_auth.log
+    echo  Voce pode autenticar manualmente clicando no icone do Whom no Chrome.
+    echo  Pressione qualquer tecla para continuar com a coleta mesmo assim...
+    pause > nul
+)
 
 REM ── Coletar audiencias ────────────────────────────────────────────────────────
 echo.

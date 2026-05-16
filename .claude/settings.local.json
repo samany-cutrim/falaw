@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s --max-time 3 http://127.0.0.1:9222/json/version)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Chrome OK:', d.get\\('Browser','?'\\)\\)\")",
+      "PowerShell(try { $r = Invoke-WebRequest \"http://127.0.0.1:9222/json/version\" -UseBasicParsing -TimeoutSec 3; \\($r.Content | ConvertFrom-Json\\).Browser } catch { \"Chrome nao esta rodando\" })",
+      "PowerShell(cd C:\\\\Users\\\\manyc\\\\Falaw; $env:WHOM_TRTS = \"TRT2 Pje - 1o grau,TRT16 Pje - 1o grau\"; .\\\\.venv\\\\Scripts\\\\python.exe pje-scraper\\\\whom_auth.py 2>&1 | Select-Object -First 40)",
+      "PowerShell(Get-Process chrome -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force)",
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\" -ArgumentList \"--remote-debugging-port=9222\", \"--user-data-dir=C:\\\\Users\\\\manyc\\\\AppData\\\\Local\\\\Google\\\\Chrome\\\\User Data\", \"--profile-directory=Profile 9\", \"--no-first-run\", \"--no-default-browser-check\"; Start-Sleep 8; try { \\(Invoke-WebRequest \"http://127.0.0.1:9222/json/version\" -UseBasicParsing -TimeoutSec 5 | Select-Object -ExpandProperty Content | ConvertFrom-Json\\).Browser } catch { \"Falhou: $_\" })",
+      "PowerShell(Get-Process chrome -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep 3; Start-Process \"C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\" -ArgumentList \"--remote-debugging-port=9222\", \"--user-data-dir=C:\\\\Users\\\\manyc\\\\AppData\\\\Local\\\\Google\\\\Chrome\\\\User Data\", \"--profile-directory=Profile 9\", \"--no-first-run\", \"--no-default-browser-check\"; Start-Sleep 8; try { \\(Invoke-WebRequest \"http://127.0.0.1:9222/json/version\" -UseBasicParsing -TimeoutSec 5 | Select-Object -ExpandProperty Content | ConvertFrom-Json\\).Browser } catch { \"Falhou\" })",
+      "PowerShell(cd C:\\\\Users\\\\manyc\\\\Falaw; $env:WHOM_TRTS = \"TRT2 Pje - 1$\\([char]0x00BA\\) grau\"; Write-Host \"Sistema: $env:WHOM_TRTS\")",
+      "PowerShell(cd C:\\\\Users\\\\manyc\\\\Falaw; $env:WHOM_TRTS = \"TRT2 Pje - 1$\\([char]0x00BA\\) grau\"; .\\\\.venv\\\\Scripts\\\\python.exe pje-scraper\\\\whom_auth.py 2>&1)",
+      "PowerShell(cd C:\\\\Users\\\\manyc\\\\Falaw; $o = [char]0x00BA; $env:WHOM_TRTS = \"TRT2 Pje - 1$o grau,TRT2 Pje - 2$o grau,TRT16 Pje - 1$o grau\"; .\\\\.venv\\\\Scripts\\\\python.exe pje-scraper\\\\whom_auth.py 2>&1)"
+    ]
+  }
+}

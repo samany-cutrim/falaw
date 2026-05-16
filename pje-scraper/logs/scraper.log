@@ -43,3 +43,151 @@ Call log:
   - <ws preparing> retrieving websocket url from http://localhost:9222
 
 2026-05-15 22:02:24,540 [ERROR] Certifique-se de que o Chrome foi aberto com 1_abrir_chrome.bat
+2026-05-15 22:37:42,079 [INFO] ============================================================
+2026-05-15 22:37:42,080 [INFO] Iniciando coleta — 15/05/2026 22:37
+2026-05-15 22:37:42,080 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-15 22:37:42,080 [INFO] ============================================================
+2026-05-15 22:37:43,079 [ERROR] Não foi possível conectar ao Chrome: BrowserType.connect_over_cdp: connect ECONNREFUSED 127.0.0.1:9222
+Call log:
+  - <ws preparing> retrieving websocket url from http://127.0.0.1:9222
+
+2026-05-15 22:37:43,079 [ERROR] Certifique-se de que o Chrome foi aberto com 1_abrir_chrome.bat
+2026-05-15 22:43:30,862 [INFO] ============================================================
+2026-05-15 22:43:30,862 [INFO] Iniciando coleta — 15/05/2026 22:43
+2026-05-15 22:43:30,863 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-15 22:43:30,863 [INFO] ============================================================
+2026-05-15 22:43:31,955 [INFO] Conectado ao Chrome (porta 9222)
+2026-05-15 22:43:47,067 [INFO] Sessão ativa (sem tabela visível): https://pje.trt1.jus.br
+2026-05-15 22:43:48,467 [INFO] TRT-1: extraindo página 1…
+2026-05-15 22:43:48,503 [INFO] TRT-1: nenhuma linha na página 1, finalizando
+2026-05-15 22:44:02,366 [ERROR] Erro verificar auth https://pje.trt2.jus.br: Page.wait_for_selector: Target page, context or browser has been closed
+Call log:
+  - waiting for locator("table, .p-datatable, p-table, .p-datatable-tbody") to be visible
+
+2026-05-15 22:44:03,942 [ERROR] Erro verificar auth https://pje.trt3.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:05,193 [ERROR] Erro verificar auth https://pje.trt4.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:06,293 [ERROR] Erro verificar auth https://pje.trt5.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:07,421 [ERROR] Erro verificar auth https://pje.trt6.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:08,516 [ERROR] Erro verificar auth https://pje.trt7.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:09,544 [ERROR] Erro verificar auth https://pje.trt8.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:10,802 [ERROR] Erro verificar auth https://pje.trt9.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:11,899 [ERROR] Erro verificar auth https://pje.trt10.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:13,305 [ERROR] Erro verificar auth https://pje.trt11.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:14,596 [ERROR] Erro verificar auth https://pje.trt12.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:15,648 [ERROR] Erro verificar auth https://pje.trt13.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:16,798 [ERROR] Erro verificar auth https://pje.trt14.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:17,904 [ERROR] Erro verificar auth https://pje.trt15.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:19,464 [ERROR] Erro verificar auth https://pje.trt16.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:20,523 [ERROR] Erro verificar auth https://pje.trt17.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:21,478 [ERROR] Erro verificar auth https://pje.trt18.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:22,262 [ERROR] Erro verificar auth https://pje.trt19.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:44:23,037 [ERROR] Erro verificar auth https://pje.trt20.jus.br: Page.goto: Target page, context or browser has been closed
+2026-05-15 22:47:54,846 [INFO] ============================================================
+2026-05-15 22:47:54,846 [INFO] Iniciando coleta — 15/05/2026 22:47
+2026-05-15 22:47:54,846 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-15 22:47:54,847 [INFO] ============================================================
+2026-05-15 22:47:56,224 [INFO] Conectado ao Chrome (porta 9222)
+2026-05-15 22:48:00,688 [INFO] Sessão ativa: https://pje.trt1.jus.br
+2026-05-15 22:48:01,761 [INFO] TRT-1: extraindo página 1…
+2026-05-15 22:48:01,792 [INFO] TRT-1: nenhuma linha na página 1, finalizando
+2026-05-15 22:48:17,205 [INFO] Sessão ativa (sem tabela visível): https://pje.trt2.jus.br
+2026-05-15 22:48:18,262 [INFO] TRT-2: extraindo página 1…
+2026-05-15 22:48:18,403 [INFO] TRT-2: nenhuma linha na página 1, finalizando
+2026-05-15 22:48:33,724 [INFO] Sessão ativa (sem tabela visível): https://pje.trt3.jus.br
+2026-05-15 22:48:34,781 [INFO] TRT-3: extraindo página 1…
+2026-05-15 22:48:34,800 [INFO] TRT-3: nenhuma linha na página 1, finalizando
+2026-05-15 22:48:50,393 [INFO] Sessão ativa (sem tabela visível): https://pje.trt4.jus.br
+2026-05-15 22:48:51,448 [INFO] TRT-4: extraindo página 1…
+2026-05-15 22:48:51,472 [INFO] TRT-4: nenhuma linha na página 1, finalizando
+2026-05-15 22:49:06,980 [INFO] Sessão ativa (sem tabela visível): https://pje.trt5.jus.br
+2026-05-15 22:49:08,039 [INFO] TRT-5: extraindo página 1…
+2026-05-15 22:49:08,066 [INFO] TRT-5: nenhuma linha na página 1, finalizando
+2026-05-15 22:49:24,516 [INFO] Sessão ativa (sem tabela visível): https://pje.trt6.jus.br
+2026-05-15 22:49:25,565 [INFO] TRT-6: extraindo página 1…
+2026-05-15 22:49:25,585 [INFO] TRT-6: nenhuma linha na página 1, finalizando
+2026-05-15 22:49:41,163 [INFO] Sessão ativa (sem tabela visível): https://pje.trt7.jus.br
+2026-05-15 22:49:42,221 [INFO] TRT-7: extraindo página 1…
+2026-05-15 22:49:42,242 [INFO] TRT-7: nenhuma linha na página 1, finalizando
+2026-05-15 22:49:57,743 [INFO] Sessão ativa (sem tabela visível): https://pje.trt8.jus.br
+2026-05-15 22:49:58,799 [INFO] TRT-8: extraindo página 1…
+2026-05-15 22:49:58,828 [INFO] TRT-8: nenhuma linha na página 1, finalizando
+2026-05-15 22:50:14,204 [INFO] Sessão ativa (sem tabela visível): https://pje.trt9.jus.br
+2026-05-15 22:50:15,253 [INFO] TRT-9: extraindo página 1…
+2026-05-15 22:50:15,272 [INFO] TRT-9: nenhuma linha na página 1, finalizando
+2026-05-15 22:50:31,405 [INFO] Sessão ativa (sem tabela visível): https://pje.trt10.jus.br
+2026-05-15 22:50:32,451 [INFO] TRT-10: extraindo página 1…
+2026-05-15 22:50:32,471 [INFO] TRT-10: nenhuma linha na página 1, finalizando
+2026-05-15 22:50:55,271 [INFO] Sessão ativa (sem tabela visível): https://pje.trt11.jus.br
+2026-05-15 22:50:56,319 [INFO] TRT-11: extraindo página 1…
+2026-05-15 22:50:56,339 [INFO] TRT-11: nenhuma linha na página 1, finalizando
+2026-05-15 22:51:11,494 [INFO] Sessão ativa (sem tabela visível): https://pje.trt12.jus.br
+2026-05-15 22:51:12,540 [INFO] TRT-12: extraindo página 1…
+2026-05-15 22:51:12,559 [INFO] TRT-12: nenhuma linha na página 1, finalizando
+2026-05-15 22:51:28,231 [INFO] Sessão ativa (sem tabela visível): https://pje.trt13.jus.br
+2026-05-15 22:51:29,276 [INFO] TRT-13: extraindo página 1…
+2026-05-15 22:51:29,294 [INFO] TRT-13: nenhuma linha na página 1, finalizando
+2026-05-15 22:51:45,478 [INFO] Sessão ativa (sem tabela visível): https://pje.trt14.jus.br
+2026-05-15 22:51:46,524 [INFO] TRT-14: extraindo página 1…
+2026-05-15 22:51:46,543 [INFO] TRT-14: nenhuma linha na página 1, finalizando
+2026-05-15 22:52:01,589 [INFO] Sessão ativa (sem tabela visível): https://pje.trt15.jus.br
+2026-05-15 22:52:02,635 [INFO] TRT-15: extraindo página 1…
+2026-05-15 22:52:02,655 [INFO] TRT-15: nenhuma linha na página 1, finalizando
+2026-05-15 22:52:18,385 [INFO] Sessão ativa (sem tabela visível): https://pje.trt16.jus.br
+2026-05-15 22:52:19,430 [INFO] TRT-16: extraindo página 1…
+2026-05-15 22:52:19,448 [INFO] TRT-16: nenhuma linha na página 1, finalizando
+2026-05-15 22:52:34,546 [INFO] Sessão ativa (sem tabela visível): https://pje.trt17.jus.br
+2026-05-15 22:52:35,592 [INFO] TRT-17: extraindo página 1…
+2026-05-15 22:52:35,610 [INFO] TRT-17: nenhuma linha na página 1, finalizando
+2026-05-15 22:52:50,700 [INFO] Sessão ativa (sem tabela visível): https://pje.trt18.jus.br
+2026-05-15 22:52:51,746 [INFO] TRT-18: extraindo página 1…
+2026-05-15 22:52:51,765 [INFO] TRT-18: nenhuma linha na página 1, finalizando
+2026-05-15 22:53:07,185 [INFO] Sessão ativa (sem tabela visível): https://pje.trt19.jus.br
+2026-05-15 22:53:08,240 [INFO] TRT-19: extraindo página 1…
+2026-05-15 22:53:08,258 [INFO] TRT-19: nenhuma linha na página 1, finalizando
+2026-05-15 22:53:23,711 [INFO] Sessão ativa (sem tabela visível): https://pje.trt20.jus.br
+2026-05-15 22:53:24,757 [INFO] TRT-20: extraindo página 1…
+2026-05-15 22:53:24,775 [INFO] TRT-20: nenhuma linha na página 1, finalizando
+2026-05-15 22:53:40,342 [INFO] Sessão ativa (sem tabela visível): https://pje.trt21.jus.br
+2026-05-15 22:53:41,386 [INFO] TRT-21: extraindo página 1…
+2026-05-15 22:53:41,407 [INFO] TRT-21: nenhuma linha na página 1, finalizando
+2026-05-15 22:53:56,864 [INFO] Sessão ativa (sem tabela visível): https://pje.trt22.jus.br
+2026-05-15 22:53:57,913 [INFO] TRT-22: extraindo página 1…
+2026-05-15 22:53:57,931 [INFO] TRT-22: nenhuma linha na página 1, finalizando
+2026-05-15 22:54:13,619 [INFO] Sessão ativa (sem tabela visível): https://pje.trt23.jus.br
+2026-05-15 22:54:14,663 [INFO] TRT-23: extraindo página 1…
+2026-05-15 22:54:14,787 [INFO] TRT-23: nenhuma linha na página 1, finalizando
+2026-05-15 22:54:29,760 [INFO] Sessão ativa (sem tabela visível): https://pje.trt24.jus.br
+2026-05-15 22:54:30,810 [INFO] TRT-24: extraindo página 1…
+2026-05-15 22:54:30,828 [INFO] TRT-24: nenhuma linha na página 1, finalizando
+2026-05-15 22:54:31,565 [INFO] 
+============================================================
+2026-05-15 22:54:31,565 [INFO] RELATÓRIO FINAL
+2026-05-15 22:54:31,565 [INFO] ============================================================
+2026-05-15 22:54:31,566 [INFO] Total enviados ao Supabase: 0
+2026-05-15 22:54:31,566 [INFO] Cancelamentos detectados:   0
+2026-05-15 22:54:31,566 [INFO] TRTs coletados:
+  TRT-1 (0 auds, 0 cancel.)
+  TRT-2 (0 auds, 0 cancel.)
+  TRT-3 (0 auds, 0 cancel.)
+  TRT-4 (0 auds, 0 cancel.)
+  TRT-5 (0 auds, 0 cancel.)
+  TRT-6 (0 auds, 0 cancel.)
+  TRT-7 (0 auds, 0 cancel.)
+  TRT-8 (0 auds, 0 cancel.)
+  TRT-9 (0 auds, 0 cancel.)
+  TRT-10 (0 auds, 0 cancel.)
+  TRT-11 (0 auds, 0 cancel.)
+  TRT-12 (0 auds, 0 cancel.)
+  TRT-13 (0 auds, 0 cancel.)
+  TRT-14 (0 auds, 0 cancel.)
+  TRT-15 (0 auds, 0 cancel.)
+  TRT-16 (0 auds, 0 cancel.)
+  TRT-17 (0 auds, 0 cancel.)
+  TRT-18 (0 auds, 0 cancel.)
+  TRT-19 (0 auds, 0 cancel.)
+  TRT-20 (0 auds, 0 cancel.)
+  TRT-21 (0 auds, 0 cancel.)
+  TRT-22 (0 auds, 0 cancel.)
+  TRT-23 (0 auds, 0 cancel.)
+  TRT-24 (0 auds, 0 cancel.)
+2026-05-15 22:54:31,566 [INFO] ============================================================
