@@ -8,3 +8,43 @@ Call log:
   - <ws preparing> retrieving websocket url from http://localhost:9222
 
 2026-05-15 21:46:20,291 [ERROR] Abra o Chrome com 1_abrir_chrome.bat antes de executar.
+2026-05-15 21:48:47,381 [INFO] ============================================================
+2026-05-15 21:48:47,382 [INFO] Whom Auth — Detectando extensão e autenticando TRTs
+2026-05-15 21:48:47,385 [INFO] ============================================================
+2026-05-15 21:48:47,422 [INFO] Whom encontrado: ID=lnidijeaekolpfeckelhkomndglcglhh | popup=index.html | perfil=Profile 9
+2026-05-15 21:48:47,423 [INFO] URL do Whom: chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+2026-05-15 21:48:49,523 [ERROR] Não foi possível conectar ao Chrome: BrowserType.connect_over_cdp: connect ECONNREFUSED ::1:9222
+Call log:
+  - <ws preparing> retrieving websocket url from http://localhost:9222
+
+2026-05-15 21:48:49,523 [ERROR] Abra o Chrome com 1_abrir_chrome.bat antes de executar.
+2026-05-15 21:49:01,553 [INFO] ============================================================
+2026-05-15 21:49:01,554 [INFO] Whom Auth — Detectando extensão e autenticando TRTs
+2026-05-15 21:49:01,554 [INFO] ============================================================
+2026-05-15 21:49:01,579 [INFO] Whom encontrado: ID=lnidijeaekolpfeckelhkomndglcglhh | popup=index.html | perfil=Profile 9
+2026-05-15 21:49:01,579 [INFO] URL do Whom: chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+2026-05-15 21:49:02,645 [ERROR] Não foi possível conectar ao Chrome: BrowserType.connect_over_cdp: connect ECONNREFUSED ::1:9222
+Call log:
+  - <ws preparing> retrieving websocket url from http://localhost:9222
+
+2026-05-15 21:49:02,645 [ERROR] Abra o Chrome com 1_abrir_chrome.bat antes de executar.
+2026-05-15 21:49:34,162 [INFO] ============================================================
+2026-05-15 21:49:34,163 [INFO] Whom Auth — Detectando extensão e autenticando TRTs
+2026-05-15 21:49:34,163 [INFO] ============================================================
+2026-05-15 21:49:34,187 [INFO] Whom encontrado: ID=lnidijeaekolpfeckelhkomndglcglhh | popup=index.html | perfil=Profile 9
+2026-05-15 21:49:34,187 [INFO] URL do Whom: chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+2026-05-15 21:49:35,235 [ERROR] Não foi possível conectar ao Chrome: BrowserType.connect_over_cdp: connect ECONNREFUSED ::1:9222
+Call log:
+  - <ws preparing> retrieving websocket url from http://localhost:9222
+
+2026-05-15 21:49:35,235 [ERROR] Abra o Chrome com 1_abrir_chrome.bat antes de executar.
+2026-05-15 21:50:09,093 [INFO] ============================================================
+2026-05-15 21:50:09,093 [INFO] Whom Auth — Detectando extensão e autenticando TRTs
+2026-05-15 21:50:09,094 [INFO] ============================================================
+2026-05-15 21:50:09,119 [INFO] Whom encontrado: ID=lnidijeaekolpfeckelhkomndglcglhh | popup=index.html | perfil=Profile 9
+2026-05-15 21:50:09,119 [INFO] URL do Whom: chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html
+2026-05-15 21:50:10,179 [ERROR] Não foi possível conectar ao Chrome: BrowserType.connect_over_cdp: connect ECONNREFUSED ::1:9222
+Call log:
+  - <ws preparing> retrieving websocket url from http://localhost:9222
+
+2026-05-15 21:50:10,179 [ERROR] Abra o Chrome com 1_abrir_chrome.bat antes de executar.
