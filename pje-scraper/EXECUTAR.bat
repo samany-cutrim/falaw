@@ -41,15 +41,20 @@ if %errorlevel% equ 0 (
 
 REM ── Abrir Chrome com remote debugging ────────────────────────────────────────
 echo  Abrindo Chrome...
-set CHROME="C:\Program Files\Google\Chrome\Application\chrome.exe"
-if not exist %CHROME% set CHROME="C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
-if not exist %CHROME% (
-    echo  ERRO: Chrome nao encontrado. Ajuste o caminho no EXECUTAR.bat
+set "CHROME="
+if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" set "CHROME=C:\Program Files\Google\Chrome\Application\chrome.exe"
+if exist "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" set "CHROME=C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+if not defined CHROME (
+    echo  ERRO: Chrome nao encontrado nos caminhos padrao.
+    echo  Caminhos testados:
+    echo    C:\Program Files\Google\Chrome\Application\chrome.exe
+    echo    C:\Program Files (x86)\Google\Chrome\Application\chrome.exe
     pause
     exit /b 1
 )
+echo  Chrome encontrado em: %CHROME%
 
-start "" %CHROME% --remote-debugging-port=9222 --profile-directory="Profile 9" --no-first-run --no-default-browser-check --disable-session-crashed-bubble --restore-last-session
+start "" "%CHROME%" --remote-debugging-port=9222 --profile-directory="Profile 9" --no-first-run --no-default-browser-check --disable-session-crashed-bubble --restore-last-session
 
 echo  Aguardando Chrome inicializar (8 segundos)...
 timeout /t 8 /nobreak > nul
