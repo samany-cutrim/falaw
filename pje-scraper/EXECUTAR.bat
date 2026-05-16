@@ -22,13 +22,21 @@ if exist "..\\.venv\\Scripts\\activate.bat" (
     call "..\\.venv\\Scripts\\activate.bat"
 )
 
-REM ── Fechar Chrome existente na porta 9222 ────────────────────────────────────
+REM ── Verificar se Chrome já está na porta 9222 ───────────────────────────────
 echo.
 echo [0/3] Verificando Chrome...
-curl -s http://localhost:9222/json/version > nul 2>&1
+curl -s --max-time 2 http://localhost:9222/json/version > nul 2>&1
 if %errorlevel% equ 0 (
     echo  Chrome ja esta rodando na porta 9222. Reutilizando sessao existente.
     goto :autenticar
+)
+
+REM Chrome aberto sem porta de depuracao — precisa fechar primeiro
+tasklist /FI "IMAGENAME eq chrome.exe" 2>nul | find /I "chrome.exe" > nul
+if %errorlevel% equ 0 (
+    echo  Fechando Chrome existente (necessario para ativar depuracao remota)...
+    taskkill /F /IM chrome.exe > nul 2>&1
+    timeout /t 3 /nobreak > nul
 )
 
 REM ── Abrir Chrome com remote debugging ────────────────────────────────────────
