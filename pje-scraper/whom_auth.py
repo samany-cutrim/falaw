@@ -19,10 +19,13 @@ from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 _HERE = Path(__file__).parent
 load_dotenv(_HERE / ".env")
 
-CHROME_DEBUG_PORT = int(os.getenv("CHROME_DEBUG_PORT", "9222"))
-CERT_NAME         = os.getenv("WHOM_CERT_NAME", "")
-CHROME_PROFILE    = os.getenv("CHROME_PROFILE", "Default")
-MODO_OCULTO       = os.getenv("MODO_OCULTO", "false").lower() in ("true", "1", "sim", "s")
+CHROME_DEBUG_PORT  = int(os.getenv("CHROME_DEBUG_PORT", "9222"))
+CERT_NAME          = os.getenv("WHOM_CERT_NAME", "")
+CHROME_PROFILE     = os.getenv("CHROME_PROFILE", "Default")
+MODO_OCULTO        = os.getenv("MODO_OCULTO", "false").lower() in ("true", "1", "sim", "s")
+# ID e popup da extensão Whom — configure no .env para evitar detecção automática
+WHOM_EXT_ID_ENV    = os.getenv("WHOM_EXT_ID", "")
+WHOM_EXT_POPUP_ENV = os.getenv("WHOM_EXT_POPUP", "")
 
 _APPDATA = Path(os.environ.get("LOCALAPPDATA", ""))
 
@@ -154,16 +157,20 @@ def garantir_chrome_aberto() -> bool:
 # ── Detectar extensão Whom ────────────────────────────────────────────────────
 
 def encontrar_whom() -> tuple[str, str]:
-    """Varre a pasta de extensões do Chrome e retorna (extension_id, popup_filename).
-    Procura primeiro no perfil de scraping (FalawScraper), depois no Chrome normal."""
-    possiveis_data_dirs = []
+    """Retorna (extension_id, popup_path) do Whom.
+    Usa WHOM_EXT_ID/.env quando configurado; senão faz detecção automática."""
 
-    # 1. Perfil de scraping (prioridade)
+    # Configuração manual via .env — mais confiável (evita detecção errada)
+    if WHOM_EXT_ID_ENV:
+        popup = WHOM_EXT_POPUP_ENV or "sidepanel.html?mode=tab"
+        log.info(f"Whom (configurado): ID={WHOM_EXT_ID_ENV} | popup={popup}")
+        return WHOM_EXT_ID_ENV, popup
+
+    # ── Auto-detecção ─────────────────────────────────────────────────────────
+    possiveis_data_dirs = []
     scraping_dir = Path(CHROME_USER_DATA)
     if scraping_dir.exists():
         possiveis_data_dirs.append(scraping_dir)
-
-    # 2. Chrome normal como fallback
     appdata = Path(os.environ.get("LOCALAPPDATA", ""))
     for canal in ["Google/Chrome", "Google/Chrome Beta", "Google/Chrome Dev", "Chromium"]:
         d = appdata / canal / "User Data"
@@ -193,18 +200,27 @@ def encontrar_whom() -> tuple[str, str]:
                         nome = manifest.get("name", "").lower()
                         descricao = manifest.get("description", "").lower()
                         if "whom" in nome or ("certificado" in descricao and "digital" in descricao):
+                            # Side panel extension usa side_panel.default_path
                             popup = (
                                 manifest.get("action", {}).get("default_popup")
                                 or manifest.get("browser_action", {}).get("default_popup")
-                                or "index.html"
+                                or manifest.get("side_panel", {}).get("default_path")
+                                or "sidepanel.html"
                             )
+                            # Side panels precisam do ?mode=tab para abrir como aba
+                            if "sidepanel" in popup.lower() and "?" not in popup:
+                                popup = f"{popup}?mode=tab"
                             ext_id = ext_id_dir.name
                             log.info(f"Whom encontrado: ID={ext_id} | popup={popup} | perfil={perfil}")
                             return ext_id, popup
                     except Exception:
                         continue
 
-    log.error("Extensão Whom não encontrada. Verifique se está instalada no Chrome.")
+    log.error(
+        "Extensão Whom não encontrada.\n"
+        "  → Configure WHOM_EXT_ID no arquivo .env com o ID da extensão.\n"
+        "  → Exemplo: WHOM_EXT_ID=lnidijeaekolpfeckelhkomndglcglhh"
+    )
     return "", ""
 
 
@@ -221,49 +237,41 @@ def _fechar_abas_whom(ext_id: str) -> None:
 
 # ── Automação da interface do Whom ────────────────────────────────────────────
 
+def _abrir_whom_page(browser, ext_id: str, popup: str):
+    """Abre a extensão Whom numa nova aba via Playwright e retorna a página."""
+    ext_url = f"chrome-extension://{ext_id}/{popup}"
+    _fechar_abas_whom(ext_id)
+    time.sleep(0.3)
+
+    ctx = browser.contexts[0] if browser.contexts else None
+    if not ctx:
+        log.error("Nenhum contexto de browser disponível")
+        return None
+
+    page = ctx.new_page()
+    try:
+        page.goto(ext_url, wait_until="domcontentloaded", timeout=12000)
+        time.sleep(1.5)
+        return page
+    except Exception as e:
+        log.warning(f"Erro ao abrir Whom ({ext_url}): {e}")
+        try:
+            page.close()
+        except Exception:
+            pass
+        return None
+
+
 def autenticar_sistema(browser, ext_id: str, popup: str, sistema: str) -> bool:
     """
-    Abre o popup do Whom via CDP /json/new usando ctx.expect_page() para capturar
-    corretamente a nova aba sem interferência do Playwright.
+    Abre o painel do Whom numa nova aba e executa o fluxo de autenticação.
     Retorna True se conseguiu clicar em Acessar.
     """
-    ext_url = f"chrome-extension://{ext_id}/{popup}"
-
-    _fechar_abas_whom(ext_id)
-    time.sleep(0.5)
-
-    # Capturar nova aba usando expect_page (forma correta quando Playwright já está conectado)
-    page = None
-    for ctx in browser.contexts:
-        try:
-            with ctx.expect_page(timeout=8000) as page_info:
-                requests.put(f"{CDP_BASE}/json/new?{ext_url}", timeout=5)
-            page = page_info.value
-            break
-        except Exception:
-            continue
-
-    if not page:
-        # Fallback: abrir sem captura de evento e procurar pelo URL
-        requests.put(f"{CDP_BASE}/json/new?{ext_url}", timeout=5)
-        time.sleep(3)
-        for ctx in browser.contexts:
-            for pg in ctx.pages:
-                if ext_id in pg.url:
-                    page = pg
-                    break
-            if page:
-                break
+    page = _abrir_whom_page(browser, ext_id, popup)
 
     if not page:
         log.warning(f"[{sistema}] Página do Whom não encontrada após abertura")
         return False
-
-    try:
-        page.wait_for_load_state("domcontentloaded", timeout=10000)
-        time.sleep(1.5)
-    except Exception:
-        pass
 
     try:
         # ── Fechar NPS se aparecer ────────────────────────────────────────────
@@ -372,44 +380,14 @@ def autenticar_sistema(browser, ext_id: str, popup: str, sistema: str) -> bool:
 def autenticar_e_capturar_pje_page(browser, ext_id: str, popup: str, sistema: str):
     """
     Autentica via Whom e retorna a página PJe aberta pelo Whom.
-    Ao contrário de autenticar_sistema(), NÃO fecha a aba PJe — o chamador
-    deve navegar para a pauta e fechar a aba quando terminar.
+    NÃO fecha a aba PJe — o chamador deve navegar para a pauta e fechá-la.
     Retorna None se a autenticação falhar.
     """
-    ext_url = f"chrome-extension://{ext_id}/{popup}"
-    _fechar_abas_whom(ext_id)
-    time.sleep(0.5)
-
-    page = None
-    for ctx in browser.contexts:
-        try:
-            with ctx.expect_page(timeout=8000) as page_info:
-                requests.put(f"{CDP_BASE}/json/new?{ext_url}", timeout=5)
-            page = page_info.value
-            break
-        except Exception:
-            continue
+    page = _abrir_whom_page(browser, ext_id, popup)
 
     if not page:
-        requests.put(f"{CDP_BASE}/json/new?{ext_url}", timeout=5)
-        time.sleep(3)
-        for ctx in browser.contexts:
-            for pg in ctx.pages:
-                if ext_id in pg.url:
-                    page = pg
-                    break
-            if page:
-                break
-
-    if not page:
-        log.warning(f"[{sistema}] Popup Whom não encontrado")
+        log.warning(f"[{sistema}] Painel Whom não abriu")
         return None
-
-    try:
-        page.wait_for_load_state("domcontentloaded", timeout=10000)
-        time.sleep(1.5)
-    except Exception:
-        pass
 
     try:
         # NPS

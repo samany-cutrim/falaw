@@ -1,40 +1,34 @@
 @echo off
-title Falaw PJe - Coleta Completa
+title Falaw PJe - Coleta de Audiencias
 cd /d "%~dp0"
 
 echo.
 echo ============================================================
-echo  FALAW - Coleta completa do PJe
+echo  FALAW - Coleta de audiencias PJe
 echo  %DATE% %TIME:~0,5%
 echo ============================================================
 echo.
-echo  Como deseja executar?
+echo  IMPORTANTE — leia antes de continuar:
 echo.
-echo    [1] Visivel  - Chrome aparece na tela
-echo    [2] Oculto   - Chrome roda em segundo plano (sem janela)
+echo  O Chrome do Falaw vai abrir automaticamente.
+echo  Antes de iniciar a coleta voce deve:
 echo.
-choice /c 12 /n /m "  Opcao: "
-
-if %errorlevel%==1 (
-    set MODO_OCULTO=false
-    echo.
-    echo  Modo: VISIVEL
-) else (
-    set MODO_OCULTO=true
-    echo.
-    echo  Modo: OCULTO ^(Chrome em segundo plano^)
-)
-
+echo    1. Abrir a extensao Whom no Chrome (icone na barra)
+echo    2. Selecionar o certificado digital
+echo    3. Autenticar em cada TRT que deseja coletar
+echo    4. Voltar aqui e pressionar Enter
 echo.
-echo  Pressione qualquer tecla para iniciar...
-pause > nul
+echo ============================================================
+echo.
 
 REM ── Ativar venv ──────────────────────────────────────────────────────────────
 if exist "..\\.venv\\Scripts\\activate.bat" (
     call "..\\.venv\\Scripts\\activate.bat"
 )
 
-echo.
+set MODO_OCULTO=false
+set MODO_INTERATIVO=true
+
 echo Iniciando coleta...
 echo.
 python scraper.py

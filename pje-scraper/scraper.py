@@ -1,24 +1,24 @@
 """
 scraper.py — Coleta audiências PJe → Supabase | Falaw
-Fluxo por TRT/grau: autentica via Whom → pauta (1 ano) → pagina → entra
-em cada processo para buscar intimação com link, ID e senha → salva.
+Fluxo por TRT/grau: navega para pauta (sessão já aberta via Whom manual) →
+define período de 1 ano → pagina → entra em cada processo para buscar
+intimação (link, ID, senha) → salva no Supabase.
 """
 
 import os
 import re
+import sys
 import time
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from urllib.parse import urlparse, quote
+from urllib.parse import quote
 from dotenv import load_dotenv
 import requests
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 from whom_auth import (
     garantir_chrome_aberto,
-    encontrar_whom,
-    autenticar_e_capturar_pje_page,
     CHROME_DEBUG_PORT,
     WHOM_TRTS,
 )
@@ -26,10 +26,12 @@ from whom_auth import (
 _HERE = Path(__file__).parent
 load_dotenv(_HERE / ".env")
 
-DIAS_BUSCA = int(os.getenv("DIAS_BUSCA", "365"))
-SB_URL     = os.getenv("SUPABASE_URL", "").rstrip("/")
-SB_KEY     = os.getenv("SUPABASE_KEY", "")
-SB_TABLE   = "pauta_audiencias"
+DIAS_BUSCA      = int(os.getenv("DIAS_BUSCA", "365"))
+SB_URL          = os.getenv("SUPABASE_URL", "").rstrip("/")
+SB_KEY          = os.getenv("SUPABASE_KEY", "")
+SB_TABLE        = "pauta_audiencias"
+# False quando iniciado pelo servidor Flask (sem terminal interativo)
+MODO_INTERATIVO = os.getenv("MODO_INTERATIVO", "true").lower() in ("true", "1")
 
 _LOG_DIR = _HERE / "logs"
 _LOG_DIR.mkdir(exist_ok=True)
@@ -161,19 +163,8 @@ def sb_upsert(records: list[dict]) -> int:
 
 
 def sb_buscar_ativos(nome: str) -> list[dict]:
-    if not SB_URL or not SB_KEY:
-        return []
-    today = datetime.today().strftime("%Y-%m-%d")
-    url = (
-        f"{SB_URL}/rest/v1/{SB_TABLE}"
-        f"?trt_grau=eq.{nome}"
-        f"&data_audiencia=gte.{today}"
-        f"&status=neq.cancelado"
-        f"&status=neq.cancelado_pje"
-        f"&select=id"
-    )
-    r = requests.get(url, headers=sb_headers(), timeout=20)
-    return r.json() if r.status_code == 200 else []
+    # Cancelamento desabilitado: sem coluna trt_grau no schema para filtrar por TRT
+    return []
 
 
 def sb_marcar_cancelado(ids: list[str]):
@@ -306,13 +297,12 @@ def extrair_linhas_pagina(page, nome: str, trt_grau: str) -> list[dict]:
             "tipo_audiencia": tipo,
             "modalidade":     mod,
             "vara":           vara_raw,
-            "trt_grau":       trt_grau,
-            "status":         "agendado",
+            "status":         "agendada",
             "origem":         "pje",
             "updated_at":     datetime.utcnow().isoformat(),
-            # campos extras (não enviados ao Supabase diretamente — populados após)
-            "_proc_href":     proc_href,
-            "_processo_num":  processo,
+            # campos populados após busca na intimação
+            "_proc_href":    proc_href,
+            "_processo_num": processo,
         })
     return audiencias
 
@@ -501,45 +491,29 @@ def buscar_detalhes_intimacao(ctx, base: str, proc_href: str, proc_num: str) -> 
 
 # ── Processamento por sistema ─────────────────────────────────────────────────
 
-def processar_sistema(browser, ext_id: str, popup: str, sistema: dict) -> tuple[int, int]:
-    whom_nome = sistema["whom"]
+def processar_sistema(browser, sistema: dict) -> tuple[int, int]:
     nome      = sistema["nome"]
-    fallback  = sistema["fallback_base"]
-
-    log.info(f"  Autenticando: {whom_nome}")
-    pje_page = autenticar_e_capturar_pje_page(browser, ext_id, popup, whom_nome)
-
-    # Determinar URL base
-    if pje_page and pje_page.url and "about:" not in pje_page.url:
-        parsed = urlparse(pje_page.url)
-        base   = f"{parsed.scheme}://{parsed.netloc}"
-    else:
-        base = fallback
-        log.info(f"  Usando fallback: {base}")
-
+    base      = sistema["fallback_base"]
     pauta_url = f"{base}/pjekz/pauta-usuarios-externos"
+
     log.info(f"  Pauta: {pauta_url}")
 
     ctx = browser.contexts[0] if browser.contexts else None
-    if pje_page:
-        try:
-            pje_page.goto(pauta_url, wait_until="domcontentloaded", timeout=25000)
-            page = pje_page
-        except Exception:
-            page = ctx.new_page() if ctx else None
-            if page:
-                page.goto(pauta_url, wait_until="domcontentloaded", timeout=25000)
-    else:
-        page = ctx.new_page() if ctx else None
-        if page:
-            page.goto(pauta_url, wait_until="domcontentloaded", timeout=25000)
+    if not ctx:
+        log.warning(f"  {nome}: sem contexto de browser disponível")
+        return 0, 0
 
-    if not page:
-        log.warning(f"  {nome}: sem página disponível")
+    page = ctx.new_page()
+    try:
+        page.goto(pauta_url, wait_until="domcontentloaded", timeout=25000)
+    except Exception as e:
+        log.warning(f"  {nome}: erro ao navegar — {e}")
+        try: page.close()
+        except Exception: pass
         return 0, 0
 
     if "login" in page.url.lower() or "token" in page.url.lower():
-        log.warning(f"  {nome}: não autenticado (redirecionou para login)")
+        log.warning(f"  {nome}: sem sessão ativa (não autenticado no Whom)")
         page.close()
         return -1, 0
 
@@ -562,9 +536,13 @@ def processar_sistema(browser, ext_id: str, popup: str, sistema: dict) -> tuple[
         # Atualizar modalidade se intimação confirmou algo diferente
         if detalhes["modalidade_intim"]:
             aud["modalidade"] = detalhes["modalidade_intim"]
-        aud["link_video"]  = detalhes["link_video"]
-        aud["meeting_id"]  = detalhes["meeting_id"]
-        aud["senha"]       = detalhes["senha"]
+        aud["link"] = detalhes["link_video"]
+        partes_id_senha = []
+        if detalhes["meeting_id"]:
+            partes_id_senha.append(f"ID: {detalhes['meeting_id']}")
+        if detalhes["senha"]:
+            partes_id_senha.append(f"Senha: {detalhes['senha']}")
+        aud["id_senha"] = " | ".join(partes_id_senha)
         time.sleep(0.5)
 
     # ── Salvar no Supabase ────────────────────────────────────────────────────
@@ -602,14 +580,18 @@ def main():
         log.error("Não foi possível abrir o Chrome de scraping. Abortando.")
         return
 
-    ext_id, popup = encontrar_whom()
-    if not ext_id:
-        log.error(
-            "Extensão Whom não encontrada no perfil de scraping.\n"
-            "  → Abra o Chrome de scraping (FalawScraper) e instale a extensão Whom.\n"
-            "  → Depois execute novamente."
-        )
-        return
+    # Aguardar autenticação manual no Whom (apenas quando rodando interativamente via BAT)
+    if MODO_INTERATIVO:
+        log.info("=" * 60)
+        log.info("Chrome aberto! Agora autentique-se no Whom:")
+        log.info("  1. Clique no ícone da extensão Whom na barra do Chrome")
+        log.info("  2. Selecione o certificado e autentique em cada TRT")
+        log.info("  3. Volte aqui e pressione Enter para iniciar a coleta")
+        log.info("=" * 60)
+        try:
+            input("  → Pressione Enter quando estiver pronto: ")
+        except EOFError:
+            pass  # stdin não é interativo — continuar sem pausa
 
     resumo = {"ok": [], "sem_auth": [], "sem_aud": [], "erro": [], "total": 0, "cancelados": 0}
 
@@ -626,7 +608,7 @@ def main():
             log.info(f"\n{'─' * 50}")
             log.info(f"[{nome}]")
             try:
-                enviados, cancelados = processar_sistema(browser, ext_id, popup, sistema)
+                enviados, cancelados = processar_sistema(browser, sistema)
                 resumo["cancelados"] += cancelados
                 if enviados == -1:
                     resumo["sem_auth"].append(nome)

@@ -318,3 +318,606 @@ Call log:
   TRT-23 (0 auds, 0 cancel.)
   TRT-24 (0 auds, 0 cancel.)
 2026-05-16 10:54:35,777 [INFO] ============================================================
+2026-05-16 11:32:49,602 [INFO] ============================================================
+2026-05-16 11:32:49,604 [INFO] Iniciando coleta — 16/05/2026 11:32
+2026-05-16 11:32:49,604 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-16 11:32:49,604 [INFO] Sistemas: 49 | Período: hoje + 365 dias
+2026-05-16 11:32:49,604 [INFO] ============================================================
+2026-05-16 11:32:51,617 [INFO] Abrindo Chrome de scraping [visível] (porta 9222, dir FalawScraper/Default)...
+2026-05-16 11:32:51,618 [INFO]   Se for a primeira vez: instale a extensão Whom neste Chrome.
+2026-05-16 11:32:55,668 [INFO] Chrome pronto!
+2026-05-16 11:32:56,587 [INFO] Whom encontrado: ID=lnidijeaekolpfeckelhkomndglcglhh | popup=index.html | perfil=Profile 9
+2026-05-16 11:33:28,884 [INFO] Conectado ao Chrome de scraping (porta 9222)
+2026-05-16 11:33:28,884 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:33:28,885 [INFO] [TRT-1/1G]
+2026-05-16 11:33:28,885 [INFO]   Autenticando: TRT1 Pje - 1º grau
+2026-05-16 11:33:40,826 [WARNING] [TRT1 Pje - 1º grau] Certificado não encontrado
+2026-05-16 11:33:40,856 [INFO]   Usando fallback: https://pje.trt1.jus.br
+2026-05-16 11:33:40,859 [INFO]   Pauta: https://pje.trt1.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:33:42,900 [INFO]   Período: hoje → +365 dias
+2026-05-16 11:33:46,479 [INFO]     Página 1…
+2026-05-16 11:33:46,555 [INFO]     Tabela vazia
+2026-05-16 11:33:47,604 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:33:47,605 [INFO] [TRT-1/2G]
+2026-05-16 11:33:47,607 [INFO]   Autenticando: TRT1 Pje - 2º grau
+2026-05-16 11:33:58,857 [WARNING] [TRT1 Pje - 2º grau] Certificado não encontrado
+2026-05-16 11:33:58,879 [INFO]   Usando fallback: https://pje.trt1.jus.br
+2026-05-16 11:33:58,880 [INFO]   Pauta: https://pje.trt1.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:34:00,307 [INFO]   Período: hoje → +365 dias
+2026-05-16 11:34:03,890 [INFO]     Página 1…
+2026-05-16 11:34:03,919 [INFO]     Tabela vazia
+2026-05-16 11:34:04,928 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:34:04,929 [INFO] [TRT-2/1G]
+2026-05-16 11:34:04,929 [INFO]   Autenticando: TRT2 Pje - 1º grau
+2026-05-16 11:34:16,398 [WARNING] [TRT2 Pje - 1º grau] Certificado não encontrado
+2026-05-16 11:34:16,421 [INFO]   Usando fallback: https://pje.trt2.jus.br
+2026-05-16 11:34:16,422 [INFO]   Pauta: https://pje.trt2.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:34:17,985 [INFO]   Período: hoje → +365 dias
+2026-05-16 11:34:21,540 [INFO]     Página 1…
+2026-05-16 11:34:21,970 [INFO]     Tabela vazia
+2026-05-16 11:34:22,980 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:34:22,980 [INFO] [TRT-2/2G]
+2026-05-16 11:34:22,980 [INFO]   Autenticando: TRT2 Pje - 2º grau
+2026-05-16 11:34:27,574 [ERROR]   TRT-2/2G: erro inesperado — HTTPConnectionPool(host='127.0.0.1', port=9222): Max retries exceeded with url: /json/new?chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=9222): Failed to establish a new connection: [WinError 10061] Nenhuma conexão pôde ser feita porque a máquina de destino as recusou ativamente"))
+2026-05-16 11:34:28,575 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:34:28,575 [INFO] [TRT-3/1G]
+2026-05-16 11:34:28,575 [INFO]   Autenticando: TRT3 Pje - 1º grau
+2026-05-16 11:35:19,281 [INFO] ============================================================
+2026-05-16 11:35:19,282 [INFO] Iniciando coleta — 16/05/2026 11:35
+2026-05-16 11:35:19,282 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-16 11:35:19,282 [INFO] Sistemas: 49 | Período: hoje + 365 dias
+2026-05-16 11:35:19,282 [INFO] ============================================================
+2026-05-16 11:35:21,289 [INFO] Abrindo Chrome de scraping [visível] (porta 9222, dir FalawScraper/Default)...
+2026-05-16 11:35:21,290 [INFO]   Se for a primeira vez: instale a extensão Whom neste Chrome.
+2026-05-16 11:35:23,539 [INFO] Chrome pronto!
+2026-05-16 11:35:23,747 [INFO] Whom encontrado: ID=lnidijeaekolpfeckelhkomndglcglhh | popup=index.html | perfil=Profile 9
+2026-05-16 11:35:25,550 [INFO] Conectado ao Chrome de scraping (porta 9222)
+2026-05-16 11:35:25,550 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:35:25,550 [INFO] [TRT-1/1G]
+2026-05-16 11:35:25,551 [INFO]   Autenticando: TRT1 Pje - 1º grau
+2026-05-16 11:35:36,851 [WARNING] [TRT1 Pje - 1º grau] Certificado não encontrado
+2026-05-16 11:35:36,878 [INFO]   Usando fallback: https://pje.trt1.jus.br
+2026-05-16 11:35:36,879 [INFO]   Pauta: https://pje.trt1.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:35:38,207 [INFO]   Período: hoje → +365 dias
+2026-05-16 11:35:41,755 [INFO]     Página 1…
+2026-05-16 11:35:41,779 [INFO]     Tabela vazia
+2026-05-16 11:35:42,806 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:35:42,807 [INFO] [TRT-1/2G]
+2026-05-16 11:35:42,807 [INFO]   Autenticando: TRT1 Pje - 2º grau
+2026-05-16 11:35:47,352 [ERROR]   TRT-1/2G: erro inesperado — HTTPConnectionPool(host='127.0.0.1', port=9222): Max retries exceeded with url: /json/new?chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=9222): Failed to establish a new connection: [WinError 10061] Nenhuma conexão pôde ser feita porque a máquina de destino as recusou ativamente"))
+2026-05-16 11:35:48,353 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:35:48,353 [INFO] [TRT-2/1G]
+2026-05-16 11:35:48,354 [INFO]   Autenticando: TRT2 Pje - 1º grau
+2026-05-16 11:35:54,907 [ERROR]   TRT-2/1G: erro inesperado — HTTPConnectionPool(host='127.0.0.1', port=9222): Max retries exceeded with url: /json/new?chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/index.html (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=9222): Failed to establish a new connection: [WinError 10061] Nenhuma conexão pôde ser feita porque a máquina de destino as recusou ativamente"))
+2026-05-16 11:35:55,908 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:35:55,908 [INFO] [TRT-2/2G]
+2026-05-16 11:35:55,908 [INFO]   Autenticando: TRT2 Pje - 2º grau
+2026-05-16 11:54:56,683 [INFO] ============================================================
+2026-05-16 11:54:56,684 [INFO] Iniciando coleta — 16/05/2026 11:54
+2026-05-16 11:54:56,685 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-16 11:54:56,685 [INFO] Sistemas: 49 | Período: hoje + 365 dias
+2026-05-16 11:54:56,685 [INFO] ============================================================
+2026-05-16 11:54:58,704 [INFO] Abrindo Chrome de scraping [visível] (porta 9222, dir FalawScraper/Default)...
+2026-05-16 11:54:58,705 [INFO]   Se for a primeira vez: instale a extensão Whom neste Chrome.
+2026-05-16 11:55:02,744 [INFO] Chrome pronto!
+2026-05-16 11:55:02,744 [INFO] Whom (configurado): ID=lnidijeaekolpfeckelhkomndglcglhh | popup=sidepanel.html?mode=tab
+2026-05-16 11:55:04,662 [INFO] Conectado ao Chrome de scraping (porta 9222)
+2026-05-16 11:55:04,666 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:04,667 [INFO] [TRT-1/1G]
+2026-05-16 11:55:04,667 [INFO]   Autenticando: TRT1 Pje - 1º grau
+2026-05-16 11:55:05,138 [WARNING] Erro ao abrir Whom (chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab): Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab", waiting until "domcontentloaded"
+
+2026-05-16 11:55:05,210 [WARNING] [TRT1 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:55:05,216 [INFO]   Usando fallback: https://pje.trt1.jus.br
+2026-05-16 11:55:05,221 [INFO]   Pauta: https://pje.trt1.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:55:07,078 [INFO]   Período: hoje → +365 dias
+2026-05-16 11:55:10,656 [INFO]     Página 1…
+2026-05-16 11:55:10,682 [INFO]     Tabela vazia
+2026-05-16 11:55:11,704 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:11,705 [INFO] [TRT-1/2G]
+2026-05-16 11:55:11,705 [INFO]   Autenticando: TRT1 Pje - 2º grau
+2026-05-16 11:55:12,081 [WARNING] Erro ao abrir Whom (chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab): Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab", waiting until "domcontentloaded"
+
+2026-05-16 11:55:12,111 [WARNING] [TRT1 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:55:12,111 [INFO]   Usando fallback: https://pje.trt1.jus.br
+2026-05-16 11:55:12,112 [INFO]   Pauta: https://pje.trt1.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:55:13,448 [INFO]   Período: hoje → +365 dias
+2026-05-16 11:55:17,009 [INFO]     Página 1…
+2026-05-16 11:55:17,034 [INFO]     Tabela vazia
+2026-05-16 11:55:18,054 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:18,056 [INFO] [TRT-2/1G]
+2026-05-16 11:55:18,057 [INFO]   Autenticando: TRT2 Pje - 1º grau
+2026-05-16 11:55:18,496 [WARNING] Erro ao abrir Whom (chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab): Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab", waiting until "domcontentloaded"
+
+2026-05-16 11:55:18,526 [WARNING] [TRT2 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:55:18,526 [INFO]   Usando fallback: https://pje.trt2.jus.br
+2026-05-16 11:55:18,527 [INFO]   Pauta: https://pje.trt2.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:55:20,208 [INFO]   Período: hoje → +365 dias
+2026-05-16 11:55:23,760 [INFO]     Página 1…
+2026-05-16 11:55:23,784 [INFO]     Tabela vazia
+2026-05-16 11:55:24,795 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:24,795 [INFO] [TRT-2/2G]
+2026-05-16 11:55:24,796 [INFO]   Autenticando: TRT2 Pje - 2º grau
+2026-05-16 11:55:25,130 [ERROR]   TRT-2/2G: erro inesperado — BrowserContext.new_page: Target page, context or browser has been closed
+2026-05-16 11:55:26,131 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:26,131 [INFO] [TRT-3/1G]
+2026-05-16 11:55:26,132 [INFO]   Autenticando: TRT3 Pje - 1º grau
+2026-05-16 11:55:28,462 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:55:28,462 [WARNING] [TRT3 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:55:28,463 [INFO]   Usando fallback: https://pje.trt3.jus.br
+2026-05-16 11:55:28,463 [INFO]   Pauta: https://pje.trt3.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:55:28,463 [WARNING]   TRT-3/1G: sem página disponível
+2026-05-16 11:55:29,463 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:29,464 [INFO] [TRT-3/2G]
+2026-05-16 11:55:29,464 [INFO]   Autenticando: TRT3 Pje - 2º grau
+2026-05-16 11:55:31,808 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:55:31,808 [WARNING] [TRT3 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:55:31,808 [INFO]   Usando fallback: https://pje.trt3.jus.br
+2026-05-16 11:55:31,809 [INFO]   Pauta: https://pje.trt3.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:55:31,809 [WARNING]   TRT-3/2G: sem página disponível
+2026-05-16 11:55:32,810 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:32,810 [INFO] [TRT-4/1G]
+2026-05-16 11:55:32,810 [INFO]   Autenticando: TRT4 Pje - 1º grau
+2026-05-16 11:55:35,172 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:55:35,172 [WARNING] [TRT4 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:55:35,173 [INFO]   Usando fallback: https://pje.trt4.jus.br
+2026-05-16 11:55:35,173 [INFO]   Pauta: https://pje.trt4.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:55:35,173 [WARNING]   TRT-4/1G: sem página disponível
+2026-05-16 11:55:36,175 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:36,178 [INFO] [TRT-4/2G]
+2026-05-16 11:55:36,179 [INFO]   Autenticando: TRT4 Pje - 2º grau
+2026-05-16 11:55:38,524 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:55:38,525 [WARNING] [TRT4 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:55:38,525 [INFO]   Usando fallback: https://pje.trt4.jus.br
+2026-05-16 11:55:38,525 [INFO]   Pauta: https://pje.trt4.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:55:38,526 [WARNING]   TRT-4/2G: sem página disponível
+2026-05-16 11:55:39,526 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:39,527 [INFO] [TRT-5/1G]
+2026-05-16 11:55:39,527 [INFO]   Autenticando: TRT5 Pje - 1º grau
+2026-05-16 11:55:41,873 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:55:41,874 [WARNING] [TRT5 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:55:41,874 [INFO]   Usando fallback: https://pje.trt5.jus.br
+2026-05-16 11:55:41,874 [INFO]   Pauta: https://pje.trt5.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:55:41,874 [WARNING]   TRT-5/1G: sem página disponível
+2026-05-16 11:55:42,875 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:42,876 [INFO] [TRT-5/2G]
+2026-05-16 11:55:42,876 [INFO]   Autenticando: TRT5 Pje - 2º grau
+2026-05-16 11:55:45,220 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:55:45,220 [WARNING] [TRT5 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:55:45,221 [INFO]   Usando fallback: https://pje.trt5.jus.br
+2026-05-16 11:55:45,221 [INFO]   Pauta: https://pje.trt5.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:55:45,221 [WARNING]   TRT-5/2G: sem página disponível
+2026-05-16 11:55:46,221 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:46,222 [INFO] [TRT-6/1G]
+2026-05-16 11:55:46,222 [INFO]   Autenticando: TRT6 Pje - 1º grau
+2026-05-16 11:55:48,554 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:55:48,554 [WARNING] [TRT6 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:55:48,554 [INFO]   Usando fallback: https://pje.trt6.jus.br
+2026-05-16 11:55:48,554 [INFO]   Pauta: https://pje.trt6.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:55:48,554 [WARNING]   TRT-6/1G: sem página disponível
+2026-05-16 11:55:49,555 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:49,555 [INFO] [TRT-6/2G]
+2026-05-16 11:55:49,556 [INFO]   Autenticando: TRT6 Pje - 2º grau
+2026-05-16 11:55:51,909 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:55:51,909 [WARNING] [TRT6 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:55:51,910 [INFO]   Usando fallback: https://pje.trt6.jus.br
+2026-05-16 11:55:51,910 [INFO]   Pauta: https://pje.trt6.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:55:51,910 [WARNING]   TRT-6/2G: sem página disponível
+2026-05-16 11:55:52,910 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:52,911 [INFO] [TRT-7/1G]
+2026-05-16 11:55:52,911 [INFO]   Autenticando: TRT7 Pje - 1º grau
+2026-05-16 11:55:55,237 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:55:55,238 [WARNING] [TRT7 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:55:55,238 [INFO]   Usando fallback: https://pje.trt7.jus.br
+2026-05-16 11:55:55,238 [INFO]   Pauta: https://pje.trt7.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:55:55,238 [WARNING]   TRT-7/1G: sem página disponível
+2026-05-16 11:55:56,239 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:56,239 [INFO] [TRT-7/2G]
+2026-05-16 11:55:56,239 [INFO]   Autenticando: TRT7 Pje - 2º grau
+2026-05-16 11:55:58,552 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:55:58,552 [WARNING] [TRT7 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:55:58,552 [INFO]   Usando fallback: https://pje.trt7.jus.br
+2026-05-16 11:55:58,552 [INFO]   Pauta: https://pje.trt7.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:55:58,553 [WARNING]   TRT-7/2G: sem página disponível
+2026-05-16 11:55:59,553 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:55:59,553 [INFO] [TRT-8/1G]
+2026-05-16 11:55:59,553 [INFO]   Autenticando: TRT8 Pje - 1º grau
+2026-05-16 11:56:01,874 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:01,874 [WARNING] [TRT8 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:56:01,875 [INFO]   Usando fallback: https://pje.trt8.jus.br
+2026-05-16 11:56:01,875 [INFO]   Pauta: https://pje.trt8.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:01,875 [WARNING]   TRT-8/1G: sem página disponível
+2026-05-16 11:56:02,876 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:02,876 [INFO] [TRT-8/2G]
+2026-05-16 11:56:02,876 [INFO]   Autenticando: TRT8 Pje - 2º grau
+2026-05-16 11:56:05,237 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:05,237 [WARNING] [TRT8 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:56:05,237 [INFO]   Usando fallback: https://pje.trt8.jus.br
+2026-05-16 11:56:05,237 [INFO]   Pauta: https://pje.trt8.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:05,238 [WARNING]   TRT-8/2G: sem página disponível
+2026-05-16 11:56:06,238 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:06,238 [INFO] [TRT-9/1G]
+2026-05-16 11:56:06,239 [INFO]   Autenticando: TRT9 Pje - 1º grau
+2026-05-16 11:56:08,571 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:08,585 [WARNING] [TRT9 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:56:08,586 [INFO]   Usando fallback: https://pje.trt9.jus.br
+2026-05-16 11:56:08,590 [INFO]   Pauta: https://pje.trt9.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:08,591 [WARNING]   TRT-9/1G: sem página disponível
+2026-05-16 11:56:09,591 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:09,593 [INFO] [TRT-9/2G]
+2026-05-16 11:56:09,597 [INFO]   Autenticando: TRT9 Pje - 2º grau
+2026-05-16 11:56:11,926 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:11,927 [WARNING] [TRT9 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:56:11,928 [INFO]   Usando fallback: https://pje.trt9.jus.br
+2026-05-16 11:56:11,928 [INFO]   Pauta: https://pje.trt9.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:11,929 [WARNING]   TRT-9/2G: sem página disponível
+2026-05-16 11:56:12,930 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:12,930 [INFO] [TRT-10/1G]
+2026-05-16 11:56:12,930 [INFO]   Autenticando: TRT10 Pje - 1º grau
+2026-05-16 11:56:15,268 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:15,269 [WARNING] [TRT10 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:56:15,269 [INFO]   Usando fallback: https://pje.trt10.jus.br
+2026-05-16 11:56:15,269 [INFO]   Pauta: https://pje.trt10.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:15,269 [WARNING]   TRT-10/1G: sem página disponível
+2026-05-16 11:56:16,270 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:16,270 [INFO] [TRT-10/2G]
+2026-05-16 11:56:16,270 [INFO]   Autenticando: TRT10 Pje - 2º grau
+2026-05-16 11:56:18,596 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:18,597 [WARNING] [TRT10 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:56:18,597 [INFO]   Usando fallback: https://pje.trt10.jus.br
+2026-05-16 11:56:18,597 [INFO]   Pauta: https://pje.trt10.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:18,597 [WARNING]   TRT-10/2G: sem página disponível
+2026-05-16 11:56:19,598 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:19,598 [INFO] [TRT-11/1G]
+2026-05-16 11:56:19,599 [INFO]   Autenticando: TRT11 Pje - 1º grau
+2026-05-16 11:56:21,937 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:21,938 [WARNING] [TRT11 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:56:21,938 [INFO]   Usando fallback: https://pje.trt11.jus.br
+2026-05-16 11:56:21,938 [INFO]   Pauta: https://pje.trt11.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:21,938 [WARNING]   TRT-11/1G: sem página disponível
+2026-05-16 11:56:22,939 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:22,939 [INFO] [TRT-11/2G]
+2026-05-16 11:56:22,940 [INFO]   Autenticando: TRT11 Pje - 2º grau
+2026-05-16 11:56:25,281 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:25,282 [WARNING] [TRT11 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:56:25,282 [INFO]   Usando fallback: https://pje.trt11.jus.br
+2026-05-16 11:56:25,283 [INFO]   Pauta: https://pje.trt11.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:25,283 [WARNING]   TRT-11/2G: sem página disponível
+2026-05-16 11:56:26,283 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:26,284 [INFO] [TRT-12/1G]
+2026-05-16 11:56:26,284 [INFO]   Autenticando: TRT12 Pje - 1º grau
+2026-05-16 11:56:28,616 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:28,616 [WARNING] [TRT12 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:56:28,616 [INFO]   Usando fallback: https://pje.trt12.jus.br
+2026-05-16 11:56:28,617 [INFO]   Pauta: https://pje.trt12.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:28,617 [WARNING]   TRT-12/1G: sem página disponível
+2026-05-16 11:56:29,618 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:29,618 [INFO] [TRT-12/2G]
+2026-05-16 11:56:29,618 [INFO]   Autenticando: TRT12 Pje - 2º grau
+2026-05-16 11:56:31,940 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:31,940 [WARNING] [TRT12 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:56:31,940 [INFO]   Usando fallback: https://pje.trt12.jus.br
+2026-05-16 11:56:31,941 [INFO]   Pauta: https://pje.trt12.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:31,941 [WARNING]   TRT-12/2G: sem página disponível
+2026-05-16 11:56:32,942 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:32,942 [INFO] [TRT-13/1G]
+2026-05-16 11:56:32,942 [INFO]   Autenticando: TRT13 Pje - 1º grau
+2026-05-16 11:56:35,286 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:35,286 [WARNING] [TRT13 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:56:35,286 [INFO]   Usando fallback: https://pje.trt13.jus.br
+2026-05-16 11:56:35,287 [INFO]   Pauta: https://pje.trt13.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:35,287 [WARNING]   TRT-13/1G: sem página disponível
+2026-05-16 11:56:36,287 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:36,288 [INFO] [TRT-13/2G]
+2026-05-16 11:56:36,288 [INFO]   Autenticando: TRT13 Pje - 2º grau
+2026-05-16 11:56:38,634 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:38,634 [WARNING] [TRT13 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:56:38,634 [INFO]   Usando fallback: https://pje.trt13.jus.br
+2026-05-16 11:56:38,634 [INFO]   Pauta: https://pje.trt13.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:38,635 [WARNING]   TRT-13/2G: sem página disponível
+2026-05-16 11:56:39,635 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:39,635 [INFO] [TRT-14/1G]
+2026-05-16 11:56:39,636 [INFO]   Autenticando: TRT14 Pje - 1º grau
+2026-05-16 11:56:41,975 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:41,975 [WARNING] [TRT14 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:56:41,975 [INFO]   Usando fallback: https://pje.trt14.jus.br
+2026-05-16 11:56:41,975 [INFO]   Pauta: https://pje.trt14.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:41,976 [WARNING]   TRT-14/1G: sem página disponível
+2026-05-16 11:56:42,976 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:42,977 [INFO] [TRT-14/2G]
+2026-05-16 11:56:42,977 [INFO]   Autenticando: TRT14 Pje - 2º grau
+2026-05-16 11:56:45,307 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:45,307 [WARNING] [TRT14 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:56:45,308 [INFO]   Usando fallback: https://pje.trt14.jus.br
+2026-05-16 11:56:45,308 [INFO]   Pauta: https://pje.trt14.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:45,308 [WARNING]   TRT-14/2G: sem página disponível
+2026-05-16 11:56:46,308 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:46,309 [INFO] [TRT-15/1G]
+2026-05-16 11:56:46,309 [INFO]   Autenticando: TRT15 Pje - 1º grau
+2026-05-16 11:56:48,630 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:48,631 [WARNING] [TRT15 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:56:48,631 [INFO]   Usando fallback: https://pje.trt15.jus.br
+2026-05-16 11:56:48,631 [INFO]   Pauta: https://pje.trt15.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:48,631 [WARNING]   TRT-15/1G: sem página disponível
+2026-05-16 11:56:49,632 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:49,632 [INFO] [TRT-15/2G]
+2026-05-16 11:56:49,632 [INFO]   Autenticando: TRT15 Pje - 2º grau
+2026-05-16 11:56:51,956 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:51,956 [WARNING] [TRT15 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:56:51,956 [INFO]   Usando fallback: https://pje.trt15.jus.br
+2026-05-16 11:56:51,957 [INFO]   Pauta: https://pje.trt15.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:51,957 [WARNING]   TRT-15/2G: sem página disponível
+2026-05-16 11:56:52,957 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:52,958 [INFO] [TRT-16/1G]
+2026-05-16 11:56:52,958 [INFO]   Autenticando: TRT16 Pje - 1º grau
+2026-05-16 11:56:55,295 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:55,296 [WARNING] [TRT16 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:56:55,296 [INFO]   Usando fallback: https://pje.trt16.jus.br
+2026-05-16 11:56:55,296 [INFO]   Pauta: https://pje.trt16.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:55,296 [WARNING]   TRT-16/1G: sem página disponível
+2026-05-16 11:56:56,297 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:56,297 [INFO] [TRT-16/2G]
+2026-05-16 11:56:56,298 [INFO]   Autenticando: TRT16 Pje - 2º grau
+2026-05-16 11:56:58,631 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:56:58,632 [WARNING] [TRT16 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:56:58,632 [INFO]   Usando fallback: https://pje.trt16.jus.br
+2026-05-16 11:56:58,632 [INFO]   Pauta: https://pje.trt16.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:56:58,633 [WARNING]   TRT-16/2G: sem página disponível
+2026-05-16 11:56:59,633 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:56:59,633 [INFO] [TRT-17/1G]
+2026-05-16 11:56:59,633 [INFO]   Autenticando: TRT17 Pje - 1º grau
+2026-05-16 11:57:01,985 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:01,985 [WARNING] [TRT17 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:57:01,986 [INFO]   Usando fallback: https://pje.trt17.jus.br
+2026-05-16 11:57:01,986 [INFO]   Pauta: https://pje.trt17.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:01,986 [WARNING]   TRT-17/1G: sem página disponível
+2026-05-16 11:57:02,987 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:02,987 [INFO] [TRT-17/2G]
+2026-05-16 11:57:02,987 [INFO]   Autenticando: TRT17 Pje - 2º grau
+2026-05-16 11:57:05,313 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:05,313 [WARNING] [TRT17 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:57:05,314 [INFO]   Usando fallback: https://pje.trt17.jus.br
+2026-05-16 11:57:05,314 [INFO]   Pauta: https://pje.trt17.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:05,314 [WARNING]   TRT-17/2G: sem página disponível
+2026-05-16 11:57:06,315 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:06,315 [INFO] [TRT-18/1G]
+2026-05-16 11:57:06,315 [INFO]   Autenticando: TRT18 Pje - 1º grau
+2026-05-16 11:57:08,657 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:08,657 [WARNING] [TRT18 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:57:08,657 [INFO]   Usando fallback: https://pje.trt18.jus.br
+2026-05-16 11:57:08,658 [INFO]   Pauta: https://pje.trt18.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:08,658 [WARNING]   TRT-18/1G: sem página disponível
+2026-05-16 11:57:09,658 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:09,659 [INFO] [TRT-18/2G]
+2026-05-16 11:57:09,660 [INFO]   Autenticando: TRT18 Pje - 2º grau
+2026-05-16 11:57:11,990 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:11,990 [WARNING] [TRT18 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:57:11,990 [INFO]   Usando fallback: https://pje.trt18.jus.br
+2026-05-16 11:57:11,991 [INFO]   Pauta: https://pje.trt18.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:11,991 [WARNING]   TRT-18/2G: sem página disponível
+2026-05-16 11:57:12,991 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:12,992 [INFO] [TRT-19/1G]
+2026-05-16 11:57:12,992 [INFO]   Autenticando: TRT19 Pje - 1º grau
+2026-05-16 11:57:15,326 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:15,326 [WARNING] [TRT19 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:57:15,327 [INFO]   Usando fallback: https://pje.trt19.jus.br
+2026-05-16 11:57:15,327 [INFO]   Pauta: https://pje.trt19.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:15,327 [WARNING]   TRT-19/1G: sem página disponível
+2026-05-16 11:57:16,328 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:16,328 [INFO] [TRT-19/2G]
+2026-05-16 11:57:16,328 [INFO]   Autenticando: TRT19 Pje - 2º grau
+2026-05-16 11:57:18,661 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:18,662 [WARNING] [TRT19 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:57:18,662 [INFO]   Usando fallback: https://pje.trt19.jus.br
+2026-05-16 11:57:18,662 [INFO]   Pauta: https://pje.trt19.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:18,662 [WARNING]   TRT-19/2G: sem página disponível
+2026-05-16 11:57:19,663 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:19,663 [INFO] [TRT-20/1G]
+2026-05-16 11:57:19,663 [INFO]   Autenticando: TRT20 Pje - 1º grau
+2026-05-16 11:57:21,981 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:21,982 [WARNING] [TRT20 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:57:21,982 [INFO]   Usando fallback: https://pje.trt20.jus.br
+2026-05-16 11:57:21,982 [INFO]   Pauta: https://pje.trt20.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:21,982 [WARNING]   TRT-20/1G: sem página disponível
+2026-05-16 11:57:22,983 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:22,983 [INFO] [TRT-20/2G]
+2026-05-16 11:57:22,983 [INFO]   Autenticando: TRT20 Pje - 2º grau
+2026-05-16 11:57:25,315 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:25,316 [WARNING] [TRT20 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:57:25,316 [INFO]   Usando fallback: https://pje.trt20.jus.br
+2026-05-16 11:57:25,316 [INFO]   Pauta: https://pje.trt20.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:25,316 [WARNING]   TRT-20/2G: sem página disponível
+2026-05-16 11:57:26,317 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:26,317 [INFO] [TRT-21/1G]
+2026-05-16 11:57:26,317 [INFO]   Autenticando: TRT21 Pje - 1º grau
+2026-05-16 11:57:28,656 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:28,656 [WARNING] [TRT21 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:57:28,657 [INFO]   Usando fallback: https://pje.trt21.jus.br
+2026-05-16 11:57:28,657 [INFO]   Pauta: https://pje.trt21.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:28,657 [WARNING]   TRT-21/1G: sem página disponível
+2026-05-16 11:57:29,658 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:29,658 [INFO] [TRT-21/2G]
+2026-05-16 11:57:29,658 [INFO]   Autenticando: TRT21 Pje - 2º grau
+2026-05-16 11:57:32,016 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:32,016 [WARNING] [TRT21 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:57:32,017 [INFO]   Usando fallback: https://pje.trt21.jus.br
+2026-05-16 11:57:32,017 [INFO]   Pauta: https://pje.trt21.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:32,017 [WARNING]   TRT-21/2G: sem página disponível
+2026-05-16 11:57:33,017 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:33,018 [INFO] [TRT-22/1G]
+2026-05-16 11:57:33,018 [INFO]   Autenticando: TRT22 Pje - 1º grau
+2026-05-16 11:57:35,358 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:35,359 [WARNING] [TRT22 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:57:35,359 [INFO]   Usando fallback: https://pje.trt22.jus.br
+2026-05-16 11:57:35,359 [INFO]   Pauta: https://pje.trt22.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:35,360 [WARNING]   TRT-22/1G: sem página disponível
+2026-05-16 11:57:36,360 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:36,361 [INFO] [TRT-22/2G]
+2026-05-16 11:57:36,361 [INFO]   Autenticando: TRT22 Pje - 2º grau
+2026-05-16 11:57:38,702 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:38,702 [WARNING] [TRT22 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:57:38,702 [INFO]   Usando fallback: https://pje.trt22.jus.br
+2026-05-16 11:57:38,702 [INFO]   Pauta: https://pje.trt22.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:38,703 [WARNING]   TRT-22/2G: sem página disponível
+2026-05-16 11:57:39,703 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:39,704 [INFO] [TRT-23/1G]
+2026-05-16 11:57:39,704 [INFO]   Autenticando: TRT23 Pje - 1º grau
+2026-05-16 11:57:42,065 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:42,066 [WARNING] [TRT23 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:57:42,066 [INFO]   Usando fallback: https://pje.trt23.jus.br
+2026-05-16 11:57:42,066 [INFO]   Pauta: https://pje.trt23.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:42,066 [WARNING]   TRT-23/1G: sem página disponível
+2026-05-16 11:57:43,067 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:43,067 [INFO] [TRT-23/2G]
+2026-05-16 11:57:43,067 [INFO]   Autenticando: TRT23 Pje - 2º grau
+2026-05-16 11:57:45,391 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:45,391 [WARNING] [TRT23 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:57:45,391 [INFO]   Usando fallback: https://pje.trt23.jus.br
+2026-05-16 11:57:45,392 [INFO]   Pauta: https://pje.trt23.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:45,392 [WARNING]   TRT-23/2G: sem página disponível
+2026-05-16 11:57:46,392 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:46,392 [INFO] [TRT-24/1G]
+2026-05-16 11:57:46,393 [INFO]   Autenticando: TRT24 Pje - 1º grau
+2026-05-16 11:57:48,730 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:48,731 [WARNING] [TRT24 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 11:57:48,731 [INFO]   Usando fallback: https://pje.trt24.jus.br
+2026-05-16 11:57:48,731 [INFO]   Pauta: https://pje.trt24.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:48,731 [WARNING]   TRT-24/1G: sem página disponível
+2026-05-16 11:57:49,732 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:49,732 [INFO] [TRT-24/2G]
+2026-05-16 11:57:49,732 [INFO]   Autenticando: TRT24 Pje - 2º grau
+2026-05-16 11:57:52,087 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:52,088 [WARNING] [TRT24 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 11:57:52,088 [INFO]   Usando fallback: https://pje.trt24.jus.br
+2026-05-16 11:57:52,088 [INFO]   Pauta: https://pje.trt24.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:52,088 [WARNING]   TRT-24/2G: sem página disponível
+2026-05-16 11:57:53,089 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 11:57:53,089 [INFO] [TST]
+2026-05-16 11:57:53,089 [INFO]   Autenticando: TST Pje
+2026-05-16 11:57:55,422 [ERROR] Nenhum contexto de browser disponível
+2026-05-16 11:57:55,422 [WARNING] [TST Pje] Painel Whom não abriu
+2026-05-16 11:57:55,423 [INFO]   Usando fallback: https://pje.tst.jus.br
+2026-05-16 11:57:55,423 [INFO]   Pauta: https://pje.tst.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 11:57:55,423 [WARNING]   TST: sem página disponível
+2026-05-16 11:57:56,453 [INFO] 
+============================================================
+2026-05-16 11:57:56,453 [INFO] RELATÓRIO FINAL
+2026-05-16 11:57:56,453 [INFO] ============================================================
+2026-05-16 11:57:56,453 [INFO] Total salvas:             0
+2026-05-16 11:57:56,454 [INFO] Cancelamentos detectados: 0
+2026-05-16 11:57:56,454 [INFO] Sem audiências no período:
+  TRT-1/1G
+  TRT-1/2G
+  TRT-2/1G
+  TRT-3/1G
+  TRT-3/2G
+  TRT-4/1G
+  TRT-4/2G
+  TRT-5/1G
+  TRT-5/2G
+  TRT-6/1G
+  TRT-6/2G
+  TRT-7/1G
+  TRT-7/2G
+  TRT-8/1G
+  TRT-8/2G
+  TRT-9/1G
+  TRT-9/2G
+  TRT-10/1G
+  TRT-10/2G
+  TRT-11/1G
+  TRT-11/2G
+  TRT-12/1G
+  TRT-12/2G
+  TRT-13/1G
+  TRT-13/2G
+  TRT-14/1G
+  TRT-14/2G
+  TRT-15/1G
+  TRT-15/2G
+  TRT-16/1G
+  TRT-16/2G
+  TRT-17/1G
+  TRT-17/2G
+  TRT-18/1G
+  TRT-18/2G
+  TRT-19/1G
+  TRT-19/2G
+  TRT-20/1G
+  TRT-20/2G
+  TRT-21/1G
+  TRT-21/2G
+  TRT-22/1G
+  TRT-22/2G
+  TRT-23/1G
+  TRT-23/2G
+  TRT-24/1G
+  TRT-24/2G
+  TST
+2026-05-16 11:57:56,454 [ERROR] Com erro:
+  TRT-2/2G
+2026-05-16 11:57:56,455 [INFO] ============================================================

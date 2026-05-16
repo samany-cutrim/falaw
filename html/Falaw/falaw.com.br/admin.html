@@ -935,7 +935,6 @@
         <div class="admin-dropdown">
           <div class="admin-dropdown-item" id="ditem-equipe" onclick="switchTab('equipe')"><span>Equipe</span></div>
           <div class="admin-dropdown-item" id="ditem-clientes" onclick="switchTab('clientes')"><span>Clientes</span></div>
-          <div class="admin-dropdown-item" id="ditem-audiencias" onclick="switchTab('audiencias')"><span>Pauta de Audiências</span></div>
         </div>
       </div>
       <!-- Grupo Dashboards -->
@@ -946,6 +945,7 @@
           <div class="admin-dropdown-item" id="ditem-cli-dash" onclick="switchTab('cli-dash')"><span>Clientes</span></div>
         </div>
       </div>
+      <div class="admin-tab" id="tab-btn-audiencias" onclick="switchTab('audiencias')">Pauta de Audiências</div>
       <div class="admin-tab" id="tab-btn-config" onclick="switchTab('config')">Configurações</div>
     </div>
     <button class="admin-logout" onclick="doLogout()">Sair</button>
@@ -1010,8 +1010,8 @@
           <div class="ai-suggestions" id="social-suggestions"></div>
           <div id="social-actions" hidden>
             <div class="social-tabs-nav" style="margin-top:16px">
-              <button type="button" class="social-tab-btn active" id="tab-btn-ig" onclick="selectSocialPlatform('instagram')">📸 Instagram</button>
-              <button type="button" class="social-tab-btn" id="tab-btn-li" onclick="selectSocialPlatform('linkedin')">💼 LinkedIn</button>
+              <button type="button" class="social-tab-btn active" id="tab-btn-ig" onclick="selectSocialPlatform('instagram')">Instagram</button>
+              <button type="button" class="social-tab-btn" id="tab-btn-li" onclick="selectSocialPlatform('linkedin')">LinkedIn</button>
             </div>
             <!-- LinkedIn mode toggle (only shown when LinkedIn is active) -->
             <div class="li-mode-row" id="li-mode-row" style="display:none">
@@ -1432,15 +1432,15 @@
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <!-- Botão principal: usa extensão se disponível, senão mostra instrução -->
-          <button type="button" id="btn-sync-pje" class="btn btn-primary" style="display:flex;align-items:center;gap:6px" onclick="pjeSyncIniciar()">
-            ⚡ Sincronizar PJe
+          <button type="button" id="btn-sync-pje" class="btn btn-primary" onclick="pjeSyncIniciar()">
+            Sincronizar PJe
           </button>
-          <label title="Chrome roda invisível em segundo plano" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--c-muted);cursor:pointer;padding:4px 8px;border:1px solid var(--c-border,#e5e7eb);border-radius:6px;user-select:none">
-            <input type="checkbox" id="pje-modo-oculto" style="width:14px;height:14px;cursor:pointer;accent-color:#0D2B5E">
-            Chrome oculto
+          <label title="Chrome roda invisível em segundo plano" style="display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--c-muted);cursor:pointer;padding:4px 10px;border:1px solid var(--c-divider);border-radius:2px;user-select:none">
+            <input type="checkbox" id="pje-modo-oculto" style="width:12px;height:12px;cursor:pointer;accent-color:#0D2B5E">
+            Oculto
           </label>
-          <label class="btn btn-ghost" style="cursor:pointer;display:flex;align-items:center;gap:6px" title="Importar planilha Excel (.xlsx)">
-            📁 Importar Excel
+          <label class="btn btn-ghost" style="cursor:pointer" title="Importar planilha Excel (.xlsx)">
+            Importar Excel
             <input type="file" id="aud-xl-input" accept=".xlsx,.xls" style="display:none" onchange="audImportExcel(this)" />
           </label>
           <button type="button" class="btn btn-ghost" onclick="openAudienciaModal()">+ Manual</button>
@@ -1448,27 +1448,27 @@
       </div>
 
       <!-- Barra de progresso PJe sync -->
-      <div id="pje-progress-wrap" style="display:none;background:#EEF2FF;border:1px solid #c7d2fe;border-radius:8px;padding:14px 18px;margin-bottom:16px">
+      <div id="pje-progress-wrap" style="display:none;background:#EEF2FF;border:1px solid #c7d2fe;border-radius:4px;padding:14px 18px;margin-bottom:16px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span id="pje-progress-icon" style="font-size:18px">⏳</span>
+          <span id="pje-progress-icon" style="display:inline-block;width:14px;height:14px;border:2px solid #c7d2fe;border-top-color:#0D2B5E;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0"></span>
           <div style="flex:1">
-            <div style="font-size:12px;font-weight:700;color:#0D2B5E" id="pje-progress-label">Iniciando sincronização…</div>
-            <div style="font-size:11px;color:#6366f1;margin-top:2px" id="pje-progress-sub"></div>
+            <div style="font-family:var(--f-mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#0D2B5E" id="pje-progress-label">Iniciando sincronização…</div>
+            <div style="font-family:var(--f-mono);font-size:10px;color:#6366f1;margin-top:2px;letter-spacing:.04em" id="pje-progress-sub"></div>
           </div>
         </div>
-        <div style="background:#c7d2fe;border-radius:4px;height:6px;overflow:hidden">
-          <div id="pje-progress-bar" style="background:#0D2B5E;height:100%;width:0%;transition:width .4s ease;border-radius:4px"></div>
+        <div style="background:#c7d2fe;border-radius:2px;height:3px;overflow:hidden">
+          <div id="pje-progress-bar" style="background:#0D2B5E;height:100%;width:0%;transition:width .4s ease"></div>
         </div>
-        <div id="pje-ext-missing" style="display:none;margin-top:10px;font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px">
-          ⚠️ Extensão <strong>Falaw Sync PJe</strong> não detectada.<br>
-          <a href="https://github.com/samany-cutrim/falaw/tree/master/falaw-extension" target="_blank" style="color:#0D2B5E;font-weight:700">Instalar extensão</a> · 
+        <div id="pje-ext-missing" style="display:none;margin-top:10px;font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:2px;padding:8px 10px">
+          Extensão <strong>Falaw Sync PJe</strong> não detectada.<br>
+          <a href="https://github.com/samany-cutrim/falaw/tree/master/falaw-extension" target="_blank" style="color:#0D2B5E;font-weight:700">Instalar extensão</a> ·
           <a href="instalar-sync-pje.html" target="_blank" style="color:#6b7280">Usar bookmarklet</a>
         </div>
-        <div id="pje-sem-sessao" style="display:none;margin-top:10px;font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px"></div>
+        <div id="pje-sem-sessao" style="display:none;margin-top:10px;font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:2px;padding:8px 10px"></div>
       </div>
 
       <!-- Stats rápidas -->
-      <div id="aud-stats-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px"></div>
+      <div id="aud-stats-row" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px"></div>
 
       <!-- Filtros -->
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center;background:#fafaf8;border:1px solid var(--c-divider);border-radius:4px;padding:12px 16px">
@@ -3289,9 +3289,9 @@ function getSbCreds() {
 }
 
 const CONTEUDO_TABS   = ['blog','newsletter','contato','curriculos','comentarios','calendario'];
-const GESTAO_TABS     = ['equipe','clientes','audiencias'];
+const GESTAO_TABS     = ['equipe','clientes'];
 const DASH_TABS       = ['ifood','cli-dash'];
-const STANDALONE_TABS = ['config'];
+const STANDALONE_TABS = ['config','audiencias'];
 
 function toggleGroup(group) {
   const el = document.getElementById('group-' + group);
@@ -3363,7 +3363,7 @@ function _renderCalGrid(items) {
     const diaItems = items.filter(it => it.data === dataStr);
     const isHoje = dataStr === new Date().toISOString().slice(0,10);
     const dots = diaItems.map(it => {
-      const cfg = CAL_TIPO_CFG[it.tipo] || CAL_TIPO_CFG.post;
+      const cfg = CAL_TIPO_CFG[it.tipo] || CAL_TIPO_CFG.informativo;
       return `<div style="width:6px;height:6px;border-radius:50%;background:${cfg.color};flex-shrink:0"></div>`;
     }).join('');
     html += `<div onclick="abrirModalCalendario('${dataStr}')" style="min-height:54px;border:1px solid ${isHoje?'#0D2B5E':'#e8eaf0'};border-radius:4px;padding:5px 6px;cursor:pointer;background:${isHoje?'#EEF2FF':'#fff'};transition:background .15s" onmouseenter="this.style.background='#f5f7ff'" onmouseleave="this.style.background='${isHoje?'#EEF2FF':'#fff'}'">
@@ -3390,7 +3390,7 @@ function _renderCalLista(items) {
   }
 
   lista.innerHTML = mesItems.map(it => {
-    const tipoCfg   = CAL_TIPO_CFG[it.tipo]   || CAL_TIPO_CFG.post;
+    const tipoCfg   = CAL_TIPO_CFG[it.tipo]   || CAL_TIPO_CFG.informativo;
     const statusCfg = CAL_STATUS_CFG[it.status] || CAL_STATUS_CFG.planejado;
     const [y, m, d] = it.data.split('-');
     const publicado  = it.status === 'publicado';
@@ -3434,7 +3434,7 @@ function abrirModalCalendario(data) {
   const modal = document.getElementById('cal-modal');
   document.getElementById('cal-edit-id').value  = '';
   document.getElementById('cal-f-titulo').value  = '';
-  document.getElementById('cal-f-tipo').value    = 'post';
+  document.getElementById('cal-f-tipo').value    = 'informativo';
   document.getElementById('cal-f-status').value  = 'planejado';
   document.getElementById('cal-f-data').value    = data && data.length === 10 ? data : '';
   document.getElementById('cal-f-autor').value   = '';
@@ -3450,7 +3450,7 @@ function editarPublicacao(id) {
   if (!it) return;
   document.getElementById('cal-edit-id').value  = it.id;
   document.getElementById('cal-f-titulo').value  = it.titulo  || '';
-  document.getElementById('cal-f-tipo').value    = it.tipo    || 'post';
+  document.getElementById('cal-f-tipo').value    = it.tipo    || 'informativo';
   document.getElementById('cal-f-status').value  = it.status  || 'planejado';
   document.getElementById('cal-f-data').value    = it.data    || '';
   document.getElementById('cal-f-autor').value   = it.autor   || '';
@@ -3527,6 +3527,11 @@ function switchTab(name) {
   const groupD = document.getElementById('group-dashboards');
   groupD.querySelector('.admin-tab').classList.toggle('active', DASH_TABS.includes(name));
   groupD.classList.remove('open');
+  // Mark standalone tabs as active
+  const tabAud = document.getElementById('tab-btn-audiencias');
+  if (tabAud) tabAud.classList.toggle('active', name === 'audiencias');
+  const tabCfg = document.getElementById('tab-btn-config');
+  if (tabCfg) tabCfg.classList.toggle('active', name === 'config');
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'blog')          { loadArticlesFromGitHub().then(renderBlog); }
@@ -10150,7 +10155,7 @@ const AUD_TIPO_LABEL   = { INICIAL:'Inicial', 'INSTRUÇÃO':'Instrução', 'CONC
 const AUD_TIPO_COLOR   = { INICIAL:'#0D2B5E', 'INSTRUÇÃO':'#6D28D9', 'CONCILIAÇÃO':'#1B7A4E', UNA:'#92400e' };
 const AUD_TIPO_BG      = { INICIAL:'#EEF2FF', 'INSTRUÇÃO':'#F5F3FF', 'CONCILIAÇÃO':'#E8F5EE', UNA:'#fffbeb' };
 const AUD_MOD_LABEL    = { VIRTUAL:'Virtual', PRESENCIAL:'Presencial', 'HÍBRIDA':'Híbrida' };
-const AUD_MOD_ICON     = { VIRTUAL:'🖥', PRESENCIAL:'🏛', 'HÍBRIDA':'🔀' };
+const AUD_MOD_ICON     = { VIRTUAL:'', PRESENCIAL:'', 'HÍBRIDA':'' };
 const AUD_STATUS_LABEL = { agendada:'Agendada', realizada:'Realizada', adiada:'Adiada', cancelada:'Cancelada', cancelado_pje:'Cancelada no PJe?' };
 const AUD_STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62828', cancelada:'#6B7280', cancelado_pje:'#92400E' };
 const AUD_STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#F3F4F6', cancelado_pje:'#FEF3C7' };
@@ -10190,24 +10195,24 @@ function _audMakeId(proc, data, hora) {
 
 /* ── render stats ── */
 function _audRenderStats(items) {
-  const today = new Date().toISOString().slice(0,10);
-  const hoje   = items.filter(a => a.data_audiencia === today).length;
-  const future = items.filter(a => a.data_audiencia > today && a.status === 'agendada').length;
-  const testem = items.filter(a => a.testemunha_necessaria).length;
-  const virtual = items.filter(a => a.modalidade === 'VIRTUAL').length;
+  const today     = new Date().toISOString().slice(0,10);
+  const thisMonth = today.slice(0,7);
+  const hoje         = items.filter(a => a.data_audiencia === today).length;
+  const agendadasMes = items.filter(a =>
+    a.data_audiencia && a.data_audiencia.startsWith(thisMonth) && a.status === 'agendada'
+  ).length;
+  const canceladas = items.filter(a =>
+    a.status === 'cancelada' || a.status === 'cancelado_pje'
+  ).length;
   const cards = [
-    { label:'Hoje',        val: hoje,    icon:'📅', color:'#0D2B5E', bg:'#EEF2FF' },
-    { label:'Agendadas',   val: future,  icon:'⏳', color:'#1B7A4E', bg:'#E8F5EE' },
-    { label:'c/ Testemunha', val: testem, icon:'👥', color:'#92400e', bg:'#fffbeb' },
-    { label:'Virtuais',    val: virtual, icon:'🖥', color:'#6D28D9', bg:'#F5F3FF' },
+    { label:'Hoje',             val: hoje,         color:'#0D2B5E', bg:'#EEF2FF', border:'#c7d2fe' },
+    { label:'Agendadas no Mês', val: agendadasMes,  color:'#1B7A4E', bg:'#E8F5EE', border:'#bbddc8' },
+    { label:'Canceladas',       val: canceladas,    color:'#C62828', bg:'#FFF0F0', border:'#ffcdd2' },
   ];
   document.getElementById('aud-stats-row').innerHTML = cards.map(c =>
-    `<div style="background:${c.bg};border:1px solid rgba(0,0,0,.06);border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:12px">
-      <span style="font-size:22px">${c.icon}</span>
-      <div>
-        <div style="font-family:var(--f-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.5);margin-bottom:4px">${c.label}</div>
-        <div style="font-family:var(--f-body);font-size:26px;font-weight:700;color:${c.color};line-height:1">${c.val}</div>
-      </div>
+    `<div style="background:${c.bg};border:1px solid ${c.border};border-radius:4px;padding:18px 20px;border-top:3px solid ${c.color}">
+      <div style="font-family:var(--f-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,0,0,.45);margin-bottom:10px">${c.label}</div>
+      <div style="font-family:var(--f-display);font-size:30px;font-weight:700;color:${c.color};line-height:1">${c.val}</div>
     </div>`
   ).join('');
 }
@@ -10225,12 +10230,12 @@ function _audCard(a) {
   const today     = new Date().toISOString().slice(0,10);
   const isHoje    = a.data_audiencia === today;
   const linkHtml  = (a.link && a.link !== 'NÃO SE APLICA' && a.link.startsWith('http'))
-    ? `<a href="${_escHtml(a.link)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:#0D2B5E;color:#fff;font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:3px;text-decoration:none;margin-top:4px">🔗 Entrar na Audiência</a>`
+    ? `<a href="${_escHtml(a.link)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:#0D2B5E;color:#fff;font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:2px;text-decoration:none;margin-top:4px">Acessar Audiência</a>`
     : '';
 
   const isCancelPje = a.status === 'cancelado_pje';
   return `<div class="item-card" style="border-left:4px solid ${isCancelPje ? '#D97706' : tipoColor};padding:18px 20px;${isCancelPje ? 'background:#FFFBEB;opacity:.85;' : isHoje ? 'background:#fffef0;' : ''}" data-aud-id="${_escHtml(a.id)}">
-    ${isCancelPje ? `<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:4px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#92400E;display:flex;align-items:center;gap:8px"><span style="font-size:16px">⚠️</span><span><strong>Audiência não encontrada no PJe</strong> — Pode ter sido cancelada. Confirme abaixo ou ignore se for engano do scraper.</span></div>` : ''}
+    ${isCancelPje ? `<div style="background:#FEF3C7;border:1px solid #FCD34D;border-left:3px solid #D97706;border-radius:2px;padding:8px 12px;margin-bottom:12px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#92400E"><strong>Audiência não encontrada no PJe</strong> — Pode ter sido cancelada. Confirme abaixo ou ignore se for engano do scraper.</div>` : ''}
     <!-- linha topo -->
     <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
       <!-- data/hora bloco -->
@@ -10259,18 +10264,18 @@ function _audCard(a) {
         </div>
         <!-- responsáveis -->
         <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--c-muted);margin-bottom:4px">
-          ${a.advogado         ? `<span>👨‍⚖️ Adv: <strong style="color:var(--c-dark)">${_escHtml(a.advogado)}</strong></span>` : ''}
-          ${a.responsavel_conducao ? `<span>🎤 Condução: <strong style="color:var(--c-dark)">${_escHtml(a.responsavel_conducao)}</strong></span>` : ''}
-          ${a.dados_preposto   ? `<span>🪪 Preposto: <strong style="color:var(--c-dark)">${_escHtml(a.dados_preposto)}</strong></span>` : ''}
+          ${a.advogado         ? `<span>Adv: <strong style="color:var(--c-dark)">${_escHtml(a.advogado)}</strong></span>` : ''}
+          ${a.responsavel_conducao ? `<span>Condução: <strong style="color:var(--c-dark)">${_escHtml(a.responsavel_conducao)}</strong></span>` : ''}
+          ${a.dados_preposto   ? `<span>Preposto: <strong style="color:var(--c-dark)">${_escHtml(a.dados_preposto)}</strong></span>` : ''}
         </div>
         <!-- testemunha -->
-        ${a.testemunha_necessaria ? `<div style="margin-top:6px;padding:6px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;font-size:11px;color:#92400e"><strong>⚠ Testemunha necessária</strong>${a.testemunhas ? ' — ' + _escHtml(a.testemunhas) : ''}</div>` : ''}
+        ${a.testemunha_necessaria ? `<div style="margin-top:6px;padding:6px 10px;background:#fffbeb;border:1px solid #fde68a;border-left:3px solid #D97706;border-radius:2px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#92400e"><strong>Testemunha necessária</strong>${a.testemunhas ? ' — ' + _escHtml(a.testemunhas) : ''}</div>` : ''}
         <!-- link -->
         ${linkHtml}
         <!-- id/senha e comentários -->
-        ${(a.id_senha && a.id_senha !== '-') ? `<div style="margin-top:6px;font-family:var(--f-mono);font-size:10px;color:var(--c-muted)">🔑 ${_escHtml(a.id_senha)}</div>` : ''}
+        ${(a.id_senha && a.id_senha !== '-') ? `<div style="margin-top:6px;font-family:var(--f-mono);font-size:10px;color:var(--c-muted);letter-spacing:.04em">${_escHtml(a.id_senha)}</div>` : ''}
         ${a.comentarios ? `<div style="margin-top:4px;font-size:11px;color:var(--c-muted);font-style:italic">${_escHtml(a.comentarios)}</div>` : ''}
-        ${a.orientacao  ? `<div style="margin-top:4px;font-size:11px;color:#0D2B5E;background:#EEF2FF;padding:4px 8px;border-radius:3px">📌 ${_escHtml(a.orientacao)}</div>` : ''}
+        ${a.orientacao  ? `<div style="margin-top:4px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#0D2B5E;background:#EEF2FF;padding:4px 10px;border-radius:2px;border-left:2px solid #0D2B5E">${_escHtml(a.orientacao)}</div>` : ''}
       </div>
       <!-- ações -->
       <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
@@ -10292,8 +10297,9 @@ async function loadAudiencias() {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
       const today = new Date().toISOString().slice(0,10);
+      const startOfMonth = today.slice(0,7) + '-01'; // busca desde o início do mês para stats corretos
       let q = sb.from('pauta_audiencias').select('*')
-        .gte('data_audiencia', today)
+        .gte('data_audiencia', startOfMonth)
         .order('data_audiencia', { ascending: true })
         .order('horario',       { ascending: true });
       const { data, error } = await q;
@@ -10304,6 +10310,8 @@ async function loadAudiencias() {
     items = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]');
   }
 
+  const today = new Date().toISOString().slice(0,10);
+
   // filtros client-side
   const fTipo  = document.getElementById('aud-filter-tipo')?.value      || '';
   const fMod   = document.getElementById('aud-filter-modalidade')?.value|| '';
@@ -10312,6 +10320,8 @@ async function loadAudiencias() {
   const fBusca = (document.getElementById('aud-filter-busca')?.value    || '').toLowerCase().trim();
 
   const filtered = items.filter(a => {
+    // sem filtro de mês ativo: esconde itens passados da lista (mas mantém nos stats)
+    if (!fMes && a.data_audiencia < today) return false;
     if (fTipo && a.tipo_audiencia !== fTipo) return false;
     if (fMod  && a.modalidade    !== fMod)  return false;
     if (fSt   && a.status        !== fSt)   return false;

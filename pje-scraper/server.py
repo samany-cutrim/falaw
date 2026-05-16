@@ -62,7 +62,8 @@ def _run_job(modo_oculto: bool) -> None:
     })
 
     env = os.environ.copy()
-    env["MODO_OCULTO"] = "true" if modo_oculto else "false"
+    env["MODO_OCULTO"]      = "true" if modo_oculto else "false"
+    env["MODO_INTERATIVO"]  = "false"  # sem pausa para auth quando rodando pelo servidor
 
     try:
         proc = subprocess.Popen(
