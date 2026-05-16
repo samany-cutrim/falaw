@@ -1,34 +1,47 @@
 @echo off
-title Coletando Audiencias PJe - Falaw
+title Falaw PJe - Coleta Completa
 cd /d "%~dp0"
 
+echo.
 echo ============================================================
-echo  FALAW - Coletando audiencias do PJe
-echo  %date% %time%
+echo  FALAW - Coleta completa do PJe
+echo  %DATE% %TIME:~0,5%
 echo ============================================================
 echo.
-echo Certifique-se de que o Chrome esta aberto e voce esta
-echo logado nos TRTs desejados. Pressione qualquer tecla para iniciar.
+echo  Como deseja executar?
 echo.
-pause
+echo    [1] Visivel  - Chrome aparece na tela
+echo    [2] Oculto   - Chrome roda em segundo plano (sem janela)
+echo.
+choice /c 12 /n /m "  Opcao: "
 
-REM Ativa o venv se existir
+if %errorlevel%==1 (
+    set MODO_OCULTO=false
+    echo.
+    echo  Modo: VISIVEL
+) else (
+    set MODO_OCULTO=true
+    echo.
+    echo  Modo: OCULTO ^(Chrome em segundo plano^)
+)
+
+echo.
+echo  Pressione qualquer tecla para iniciar...
+pause > nul
+
+REM ── Ativar venv ──────────────────────────────────────────────────────────────
 if exist "..\\.venv\\Scripts\\activate.bat" (
     call "..\\.venv\\Scripts\\activate.bat"
 )
 
-echo [1/2] Autenticando TRTs via Whom...
-python whom_auth.py
-if %errorlevel% neq 0 (
-    echo AVISO: whom_auth.py retornou erro. Continuando com sessoes existentes...
-)
-
 echo.
-echo [2/2] Coletando audiencias do PJe...
+echo Iniciando coleta...
+echo.
 python scraper.py
 
 echo.
 echo ============================================================
-echo  Coleta finalizada. Verifique o log em logs\scraper.log
+echo  Concluido! Verifique logs\scraper.log
 echo ============================================================
+echo.
 pause

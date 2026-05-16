@@ -1,81 +1,77 @@
 """
-scraper.py — Extrator de Audiências PJe-kz → Supabase | Falaw
-Versão: CDP (conecta ao Chrome já aberto com Whom/certificado ativo)
-Detecta cancelamentos: audiências que sumiram do PJe são marcadas como 'cancelado_pje'
-
-COMO USAR:
-1. Feche o Chrome completamente
-2. Abra via atalho "Chrome PJe" (usa 1_abrir_chrome.bat)
-3. Faça login nos TRTs normalmente com o Whom
-4. Execute: python scraper.py
+scraper.py — Coleta audiências PJe → Supabase | Falaw
+Fluxo por TRT/grau: autentica via Whom → pauta (1 ano) → pagina → entra
+em cada processo para buscar intimação com link, ID e senha → salva.
 """
 
-import json
+import os
+import re
 import time
 import logging
-import os
-import hashlib
-import re
 from datetime import datetime, timedelta
 from pathlib import Path
+from urllib.parse import urlparse, quote
 from dotenv import load_dotenv
 import requests
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
-load_dotenv()
+from whom_auth import (
+    garantir_chrome_aberto,
+    encontrar_whom,
+    autenticar_e_capturar_pje_page,
+    CHROME_DEBUG_PORT,
+    WHOM_TRTS,
+)
 
-# ── Configurações ──────────────────────────────────────────────────────────────
+_HERE = Path(__file__).parent
+load_dotenv(_HERE / ".env")
 
-CHROME_DEBUG_PORT = int(os.getenv("CHROME_DEBUG_PORT", "9222"))
-DIAS_BUSCA        = int(os.getenv("DIAS_BUSCA", "60"))
-SB_URL            = os.getenv("SUPABASE_URL", "").rstrip("/")
-SB_KEY            = os.getenv("SUPABASE_KEY", "")
-SB_TABLE          = "pauta_audiencias"
+DIAS_BUSCA = int(os.getenv("DIAS_BUSCA", "365"))
+SB_URL     = os.getenv("SUPABASE_URL", "").rstrip("/")
+SB_KEY     = os.getenv("SUPABASE_KEY", "")
+SB_TABLE   = "pauta_audiencias"
 
-Path("logs").mkdir(exist_ok=True)
-
-# TRTs — PJe-kz
-TRTS = [
-    {"nome": "TRT-1",  "base": "https://pje.trt1.jus.br"},
-    {"nome": "TRT-2",  "base": "https://pje.trt2.jus.br"},
-    {"nome": "TRT-3",  "base": "https://pje.trt3.jus.br"},
-    {"nome": "TRT-4",  "base": "https://pje.trt4.jus.br"},
-    {"nome": "TRT-5",  "base": "https://pje.trt5.jus.br"},
-    {"nome": "TRT-6",  "base": "https://pje.trt6.jus.br"},
-    {"nome": "TRT-7",  "base": "https://pje.trt7.jus.br"},
-    {"nome": "TRT-8",  "base": "https://pje.trt8.jus.br"},
-    {"nome": "TRT-9",  "base": "https://pje.trt9.jus.br"},
-    {"nome": "TRT-10", "base": "https://pje.trt10.jus.br"},
-    {"nome": "TRT-11", "base": "https://pje.trt11.jus.br"},
-    {"nome": "TRT-12", "base": "https://pje.trt12.jus.br"},
-    {"nome": "TRT-13", "base": "https://pje.trt13.jus.br"},
-    {"nome": "TRT-14", "base": "https://pje.trt14.jus.br"},
-    {"nome": "TRT-15", "base": "https://pje.trt15.jus.br"},
-    {"nome": "TRT-16", "base": "https://pje.trt16.jus.br"},
-    {"nome": "TRT-17", "base": "https://pje.trt17.jus.br"},
-    {"nome": "TRT-18", "base": "https://pje.trt18.jus.br"},
-    {"nome": "TRT-19", "base": "https://pje.trt19.jus.br"},
-    {"nome": "TRT-20", "base": "https://pje.trt20.jus.br"},
-    {"nome": "TRT-21", "base": "https://pje.trt21.jus.br"},
-    {"nome": "TRT-22", "base": "https://pje.trt22.jus.br"},
-    {"nome": "TRT-23", "base": "https://pje.trt23.jus.br"},
-    {"nome": "TRT-24", "base": "https://pje.trt24.jus.br"},
-]
-
-# ── Logging ────────────────────────────────────────────────────────────────────
-
+_LOG_DIR = _HERE / "logs"
+_LOG_DIR.mkdir(exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler("logs/scraper.log", encoding="utf-8"),
+        logging.FileHandler(_LOG_DIR / "scraper.log", encoding="utf-8"),
         logging.StreamHandler(),
     ],
 )
 log = logging.getLogger(__name__)
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
+# ── Mapeamento sistemas → fallback URLs ───────────────────────────────────────
+
+def _build_sistemas():
+    todos = []
+    for n in range(1, 25):
+        todos.append({
+            "whom":          f"TRT{n} Pje - 1º grau",
+            "nome":          f"TRT-{n}/1G",
+            "fallback_base": f"https://pje.trt{n}.jus.br",
+        })
+        todos.append({
+            "whom":          f"TRT{n} Pje - 2º grau",
+            "nome":          f"TRT-{n}/2G",
+            "fallback_base": f"https://pje.trt{n}.jus.br",
+        })
+    todos.append({
+        "whom":          "TST Pje",
+        "nome":          "TST",
+        "fallback_base": "https://pje.tst.jus.br",
+    })
+    if WHOM_TRTS:
+        todos = [s for s in todos if s["whom"] in WHOM_TRTS]
+    return todos
+
+SISTEMAS = _build_sistemas()
+
+
+# ── Parse helpers ─────────────────────────────────────────────────────────────
 
 MESES = {
     "janeiro":1,"fevereiro":2,"março":3,"abril":4,"maio":5,"junho":6,
@@ -85,29 +81,19 @@ MESES = {
 }
 
 def parse_data_hora(txt: str) -> tuple[str, str]:
-    """
-    Aceita: 'Segunda, 18 de maio de 2026 14:20'
-            '18/05/2026 14:20'
-            '2026-05-18T14:20:00'
-    Retorna: ('2026-05-18', '14:20')
-    """
     txt = txt.strip()
-    # ISO
     m = re.search(r"(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})", txt)
     if m:
         return m.group(1), m.group(2)
-    # dd/mm/yyyy HH:MM
     m = re.search(r"(\d{2})/(\d{2})/(\d{4})\s+(\d{2}:\d{2})", txt)
     if m:
         return f"{m.group(3)}-{m.group(2)}-{m.group(1)}", m.group(4)
-    # "Segunda, 18 de maio de 2026 14:20"
     m = re.search(r"(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})\s+(\d{2}:\d{2})", txt, re.IGNORECASE)
     if m:
         dia, mes_str, ano, hora = m.groups()
         mes = MESES.get(mes_str.lower())
         if mes:
             return f"{ano}-{mes:02d}-{int(dia):02d}", hora
-    # só data dd/mm/yyyy
     m = re.search(r"(\d{2})/(\d{2})/(\d{4})", txt)
     if m:
         return f"{m.group(3)}-{m.group(2)}-{m.group(1)}", ""
@@ -115,24 +101,20 @@ def parse_data_hora(txt: str) -> tuple[str, str]:
 
 
 def parse_tipo(txt: str) -> tuple[str, str]:
-    """
-    'Una por videoconferência' → ('UNA', 'VIRTUAL')
-    'Instrução presencial'     → ('INSTRUCAO', 'PRESENCIAL')
-    Retorna (tipo, modalidade)
-    """
     t = txt.upper()
     if "UNA" in t or "CONCILIAÇ" in t:
         tipo = "UNA"
     elif "INSTRUÇÃO" in t or "INSTRUCAO" in t:
         tipo = "INSTRUCAO"
+    elif "INICIAL" in t:
+        tipo = "INICIAL"
     elif "JULGAMENTO" in t:
         tipo = "JULGAMENTO"
     elif "PERIC" in t:
         tipo = "PERICIAL"
     else:
         tipo = txt.strip().upper()[:20] if txt.strip() else "AUDIENCIA"
-
-    if "VIDEO" in t or "VIRTUAL" in t or "REMOT" in t or "DIGITAL" in t:
+    if "VIDEO" in t or "VIRTUAL" in t or "REMOT" in t or "DIGITAL" in t or "TELEPR" in t:
         mod = "VIRTUAL"
     elif "PRESENCIAL" in t or "FÍSIC" in t or "FISIC" in t:
         mod = "PRESENCIAL"
@@ -144,7 +126,6 @@ def parse_tipo(txt: str) -> tuple[str, str]:
 
 
 def make_id(processo: str, data: str, hora: str) -> str:
-    """ID estável baseado em FNV-1a do processo+data+hora."""
     raw = f"{processo}|{data}|{hora}".encode()
     h = 0x811c9dc5
     for b in raw:
@@ -153,168 +134,122 @@ def make_id(processo: str, data: str, hora: str) -> str:
     return f"pje-{h:08x}"
 
 
-# ── Supabase helpers ───────────────────────────────────────────────────────────
+# ── Supabase ──────────────────────────────────────────────────────────────────
 
 def sb_headers() -> dict:
     return {
         "apikey": SB_KEY,
         "Authorization": f"Bearer {SB_KEY}",
         "Content-Type": "application/json",
-        "Prefer": "return=minimal",
     }
 
 
 def sb_upsert(records: list[dict]) -> int:
-    """Upsert em lote. Retorna quantos foram enviados."""
     if not records or not SB_URL or not SB_KEY:
         return 0
     url = f"{SB_URL}/rest/v1/{SB_TABLE}"
-    headers = sb_headers()
-    headers["Prefer"] = "resolution=merge-duplicates,return=minimal"
-    # Lotes de 50
+    headers = {**sb_headers(), "Prefer": "resolution=merge-duplicates,return=minimal"}
     sent = 0
     for i in range(0, len(records), 50):
-        batch = records[i:i+50]
+        batch = records[i:i + 50]
         r = requests.post(url, headers=headers, json=batch, timeout=20)
         if r.status_code in (200, 201):
             sent += len(batch)
         else:
-            log.error(f"Supabase upsert erro {r.status_code}: {r.text[:200]}")
+            log.error(f"Supabase {r.status_code}: {r.text[:200]}")
     return sent
 
 
-def sb_buscar_ativos_trt(nome_trt: str) -> list[dict]:
-    """
-    Busca todas as audiências ativas (status != cancelado) de um TRT
-    com data futura, para detectar cancelamentos.
-    """
+def sb_buscar_ativos(nome: str) -> list[dict]:
     if not SB_URL or not SB_KEY:
         return []
     today = datetime.today().strftime("%Y-%m-%d")
     url = (
         f"{SB_URL}/rest/v1/{SB_TABLE}"
-        f"?vara=ilike.*{nome_trt}*"
+        f"?trt_grau=eq.{nome}"
         f"&data_audiencia=gte.{today}"
         f"&status=neq.cancelado"
         f"&status=neq.cancelado_pje"
-        f"&origem=eq.pje"
-        f"&select=id,processo,data_audiencia,horario"
+        f"&select=id"
     )
     r = requests.get(url, headers=sb_headers(), timeout=20)
-    if r.status_code == 200:
-        return r.json()
-    return []
+    return r.json() if r.status_code == 200 else []
 
 
-def sb_marcar_cancelado_pje(ids: list[str]):
-    """Marca audiências como 'cancelado_pje' (pendente confirmação no admin)."""
+def sb_marcar_cancelado(ids: list[str]):
     if not ids or not SB_URL or not SB_KEY:
         return
     url = f"{SB_URL}/rest/v1/{SB_TABLE}"
-    headers = sb_headers()
-    headers["Prefer"] = "return=minimal"
     for uid in ids:
-        r = requests.patch(
+        requests.patch(
             f"{url}?id=eq.{uid}",
-            headers=headers,
+            headers={**sb_headers(), "Prefer": "return=minimal"},
             json={"status": "cancelado_pje", "updated_at": datetime.utcnow().isoformat()},
             timeout=20,
         )
-        if r.status_code not in (200, 204):
-            log.warning(f"Erro ao marcar cancelado_pje id={uid}: {r.status_code}")
 
 
-# ── Scraper PJe-kz ─────────────────────────────────────────────────────────────
+# ── Filtro de data ────────────────────────────────────────────────────────────
 
-def verificar_autenticado(page, base_url: str) -> bool:
-    pauta_url = f"{base_url}/pjekz/pauta-usuarios-externos"
+def _set_calendar_input(page, inp, valor: str):
     try:
-        page.goto(pauta_url, timeout=25000, wait_until="domcontentloaded")
-        time.sleep(3)
-        url_atual = page.url
-        # Se redirecionou para login, sessão expirou
-        if "login" in url_atual.lower() or "token" in url_atual.lower():
-            log.warning(f"Sessão expirada: {base_url}")
-            return False
-        # Verificar se a página tem conteúdo de pauta
-        if page.locator("table, .p-datatable, p-table").count() > 0:
-            log.info(f"Sessão ativa: {base_url}")
-            return True
-        # Às vezes carrega lentamente
-        page.wait_for_selector("table, .p-datatable, p-table, .p-datatable-tbody", timeout=10000)
-        log.info(f"Sessão ativa (aguardou tabela): {base_url}")
-        return True
-    except PlaywrightTimeout:
-        # Timeout pode significar que o TRT não tem audiências (tabela vazia) mas sessão ok
-        url_atual = page.url
-        if "login" not in url_atual.lower():
-            log.info(f"Sessão ativa (sem tabela visível): {base_url}")
-            return True
-        log.warning(f"Timeout/sessão inativa: {base_url}")
-        return False
-    except Exception as e:
-        log.error(f"Erro verificar auth {base_url}: {e}")
-        return False
+        inp.click(force=True)
+        time.sleep(0.2)
+        inp.press("Control+a")
+        inp.type(valor, delay=40)
+        time.sleep(0.4)
+        inp.press("Tab")
+        time.sleep(0.3)
+        page.keyboard.press("Escape")
+        time.sleep(0.2)
+    except Exception:
+        pass
 
 
-def expandir_periodo(page):
-    """Tenta configurar o filtro de período para hoje + DIAS_BUSCA dias."""
-    hoje = datetime.today()
-    fim  = hoje + timedelta(days=DIAS_BUSCA)
+def definir_periodo(page):
+    """Define De=hoje, Até=hoje+DIAS_BUSCA nos campos p-calendar da pauta."""
+    hoje   = datetime.today()
+    fim    = hoje + timedelta(days=DIAS_BUSCA)
+    hoje_s = hoje.strftime("%d/%m/%Y")
+    fim_s  = fim.strftime("%d/%m/%Y")
+
     try:
-        # Filtro de data inicial
-        for sel in ["input[placeholder*='nício']", "input[placeholder*='inicio']",
-                    "p-calendar:first-of-type input", "#dtInicio"]:
-            c = page.locator(sel).first
-            if c.count() > 0 and c.is_visible():
-                c.triple_click()
-                c.type(hoje.strftime("%d/%m/%Y"))
-                time.sleep(0.3)
-                break
-        # Filtro de data final
-        for sel in ["input[placeholder*='inal']", "input[placeholder*='fim']",
-                    "p-calendar:last-of-type input", "#dtFim"]:
-            c = page.locator(sel).first
-            if c.count() > 0 and c.is_visible():
-                c.triple_click()
-                c.type(fim.strftime("%d/%m/%Y"))
-                time.sleep(0.3)
-                break
-        # Pesquisar
-        for sel in ["button:has-text('Pesquisar')", "button:has-text('Filtrar')",
-                    "button[type='submit']", "p-button:has-text('Pesquisar')"]:
-            b = page.locator(sel).first
-            if b.count() > 0 and b.is_visible():
-                b.click()
-                time.sleep(3)
-                break
-    except Exception as e:
-        log.debug(f"Período não ajustado: {e}")
+        page.wait_for_load_state("domcontentloaded", timeout=15000)
+        time.sleep(1.5)
+    except Exception:
+        pass
 
+    cal = page.locator("p-calendar input")
+    n = cal.count()
 
-def extrair_linhas_pagina(page, nome_trt: str) -> list[dict]:
-    """Extrai registros de audiência da tabela visível na página atual."""
-    audiencias = []
+    if n >= 1:
+        _set_calendar_input(page, cal.nth(0), hoje_s)
+    if n >= 2:
+        _set_calendar_input(page, cal.nth(1), fim_s)
+
     try:
-        # Aguardar tabela estabilizar
+        page.wait_for_load_state("networkidle", timeout=12000)
+    except Exception:
+        pass
+    time.sleep(2)
+
+
+# ── Extração de linhas da pauta ───────────────────────────────────────────────
+
+def extrair_linhas_pagina(page, nome: str, trt_grau: str) -> list[dict]:
+    try:
         page.wait_for_load_state("networkidle", timeout=8000)
     except Exception:
         pass
 
-    # Seletores de linha para PJe-kz (PrimeNG) e PJe legado
-    seletores_tr = [
-        ".p-datatable-tbody > tr",
-        "p-table .p-datatable-tbody > tr",
-        "table tbody tr",
-        "[class*='datatable'] tbody tr",
-    ]
     linhas = []
-    for sel in seletores_tr:
+    for sel in [".p-datatable-tbody > tr", "table tbody tr", "[class*='datatable'] tbody tr"]:
         found = page.locator(sel).all()
         if found:
             linhas = found
             break
 
+    audiencias = []
     for linha in linhas:
         celulas = linha.locator("td").all()
         if len(celulas) < 3:
@@ -323,86 +258,91 @@ def extrair_linhas_pagina(page, nome_trt: str) -> list[dict]:
         if not any(textos):
             continue
 
-        # PJe-kz colunas: [0]=Processo+partes, [1]=Prioridade/Juízo Digital, [2]=Data e Horário, [3]=Tipo, [4]=Órgão Julgador
-        processo_raw = textos[0] if len(textos) > 0 else ""
-        data_hora_raw = textos[2] if len(textos) > 2 else textos[0]
+        # Colunas: [0] Processo+partes  [1] Prioridade  [2] Data/hora  [3] Tipo  [4] Vara
+        processo_raw  = textos[0] if textos else ""
+        data_hora_raw = textos[2] if len(textos) > 2 else ""
         tipo_raw      = textos[3] if len(textos) > 3 else ""
         vara_raw      = textos[4] if len(textos) > 4 else ""
 
-        # Extrair número do processo (linha 1) e partes (resto)
         linhas_proc = processo_raw.split("\n")
-        processo = linhas_proc[0].strip() if linhas_proc else processo_raw
-        partes_raw = " | ".join(l.strip() for l in linhas_proc[1:] if l.strip())
+        processo    = linhas_proc[0].strip()
+        partes_raw  = " | ".join(l.strip() for l in linhas_proc[1:] if l.strip())
 
         reclamante, reclamada = "", ""
         if " X " in partes_raw.upper():
-            partes_split = re.split(r"\s+[xX]\s+", partes_raw, maxsplit=1)
-            reclamante = partes_split[0].strip()
-            reclamada  = partes_split[1].strip() if len(partes_split) > 1 else ""
+            sp = re.split(r"\s+[xX]\s+", partes_raw, maxsplit=1)
+            reclamante = sp[0].strip()
+            reclamada  = sp[1].strip() if len(sp) > 1 else ""
         elif "|" in partes_raw:
-            partes_split = partes_raw.split("|")
-            reclamante = partes_split[0].strip()
-            reclamada  = partes_split[1].strip() if len(partes_split) > 1 else ""
+            sp = partes_raw.split("|")
+            reclamante = sp[0].strip()
+            reclamada  = sp[1].strip() if len(sp) > 1 else ""
 
         data, hora = parse_data_hora(data_hora_raw)
-        tipo, mod   = parse_tipo(tipo_raw)
-        uid         = make_id(processo, data, hora)
+        tipo, mod  = parse_tipo(tipo_raw)
+        uid        = make_id(processo, data, hora)
 
         if not processo and not data:
             continue
 
+        # Capturar href do processo para buscar intimação depois
+        proc_href = ""
+        try:
+            link_el = celulas[0].locator("a").first
+            if link_el.count() > 0:
+                proc_href = link_el.get_attribute("href") or ""
+                if proc_href in ("#", "javascript:void(0)", "javascript:;"):
+                    proc_href = ""
+        except Exception:
+            pass
+
         audiencias.append({
-            "id":            uid,
-            "processo":      processo,
-            "reclamante":    reclamante,
-            "reclamada":     reclamada,
+            "id":             uid,
+            "processo":       processo,
+            "reclamante":     reclamante,
+            "reclamada":      reclamada,
             "data_audiencia": data,
-            "horario":       hora,
+            "horario":        hora,
             "tipo_audiencia": tipo,
-            "modalidade":    mod,
-            "vara":          vara_raw,
-            "status":        "agendado",
-            "origem":        "pje",
-            "updated_at":    datetime.utcnow().isoformat(),
+            "modalidade":     mod,
+            "vara":           vara_raw,
+            "trt_grau":       trt_grau,
+            "status":         "agendado",
+            "origem":         "pje",
+            "updated_at":     datetime.utcnow().isoformat(),
+            # campos extras (não enviados ao Supabase diretamente — populados após)
+            "_proc_href":     proc_href,
+            "_processo_num":  processo,
         })
     return audiencias
 
 
-def scrape_trt(page, trt: dict) -> list[dict]:
-    """Coleta todas as páginas de um TRT. Retorna lista de audiências."""
-    nome = trt["nome"]
-    base = trt["base"]
+# ── Paginação completa da pauta ───────────────────────────────────────────────
 
-    if not verificar_autenticado(page, base):
-        return []
-
-    # Tenta expandir período
-    expandir_periodo(page)
-    time.sleep(1)
-
-    todas = []
+def scrape_todas_paginas(page, nome: str, trt_grau: str) -> list[dict]:
+    todas  = []
     pagina = 1
 
-    while pagina <= 30:  # máx 30 páginas por segurança
-        log.info(f"{nome}: extraindo página {pagina}…")
-        items = extrair_linhas_pagina(page, nome)
-        if not items:
-            log.info(f"{nome}: nenhuma linha na página {pagina}, finalizando")
-            break
-        todas.extend(items)
-        log.info(f"{nome}: {len(items)} linha(s) página {pagina} ({len(todas)} total)")
+    while pagina <= 50:
+        log.info(f"    Página {pagina}…")
+        items = extrair_linhas_pagina(page, nome, trt_grau)
 
-        # Paginação PrimeNG
-        proximo = page.locator(
+        if not items:
+            sem = page.locator("text='Não há resultados'").count()
+            log.info(f"    {'Sem audiências no período' if sem else 'Tabela vazia'}")
+            break
+
+        todas.extend(items)
+        log.info(f"    {len(items)} audiência(s) — total: {len(todas)}")
+
+        prox = page.locator(
             "button[aria-label='Next Page']:not([disabled]),"
             ".p-paginator-next:not(.p-disabled),"
-            "button.p-paginator-next:not([disabled]),"
-            "a:has-text('Próximo'):not(.disabled),"
-            "a:has-text('>'):not(.disabled)"
+            "button.p-paginator-next:not([disabled])"
         ).first
         try:
-            if proximo.count() > 0 and proximo.is_enabled():
-                proximo.click()
+            if prox.count() > 0 and prox.is_enabled():
+                prox.click()
                 pagina += 1
                 time.sleep(2)
             else:
@@ -413,87 +353,306 @@ def scrape_trt(page, trt: dict) -> list[dict]:
     return todas
 
 
-# ── Detecção de cancelamentos ──────────────────────────────────────────────────
+# ── Detalhes da intimação por processo ───────────────────────────────────────
 
-def detectar_cancelamentos(nome_trt: str, ids_coletados: set[str]):
+# Padrões de link de videoconferência
+_RE_LINKS = re.compile(
+    r'https?://[^\s<>"\'()]+',
+    re.IGNORECASE,
+)
+_DOMINIOS_VIDEO = re.compile(
+    r'zoom\.us|teams\.microsoft\.com|meet\.google\.com|webex\.com|jitsi|whereby\.com'
+    r'|videoconferencia|sala\.virtual|mconf|rnp\.br|jus\.br.*(?:video|sala|meet)',
+    re.IGNORECASE,
+)
+
+# Padrões de ID e senha
+_RE_MEETING_ID = re.compile(
+    r'(?:ID\s+da\s+reuni[aã]o|meeting\s+id|ID\s+do\s+(?:meet|webinar|reuni[aã]o)|ID)\s*[:\-]?\s*([\d][\d\s\.\-]{4,})',
+    re.IGNORECASE,
+)
+_RE_SENHA = re.compile(
+    r'(?:senha|password|c[oó]digo\s+de\s+acesso|access\s+code)\s*[:\-]?\s*([A-Za-z0-9\!\@\#\$\%]{4,})',
+    re.IGNORECASE,
+)
+_RE_TIPO_INTIM = re.compile(
+    r'\b(virtual|presencial|h[íi]brida?|telep[re]+sencial|videoconfer[êe]ncia)\b',
+    re.IGNORECASE,
+)
+
+
+def _extrair_de_texto(texto: str) -> dict:
+    """Extrai link_video, meeting_id e senha de texto livre da intimação."""
+    resultado = {"link_video": "", "meeting_id": "", "senha": "", "modalidade_intim": ""}
+
+    # Links de vídeo
+    for url in _RE_LINKS.findall(texto):
+        url_clean = url.rstrip(".,;)")
+        if _DOMINIOS_VIDEO.search(url_clean):
+            resultado["link_video"] = url_clean
+            break
+
+    # Meeting ID
+    m = _RE_MEETING_ID.search(texto)
+    if m:
+        resultado["meeting_id"] = re.sub(r'\s+', ' ', m.group(1)).strip()
+
+    # Senha
+    m = _RE_SENHA.search(texto)
+    if m:
+        resultado["senha"] = m.group(1).strip()
+
+    # Modalidade confirmada na intimação
+    m = _RE_TIPO_INTIM.search(texto)
+    if m:
+        val = m.group(1).upper()
+        if "VIRTUAL" in val or "VIDEO" in val or "TELEPR" in val:
+            resultado["modalidade_intim"] = "VIRTUAL"
+        elif "HIBRIDA" in val or "HÍBRIDA" in val:
+            resultado["modalidade_intim"] = "HIBRIDA"
+        elif "PRESENCIAL" in val:
+            resultado["modalidade_intim"] = "PRESENCIAL"
+
+    return resultado
+
+
+def buscar_detalhes_intimacao(ctx, base: str, proc_href: str, proc_num: str) -> dict:
     """
-    Compara os IDs coletados agora com os que estavam ativos no Supabase.
-    Os que sumiram do PJe são marcados como 'cancelado_pje'.
+    Abre o processo em nova aba, navega para Comunicações/Audiências,
+    extrai link de vídeo, meeting ID e senha da intimação mais recente.
+    Fecha a aba ao terminar. Retorna dict com as chaves extraídas.
     """
-    ativos_sb = sb_buscar_ativos_trt(nome_trt)
-    ids_sb = {r["id"] for r in ativos_sb}
+    vazio = {"link_video": "", "meeting_id": "", "senha": "", "modalidade_intim": ""}
+
+    # Montar URL do processo
+    if proc_href and proc_href.startswith("http"):
+        url = proc_href
+    elif proc_href and proc_href.startswith("/"):
+        url = f"{base}{proc_href}"
+    else:
+        # Fallback: busca por número do processo
+        url = f"{base}/pjekz/consulta-publica/listView.seam?paginaConsulta=0&numeroProcesso={quote(proc_num, safe='')}"
+
+    proc_page = ctx.new_page()
+    try:
+        proc_page.goto(url, wait_until="domcontentloaded", timeout=20000)
+        time.sleep(1.5)
+
+        # Tentar navegar para abas de comunicação/audiências (várias nomenclaturas)
+        for aba in ["Comunicações", "Comunicacoes", "Intimações", "Audiências", "Audiencias"]:
+            tab = proc_page.locator(
+                f"[role='tab']:has-text('{aba}'), "
+                f"a.nav-link:has-text('{aba}'), "
+                f"li:has-text('{aba}') a"
+            ).first
+            try:
+                if tab.count() > 0:
+                    tab.wait_for(state="visible", timeout=3000)
+                    tab.click()
+                    time.sleep(1.5)
+                    break
+            except Exception:
+                pass
+
+        # Tentar abrir o documento/intimação mais recente visível
+        for doc_sel in [
+            "button:has-text('Visualizar')",
+            "a:has-text('Visualizar')",
+            ".p-datatable-tbody tr:first-child button",
+            ".p-datatable-tbody tr:first-child a",
+        ]:
+            doc_btn = proc_page.locator(doc_sel).first
+            try:
+                if doc_btn.count() > 0 and doc_btn.is_visible():
+                    # Abrir em nova aba para não perder o contexto do processo
+                    with ctx.expect_page(timeout=8000) as doc_info:
+                        doc_btn.click(modifiers=["Control"])
+                    doc_page = doc_info.value
+                    try:
+                        doc_page.wait_for_load_state("domcontentloaded", timeout=12000)
+                        time.sleep(1)
+                        texto = doc_page.inner_text("body")
+                        doc_page.close()
+                        resultado = _extrair_de_texto(texto)
+                        if resultado["link_video"] or resultado["meeting_id"]:
+                            return resultado
+                    except Exception:
+                        try:
+                            doc_page.close()
+                        except Exception:
+                            pass
+                    break
+            except Exception:
+                pass
+
+        # Fallback: extrair texto da página inteira do processo
+        texto = proc_page.inner_text("body")
+        return _extrair_de_texto(texto)
+
+    except Exception as e:
+        log.debug(f"buscar_detalhes_intimacao [{proc_num}]: {e}")
+        return vazio
+    finally:
+        try:
+            proc_page.close()
+        except Exception:
+            pass
+
+
+# ── Processamento por sistema ─────────────────────────────────────────────────
+
+def processar_sistema(browser, ext_id: str, popup: str, sistema: dict) -> tuple[int, int]:
+    whom_nome = sistema["whom"]
+    nome      = sistema["nome"]
+    fallback  = sistema["fallback_base"]
+
+    log.info(f"  Autenticando: {whom_nome}")
+    pje_page = autenticar_e_capturar_pje_page(browser, ext_id, popup, whom_nome)
+
+    # Determinar URL base
+    if pje_page and pje_page.url and "about:" not in pje_page.url:
+        parsed = urlparse(pje_page.url)
+        base   = f"{parsed.scheme}://{parsed.netloc}"
+    else:
+        base = fallback
+        log.info(f"  Usando fallback: {base}")
+
+    pauta_url = f"{base}/pjekz/pauta-usuarios-externos"
+    log.info(f"  Pauta: {pauta_url}")
+
+    ctx = browser.contexts[0] if browser.contexts else None
+    if pje_page:
+        try:
+            pje_page.goto(pauta_url, wait_until="domcontentloaded", timeout=25000)
+            page = pje_page
+        except Exception:
+            page = ctx.new_page() if ctx else None
+            if page:
+                page.goto(pauta_url, wait_until="domcontentloaded", timeout=25000)
+    else:
+        page = ctx.new_page() if ctx else None
+        if page:
+            page.goto(pauta_url, wait_until="domcontentloaded", timeout=25000)
+
+    if not page:
+        log.warning(f"  {nome}: sem página disponível")
+        return 0, 0
+
+    if "login" in page.url.lower() or "token" in page.url.lower():
+        log.warning(f"  {nome}: não autenticado (redirecionou para login)")
+        page.close()
+        return -1, 0
+
+    log.info(f"  Período: hoje → +{DIAS_BUSCA} dias")
+    definir_periodo(page)
+
+    audiencias = scrape_todas_paginas(page, nome, nome)
+    page.close()
+
+    if not audiencias:
+        return 0, 0
+
+    # ── Buscar detalhes da intimação processo a processo ──────────────────────
+    log.info(f"  Buscando detalhes das intimações ({len(audiencias)} processo(s))...")
+    for i, aud in enumerate(audiencias, 1):
+        proc_href = aud.pop("_proc_href", "")
+        proc_num  = aud.pop("_processo_num", "")
+        log.info(f"    [{i}/{len(audiencias)}] {proc_num[:40]}…")
+        detalhes = buscar_detalhes_intimacao(ctx, base, proc_href, proc_num)
+        # Atualizar modalidade se intimação confirmou algo diferente
+        if detalhes["modalidade_intim"]:
+            aud["modalidade"] = detalhes["modalidade_intim"]
+        aud["link_video"]  = detalhes["link_video"]
+        aud["meeting_id"]  = detalhes["meeting_id"]
+        aud["senha"]       = detalhes["senha"]
+        time.sleep(0.5)
+
+    # ── Salvar no Supabase ────────────────────────────────────────────────────
+    enviados = sb_upsert(audiencias)
+    log.info(f"  {nome}: {enviados} audiências salvas")
+
+    # ── Detectar cancelamentos ────────────────────────────────────────────────
+    cancelados = 0
+    ids_coletados = {a["id"] for a in audiencias}
+    ativos_sb     = sb_buscar_ativos(nome)
+    ids_sb        = {r["id"] for r in ativos_sb}
     desaparecidos = ids_sb - ids_coletados
     if desaparecidos:
-        log.info(f"{nome_trt}: {len(desaparecidos)} audiência(s) marcada(s) como cancelado_pje")
-        sb_marcar_cancelado_pje(list(desaparecidos))
-    return len(desaparecidos)
+        sb_marcar_cancelado(list(desaparecidos))
+        cancelados = len(desaparecidos)
+        log.info(f"  {nome}: {cancelados} marcada(s) como cancelado_pje")
+
+    return enviados, cancelados
 
 
-# ── Main ───────────────────────────────────────────────────────────────────────
+# ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
     log.info("=" * 60)
     log.info(f"Iniciando coleta — {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     log.info(f"Supabase: {SB_URL or 'NÃO CONFIGURADO'}")
+    log.info(f"Sistemas: {len(SISTEMAS)} | Período: hoje + {DIAS_BUSCA} dias")
     log.info("=" * 60)
 
     if not SB_URL or not SB_KEY:
-        log.error("SUPABASE_URL e SUPABASE_KEY não configurados no .env — abortando")
+        log.error("SUPABASE_URL e SUPABASE_KEY não configurados no .env")
         return
 
-    resumo = {"trt_ok": [], "trt_erro": [], "trt_sem_sessao": [], "total": 0, "cancelados": 0}
+    if not garantir_chrome_aberto():
+        log.error("Não foi possível abrir o Chrome de scraping. Abortando.")
+        return
+
+    ext_id, popup = encontrar_whom()
+    if not ext_id:
+        log.error(
+            "Extensão Whom não encontrada no perfil de scraping.\n"
+            "  → Abra o Chrome de scraping (FalawScraper) e instale a extensão Whom.\n"
+            "  → Depois execute novamente."
+        )
+        return
+
+    resumo = {"ok": [], "sem_auth": [], "sem_aud": [], "erro": [], "total": 0, "cancelados": 0}
 
     with sync_playwright() as p:
         try:
             browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{CHROME_DEBUG_PORT}")
-            log.info(f"Conectado ao Chrome (porta {CHROME_DEBUG_PORT})")
+            log.info(f"Conectado ao Chrome de scraping (porta {CHROME_DEBUG_PORT})")
         except Exception as e:
             log.error(f"Não foi possível conectar ao Chrome: {e}")
-            log.error("Certifique-se de que o Chrome foi aberto com 1_abrir_chrome.bat")
             return
 
-        ctx = browser.contexts[0] if browser.contexts else browser.new_context()
-        page = ctx.new_page()
-
-        for trt in TRTS:
+        for sistema in SISTEMAS:
+            nome = sistema["nome"]
+            log.info(f"\n{'─' * 50}")
+            log.info(f"[{nome}]")
             try:
-                audiencias = scrape_trt(page, trt)
-                if audiencias is None:
-                    resumo["trt_sem_sessao"].append(trt["nome"])
-                    continue
-
-                if audiencias:
-                    enviados = sb_upsert(audiencias)
-                    ids_coletados = {a["id"] for a in audiencias}
-                    cancelados = detectar_cancelamentos(trt["nome"], ids_coletados)
+                enviados, cancelados = processar_sistema(browser, ext_id, popup, sistema)
+                resumo["cancelados"] += cancelados
+                if enviados == -1:
+                    resumo["sem_auth"].append(nome)
+                elif enviados > 0:
                     resumo["total"] += enviados
-                    resumo["cancelados"] += cancelados
-                    resumo["trt_ok"].append(f"{trt['nome']} ({enviados} auds, {cancelados} cancel.)")
+                    resumo["ok"].append(f"{nome} ({enviados} auds, {cancelados} cancel.)")
                 else:
-                    # TRT sem audiências futuras — verificar cancelamentos
-                    ids_coletados = set()
-                    cancelados = detectar_cancelamentos(trt["nome"], ids_coletados)
-                    resumo["cancelados"] += cancelados
-                    resumo["trt_ok"].append(f"{trt['nome']} (0 auds, {cancelados} cancel.)")
-
+                    resumo["sem_aud"].append(nome)
             except Exception as e:
-                log.error(f"{trt['nome']}: erro inesperado — {e}")
-                resumo["trt_erro"].append(trt["nome"])
+                log.error(f"  {nome}: erro inesperado — {e}")
+                resumo["erro"].append(nome)
+            time.sleep(1)
 
-        page.close()
-
-    # Relatório final
     log.info("\n" + "=" * 60)
     log.info("RELATÓRIO FINAL")
     log.info("=" * 60)
-    log.info(f"Total enviados ao Supabase: {resumo['total']}")
-    log.info(f"Cancelamentos detectados:   {resumo['cancelados']}")
-    if resumo["trt_ok"]:
-        log.info(f"TRTs coletados:\n  " + "\n  ".join(resumo["trt_ok"]))
-    if resumo["trt_sem_sessao"]:
-        log.warning(f"TRTs SEM SESSÃO (refaça login):\n  " + "\n  ".join(resumo["trt_sem_sessao"]))
-    if resumo["trt_erro"]:
-        log.error(f"TRTs com erro:\n  " + "\n  ".join(resumo["trt_erro"]))
+    log.info(f"Total salvas:             {resumo['total']}")
+    log.info(f"Cancelamentos detectados: {resumo['cancelados']}")
+    if resumo["ok"]:
+        log.info("Com audiências:\n  " + "\n  ".join(resumo["ok"]))
+    if resumo["sem_aud"]:
+        log.info("Sem audiências no período:\n  " + "\n  ".join(resumo["sem_aud"]))
+    if resumo["sem_auth"]:
+        log.warning("Sem autenticação:\n  " + "\n  ".join(resumo["sem_auth"]))
+    if resumo["erro"]:
+        log.error("Com erro:\n  " + "\n  ".join(resumo["erro"]))
     log.info("=" * 60)
 
 

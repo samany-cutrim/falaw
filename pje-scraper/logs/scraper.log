@@ -191,3 +191,130 @@ Call log:
   TRT-23 (0 auds, 0 cancel.)
   TRT-24 (0 auds, 0 cancel.)
 2026-05-15 22:54:31,566 [INFO] ============================================================
+2026-05-16 09:56:11,744 [INFO] ============================================================
+2026-05-16 09:56:11,745 [INFO] Iniciando coleta — 16/05/2026 09:56
+2026-05-16 09:56:11,745 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-16 09:56:11,746 [INFO] ============================================================
+2026-05-16 09:56:12,393 [ERROR] Não foi possível conectar ao Chrome: BrowserType.connect_over_cdp: connect ECONNREFUSED 127.0.0.1:9222
+Call log:
+  - <ws preparing> retrieving websocket url from http://127.0.0.1:9222
+
+2026-05-16 09:56:12,394 [ERROR] Certifique-se de que o Chrome foi aberto com 1_abrir_chrome.bat
+2026-05-16 10:38:17,495 [INFO] ============================================================
+2026-05-16 10:38:17,496 [INFO] Iniciando coleta — 16/05/2026 10:38
+2026-05-16 10:38:17,496 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-16 10:38:17,497 [INFO] ============================================================
+2026-05-16 10:38:18,365 [ERROR] Não foi possível conectar ao Chrome: BrowserType.connect_over_cdp: connect ECONNREFUSED 127.0.0.1:9222
+Call log:
+  - <ws preparing> retrieving websocket url from http://127.0.0.1:9222
+
+2026-05-16 10:38:18,365 [ERROR] Certifique-se de que o Chrome foi aberto com 1_abrir_chrome.bat
+2026-05-16 10:48:05,831 [INFO] ============================================================
+2026-05-16 10:48:05,832 [INFO] Iniciando coleta — 16/05/2026 10:48
+2026-05-16 10:48:05,832 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-16 10:48:05,833 [INFO] ============================================================
+2026-05-16 10:48:06,829 [INFO] Conectado ao Chrome (porta 9222)
+2026-05-16 10:48:21,987 [INFO] Sessão ativa (sem tabela visível): https://pje.trt1.jus.br
+2026-05-16 10:48:23,048 [INFO] TRT-1: extraindo página 1…
+2026-05-16 10:48:23,078 [INFO] TRT-1: nenhuma linha na página 1, finalizando
+2026-05-16 10:48:30,826 [INFO] Sessão ativa: https://pje.trt2.jus.br
+2026-05-16 10:48:31,916 [INFO] TRT-2: extraindo página 1…
+2026-05-16 10:48:31,950 [INFO] TRT-2: nenhuma linha na página 1, finalizando
+2026-05-16 10:48:47,841 [INFO] Sessão ativa (sem tabela visível): https://pje.trt3.jus.br
+2026-05-16 10:48:48,895 [INFO] TRT-3: extraindo página 1…
+2026-05-16 10:48:48,923 [INFO] TRT-3: nenhuma linha na página 1, finalizando
+2026-05-16 10:49:03,978 [INFO] Sessão ativa (sem tabela visível): https://pje.trt4.jus.br
+2026-05-16 10:49:05,055 [INFO] TRT-4: extraindo página 1…
+2026-05-16 10:49:05,084 [INFO] TRT-4: nenhuma linha na página 1, finalizando
+2026-05-16 10:49:20,942 [INFO] Sessão ativa (sem tabela visível): https://pje.trt5.jus.br
+2026-05-16 10:49:21,995 [INFO] TRT-5: extraindo página 1…
+2026-05-16 10:49:22,030 [INFO] TRT-5: nenhuma linha na página 1, finalizando
+2026-05-16 10:49:39,821 [INFO] Sessão ativa (sem tabela visível): https://pje.trt6.jus.br
+2026-05-16 10:49:40,877 [INFO] TRT-6: extraindo página 1…
+2026-05-16 10:49:40,900 [INFO] TRT-6: nenhuma linha na página 1, finalizando
+2026-05-16 10:49:56,950 [INFO] Sessão ativa (sem tabela visível): https://pje.trt7.jus.br
+2026-05-16 10:49:58,005 [INFO] TRT-7: extraindo página 1…
+2026-05-16 10:49:58,030 [INFO] TRT-7: nenhuma linha na página 1, finalizando
+2026-05-16 10:50:14,230 [INFO] Sessão ativa (sem tabela visível): https://pje.trt8.jus.br
+2026-05-16 10:50:15,286 [INFO] TRT-8: extraindo página 1…
+2026-05-16 10:50:15,310 [INFO] TRT-8: nenhuma linha na página 1, finalizando
+2026-05-16 10:50:30,574 [INFO] Sessão ativa (sem tabela visível): https://pje.trt9.jus.br
+2026-05-16 10:50:31,626 [INFO] TRT-9: extraindo página 1…
+2026-05-16 10:50:31,650 [INFO] TRT-9: nenhuma linha na página 1, finalizando
+2026-05-16 10:50:46,390 [INFO] Sessão ativa (sem tabela visível): https://pje.trt10.jus.br
+2026-05-16 10:50:47,442 [INFO] TRT-10: extraindo página 1…
+2026-05-16 10:50:47,464 [INFO] TRT-10: nenhuma linha na página 1, finalizando
+2026-05-16 10:51:03,874 [INFO] Sessão ativa (sem tabela visível): https://pje.trt11.jus.br
+2026-05-16 10:51:04,928 [INFO] TRT-11: extraindo página 1…
+2026-05-16 10:51:04,951 [INFO] TRT-11: nenhuma linha na página 1, finalizando
+2026-05-16 10:51:20,530 [INFO] Sessão ativa (sem tabela visível): https://pje.trt12.jus.br
+2026-05-16 10:51:21,592 [INFO] TRT-12: extraindo página 1…
+2026-05-16 10:51:21,618 [INFO] TRT-12: nenhuma linha na página 1, finalizando
+2026-05-16 10:51:37,255 [INFO] Sessão ativa (sem tabela visível): https://pje.trt13.jus.br
+2026-05-16 10:51:38,314 [INFO] TRT-13: extraindo página 1…
+2026-05-16 10:51:38,346 [INFO] TRT-13: nenhuma linha na página 1, finalizando
+2026-05-16 10:51:53,630 [INFO] Sessão ativa (sem tabela visível): https://pje.trt14.jus.br
+2026-05-16 10:51:54,703 [INFO] TRT-14: extraindo página 1…
+2026-05-16 10:51:54,727 [INFO] TRT-14: nenhuma linha na página 1, finalizando
+2026-05-16 10:52:10,768 [INFO] Sessão ativa (sem tabela visível): https://pje.trt15.jus.br
+2026-05-16 10:52:11,868 [INFO] TRT-15: extraindo página 1…
+2026-05-16 10:52:11,889 [INFO] TRT-15: nenhuma linha na página 1, finalizando
+2026-05-16 10:52:21,113 [INFO] Sessão ativa: https://pje.trt16.jus.br
+2026-05-16 10:52:22,202 [INFO] TRT-16: extraindo página 1…
+2026-05-16 10:52:22,232 [INFO] TRT-16: nenhuma linha na página 1, finalizando
+2026-05-16 10:52:38,041 [INFO] Sessão ativa (sem tabela visível): https://pje.trt17.jus.br
+2026-05-16 10:52:39,094 [INFO] TRT-17: extraindo página 1…
+2026-05-16 10:52:39,124 [INFO] TRT-17: nenhuma linha na página 1, finalizando
+2026-05-16 10:52:54,400 [INFO] Sessão ativa (sem tabela visível): https://pje.trt18.jus.br
+2026-05-16 10:52:55,622 [INFO] TRT-18: extraindo página 1…
+2026-05-16 10:52:55,650 [INFO] TRT-18: nenhuma linha na página 1, finalizando
+2026-05-16 10:53:11,458 [INFO] Sessão ativa (sem tabela visível): https://pje.trt19.jus.br
+2026-05-16 10:53:12,578 [INFO] TRT-19: extraindo página 1…
+2026-05-16 10:53:12,607 [INFO] TRT-19: nenhuma linha na página 1, finalizando
+2026-05-16 10:53:27,398 [INFO] Sessão ativa (sem tabela visível): https://pje.trt20.jus.br
+2026-05-16 10:53:28,451 [INFO] TRT-20: extraindo página 1…
+2026-05-16 10:53:28,478 [INFO] TRT-20: nenhuma linha na página 1, finalizando
+2026-05-16 10:53:43,872 [INFO] Sessão ativa (sem tabela visível): https://pje.trt21.jus.br
+2026-05-16 10:53:44,925 [INFO] TRT-21: extraindo página 1…
+2026-05-16 10:53:44,947 [INFO] TRT-21: nenhuma linha na página 1, finalizando
+2026-05-16 10:54:01,312 [INFO] Sessão ativa (sem tabela visível): https://pje.trt22.jus.br
+2026-05-16 10:54:02,365 [INFO] TRT-22: extraindo página 1…
+2026-05-16 10:54:02,390 [INFO] TRT-22: nenhuma linha na página 1, finalizando
+2026-05-16 10:54:17,661 [INFO] Sessão ativa (sem tabela visível): https://pje.trt23.jus.br
+2026-05-16 10:54:18,737 [INFO] TRT-23: extraindo página 1…
+2026-05-16 10:54:18,796 [INFO] TRT-23: nenhuma linha na página 1, finalizando
+2026-05-16 10:54:33,489 [INFO] Sessão ativa (sem tabela visível): https://pje.trt24.jus.br
+2026-05-16 10:54:34,541 [INFO] TRT-24: extraindo página 1…
+2026-05-16 10:54:34,565 [INFO] TRT-24: nenhuma linha na página 1, finalizando
+2026-05-16 10:54:35,775 [INFO] 
+============================================================
+2026-05-16 10:54:35,776 [INFO] RELATÓRIO FINAL
+2026-05-16 10:54:35,776 [INFO] ============================================================
+2026-05-16 10:54:35,776 [INFO] Total enviados ao Supabase: 0
+2026-05-16 10:54:35,776 [INFO] Cancelamentos detectados:   0
+2026-05-16 10:54:35,777 [INFO] TRTs coletados:
+  TRT-1 (0 auds, 0 cancel.)
+  TRT-2 (0 auds, 0 cancel.)
+  TRT-3 (0 auds, 0 cancel.)
+  TRT-4 (0 auds, 0 cancel.)
+  TRT-5 (0 auds, 0 cancel.)
+  TRT-6 (0 auds, 0 cancel.)
+  TRT-7 (0 auds, 0 cancel.)
+  TRT-8 (0 auds, 0 cancel.)
+  TRT-9 (0 auds, 0 cancel.)
+  TRT-10 (0 auds, 0 cancel.)
+  TRT-11 (0 auds, 0 cancel.)
+  TRT-12 (0 auds, 0 cancel.)
+  TRT-13 (0 auds, 0 cancel.)
+  TRT-14 (0 auds, 0 cancel.)
+  TRT-15 (0 auds, 0 cancel.)
+  TRT-16 (0 auds, 0 cancel.)
+  TRT-17 (0 auds, 0 cancel.)
+  TRT-18 (0 auds, 0 cancel.)
+  TRT-19 (0 auds, 0 cancel.)
+  TRT-20 (0 auds, 0 cancel.)
+  TRT-21 (0 auds, 0 cancel.)
+  TRT-22 (0 auds, 0 cancel.)
+  TRT-23 (0 auds, 0 cancel.)
+  TRT-24 (0 auds, 0 cancel.)
+2026-05-16 10:54:35,777 [INFO] ============================================================
