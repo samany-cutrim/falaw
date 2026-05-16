@@ -122,13 +122,23 @@ def encontrar_whom() -> tuple[str, str]:
 
 # ── Automação da interface do Whom ────────────────────────────────────────────
 
-def autenticar_sistema(page, ext_url: str, cert_name: str, sistema: str) -> bool:
+def autenticar_sistema(ctx, ext_url: str, cert_name: str, sistema: str) -> bool:
     """
-    Abre a página do Whom, seleciona o certificado e autentica no sistema informado.
+    Abre a página do Whom via window.open() (bypassa ERR_BLOCKED_BY_CLIENT),
+    seleciona o certificado e autentica no sistema informado.
     Retorna True se conseguiu clicar em Acessar.
     """
     try:
-        page.goto(ext_url, timeout=10000, wait_until="domcontentloaded")
+        # Abre a extensão via window.open() a partir de uma aba neutra
+        # Isso bypassa o ERR_BLOCKED_BY_CLIENT que ocorre com page.goto()
+        bridge = ctx.new_page()
+        bridge.goto("about:blank", timeout=5000)
+
+        with ctx.expect_page(timeout=10000) as popup_info:
+            bridge.evaluate(f"window.open('{ext_url}', '_blank', 'width=400,height=600')")
+
+        page = popup_info.value
+        page.wait_for_load_state("domcontentloaded", timeout=10000)
         time.sleep(1.5)
 
         # ── Campo de certificado ──────────────────────────────────────────────
@@ -148,6 +158,7 @@ def autenticar_sistema(page, ext_url: str, cert_name: str, sistema: str) -> bool
 
         if not cert_input:
             log.warning(f"Campo de certificado não encontrado para {sistema}")
+            page.close(); bridge.close()
             return False
 
         cert_input.click()
@@ -156,13 +167,11 @@ def autenticar_sistema(page, ext_url: str, cert_name: str, sistema: str) -> bool
         if cert_name:
             cert_input.fill(cert_name)
             time.sleep(0.8)
-            # Selecionar sugestão
             sugestao = page.locator(f"li:has-text('{cert_name}'), [role='option']:has-text('{cert_name}'), .option:has-text('{cert_name}')").first
             if sugestao.count() > 0:
                 sugestao.click()
                 time.sleep(0.5)
             else:
-                # Tenta clique na primeira sugestão visível
                 primeira = page.locator("li[role='option'], .suggestion-item, .list-item").first
                 if primeira.count() > 0:
                     primeira.click()
@@ -185,14 +194,14 @@ def autenticar_sistema(page, ext_url: str, cert_name: str, sistema: str) -> bool
 
         if not sistema_input:
             log.warning(f"Campo de sistema não encontrado para {sistema}")
+            page.close(); bridge.close()
             return False
 
         sistema_input.click()
         time.sleep(0.3)
         sistema_input.fill(sistema)
-        time.sleep(1.2)  # Aguarda autocomplete carregar
+        time.sleep(1.2)
 
-        # Selecionar o sistema na lista
         opcao = page.locator(
             f"li:has-text('{sistema}'), [role='option']:has-text('{sistema}'), .option:has-text('{sistema}')"
         ).first
@@ -200,8 +209,7 @@ def autenticar_sistema(page, ext_url: str, cert_name: str, sistema: str) -> bool
             opcao.click()
             time.sleep(0.5)
         else:
-            # Tenta com busca parcial (ex: "TRT2")
-            trecho = sistema.split()[0]  # "TRT2"
+            trecho = sistema.split()[0]
             opcao_parcial = page.locator(
                 f"li:has-text('{sistema}'), [role='option']:has-text('{sistema}')"
             ).first
@@ -209,20 +217,23 @@ def autenticar_sistema(page, ext_url: str, cert_name: str, sistema: str) -> bool
                 opcao_parcial.click()
                 time.sleep(0.5)
             else:
-                log.warning(f"Sistema '{sistema}' não encontrado no Whom — pode não estar disponível para este certificado")
+                log.warning(f"Sistema '{sistema}' não encontrado no Whom")
+                page.close(); bridge.close()
                 return False
 
         # ── Botão Acessar ─────────────────────────────────────────────────────
         acessar = page.locator("button:has-text('Acessar'), input[value='Acessar']").first
         if acessar.count() == 0 or not acessar.is_enabled():
             log.warning(f"Botão Acessar não habilitado para {sistema}")
+            page.close(); bridge.close()
             return False
 
         acessar.click()
         log.info(f"Acessar clicado: {sistema}")
-
-        # Aguarda a aba do PJe abrir (nova aba no contexto)
         time.sleep(3)
+
+        page.close()
+        bridge.close()
         return True
 
     except PWTimeout:
@@ -265,30 +276,26 @@ def main():
 
         ctx = browser.contexts[0] if browser.contexts else browser.new_context()
 
-        # Página dedicada para o Whom (reaproveita a mesma aba)
-        page = ctx.new_page()
-
         ok = []
         nao_encontrado = []
         erro = []
 
         for sistema in WHOM_TRTS:
             log.info(f"Autenticando: {sistema}")
-            sucesso = autenticar_sistema(page, ext_url, CERT_NAME, sistema)
+            sucesso = autenticar_sistema(ctx, ext_url, CERT_NAME, sistema)
             if sucesso:
                 ok.append(sistema)
-                # Fecha abas extras abertas pelo Acessar (mantém só a do Whom)
+                # Fecha abas extras abertas pelo Acessar (mantém só as do PJe)
                 time.sleep(1)
                 for pg in ctx.pages:
-                    if pg != page and "chrome-extension" not in pg.url:
+                    if "chrome-extension" not in pg.url and pg.url not in ("about:blank", ""):
                         try:
-                            pg.close()
+                            if any(k in pg.url for k in ["trt", "tst", "pje"]):
+                                pg.close()  # fecha aba do PJe aberta pelo Whom
                         except Exception:
                             pass
             else:
                 nao_encontrado.append(sistema)
-
-        page.close()
 
     log.info("\n" + "=" * 60)
     log.info("RESULTADO")

@@ -61,18 +61,21 @@ timeout /t 8 /nobreak > nul
 echo  Chrome pronto!
 
 :autenticar
-REM ── Autenticar via Whom ───────────────────────────────────────────────────────
+REM ── Instrucoes para autenticar via Whom ──────────────────────────────────────
 echo.
-echo [1/3] Autenticando TRTs via Whom...
-python whom_auth.py
-if %errorlevel% neq 0 (
-    echo.
-    echo  AVISO: Autenticacao Whom com erros. Continuando com sessoes existentes...
-)
+echo [1/2] Autenticar via Whom (necessario fazer manualmente)
+echo.
+echo  1. Clique no icone do Whom na barra do Chrome (canto superior direito)
+echo  2. Selecione o certificado: Tatiana Guimaraes Ferraz Andrade
+echo  3. Selecione cada TRT e clique em Acessar
+echo  4. Repita para todos os TRTs do escritorio
+echo.
+echo  Quando terminar de autenticar, pressione qualquer tecla para iniciar a coleta...
+pause > nul
 
 REM ── Coletar audiencias ────────────────────────────────────────────────────────
 echo.
-echo [2/3] Coletando audiencias do PJe...
+echo [2/2] Coletando audiencias do PJe...
 python scraper.py
 
 echo.
