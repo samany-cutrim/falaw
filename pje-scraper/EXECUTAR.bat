@@ -54,7 +54,7 @@ if not defined CHROME (
 )
 echo  Chrome encontrado em: %CHROME%
 
-start "" "%CHROME%" --remote-debugging-port=9222 --user-data-dir="C:\Users\manyc\AppData\Local\Google\Chrome\User Data" --profile-directory="Profile 9" --no-first-run --no-default-browser-check --disable-session-crashed-bubble --restore-last-session
+start "" "%CHROME%" --remote-debugging-port=9222 "--user-data-dir=C:\Users\manyc\AppData\Local\Google\Chrome\User Data" "--profile-directory=Profile 9" --no-first-run --no-default-browser-check --disable-session-crashed-bubble --restore-last-session
 
 echo  Aguardando Chrome inicializar (8 segundos)...
 timeout /t 8 /nobreak > nul
