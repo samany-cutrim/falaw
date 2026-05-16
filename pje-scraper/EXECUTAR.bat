@@ -25,7 +25,7 @@ if exist "..\\.venv\\Scripts\\activate.bat" (
 REM ── Fechar Chrome existente na porta 9222 ────────────────────────────────────
 echo.
 echo [0/3] Verificando Chrome...
-netstat -ano | findstr ":9222" > nul 2>&1
+curl -s http://localhost:9222/json/version > nul 2>&1
 if %errorlevel% equ 0 (
     echo  Chrome ja esta rodando na porta 9222. Reutilizando sessao existente.
     goto :autenticar
@@ -43,11 +43,8 @@ if not exist %CHROME% (
 
 start "" %CHROME% --remote-debugging-port=9222 --profile-directory="Profile 9"
 
-echo  Aguardando Chrome inicializar...
-:aguarda_chrome
-timeout /t 2 /nobreak > nul
-netstat -ano | findstr ":9222" > nul 2>&1
-if %errorlevel% neq 0 goto :aguarda_chrome
+echo  Aguardando Chrome inicializar (8 segundos)...
+timeout /t 8 /nobreak > nul
 echo  Chrome pronto!
 
 :autenticar
