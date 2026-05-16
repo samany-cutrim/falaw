@@ -1428,11 +1428,12 @@
       <div class="section-header" style="flex-wrap:wrap;gap:10px">
         <div>
           <h2 style="margin-bottom:2px">Pauta de Audiências</h2>
-          <p style="font-size:12px;color:var(--c-muted);margin:0">Sincronize via PJe ou importe a planilha Excel</p>
+          <p style="font-size:12px;color:var(--c-muted);margin:0">Sincronize automaticamente via extensão, importe Excel ou adicione manualmente</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <button type="button" id="pje-sync-btn" class="btn btn-primary" onclick="pjeSyncStart()" style="display:flex;align-items:center;gap:6px">
-            <span id="pje-sync-icon">⟳</span> Sincronizar PJe
+          <!-- Botão principal: usa extensão se disponível, senão mostra instrução -->
+          <button type="button" id="btn-sync-pje" class="btn btn-primary" style="display:flex;align-items:center;gap:6px" onclick="pjeSyncIniciar()">
+            ⚡ Sync PJe
           </button>
           <label class="btn btn-ghost" style="cursor:pointer;display:flex;align-items:center;gap:6px" title="Importar planilha Excel (.xlsx)">
             📁 Importar Excel
@@ -1442,17 +1443,24 @@
         </div>
       </div>
 
-      <!-- Barra de progresso PJe -->
-      <div id="pje-progress-wrap" style="display:none;margin-bottom:16px;background:#EEF2FF;border:1px solid #c7d2fe;border-radius:6px;padding:14px 18px">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-          <span style="font-family:var(--f-mono);font-size:11px;font-weight:700;color:#3730a3">SINCRONIZANDO PJe</span>
-          <span id="pje-prog-text" style="font-size:12px;color:#4338ca;flex:1"></span>
-          <button type="button" class="btn btn-ghost btn-sm" style="font-size:10px" onclick="document.getElementById('pje-progress-wrap').style.display='none'">✕</button>
+      <!-- Barra de progresso PJe sync -->
+      <div id="pje-progress-wrap" style="display:none;background:#EEF2FF;border:1px solid #c7d2fe;border-radius:8px;padding:14px 18px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span id="pje-progress-icon" style="font-size:18px">⏳</span>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:700;color:#0D2B5E" id="pje-progress-label">Iniciando sincronização…</div>
+            <div style="font-size:11px;color:#6366f1;margin-top:2px" id="pje-progress-sub"></div>
+          </div>
         </div>
-        <div style="background:#c7d2fe;border-radius:99px;height:6px;overflow:hidden">
-          <div id="pje-prog-bar" style="background:#4338ca;height:100%;width:0%;transition:width .4s"></div>
+        <div style="background:#c7d2fe;border-radius:4px;height:6px;overflow:hidden">
+          <div id="pje-progress-bar" style="background:#0D2B5E;height:100%;width:0%;transition:width .4s ease;border-radius:4px"></div>
         </div>
-        <div id="pje-log-box" style="margin-top:10px;background:#fff;border:1px solid #c7d2fe;border-radius:4px;padding:10px;font-family:var(--f-mono);font-size:10px;color:#4338ca;max-height:120px;overflow-y:auto;white-space:pre-wrap"></div>
+        <div id="pje-ext-missing" style="display:none;margin-top:10px;font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px">
+          ⚠️ Extensão <strong>Falaw Sync PJe</strong> não detectada.<br>
+          <a href="/falaw-extension/" target="_blank" style="color:#0D2B5E;font-weight:700">Instalar extensão</a> · 
+          <a href="/pje-scraper/instalar-sync-pje.html" target="_blank" style="color:#6b7280">Usar bookmarklet</a>
+        </div>
+        <div id="pje-sem-sessao" style="display:none;margin-top:10px;font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px"></div>
       </div>
 
       <!-- Stats rápidas -->
@@ -3043,18 +3051,13 @@ async function doLogin() {
         _setLock({ attempts: 0, lockedUntil: 0 });
         sessionStorage.setItem('fa_admin_session', String(Date.now()));
         sessionStorage.setItem('fa_admin_supabase_auth', '1');
-        // Busca papel do usuário na tabela admin_users
-        sessionStorage.setItem('fa_admin_role', 'superadmin'); // default seguro
-        try {
-          const { data: usr } = await sb.auth.getUser();
-          if (usr && usr.user) {
-            const { data: adminRow, error: roleErr } = await sb.from('admin_users').select('role').eq('user_id', usr.user.id).maybeSingle();
-            if (roleErr) console.warn('admin_users query error:', roleErr.message);
-            if (adminRow && adminRow.role) {
-              sessionStorage.setItem('fa_admin_role', adminRow.role);
-            }
-          }
-        } catch(roleEx) { console.warn('role fetch failed:', roleEx.message); }
+        // Papel baseado no e-mail — sem necessidade de tabela no banco
+        const EMAILS_RESTRITOS = [
+          'secretaria@falaw.com.br',
+          // adicione outros e-mails restritos aqui
+        ];
+        const role = EMAILS_RESTRITOS.includes(authEmail.toLowerCase()) ? 'restrito' : 'superadmin';
+        sessionStorage.setItem('fa_admin_role', role);
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('admin-shell').style.display = 'block';
         errEl.style.display = 'none';
@@ -10144,9 +10147,9 @@ const AUD_TIPO_COLOR   = { INICIAL:'#0D2B5E', 'INSTRUÇÃO':'#6D28D9', 'CONCILIA
 const AUD_TIPO_BG      = { INICIAL:'#EEF2FF', 'INSTRUÇÃO':'#F5F3FF', 'CONCILIAÇÃO':'#E8F5EE', UNA:'#fffbeb' };
 const AUD_MOD_LABEL    = { VIRTUAL:'Virtual', PRESENCIAL:'Presencial', 'HÍBRIDA':'Híbrida' };
 const AUD_MOD_ICON     = { VIRTUAL:'🖥', PRESENCIAL:'🏛', 'HÍBRIDA':'🔀' };
-const AUD_STATUS_LABEL = { agendada:'Agendada', realizada:'Realizada', adiada:'Adiada', cancelada:'Cancelada' };
-const AUD_STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62828', cancelada:'#6B7280' };
-const AUD_STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#F3F4F6' };
+const AUD_STATUS_LABEL = { agendada:'Agendada', realizada:'Realizada', adiada:'Adiada', cancelada:'Cancelada', cancelado_pje:'Cancelada no PJe?' };
+const AUD_STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62828', cancelada:'#6B7280', cancelado_pje:'#92400E' };
+const AUD_STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#F3F4F6', cancelado_pje:'#FEF3C7' };
 
 /* helpers */
 function _audParseDate(v) {
@@ -10221,7 +10224,9 @@ function _audCard(a) {
     ? `<a href="${_escHtml(a.link)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:#0D2B5E;color:#fff;font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:3px;text-decoration:none;margin-top:4px">🔗 Entrar na Audiência</a>`
     : '';
 
-  return `<div class="item-card" style="border-left:4px solid ${tipoColor};padding:18px 20px;${isHoje?'background:#fffef0;':''}" data-aud-id="${_escHtml(a.id)}">
+  const isCancelPje = a.status === 'cancelado_pje';
+  return `<div class="item-card" style="border-left:4px solid ${isCancelPje ? '#D97706' : tipoColor};padding:18px 20px;${isCancelPje ? 'background:#FFFBEB;opacity:.85;' : isHoje ? 'background:#fffef0;' : ''}" data-aud-id="${_escHtml(a.id)}">
+    ${isCancelPje ? `<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:4px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#92400E;display:flex;align-items:center;gap:8px"><span style="font-size:16px">⚠️</span><span><strong>Audiência não encontrada no PJe</strong> — Pode ter sido cancelada. Confirme abaixo ou ignore se for engano do scraper.</span></div>` : ''}
     <!-- linha topo -->
     <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
       <!-- data/hora bloco -->
@@ -10265,7 +10270,7 @@ function _audCard(a) {
       </div>
       <!-- ações -->
       <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-        <button class="btn btn-ghost btn-sm" onclick="editAudiencia('${_escHtml(a.id)}')">Editar</button>
+        ${a.status === 'cancelado_pje' ? `<button class="btn btn-sm" style="background:#D97706;color:#fff;font-weight:700" onclick="confirmarCancelamentoPje('${_escHtml(a.id)}')">✓ Confirmar cancelamento</button>` : `<button class="btn btn-ghost btn-sm" onclick="editAudiencia('${_escHtml(a.id)}')">Editar</button>`}
         <button class="btn btn-ghost btn-sm" style="color:#C62828" onclick="deleteAudiencia('${_escHtml(a.id)}')">Excluir</button>
       </div>
     </div>
@@ -10465,6 +10470,26 @@ async function saveAudiencia() {
 }
 
 /* ── delete ── */
+async function confirmarCancelamentoPje(id) {
+  if (!confirm('Confirmar cancelamento desta audiência?\n\nEla será marcada como "Cancelada" no painel.')) return;
+  const { sbUrl, sbKey } = getSbCreds();
+  if (sbUrl && sbKey) {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { error } = await sb.from('pauta_audiencias')
+        .update({ status: 'cancelada', updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    } catch(e) { showToast('Erro: ' + e.message); return; }
+  } else {
+    const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY)||'[]');
+    const idx = local.findIndex(x => x.id === id);
+    if (idx !== -1) { local[idx].status = 'cancelada'; localStorage.setItem(AUD_STORE_KEY, JSON.stringify(local)); }
+  }
+  showToast('Audiência marcada como cancelada.');
+  loadAudiencias();
+}
+
 async function deleteAudiencia(id) {
   if (!confirm('Excluir esta audiência?')) return;
   const { sbUrl, sbKey } = getSbCreds();
@@ -10483,6 +10508,74 @@ async function deleteAudiencia(id) {
 }
 
 /* ─── IMPORT EXCEL ─────────────────────────────────────────── */
+/* ─── PJe SYNC via Extensão ────────────────────────────────── */
+let _extDisponivel = false;
+
+// Detecta se a extensão está instalada
+window.addEventListener('falaw-ext-ready', () => { _extDisponivel = true; });
+
+// Recebe progresso/conclusão da extensão
+window.addEventListener('falaw-ext-msg', (e) => {
+  const msg = e.detail;
+  const wrap  = document.getElementById('pje-progress-wrap');
+  const label = document.getElementById('pje-progress-label');
+  const sub   = document.getElementById('pje-progress-sub');
+  const bar   = document.getElementById('pje-progress-bar');
+  const icon  = document.getElementById('pje-progress-icon');
+  const btn   = document.getElementById('btn-sync-pje');
+
+  if (msg.type === 'FALAW_SYNC_STARTED') {
+    if (!msg.ok) { showToast(msg.msg || 'Sincronização já em andamento.'); return; }
+    if (wrap) wrap.style.display = 'block';
+    if (label) label.textContent = 'Conectando ao PJe…';
+    if (bar) bar.style.width = '2%';
+    if (btn) btn.disabled = true;
+  }
+  if (msg.type === 'FALAW_SYNC_PROGRESS' && msg.state) {
+    const pct = msg.state.total ? Math.round((msg.state.done / msg.state.total) * 100) : 0;
+    if (label) label.textContent = msg.state.status || 'Coletando…';
+    if (sub)   sub.textContent   = `${msg.state.done} de ${msg.state.total} TRTs`;
+    if (bar)   bar.style.width   = pct + '%';
+  }
+  if (msg.type === 'FALAW_SYNC_DONE' && msg.state) {
+    if (icon)  icon.textContent  = '✅';
+    if (label) label.textContent = `Concluído — ${msg.state.audiencias} audiências sincronizadas`;
+    const semSessao = msg.state.semSessao || [];
+    if (sub) {
+      const partes = [];
+      if (msg.state.cancelados) partes.push(`${msg.state.cancelados} cancelamento(s) detectado(s)`);
+      if (semSessao.length)     partes.push(`${semSessao.length} TRT(s) sem sessão ativa`);
+      sub.textContent = partes.join(' · ');
+    }
+    // Aviso de TRTs sem sessão
+    const semSessaoWrap = document.getElementById('pje-sem-sessao');
+    if (semSessaoWrap) {
+      if (semSessao.length > 0) {
+        semSessaoWrap.style.display = 'block';
+        semSessaoWrap.innerHTML = `<strong>⚠️ TRTs sem sessão ativa</strong> — autentique via Whom e sincronize novamente:<br>${semSessao.join(', ')}`;
+      } else {
+        semSessaoWrap.style.display = 'none';
+      }
+    }
+    if (bar)   bar.style.width   = '100%';
+    if (btn)   btn.disabled      = false;
+    setTimeout(() => { if (wrap) wrap.style.display = 'none'; }, 8000);
+    loadAudiencias();
+  }
+});
+
+function pjeSyncIniciar() {
+  const wrap   = document.getElementById('pje-progress-wrap');
+  const missing = document.getElementById('pje-ext-missing');
+  if (!_extDisponivel) {
+    if (wrap)    wrap.style.display = 'block';
+    if (missing) missing.style.display = 'block';
+    return;
+  }
+  if (missing) missing.style.display = 'none';
+  window.dispatchEvent(new CustomEvent('falaw-sync-request'));
+}
+
 async function audImportExcel(inputEl) {
   const file = inputEl.files[0];
   if (!file) return;

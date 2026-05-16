@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Falaw — Instalar Extensão Sync PJe</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f3f4f6;color:#1f2937;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{background:#fff;border-radius:12px;max-width:560px;width:100%;padding:36px 40px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.logo{font-size:12px;letter-spacing:.14em;font-weight:700;color:#0D2B5E;text-transform:uppercase;margin-bottom:24px}
+h1{font-size:22px;font-weight:800;color:#0D2B5E;margin-bottom:8px}
+.sub{font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:28px}
+.step{display:flex;gap:12px;margin-bottom:14px;align-items:flex-start}
+.num{background:#0D2B5E;color:#fff;font-size:11px;font-weight:700;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.step-txt{font-size:14px;color:#374151;line-height:1.5}
+.btn{display:inline-block;background:#0D2B5E;color:#fde68a;padding:12px 28px;border-radius:6px;font-weight:700;font-size:15px;text-decoration:none;cursor:pointer}
+.note{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 14px;font-size:12px;color:#92400e;margin-top:20px}
+hr{border:none;border-top:1px solid #e5e7eb;margin:24px 0}
+code{background:#f3f4f6;padding:2px 6px;border-radius:3px;font-family:monospace;font-size:12px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">Falaw Advogados</div>
+  <h1>🧩 Instalar Extensão Sync PJe</h1>
+  <p class="sub">A extensão permite sincronizar automaticamente a pauta de audiências do PJe (1º grau, 2º grau e TST) diretamente pelo botão <strong>⚡ Sync PJe</strong> no painel admin — sem nenhuma ação visível.</p>
+
+  <div class="step"><div class="num">1</div><div class="step-txt">Acesse <strong>chrome://extensions</strong> no Chrome (cole na barra de endereços).</div></div>
+  <div class="step"><div class="num">2</div><div class="step-txt">Ative o <strong>Modo do desenvolvedor</strong> (toggle no canto superior direito).</div></div>
+  <div class="step"><div class="num">3</div><div class="step-txt">Clique em <strong>Carregar sem compactação</strong> e selecione a pasta: <code>Falaw\falaw-extension</code></div></div>
+  <div class="step"><div class="num">4</div><div class="step-txt">A extensão <strong>Falaw — Sync PJe</strong> aparece na lista. Fixe-a na barra clicando no ícone de peça 🧩.</div></div>
+  <div class="step"><div class="num">5</div><div class="step-txt">Abra o painel admin, clique em <strong>⚡ Sync PJe</strong> e aguarde — as abas do PJe abrem e fecham em segundo plano automaticamente.</div></div>
+
+  <hr>
+  <div class="note">
+    <strong>Requisito:</strong> O Chrome deve estar com o <strong>Whom</strong> ativo e o advogado logado nos TRTs desejados antes de sincronizar.<br><br>
+    A extensão também programa coletas automáticas às <strong>08:00 e 18:00</strong> nos dias úteis, sem nenhuma ação extra.
+  </div>
+</div>
+</body>
+</html>

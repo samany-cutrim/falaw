@@ -1,0 +1,66 @@
+{
+  "manifest_version": 3,
+  "name": "Falaw — Sync PJe",
+  "version": "1.0.0",
+  "description": "Sincroniza a pauta de audiências do PJe (1º grau, 2º grau e TST) com o painel Falaw.",
+
+  "permissions": [
+    "tabs",
+    "scripting",
+    "storage",
+    "alarms"
+  ],
+
+  "host_permissions": [
+    "https://*.trt1.jus.br/*",
+    "https://*.trt2.jus.br/*",
+    "https://*.trt3.jus.br/*",
+    "https://*.trt4.jus.br/*",
+    "https://*.trt5.jus.br/*",
+    "https://*.trt6.jus.br/*",
+    "https://*.trt7.jus.br/*",
+    "https://*.trt8.jus.br/*",
+    "https://*.trt9.jus.br/*",
+    "https://*.trt10.jus.br/*",
+    "https://*.trt11.jus.br/*",
+    "https://*.trt12.jus.br/*",
+    "https://*.trt13.jus.br/*",
+    "https://*.trt14.jus.br/*",
+    "https://*.trt15.jus.br/*",
+    "https://*.trt16.jus.br/*",
+    "https://*.trt17.jus.br/*",
+    "https://*.trt18.jus.br/*",
+    "https://*.trt19.jus.br/*",
+    "https://*.trt20.jus.br/*",
+    "https://*.trt21.jus.br/*",
+    "https://*.trt22.jus.br/*",
+    "https://*.trt23.jus.br/*",
+    "https://*.trt24.jus.br/*",
+    "https://*.tst.jus.br/*",
+    "https://yleofidqkimeanpuothv.supabase.co/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://falaw.com.br/*", "http://localhost/*", "file://*/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_title": "Falaw Sync PJe",
+    "default_popup": "popup.html"
+  },
+
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

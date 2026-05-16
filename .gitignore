@@ -37,3 +37,10 @@ html/cdn-cgi/
 html/comments/
 html/feed/
 html/author/
+
+# Segredos e artefatos locais
+pje-scraper/.env
+pje-scraper/bookmarklet_escaped.txt
+pje-scraper/make_page.py
+*.xlsx
+*.xls
