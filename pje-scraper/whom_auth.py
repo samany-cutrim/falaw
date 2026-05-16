@@ -256,7 +256,7 @@ def main():
 
     with sync_playwright() as p:
         try:
-            browser = p.chromium.connect_over_cdp(f"http://localhost:{CHROME_DEBUG_PORT}")
+            browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{CHROME_DEBUG_PORT}")
             log.info(f"Conectado ao Chrome (porta {CHROME_DEBUG_PORT})")
         except Exception as e:
             log.error(f"Não foi possível conectar ao Chrome: {e}")
