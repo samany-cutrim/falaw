@@ -49,7 +49,7 @@ if not exist %CHROME% (
     exit /b 1
 )
 
-start "" %CHROME% --remote-debugging-port=9222 --profile-directory="Profile 9"
+start "" %CHROME% --remote-debugging-port=9222 --profile-directory="Profile 9" --no-first-run --no-default-browser-check --disable-session-crashed-bubble --restore-last-session
 
 echo  Aguardando Chrome inicializar (8 segundos)...
 timeout /t 8 /nobreak > nul

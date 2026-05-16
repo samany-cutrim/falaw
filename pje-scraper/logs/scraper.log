@@ -25,3 +25,21 @@ Call log:
   - <ws preparing> retrieving websocket url from http://localhost:9222
 
 2026-05-15 21:50:12,144 [ERROR] Certifique-se de que o Chrome foi aberto com 1_abrir_chrome.bat
+2026-05-15 22:00:31,507 [INFO] ============================================================
+2026-05-15 22:00:31,508 [INFO] Iniciando coleta — 15/05/2026 22:00
+2026-05-15 22:00:31,509 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-15 22:00:31,509 [INFO] ============================================================
+2026-05-15 22:00:33,719 [ERROR] Não foi possível conectar ao Chrome: BrowserType.connect_over_cdp: connect ECONNREFUSED ::1:9222
+Call log:
+  - <ws preparing> retrieving websocket url from http://localhost:9222
+
+2026-05-15 22:00:33,728 [ERROR] Certifique-se de que o Chrome foi aberto com 1_abrir_chrome.bat
+2026-05-15 22:02:23,458 [INFO] ============================================================
+2026-05-15 22:02:23,459 [INFO] Iniciando coleta — 15/05/2026 22:02
+2026-05-15 22:02:23,459 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-15 22:02:23,459 [INFO] ============================================================
+2026-05-15 22:02:24,540 [ERROR] Não foi possível conectar ao Chrome: BrowserType.connect_over_cdp: connect ECONNREFUSED ::1:9222
+Call log:
+  - <ws preparing> retrieving websocket url from http://localhost:9222
+
+2026-05-15 22:02:24,540 [ERROR] Certifique-se de que o Chrome foi aberto com 1_abrir_chrome.bat

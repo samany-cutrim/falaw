@@ -1,4 +1,6 @@
 _cache/
+node_modules/
+*.pdf
 
 # Arquivos externos e desnecessários
 assets/css/Falaw/static.cdninstagram.com/
