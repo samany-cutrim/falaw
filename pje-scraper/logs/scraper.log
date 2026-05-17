@@ -921,3 +921,679 @@ Call log:
 2026-05-16 11:57:56,454 [ERROR] Com erro:
   TRT-2/2G
 2026-05-16 11:57:56,455 [INFO] ============================================================
+2026-05-16 12:06:56,188 [INFO] ============================================================
+2026-05-16 12:06:56,191 [INFO] Iniciando coleta — 16/05/2026 12:06
+2026-05-16 12:06:56,193 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-16 12:06:56,195 [INFO] Sistemas: 49 | Período: hoje + 365 dias
+2026-05-16 12:06:56,196 [INFO] ============================================================
+2026-05-16 12:06:58,199 [INFO] Abrindo Chrome de scraping [visível] (porta 9222, dir FalawScraper/Default)...
+2026-05-16 12:06:58,199 [INFO]   Se for a primeira vez: instale a extensão Whom neste Chrome.
+2026-05-16 12:06:59,430 [INFO] Chrome pronto!
+2026-05-16 12:06:59,512 [INFO] ============================================================
+2026-05-16 12:06:59,513 [INFO] Chrome aberto! Agora autentique-se no Whom:
+2026-05-16 12:06:59,513 [INFO]   1. Clique no ícone da extensão Whom na barra do Chrome
+2026-05-16 12:06:59,581 [INFO]   2. Selecione o certificado e autentique em cada TRT
+2026-05-16 12:06:59,600 [INFO]   3. Volte aqui e pressione Enter para iniciar a coleta
+2026-05-16 12:06:59,602 [INFO] ============================================================
+2026-05-16 12:07:51,492 [INFO] ============================================================
+2026-05-16 12:07:51,492 [INFO] Iniciando coleta — 16/05/2026 12:07
+2026-05-16 12:07:51,493 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-16 12:07:51,493 [INFO] Sistemas: 49 | Período: hoje + 365 dias
+2026-05-16 12:07:51,493 [INFO] ============================================================
+2026-05-16 12:07:53,509 [INFO] Abrindo Chrome de scraping [visível] (porta 9222, dir FalawScraper/Default)...
+2026-05-16 12:07:53,509 [INFO]   Se for a primeira vez: instale a extensão Whom neste Chrome.
+2026-05-16 12:07:54,536 [INFO] Chrome pronto!
+2026-05-16 12:07:54,555 [INFO] ============================================================
+2026-05-16 12:07:54,563 [INFO] Chrome aberto! Agora autentique-se no Whom:
+2026-05-16 12:07:54,564 [INFO]   1. Clique no ícone da extensão Whom na barra do Chrome
+2026-05-16 12:07:54,565 [INFO]   2. Selecione o certificado e autentique em cada TRT
+2026-05-16 12:07:54,567 [INFO]   3. Volte aqui e pressione Enter para iniciar a coleta
+2026-05-16 12:07:54,568 [INFO] ============================================================
+2026-05-16 12:10:53,642 [INFO] Conectado ao Chrome de scraping (porta 9222)
+2026-05-16 12:10:53,649 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 12:10:53,650 [INFO] [TRT-1/1G]
+2026-05-16 12:10:53,650 [INFO]   Pauta: https://pje.trt1.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 12:10:55,836 [INFO]   Período: hoje → +365 dias
+2026-05-16 12:10:59,420 [INFO]     Página 1…
+2026-05-16 12:10:59,548 [INFO]     Tabela vazia
+2026-05-16 12:11:00,565 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 12:11:00,566 [INFO] [TRT-1/2G]
+2026-05-16 12:11:00,566 [INFO]   Pauta: https://pje.trt1.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 12:11:02,305 [INFO]   Período: hoje → +365 dias
+2026-05-16 12:11:05,866 [INFO]     Página 1…
+2026-05-16 12:11:05,890 [INFO]     Tabela vazia
+2026-05-16 12:11:06,915 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 12:11:06,915 [INFO] [TRT-2/1G]
+2026-05-16 12:11:06,916 [INFO]   Pauta: https://pje.trt2.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 12:11:07,271 [INFO]   Período: hoje → +365 dias
+2026-05-16 12:11:10,868 [INFO]     Página 1…
+2026-05-16 12:11:10,891 [INFO]     Tabela vazia
+2026-05-16 12:11:11,902 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 12:11:11,907 [INFO] [TRT-2/2G]
+2026-05-16 12:11:11,908 [INFO]   Pauta: https://pje.trt2.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 12:11:12,116 [INFO]   Período: hoje → +365 dias
+2026-05-16 12:11:15,663 [INFO]     Página 1…
+2026-05-16 12:11:15,682 [INFO]     Tabela vazia
+2026-05-16 12:11:16,707 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 12:11:16,707 [INFO] [TRT-3/1G]
+2026-05-16 12:11:16,707 [INFO]   Pauta: https://pje.trt3.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 12:11:18,211 [INFO]   Período: hoje → +365 dias
+2026-05-16 12:11:21,765 [INFO]     Página 1…
+2026-05-16 12:11:22,549 [INFO]     Tabela vazia
+2026-05-16 12:11:23,591 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 12:11:23,592 [INFO] [TRT-3/2G]
+2026-05-16 12:11:23,592 [INFO]   Pauta: https://pje.trt3.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 12:11:25,105 [INFO]   Período: hoje → +365 dias
+2026-05-16 12:11:28,658 [INFO]     Página 1…
+2026-05-16 12:11:28,686 [INFO]     Tabela vazia
+2026-05-16 12:11:29,714 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 12:11:29,714 [INFO] [TRT-4/1G]
+2026-05-16 12:11:29,714 [INFO]   Pauta: https://pje.trt4.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 12:11:31,108 [INFO]   Período: hoje → +365 dias
+2026-05-16 12:11:34,661 [INFO]     Página 1…
+2026-05-16 12:11:34,684 [INFO]     Tabela vazia
+2026-05-16 12:11:35,710 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 12:11:35,853 [INFO] [TRT-4/2G]
+2026-05-16 12:11:35,853 [INFO]   Pauta: https://pje.trt4.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 12:11:36,872 [WARNING]   TRT-4/2G: erro ao navegar — Page.goto: Target page, context or browser has been closed
+Call log:
+  - navigating to "https://pje.trt4.jus.br/pjekz/pauta-usuarios-externos", waiting until "domcontentloaded"
+
+2026-05-16 12:11:37,895 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 12:11:37,895 [INFO] [TRT-5/1G]
+2026-05-16 12:11:37,895 [INFO]   Pauta: https://pje.trt5.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 12:11:39,320 [WARNING]   TRT-5/1G: erro ao navegar — Page.goto: Target page, context or browser has been closed
+Call log:
+  - navigating to "https://pje.trt5.jus.br/pjekz/pauta-usuarios-externos", waiting until "domcontentloaded"
+
+2026-05-16 12:11:40,367 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 12:11:40,367 [INFO] [TRT-5/2G]
+2026-05-16 12:11:40,367 [INFO]   Pauta: https://pje.trt5.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:41:42,996 [INFO] ============================================================
+2026-05-16 14:41:42,996 [INFO] Iniciando coleta — 16/05/2026 14:41
+2026-05-16 14:41:42,999 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-16 14:41:43,000 [INFO] Sistemas: 49 | Período: hoje + 365 dias
+2026-05-16 14:41:43,000 [INFO] ============================================================
+2026-05-16 14:41:43,024 [INFO] Chrome já está na porta 9222. Reutilizando sessão.
+2026-05-16 14:41:43,024 [INFO] ============================================================
+2026-05-16 14:41:43,025 [INFO] Chrome aberto! Agora autentique-se no Whom:
+2026-05-16 14:41:43,025 [INFO]   1. Clique no icone da extensao Whom na barra do Chrome
+2026-05-16 14:41:43,025 [INFO]   2. Selecione o certificado e autentique em cada TRT
+2026-05-16 14:41:43,025 [INFO]   3. Volte aqui e pressione Enter para iniciar a coleta
+2026-05-16 14:41:43,025 [INFO] ============================================================
+2026-05-16 14:42:10,883 [ERROR] Não foi possível conectar ao Chrome: BrowserType.connect_over_cdp: Protocol error (Browser.setDownloadBehavior): Browser context management is not supported.
+Call log:
+  - <ws preparing> retrieving websocket url from http://127.0.0.1:9222
+  - <ws connecting> ws://127.0.0.1:9222/devtools/browser/206775f5-dde6-48f8-b95e-00ab258953ca
+  - <ws connected> ws://127.0.0.1:9222/devtools/browser/206775f5-dde6-48f8-b95e-00ab258953ca
+  - <ws disconnecting> ws://127.0.0.1:9222/devtools/browser/206775f5-dde6-48f8-b95e-00ab258953ca
+  - <ws disconnected> ws://127.0.0.1:9222/devtools/browser/206775f5-dde6-48f8-b95e-00ab258953ca code=1000 reason=
+
+2026-05-16 14:47:35,583 [INFO] ============================================================
+2026-05-16 14:47:35,584 [INFO] Iniciando coleta — 16/05/2026 14:47
+2026-05-16 14:47:35,584 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-16 14:47:35,584 [INFO] Sistemas: 49 | Período: hoje + 365 dias
+2026-05-16 14:47:35,584 [INFO] ============================================================
+2026-05-16 14:47:35,590 [INFO] Chrome já está na porta 9222. Reutilizando sessão.
+2026-05-16 14:47:36,533 [WARNING] Chrome sem suporte a browser context management. Reiniciando com flags corretos...
+2026-05-16 14:47:41,857 [INFO] Chrome de scraping encerrado (PID(s): 21632, 0).
+2026-05-16 14:47:43,867 [INFO] Abrindo Chrome de scraping [visível] (porta 9222, dir FalawScraper/Default)...
+2026-05-16 14:47:43,867 [INFO]   Se for a primeira vez: instale a extensão Whom neste Chrome.
+2026-05-16 14:47:46,112 [INFO] Chrome pronto!
+2026-05-16 14:47:46,112 [INFO] Chrome reiniciado com suporte completo a CDP.
+2026-05-16 14:47:46,869 [INFO] ============================================================
+2026-05-16 14:47:46,869 [INFO] Chrome aberto! Agora autentique-se no Whom:
+2026-05-16 14:47:46,870 [INFO]   1. Clique no icone da extensao Whom na barra do Chrome
+2026-05-16 14:47:46,870 [INFO]   2. Selecione o certificado e autentique em cada TRT
+2026-05-16 14:47:46,870 [INFO]   3. Volte aqui e pressione Enter para iniciar a coleta
+2026-05-16 14:47:46,871 [INFO] ============================================================
+2026-05-16 14:49:24,203 [INFO] ============================================================
+2026-05-16 14:49:24,203 [INFO] Iniciando coleta — 16/05/2026 14:49
+2026-05-16 14:49:24,203 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-16 14:49:24,204 [INFO] Sistemas: 49 | Período: hoje + 365 dias
+2026-05-16 14:49:24,204 [INFO] ============================================================
+2026-05-16 14:49:24,209 [INFO] Chrome já está na porta 9222. Reutilizando sessão.
+2026-05-16 14:49:25,146 [INFO] Chrome compatível com Playwright (CDP OK).
+2026-05-16 14:49:25,174 [INFO] [AGUARDANDO_AUTH] Chrome aberto. Autentique no Whom e clique em Continuar no painel.
+2026-05-16 14:49:26,273 [INFO] Conectado ao Chrome de scraping (porta 9222)
+2026-05-16 14:49:26,273 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:49:26,274 [INFO] [TRT-1/1G]
+2026-05-16 14:49:26,274 [INFO]   Pauta: https://pje.trt1.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:49:27,604 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:49:31,354 [INFO]     Página 1…
+2026-05-16 14:49:31,391 [INFO]     Tabela vazia
+2026-05-16 14:49:32,415 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:49:32,415 [INFO] [TRT-1/2G]
+2026-05-16 14:49:32,415 [INFO]   Pauta: https://pje.trt1.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:49:33,731 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:49:37,278 [INFO]     Página 1…
+2026-05-16 14:49:37,330 [INFO]     Tabela vazia
+2026-05-16 14:49:38,339 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:49:38,340 [INFO] [TRT-2/1G]
+2026-05-16 14:49:38,340 [INFO]   Pauta: https://pje.trt2.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:49:38,541 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:49:42,090 [INFO]     Página 1…
+2026-05-16 14:49:42,095 [ERROR]   TRT-2/1G: erro inesperado — Locator.all: Target page, context or browser has been closed
+2026-05-16 14:49:43,096 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:49:43,096 [INFO] [TRT-2/2G]
+2026-05-16 14:49:43,096 [INFO]   Pauta: https://pje.trt2.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:49:43,335 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:49:46,888 [INFO]     Página 1…
+2026-05-16 14:49:46,910 [INFO]     Tabela vazia
+2026-05-16 14:49:47,932 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:49:47,933 [INFO] [TRT-3/1G]
+2026-05-16 14:49:47,933 [INFO]   Pauta: https://pje.trt3.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:49:49,281 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:49:52,843 [INFO]     Página 1…
+2026-05-16 14:49:53,260 [INFO]     Tabela vazia
+2026-05-16 14:49:54,287 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:49:54,287 [INFO] [TRT-3/2G]
+2026-05-16 14:49:54,287 [INFO]   Pauta: https://pje.trt3.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:49:55,481 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:49:59,030 [INFO]     Página 1…
+2026-05-16 14:49:59,052 [INFO]     Tabela vazia
+2026-05-16 14:50:00,076 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:50:00,076 [INFO] [TRT-4/1G]
+2026-05-16 14:50:00,076 [INFO]   Pauta: https://pje.trt4.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:50:01,294 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:50:04,837 [INFO]     Página 1…
+2026-05-16 14:50:04,860 [INFO]     Tabela vazia
+2026-05-16 14:50:05,883 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:50:05,883 [INFO] [TRT-4/2G]
+2026-05-16 14:50:05,883 [INFO]   Pauta: https://pje.trt4.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:53:35,998 [INFO] ============================================================
+2026-05-16 14:53:35,998 [INFO] Iniciando coleta — 16/05/2026 14:53
+2026-05-16 14:53:35,999 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-16 14:53:35,999 [INFO] Sistemas: 49 | Período: hoje + 365 dias
+2026-05-16 14:53:35,999 [INFO] ============================================================
+2026-05-16 14:53:36,004 [INFO] Chrome já está na porta 9222. Reutilizando sessão.
+2026-05-16 14:53:36,966 [INFO] Chrome compatível com Playwright (CDP OK).
+2026-05-16 14:53:36,990 [INFO] ============================================================
+2026-05-16 14:53:36,990 [INFO] Chrome aberto! Agora autentique-se no Whom:
+2026-05-16 14:53:36,990 [INFO]   1. Clique no icone da extensao Whom na barra do Chrome
+2026-05-16 14:53:36,990 [INFO]   2. Selecione o certificado e autentique em cada TRT
+2026-05-16 14:53:36,990 [INFO]   3. Volte aqui e pressione Enter para iniciar a coleta
+2026-05-16 14:53:36,991 [INFO] ============================================================
+2026-05-16 14:53:37,930 [INFO] Conectado ao Chrome de scraping (porta 9222)
+2026-05-16 14:53:38,411 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:53:38,412 [INFO] [TRT-1/1G]
+2026-05-16 14:53:38,412 [INFO]   Pauta: https://pje.trt1.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:53:39,955 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:53:43,516 [INFO]     Página 1…
+2026-05-16 14:53:43,542 [INFO]     Tabela vazia
+2026-05-16 14:53:44,565 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:53:44,565 [INFO] [TRT-1/2G]
+2026-05-16 14:53:44,566 [INFO]   Pauta: https://pje.trt1.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:55:42,599 [INFO] ============================================================
+2026-05-16 14:55:42,600 [INFO] Iniciando coleta — 16/05/2026 14:55
+2026-05-16 14:55:42,600 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-16 14:55:42,600 [INFO] Sistemas: 49 | Período: hoje + 365 dias
+2026-05-16 14:55:42,601 [INFO] ============================================================
+2026-05-16 14:55:44,602 [INFO] Abrindo Chrome de scraping [visível] (porta 9222, dir FalawScraper/Default)...
+2026-05-16 14:55:44,603 [INFO]   Se for a primeira vez: instale a extensão Whom neste Chrome.
+2026-05-16 14:55:45,635 [INFO] Chrome pronto!
+2026-05-16 14:55:47,139 [INFO] Chrome compatível com Playwright (CDP OK).
+2026-05-16 14:55:47,167 [INFO] ============================================================
+2026-05-16 14:55:47,167 [INFO] Chrome aberto! Agora autentique-se no Whom:
+2026-05-16 14:55:47,167 [INFO]   1. Clique no icone da extensao Whom na barra do Chrome
+2026-05-16 14:55:47,168 [INFO]   2. Selecione o certificado e autentique em cada TRT
+2026-05-16 14:55:47,168 [INFO]   3. Volte aqui e pressione Enter para iniciar a coleta
+2026-05-16 14:55:47,168 [INFO] ============================================================
+2026-05-16 14:56:14,468 [INFO] Conectado ao Chrome de scraping (porta 9222)
+2026-05-16 14:56:14,470 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:56:14,470 [INFO] [TRT-1/1G]
+2026-05-16 14:56:14,471 [INFO]   Pauta: https://pje.trt1.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:56:15,699 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:56:19,260 [INFO]     Página 1…
+2026-05-16 14:56:19,287 [INFO]     Tabela vazia
+2026-05-16 14:56:20,314 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:56:20,314 [INFO] [TRT-1/2G]
+2026-05-16 14:56:20,314 [INFO]   Pauta: https://pje.trt1.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:56:21,505 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:56:25,087 [INFO]     Página 1…
+2026-05-16 14:56:25,116 [INFO]     Tabela vazia
+2026-05-16 14:56:26,152 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:56:26,153 [INFO] [TRT-2/1G]
+2026-05-16 14:56:26,153 [INFO]   Pauta: https://pje.trt2.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:56:26,449 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:56:29,997 [INFO]     Página 1…
+2026-05-16 14:56:30,023 [INFO]     Tabela vazia
+2026-05-16 14:56:31,062 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:56:31,419 [INFO] [TRT-2/2G]
+2026-05-16 14:56:31,419 [INFO]   Pauta: https://pje.trt2.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:56:31,544 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:56:35,096 [INFO]     Página 1…
+2026-05-16 14:56:35,118 [INFO]     Tabela vazia
+2026-05-16 14:56:36,143 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:56:36,143 [INFO] [TRT-3/1G]
+2026-05-16 14:56:36,143 [INFO]   Pauta: https://pje.trt3.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:56:37,327 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:56:40,876 [INFO]     Página 1…
+2026-05-16 14:56:40,899 [INFO]     Tabela vazia
+2026-05-16 14:56:41,923 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:56:41,924 [INFO] [TRT-3/2G]
+2026-05-16 14:56:41,924 [INFO]   Pauta: https://pje.trt3.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:56:43,085 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:56:46,631 [INFO]     Página 1…
+2026-05-16 14:56:46,653 [INFO]     Tabela vazia
+2026-05-16 14:56:47,678 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:56:47,678 [INFO] [TRT-4/1G]
+2026-05-16 14:56:47,678 [INFO]   Pauta: https://pje.trt4.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:56:48,955 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:56:52,917 [INFO]     Página 1…
+2026-05-16 14:56:52,942 [INFO]     Tabela vazia
+2026-05-16 14:56:53,966 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:56:53,967 [INFO] [TRT-4/2G]
+2026-05-16 14:56:53,967 [INFO]   Pauta: https://pje.trt4.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:56:55,304 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:56:58,857 [INFO]     Página 1…
+2026-05-16 14:56:58,882 [INFO]     Tabela vazia
+2026-05-16 14:56:59,907 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:56:59,907 [INFO] [TRT-5/1G]
+2026-05-16 14:56:59,908 [INFO]   Pauta: https://pje.trt5.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:57:01,132 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:57:04,677 [INFO]     Página 1…
+2026-05-16 14:57:04,702 [INFO]     Tabela vazia
+2026-05-16 14:57:05,726 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:57:05,726 [INFO] [TRT-5/2G]
+2026-05-16 14:57:05,726 [INFO]   Pauta: https://pje.trt5.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:57:07,077 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:57:10,628 [INFO]     Página 1…
+2026-05-16 14:57:10,652 [INFO]     Tabela vazia
+2026-05-16 14:57:11,675 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:57:11,675 [INFO] [TRT-6/1G]
+2026-05-16 14:57:11,675 [INFO]   Pauta: https://pje.trt6.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:57:13,741 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:57:17,285 [INFO]     Página 1…
+2026-05-16 14:57:17,308 [INFO]     Tabela vazia
+2026-05-16 14:57:18,330 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:57:18,331 [INFO] [TRT-6/2G]
+2026-05-16 14:57:18,331 [INFO]   Pauta: https://pje.trt6.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:57:19,465 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:57:23,025 [INFO]     Página 1…
+2026-05-16 14:57:23,045 [INFO]     Tabela vazia
+2026-05-16 14:57:24,068 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:57:24,068 [INFO] [TRT-7/1G]
+2026-05-16 14:57:24,069 [INFO]   Pauta: https://pje.trt7.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:57:25,626 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:57:29,177 [INFO]     Página 1…
+2026-05-16 14:57:29,199 [INFO]     Tabela vazia
+2026-05-16 14:57:30,222 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:57:30,222 [INFO] [TRT-7/2G]
+2026-05-16 14:57:30,222 [INFO]   Pauta: https://pje.trt7.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:57:31,392 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:57:34,942 [INFO]     Página 1…
+2026-05-16 14:57:34,962 [INFO]     Tabela vazia
+2026-05-16 14:57:35,985 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:57:35,985 [INFO] [TRT-8/1G]
+2026-05-16 14:57:35,985 [INFO]   Pauta: https://pje.trt8.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:57:37,358 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:57:40,905 [INFO]     Página 1…
+2026-05-16 14:57:40,928 [INFO]     Tabela vazia
+2026-05-16 14:57:41,952 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:57:41,952 [INFO] [TRT-8/2G]
+2026-05-16 14:57:41,952 [INFO]   Pauta: https://pje.trt8.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:57:43,112 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:57:46,664 [INFO]     Página 1…
+2026-05-16 14:57:46,686 [INFO]     Tabela vazia
+2026-05-16 14:57:47,708 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:57:47,709 [INFO] [TRT-9/1G]
+2026-05-16 14:57:47,709 [INFO]   Pauta: https://pje.trt9.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:57:48,901 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:57:52,453 [INFO]     Página 1…
+2026-05-16 14:57:52,475 [INFO]     Tabela vazia
+2026-05-16 14:57:53,498 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:57:53,498 [INFO] [TRT-9/2G]
+2026-05-16 14:57:53,499 [INFO]   Pauta: https://pje.trt9.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:57:54,401 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:57:57,953 [INFO]     Página 1…
+2026-05-16 14:57:57,974 [INFO]     Tabela vazia
+2026-05-16 14:57:58,996 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:57:58,996 [INFO] [TRT-10/1G]
+2026-05-16 14:57:58,996 [INFO]   Pauta: https://pje.trt10.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:58:00,575 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:58:04,121 [INFO]     Página 1…
+2026-05-16 14:58:04,141 [INFO]     Tabela vazia
+2026-05-16 14:58:05,162 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:58:05,163 [INFO] [TRT-10/2G]
+2026-05-16 14:58:05,163 [INFO]   Pauta: https://pje.trt10.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:58:06,314 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:58:09,864 [INFO]     Página 1…
+2026-05-16 14:58:09,888 [INFO]     Tabela vazia
+2026-05-16 14:58:10,913 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:58:10,913 [INFO] [TRT-11/1G]
+2026-05-16 14:58:10,913 [INFO]   Pauta: https://pje.trt11.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:58:13,044 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:58:16,592 [INFO]     Página 1…
+2026-05-16 14:58:16,613 [INFO]     Tabela vazia
+2026-05-16 14:58:17,637 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:58:17,637 [INFO] [TRT-11/2G]
+2026-05-16 14:58:17,637 [INFO]   Pauta: https://pje.trt11.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:58:18,847 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:58:22,396 [INFO]     Página 1…
+2026-05-16 14:58:22,419 [INFO]     Tabela vazia
+2026-05-16 14:58:23,442 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:58:23,527 [INFO] [TRT-12/1G]
+2026-05-16 14:58:23,545 [INFO]   Pauta: https://pje.trt12.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:58:25,002 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:58:28,573 [INFO]     Página 1…
+2026-05-16 14:58:28,598 [INFO]     Tabela vazia
+2026-05-16 14:58:29,624 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:58:29,624 [INFO] [TRT-12/2G]
+2026-05-16 14:58:29,624 [INFO]   Pauta: https://pje.trt12.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:58:30,819 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:58:34,364 [INFO]     Página 1…
+2026-05-16 14:58:34,386 [INFO]     Tabela vazia
+2026-05-16 14:58:35,410 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:58:35,410 [INFO] [TRT-13/1G]
+2026-05-16 14:58:35,410 [INFO]   Pauta: https://pje.trt13.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:58:37,073 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:58:40,623 [INFO]     Página 1…
+2026-05-16 14:58:40,644 [INFO]     Tabela vazia
+2026-05-16 14:58:41,665 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:58:41,665 [INFO] [TRT-13/2G]
+2026-05-16 14:58:41,665 [INFO]   Pauta: https://pje.trt13.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:58:42,896 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:58:46,451 [INFO]     Página 1…
+2026-05-16 14:58:46,478 [INFO]     Tabela vazia
+2026-05-16 14:58:47,503 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:58:47,519 [INFO] [TRT-14/1G]
+2026-05-16 14:58:47,519 [INFO]   Pauta: https://pje.trt14.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:58:49,192 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:58:52,740 [INFO]     Página 1…
+2026-05-16 14:58:52,761 [INFO]     Tabela vazia
+2026-05-16 14:58:53,784 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:58:53,785 [INFO] [TRT-14/2G]
+2026-05-16 14:58:53,785 [INFO]   Pauta: https://pje.trt14.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:58:55,058 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:58:58,609 [INFO]     Página 1…
+2026-05-16 14:58:58,632 [INFO]     Tabela vazia
+2026-05-16 14:58:59,653 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:58:59,654 [INFO] [TRT-15/1G]
+2026-05-16 14:58:59,654 [INFO]   Pauta: https://pje.trt15.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:59:01,094 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:59:04,643 [INFO]     Página 1…
+2026-05-16 14:59:04,664 [INFO]     Tabela vazia
+2026-05-16 14:59:05,685 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:59:05,686 [INFO] [TRT-15/2G]
+2026-05-16 14:59:05,686 [INFO]   Pauta: https://pje.trt15.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:59:06,923 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:59:10,465 [INFO]     Página 1…
+2026-05-16 14:59:10,491 [INFO]     Tabela vazia
+2026-05-16 14:59:11,515 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:59:11,515 [INFO] [TRT-16/1G]
+2026-05-16 14:59:11,516 [INFO]   Pauta: https://pje.trt16.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:59:13,295 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:59:16,844 [INFO]     Página 1…
+2026-05-16 14:59:16,864 [INFO]     Tabela vazia
+2026-05-16 14:59:17,887 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:59:17,887 [INFO] [TRT-16/2G]
+2026-05-16 14:59:17,888 [INFO]   Pauta: https://pje.trt16.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:59:19,088 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:59:22,633 [INFO]     Página 1…
+2026-05-16 14:59:22,654 [INFO]     Tabela vazia
+2026-05-16 14:59:23,677 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:59:23,677 [INFO] [TRT-17/1G]
+2026-05-16 14:59:23,677 [INFO]   Pauta: https://pje.trt17.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:59:25,031 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:59:28,582 [INFO]     Página 1…
+2026-05-16 14:59:28,603 [INFO]     Tabela vazia
+2026-05-16 14:59:29,626 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:59:29,627 [INFO] [TRT-17/2G]
+2026-05-16 14:59:29,627 [INFO]   Pauta: https://pje.trt17.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:59:30,752 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:59:34,301 [INFO]     Página 1…
+2026-05-16 14:59:34,324 [INFO]     Tabela vazia
+2026-05-16 14:59:35,346 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:59:35,346 [INFO] [TRT-18/1G]
+2026-05-16 14:59:35,346 [INFO]   Pauta: https://pje.trt18.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:59:36,754 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:59:40,302 [INFO]     Página 1…
+2026-05-16 14:59:40,325 [INFO]     Tabela vazia
+2026-05-16 14:59:41,348 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:59:41,348 [INFO] [TRT-18/2G]
+2026-05-16 14:59:41,348 [INFO]   Pauta: https://pje.trt18.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:59:42,470 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:59:46,014 [INFO]     Página 1…
+2026-05-16 14:59:46,036 [INFO]     Tabela vazia
+2026-05-16 14:59:47,058 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:59:47,058 [INFO] [TRT-19/1G]
+2026-05-16 14:59:47,058 [INFO]   Pauta: https://pje.trt19.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:59:48,766 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:59:52,320 [INFO]     Página 1…
+2026-05-16 14:59:52,344 [INFO]     Tabela vazia
+2026-05-16 14:59:53,368 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:59:53,369 [INFO] [TRT-19/2G]
+2026-05-16 14:59:53,369 [INFO]   Pauta: https://pje.trt19.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 14:59:54,679 [INFO]   Período: hoje → +365 dias
+2026-05-16 14:59:58,225 [INFO]     Página 1…
+2026-05-16 14:59:58,246 [INFO]     Tabela vazia
+2026-05-16 14:59:59,269 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 14:59:59,270 [INFO] [TRT-20/1G]
+2026-05-16 14:59:59,270 [INFO]   Pauta: https://pje.trt20.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 15:00:00,682 [INFO]   Período: hoje → +365 dias
+2026-05-16 15:00:04,235 [INFO]     Página 1…
+2026-05-16 15:00:04,259 [INFO]     Tabela vazia
+2026-05-16 15:00:05,281 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 15:00:05,281 [INFO] [TRT-20/2G]
+2026-05-16 15:00:05,281 [INFO]   Pauta: https://pje.trt20.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 15:00:06,592 [INFO]   Período: hoje → +365 dias
+2026-05-16 15:00:10,135 [INFO]     Página 1…
+2026-05-16 15:00:10,160 [INFO]     Tabela vazia
+2026-05-16 15:00:11,185 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 15:00:11,185 [INFO] [TRT-21/1G]
+2026-05-16 15:00:11,185 [INFO]   Pauta: https://pje.trt21.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 15:00:13,043 [INFO]   Período: hoje → +365 dias
+2026-05-16 15:00:16,591 [INFO]     Página 1…
+2026-05-16 15:00:16,612 [INFO]     Tabela vazia
+2026-05-16 15:00:17,636 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 15:00:17,636 [INFO] [TRT-21/2G]
+2026-05-16 15:00:17,636 [INFO]   Pauta: https://pje.trt21.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 15:00:18,796 [INFO]   Período: hoje → +365 dias
+2026-05-16 15:00:22,345 [INFO]     Página 1…
+2026-05-16 15:00:22,366 [INFO]     Tabela vazia
+2026-05-16 15:00:23,390 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 15:00:23,390 [INFO] [TRT-22/1G]
+2026-05-16 15:00:23,390 [INFO]   Pauta: https://pje.trt22.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 15:00:25,174 [INFO]   Período: hoje → +365 dias
+2026-05-16 15:00:28,718 [INFO]     Página 1…
+2026-05-16 15:00:28,743 [INFO]     Tabela vazia
+2026-05-16 15:00:29,766 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 15:00:29,766 [INFO] [TRT-22/2G]
+2026-05-16 15:00:29,766 [INFO]   Pauta: https://pje.trt22.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 15:00:30,978 [INFO]   Período: hoje → +365 dias
+2026-05-16 15:00:34,528 [INFO]     Página 1…
+2026-05-16 15:00:34,548 [INFO]     Tabela vazia
+2026-05-16 15:00:35,571 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 15:00:35,571 [INFO] [TRT-23/1G]
+2026-05-16 15:00:35,572 [INFO]   Pauta: https://pje.trt23.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 15:00:37,069 [INFO]   Período: hoje → +365 dias
+2026-05-16 15:00:40,614 [INFO]     Página 1…
+2026-05-16 15:00:40,636 [INFO]     Tabela vazia
+2026-05-16 15:00:41,679 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 15:00:41,679 [INFO] [TRT-23/2G]
+2026-05-16 15:00:41,680 [INFO]   Pauta: https://pje.trt23.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 15:00:42,804 [INFO]   Período: hoje → +365 dias
+2026-05-16 15:00:46,358 [INFO]     Página 1…
+2026-05-16 15:00:46,380 [INFO]     Tabela vazia
+2026-05-16 15:00:47,402 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 15:00:47,403 [INFO] [TRT-24/1G]
+2026-05-16 15:00:47,403 [INFO]   Pauta: https://pje.trt24.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 15:00:47,565 [INFO]   Período: hoje → +365 dias
+2026-05-16 15:00:51,119 [INFO]     Página 1…
+2026-05-16 15:00:51,140 [INFO]     Tabela vazia
+2026-05-16 15:00:52,163 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 15:00:52,163 [INFO] [TRT-24/2G]
+2026-05-16 15:00:52,164 [INFO]   Pauta: https://pje.trt24.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 15:00:52,291 [INFO]   Período: hoje → +365 dias
+2026-05-16 15:00:55,837 [INFO]     Página 1…
+2026-05-16 15:00:55,857 [INFO]     Tabela vazia
+2026-05-16 15:00:56,881 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 15:00:56,881 [INFO] [TST]
+2026-05-16 15:00:56,881 [INFO]   Pauta: https://pje.tst.jus.br/pjekz/pauta-usuarios-externos
+2026-05-16 15:01:07,168 [INFO]   Período: hoje → +365 dias
+2026-05-16 15:01:10,714 [INFO]     Página 1…
+2026-05-16 15:01:10,734 [INFO]     Tabela vazia
+2026-05-16 15:01:11,782 [INFO] 
+============================================================
+2026-05-16 15:01:11,782 [INFO] RELATÓRIO FINAL
+2026-05-16 15:01:11,783 [INFO] ============================================================
+2026-05-16 15:01:11,783 [INFO] Total salvas:             0
+2026-05-16 15:01:11,783 [INFO] Cancelamentos detectados: 0
+2026-05-16 15:01:11,784 [INFO] Sem audiências no período:
+  TRT-1/1G
+  TRT-1/2G
+  TRT-2/1G
+  TRT-2/2G
+  TRT-3/1G
+  TRT-3/2G
+  TRT-4/1G
+  TRT-4/2G
+  TRT-5/1G
+  TRT-5/2G
+  TRT-6/1G
+  TRT-6/2G
+  TRT-7/1G
+  TRT-7/2G
+  TRT-8/1G
+  TRT-8/2G
+  TRT-9/1G
+  TRT-9/2G
+  TRT-10/1G
+  TRT-10/2G
+  TRT-11/1G
+  TRT-11/2G
+  TRT-12/1G
+  TRT-12/2G
+  TRT-13/1G
+  TRT-13/2G
+  TRT-14/1G
+  TRT-14/2G
+  TRT-15/1G
+  TRT-15/2G
+  TRT-16/1G
+  TRT-16/2G
+  TRT-17/1G
+  TRT-17/2G
+  TRT-18/1G
+  TRT-18/2G
+  TRT-19/1G
+  TRT-19/2G
+  TRT-20/1G
+  TRT-20/2G
+  TRT-21/1G
+  TRT-21/2G
+  TRT-22/1G
+  TRT-22/2G
+  TRT-23/1G
+  TRT-23/2G
+  TRT-24/1G
+  TRT-24/2G
+  TST
+2026-05-16 15:01:11,785 [INFO] ============================================================
+2026-05-16 15:31:25,953 [INFO] ============================================================
+2026-05-16 15:31:25,954 [INFO] Iniciando coleta — 16/05/2026 15:31
+2026-05-16 15:31:25,954 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-05-16 15:31:25,954 [INFO] Sistemas: 49 | Período: hoje + 365 dias
+2026-05-16 15:31:25,954 [INFO] ============================================================
+2026-05-16 15:31:27,956 [INFO] Encerrando todos os processos Chrome para relançar com debug port...
+2026-05-16 15:31:30,391 [INFO] Abrindo Chrome [visível] com debug port 9222 (perfil: Default)...
+2026-05-16 15:31:32,550 [INFO] Chrome pronto!
+2026-05-16 15:31:37,258 [INFO] Conectado ao Chrome (porta 9222)
+2026-05-16 15:31:37,258 [INFO] Whom (configurado): ID=lnidijeaekolpfeckelhkomndglcglhh | popup=sidepanel.html?mode=tab
+2026-05-16 15:31:37,258 [INFO] Whom: chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab
+2026-05-16 15:31:37,259 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 15:31:37,259 [INFO] [TRT-1/1G]
+2026-05-16 15:31:37,259 [INFO]   Autenticando via Whom: TRT1 Pje - 1º grau
+2026-05-16 15:31:47,667 [WARNING] Whom não apareceu nos contextos após Target.createTarget — tentando page.goto()
+2026-05-16 15:31:47,771 [WARNING] Erro ao abrir Whom via goto (chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab): Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab", waiting until "domcontentloaded"
+
+2026-05-16 15:31:47,828 [WARNING] [TRT1 Pje - 1º grau] Painel Whom não abriu
+2026-05-16 15:31:47,828 [WARNING]   TRT-1/1G: falha na autenticação via Whom
+2026-05-16 15:31:48,828 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 15:31:48,829 [INFO] [TRT-1/2G]
+2026-05-16 15:31:48,829 [INFO]   Autenticando via Whom: TRT1 Pje - 2º grau
+2026-05-16 15:31:59,214 [WARNING] Whom não apareceu nos contextos após Target.createTarget — tentando page.goto()
+2026-05-16 15:31:59,298 [WARNING] Erro ao abrir Whom via goto (chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab): Page.goto: net::ERR_BLOCKED_BY_CLIENT at chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab
+Call log:
+  - navigating to "chrome-extension://lnidijeaekolpfeckelhkomndglcglhh/sidepanel.html?mode=tab", waiting until "domcontentloaded"
+
+2026-05-16 15:31:59,357 [WARNING] [TRT1 Pje - 2º grau] Painel Whom não abriu
+2026-05-16 15:31:59,358 [WARNING]   TRT-1/2G: falha na autenticação via Whom
+2026-05-16 15:32:00,358 [INFO] 
+──────────────────────────────────────────────────
+2026-05-16 15:32:00,358 [INFO] [TRT-2/1G]
+2026-05-16 15:32:00,358 [INFO]   Autenticando via Whom: TRT2 Pje - 1º grau

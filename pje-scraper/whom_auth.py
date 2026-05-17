@@ -29,11 +29,10 @@ WHOM_EXT_POPUP_ENV = os.getenv("WHOM_EXT_POPUP", "")
 
 _APPDATA = Path(os.environ.get("LOCALAPPDATA", ""))
 
-# Perfil de Chrome EXCLUSIVO para scraping — nunca interfere com o Chrome normal em uso.
-# Primeira vez: o Chrome abrirá com um perfil limpo; instale a extensão Whom nele.
+# Chrome do usuário (onde o Whom já está instalado)
 CHROME_USER_DATA  = os.getenv(
     "CHROME_USER_DATA",
-    str(_APPDATA / "Google" / "Chrome" / "FalawScraper"),
+    str(_APPDATA / "Google" / "Chrome" / "User Data"),
 )
 
 # TRTs configurados — edite WHOM_TRTS no .env para restringir
@@ -71,6 +70,30 @@ log = logging.getLogger(__name__)
 
 CDP_BASE = f"http://127.0.0.1:{CHROME_DEBUG_PORT}"
 
+
+def matar_todo_chrome() -> None:
+    """Mata TODOS os processos Chrome para liberar o perfil de usuário."""
+    try:
+        subprocess.run(
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+             "Stop-Process -Name chrome -Force -ErrorAction SilentlyContinue"],
+            timeout=10,
+        )
+        time.sleep(2)
+        log.info("Chrome encerrado.")
+        udata = Path(CHROME_USER_DATA)
+        for lock in ["SingletonLock", "SingletonSocket", "SingletonCookie"]:
+            for d in [udata, udata / CHROME_PROFILE]:
+                try: (d / lock).unlink(missing_ok=True)
+                except Exception: pass
+    except Exception as e:
+        log.warning(f"Não foi possível matar Chrome: {e}")
+
+
+def matar_chrome_scraping() -> None:
+    """Alias de matar_todo_chrome() para compatibilidade."""
+    matar_todo_chrome()
+
 _CHROME_CANDIDATOS = [
     r"C:\Program Files\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
@@ -98,29 +121,38 @@ def garantir_chrome_aberto() -> bool:
         log.error("Chrome não encontrado no sistema.")
         return False
 
-    # Criar diretório de dados do Chrome de scraping (separado do Chrome normal)
+    # Matar TODOS os processos chrome.exe antes de relançar com debug port
+    log.info("Encerrando todos os processos Chrome para relançar com debug port...")
+    subprocess.run(
+        ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+         "Stop-Process -Name chrome -Force -ErrorAction SilentlyContinue"],
+        timeout=10,
+    )
+    time.sleep(2)
+
+    # Limpar singleton locks do perfil de usuário real
     udata = Path(CHROME_USER_DATA)
     udata.mkdir(parents=True, exist_ok=True)
-
-    # Limpar apenas os singleton locks do Chrome de SCRAPING (nunca toca no Chrome em uso)
+    default_dir = udata / CHROME_PROFILE
     for lock in ["SingletonLock", "SingletonSocket", "SingletonCookie"]:
         try:
             (udata / lock).unlink(missing_ok=True)
         except Exception:
             pass
+        try:
+            (default_dir / lock).unlink(missing_ok=True)
+        except Exception:
+            pass
 
-    # Abrir Chrome de scraping (profile isolado, não interfere com Chrome normal)
+    # Abrir Chrome do usuário real com debug port (onde o Whom já está instalado)
     modo_txt = "oculto" if MODO_OCULTO else "visível"
-    log.info(f"Abrindo Chrome de scraping [{modo_txt}] (porta {CHROME_DEBUG_PORT}, dir {udata.name}/{CHROME_PROFILE})...")
-    if MODO_OCULTO:
-        log.info("  Chrome rodando em segundo plano (sem janela visível).")
-    else:
-        log.info("  Se for a primeira vez: instale a extensão Whom neste Chrome.")
+    log.info(f"Abrindo Chrome [{modo_txt}] com debug port {CHROME_DEBUG_PORT} (perfil: {CHROME_PROFILE})...")
 
     chrome_args = [
         f"--remote-debugging-port={CHROME_DEBUG_PORT}",
         f"--user-data-dir={CHROME_USER_DATA}",
         f"--profile-directory={CHROME_PROFILE}",
+        "--remote-allow-origins=*",
         "--no-first-run",
         "--no-default-browser-check",
         "--disable-session-crashed-bubble",
@@ -237,16 +269,17 @@ def _fechar_abas_whom(ext_id: str) -> None:
 
 # ── Automação da interface do Whom ────────────────────────────────────────────
 
-def _abrir_whom_page(browser, ext_id: str, popup: str):
-    """Abre a extensão Whom numa nova aba via Playwright e retorna a página."""
+def _abrir_whom_page(ctx, ext_id: str, popup: str):
+    """Abre a extensão Whom numa nova aba (launch_persistent_context) e retorna a página."""
     ext_url = f"chrome-extension://{ext_id}/{popup}"
-    _fechar_abas_whom(ext_id)
+    # Fechar abas Whom existentes
+    for pg in list(ctx.pages):
+        if ext_id in pg.url:
+            try:
+                pg.close()
+            except Exception:
+                pass
     time.sleep(0.3)
-
-    ctx = browser.contexts[0] if browser.contexts else None
-    if not ctx:
-        log.error("Nenhum contexto de browser disponível")
-        return None
 
     page = ctx.new_page()
     try:
@@ -262,12 +295,12 @@ def _abrir_whom_page(browser, ext_id: str, popup: str):
         return None
 
 
-def autenticar_sistema(browser, ext_id: str, popup: str, sistema: str) -> bool:
+def autenticar_sistema(ctx, ext_id: str, popup: str, sistema: str) -> bool:
     """
     Abre o painel do Whom numa nova aba e executa o fluxo de autenticação.
     Retorna True se conseguiu clicar em Acessar.
     """
-    page = _abrir_whom_page(browser, ext_id, popup)
+    page = _abrir_whom_page(ctx, ext_id, popup)
 
     if not page:
         log.warning(f"[{sistema}] Página do Whom não encontrada após abertura")
@@ -351,15 +384,13 @@ def autenticar_sistema(browser, ext_id: str, popup: str, sistema: str) -> bool:
         page.close()
 
         # Fechar abas do PJe abertas pelo Whom (não queremos poluir o Chrome)
-        ctx = browser.contexts[0] if browser.contexts else None
-        if ctx:
-            for pg in ctx.pages:
-                url = pg.url
-                if any(k in url for k in ["trt", "tst", "pje"]) and "chrome-extension" not in url:
-                    try:
-                        pg.close()
-                    except Exception:
-                        pass
+        for pg in list(ctx.pages):
+            url = pg.url
+            if any(k in url for k in ["trt", "tst", "pje"]) and "chrome-extension" not in url:
+                try:
+                    pg.close()
+                except Exception:
+                    pass
 
         return True
 
@@ -377,13 +408,13 @@ def autenticar_sistema(browser, ext_id: str, popup: str, sistema: str) -> bool:
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
-def autenticar_e_capturar_pje_page(browser, ext_id: str, popup: str, sistema: str):
+def autenticar_e_capturar_pje_page(ctx, ext_id: str, popup: str, sistema: str):
     """
     Autentica via Whom e retorna a página PJe aberta pelo Whom.
     NÃO fecha a aba PJe — o chamador deve navegar para a pauta e fechá-la.
     Retorna None se a autenticação falhar.
     """
-    page = _abrir_whom_page(browser, ext_id, popup)
+    page = _abrir_whom_page(ctx, ext_id, popup)
 
     if not page:
         log.warning(f"[{sistema}] Painel Whom não abriu")
@@ -457,9 +488,8 @@ def autenticar_e_capturar_pje_page(browser, ext_id: str, popup: str, sistema: st
             return None
 
         pje_page = None
-        ctx_popup = page.context
         try:
-            with ctx_popup.expect_page(timeout=12000) as pje_info:
+            with ctx.expect_page(timeout=12000) as pje_info:
                 acessar.click()
             pje_page = pje_info.value
             try:
@@ -471,15 +501,12 @@ def autenticar_e_capturar_pje_page(browser, ext_id: str, popup: str, sistema: st
             acessar.click()
             time.sleep(4)
             log.info(f"[OK] {sistema}")
-            for ctx2 in browser.contexts:
-                for pg in ctx2.pages:
-                    u = pg.url
-                    if (any(k in u for k in ["trt", "tst.jus.br", "pje"])
-                            and "chrome-extension" not in u
-                            and "about:" not in u):
-                        pje_page = pg
-                        break
-                if pje_page:
+            for pg in ctx.pages:
+                u = pg.url
+                if (any(k in u for k in ["trt", "tst.jus.br", "pje"])
+                        and "chrome-extension" not in u
+                        and "about:" not in u):
+                    pje_page = pg
                     break
 
         page.close()
@@ -514,10 +541,6 @@ def main():
         log.error("Exemplo: WHOM_CERT_NAME=Tatiana Guimaraes Ferraz Andrade")
         return
 
-    if not garantir_chrome_aberto():
-        log.error("Não foi possível abrir o Chrome. Abortando.")
-        return
-
     ext_id, popup_file = encontrar_whom()
     if not ext_id:
         log.error("Não foi possível encontrar a extensão Whom. Abortando.")
@@ -525,26 +548,43 @@ def main():
 
     log.info(f"URL do Whom: chrome-extension://{ext_id}/{popup_file}")
 
+    matar_todo_chrome()
+
+    chrome_args = [
+        f"--profile-directory={CHROME_PROFILE}",
+        "--remote-allow-origins=*",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-session-crashed-bubble",
+    ]
+    if MODO_OCULTO:
+        chrome_args += ["--window-position=-10000,0", "--window-size=1280,800"]
+
     with sync_playwright() as p:
-        try:
-            browser = p.chromium.connect_over_cdp(CDP_BASE)
-            log.info(f"Conectado ao Chrome (porta {CHROME_DEBUG_PORT})")
-        except Exception as e:
-            log.error(f"Não foi possível conectar ao Chrome: {e}")
-            return
+        ctx = p.chromium.launch_persistent_context(
+            user_data_dir=CHROME_USER_DATA,
+            channel="chrome",
+            headless=False,
+            args=chrome_args,
+            no_viewport=True,
+        )
+        log.info("Chrome iniciado (launch_persistent_context)")
+        time.sleep(3)  # aguardar extensões carregarem
 
         ok = []
         nao_encontrado = []
 
         for sistema in WHOM_TRTS:
             log.info(f"Autenticando: {sistema}")
-            sucesso = autenticar_sistema(browser, ext_id, popup_file, sistema)
+            sucesso = autenticar_sistema(ctx, ext_id, popup_file, sistema)
             if sucesso:
                 ok.append(sistema)
             else:
                 nao_encontrado.append(sistema)
             # Pequena pausa entre sistemas para não sobrecarregar
             time.sleep(0.5)
+
+        ctx.close()
 
     log.info("\n" + "=" * 60)
     log.info("RESULTADO")

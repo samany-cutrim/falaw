@@ -37,7 +37,9 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\manyc\\\\Falaw\" -Force)",
       "Bash(Select-Object Name, PSIsContainer)",
       "Bash(Format-Table -AutoSize)",
-      "Bash(grep -n \"app\\\\\\\\.route\\\\|@app\\\\\\\\.\" \"c:/Users/manyc/Falaw/pje-scraper/server.py\")"
+      "Bash(grep -n \"app\\\\\\\\.route\\\\|@app\\\\\\\\.\" \"c:/Users/manyc/Falaw/pje-scraper/server.py\")",
+      "Bash(python -c \"import playwright; print\\(playwright.__version__\\)\")",
+      "Bash(.venv\\\\Scripts\\\\python.exe -c \"import playwright; print\\(playwright.__version__\\)\")"
     ]
   }
 }

@@ -7,7 +7,6 @@ intimação (link, ID, senha) → salva no Supabase.
 
 import os
 import re
-import sys
 import time
 import logging
 from datetime import datetime, timedelta
@@ -18,9 +17,12 @@ import requests
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 from whom_auth import (
-    garantir_chrome_aberto,
-    CHROME_DEBUG_PORT,
+    matar_todo_chrome,
+    CHROME_USER_DATA,
+    CHROME_PROFILE,
     WHOM_TRTS,
+    autenticar_e_capturar_pje_page,
+    encontrar_whom,
 )
 
 _HERE = Path(__file__).parent
@@ -30,8 +32,6 @@ DIAS_BUSCA      = int(os.getenv("DIAS_BUSCA", "365"))
 SB_URL          = os.getenv("SUPABASE_URL", "").rstrip("/")
 SB_KEY          = os.getenv("SUPABASE_KEY", "")
 SB_TABLE        = "pauta_audiencias"
-# False quando iniciado pelo servidor Flask (sem terminal interativo)
-MODO_INTERATIVO = os.getenv("MODO_INTERATIVO", "true").lower() in ("true", "1")
 
 _LOG_DIR = _HERE / "logs"
 _LOG_DIR.mkdir(exist_ok=True)
@@ -491,29 +491,32 @@ def buscar_detalhes_intimacao(ctx, base: str, proc_href: str, proc_num: str) -> 
 
 # ── Processamento por sistema ─────────────────────────────────────────────────
 
-def processar_sistema(browser, sistema: dict) -> tuple[int, int]:
-    nome      = sistema["nome"]
-    base      = sistema["fallback_base"]
+def processar_sistema(ctx, sistema: dict, ext_id: str, popup: str) -> tuple[int, int]:
+    nome = sistema["nome"]
+    base = sistema["fallback_base"]
+    whom = sistema["whom"]
+
+    log.info(f"  Autenticando via Whom: {whom}")
+
+    # Autenticar via Whom e capturar a página PJe que ele abre
+    page = autenticar_e_capturar_pje_page(ctx, ext_id, popup, whom)
+    if page is None:
+        log.warning(f"  {nome}: falha na autenticação via Whom")
+        return -1, 0
+
+    # Navegar para a pauta
     pauta_url = f"{base}/pjekz/pauta-usuarios-externos"
-
     log.info(f"  Pauta: {pauta_url}")
-
-    ctx = browser.contexts[0] if browser.contexts else None
-    if not ctx:
-        log.warning(f"  {nome}: sem contexto de browser disponível")
-        return 0, 0
-
-    page = ctx.new_page()
     try:
         page.goto(pauta_url, wait_until="domcontentloaded", timeout=25000)
     except Exception as e:
-        log.warning(f"  {nome}: erro ao navegar — {e}")
+        log.warning(f"  {nome}: erro ao navegar para pauta — {e}")
         try: page.close()
         except Exception: pass
         return 0, 0
 
     if "login" in page.url.lower() or "token" in page.url.lower():
-        log.warning(f"  {nome}: sem sessão ativa (não autenticado no Whom)")
+        log.warning(f"  {nome}: redirecionado para login após auth")
         page.close()
         return -1, 0
 
@@ -576,39 +579,48 @@ def main():
         log.error("SUPABASE_URL e SUPABASE_KEY não configurados no .env")
         return
 
-    if not garantir_chrome_aberto():
-        log.error("Não foi possível abrir o Chrome de scraping. Abortando.")
+    # Detectar extensão Whom (busca no sistema de arquivos, sem precisar do Chrome)
+    ext_id, popup = encontrar_whom()
+    if not ext_id:
+        log.error("Extensão Whom não encontrada. Configure WHOM_EXT_ID no .env. Abortando.")
         return
+    log.info(f"Whom: chrome-extension://{ext_id}/{popup}")
 
-    # Aguardar autenticação manual no Whom (apenas quando rodando interativamente via BAT)
-    if MODO_INTERATIVO:
-        log.info("=" * 60)
-        log.info("Chrome aberto! Agora autentique-se no Whom:")
-        log.info("  1. Clique no ícone da extensão Whom na barra do Chrome")
-        log.info("  2. Selecione o certificado e autentique em cada TRT")
-        log.info("  3. Volte aqui e pressione Enter para iniciar a coleta")
-        log.info("=" * 60)
-        try:
-            input("  → Pressione Enter quando estiver pronto: ")
-        except EOFError:
-            pass  # stdin não é interativo — continuar sem pausa
+    # Matar Chrome existente para poder abrir com controle total do Playwright
+    log.info("Encerrando Chrome existente...")
+    matar_todo_chrome()
+
+    modo_oculto = os.getenv("MODO_OCULTO", "false").lower() in ("true", "1", "sim", "s")
+    chrome_args = [
+        f"--profile-directory={CHROME_PROFILE}",
+        "--remote-allow-origins=*",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-session-crashed-bubble",
+    ]
+    if modo_oculto:
+        chrome_args += ["--window-position=-10000,0", "--window-size=1280,800"]
 
     resumo = {"ok": [], "sem_auth": [], "sem_aud": [], "erro": [], "total": 0, "cancelados": 0}
 
     with sync_playwright() as p:
-        try:
-            browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{CHROME_DEBUG_PORT}")
-            log.info(f"Conectado ao Chrome de scraping (porta {CHROME_DEBUG_PORT})")
-        except Exception as e:
-            log.error(f"Não foi possível conectar ao Chrome: {e}")
-            return
+        log.info(f"Abrindo Chrome com perfil {CHROME_PROFILE}...")
+        ctx = p.chromium.launch_persistent_context(
+            user_data_dir=CHROME_USER_DATA,
+            channel="chrome",
+            headless=False,
+            args=chrome_args,
+            no_viewport=True,
+        )
+        log.info("Chrome iniciado — aguardando extensões carregarem...")
+        time.sleep(3)
 
         for sistema in SISTEMAS:
             nome = sistema["nome"]
             log.info(f"\n{'─' * 50}")
             log.info(f"[{nome}]")
             try:
-                enviados, cancelados = processar_sistema(browser, sistema)
+                enviados, cancelados = processar_sistema(ctx, sistema, ext_id, popup)
                 resumo["cancelados"] += cancelados
                 if enviados == -1:
                     resumo["sem_auth"].append(nome)
@@ -621,6 +633,8 @@ def main():
                 log.error(f"  {nome}: erro inesperado — {e}")
                 resumo["erro"].append(nome)
             time.sleep(1)
+
+        ctx.close()
 
     log.info("\n" + "=" * 60)
     log.info("RELATÓRIO FINAL")

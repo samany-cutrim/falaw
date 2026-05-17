@@ -40,6 +40,7 @@ _job: dict = {
     "total":     49,     # 24 TRTs × 2 graus + TST
     "log":       [],
     "erro":      None,
+    "state":     "idle",   # idle | running | done
 }
 
 
@@ -58,12 +59,12 @@ def _run_job(modo_oculto: bool) -> None:
         "progress": 0,
         "log":      [],
         "erro":     None,
-        "message":  "Iniciando Chrome de scraping…",
+        "state":    "running",
+        "message":  "Iniciando Chrome…",
     })
 
     env = os.environ.copy()
-    env["MODO_OCULTO"]      = "true" if modo_oculto else "false"
-    env["MODO_INTERATIVO"]  = "false"  # sem pausa para auth quando rodando pelo servidor
+    env["MODO_OCULTO"] = "true" if modo_oculto else "false"
 
     try:
         proc = subprocess.Popen(
@@ -100,7 +101,7 @@ def _run_job(modo_oculto: bool) -> None:
         _job["progress"] = _job["total"]
 
         if proc.returncode == 0:
-            _job["message"] = "✓ Coleta concluída"
+            _job["message"] = "Coleta concluída"
         else:
             _job["erro"]    = "Scraper encerrou com código de erro"
             _job["message"] = "Erro na coleta — veja o log abaixo"
@@ -111,6 +112,7 @@ def _run_job(modo_oculto: bool) -> None:
         _job["message"] = f"Erro: {exc}"
     finally:
         _job["running"] = False
+        _job["state"]   = "idle"
 
 
 # ── Flask ─────────────────────────────────────────────────────────────────────
@@ -134,6 +136,7 @@ def status():
     return jsonify({
         "ok":       True,
         "running":  _job["running"],
+        "state":    _job["state"],
         "message":  _job["message"],
         "progress": _job["progress"],
         "total":    _job["total"],
@@ -170,6 +173,7 @@ def stream() -> Response:
                 "newLines": _job["log"][last_len:],
             }
             last_len = len(_job["log"])
+            data["state"] = _job["state"]
             yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
             if not _job["running"]:
                 break
