@@ -1267,14 +1267,17 @@ let _dashPeriodId  = null;
 // Chart instances per tab, keyed by tab key
 const _chartInstances = {};
 
-async function _cliDashGet(path) {
+async function _cliDashGet(path, { retries = 0, retryDelayMs = 0 } = {}) {
   const base = apiBase();
   if (!base) return null;
-  try {
-    const res = await fetch(base + path);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch { return null; }
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(base + path);
+      if (res.ok) return await res.json();
+    } catch { /* servidor possivelmente dormindo */ }
+    if (attempt < retries) await new Promise(r => setTimeout(r, retryDelayMs));
+  }
+  return null;
 }
 
 /* ─── Activate tab bar in topbar when dashboard loads ─ */
@@ -1292,11 +1295,22 @@ function _showDashControls(periods, activePeriodId) {
     <button class="btn-export" onclick="downloadDashboardPPT()">⬇ PPT</button>`;
 }
 
+function _showDashLoading(msg) {
+  const kpisEl = document.getElementById('kpis-visao-geral');
+  if (kpisEl) kpisEl.innerHTML = `<div style="grid-column:1/-1;padding:48px 0;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted-l)">${escHtml(msg)}</div>`;
+}
+
 async function loadClientDashData(clientId) {
   _dashClientId = clientId;
-  const periods = await _cliDashGet('/api/client-dash/' + encodeURIComponent(clientId) + '/periods');
+  _showDashLoading('Carregando dados…');
+  // Retry até 4×, aguardando 8 s entre tentativas (servidor Render pode estar dormindo)
+  const periods = await _cliDashGet('/api/client-dash/' + encodeURIComponent(clientId) + '/periods', { retries: 4, retryDelayMs: 8000 });
   _dashPeriods  = Array.isArray(periods) ? periods.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0)) : [];
-  if (!_dashPeriods.length) return false;
+  if (!_dashPeriods.length) {
+    const kpisElFb = document.getElementById('kpis-visao-geral');
+    if (kpisElFb) kpisElFb.innerHTML = '';
+    return false;
+  }
 
   _dashPeriodId = _dashPeriods[0].id;
   _showDashControls(_dashPeriods, _dashPeriodId);
@@ -1989,7 +2003,9 @@ async function init() {
 
   /* Build sections */
   /* Try new Cockroach API dashboard first; fall back to legacy analytics */
+  document.getElementById('pageSubtitle').textContent = 'Carregando dados, aguarde\u2026';
   const hasApiDash = await loadClientDashData(client.id);
+  document.getElementById('pageSubtitle').textContent = 'Visão geral dos processos de ' + (displayCompany !== '—' ? displayCompany : 'sua empresa') + '.';
   if (!hasApiDash) buildAnalytics(reports);
   renderReports(reports);
 }
