@@ -1,49 +1,62 @@
 @echo off
 chcp 65001 > nul
-title Falaw PJe - Coleta Completa
+title Falaw PJe - Coleta de Audiencias
 cd /d "%~dp0"
 set PYTHONUTF8=1
 
 echo.
 echo ============================================================
-echo  FALAW - Coleta completa do PJe
-echo  %DATE% %TIME:~0,5%
+echo   FALAW - Coleta Automatica de Audiencias PJe
+echo   %DATE%  %TIME:~0,5%
 echo ============================================================
 echo.
-echo  Como deseja executar?
+echo   O sistema vai abrir o Chrome automaticamente,
+echo   entrar em cada TRT via Whom e salvar as audiencias.
 echo.
-echo    [1] Visivel  - Chrome aparece na tela
-echo    [2] Oculto   - Chrome roda em segundo plano (sem janela)
+echo   ATENCAO: Se o Chrome estiver aberto SEM a porta de
+echo   debug (9222), ele sera reiniciado automaticamente.
+echo   Salve o que estiver fazendo antes de continuar.
 echo.
-choice /c 12 /n /m "  Opcao: "
+echo   [1] Executar  (Chrome aparece na tela)
+echo   [2] Executar  (Chrome roda em segundo plano)
+echo   [3] Cancelar
+echo.
+choice /c 123 /n /m "  Escolha: "
 
-if %errorlevel%==1 (
-    set MODO_OCULTO=false
+if %errorlevel%==3 (
     echo.
-    echo  Modo: VISIVEL
-) else (
+    echo   Operacao cancelada.
+    timeout /t 2 > nul
+    exit /b 0
+)
+if %errorlevel%==2 (
     set MODO_OCULTO=true
     echo.
-    echo  Modo: OCULTO ^(Chrome em segundo plano^)
+    echo   Modo: Chrome em segundo plano
+) else (
+    set MODO_OCULTO=false
+    echo.
+    echo   Modo: Chrome visivel
 )
 
 echo.
-echo  Pressione qualquer tecla para iniciar...
-pause > nul
+echo   Iniciando em 3 segundos...
+timeout /t 3 > nul
+echo.
 
-REM ── Ativar venv ──────────────────────────────────────────────────────────────
+REM Ativar ambiente virtual Python
 if exist "..\\.venv\\Scripts\\activate.bat" (
     call "..\\.venv\\Scripts\\activate.bat"
+) else if exist ".venv\\Scripts\\activate.bat" (
+    call ".venv\\Scripts\\activate.bat"
 )
 
-echo.
-echo Iniciando coleta...
-echo.
 python scraper.py
 
 echo.
 echo ============================================================
-echo  Concluido! Verifique logs\scraper.log
+echo   Concluido!
+echo   Resultados em: logs\scraper.log
 echo ============================================================
 echo.
 pause

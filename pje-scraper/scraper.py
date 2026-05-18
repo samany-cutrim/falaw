@@ -17,9 +17,9 @@ import requests
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 from whom_auth import (
-    matar_todo_chrome,
-    CHROME_USER_DATA,
-    CHROME_PROFILE,
+    garantir_chrome_aberto,
+    reconectar_contexto,
+    CHROME_DEBUG_PORT,
     WHOM_TRTS,
     autenticar_e_capturar_pje_page,
     encontrar_whom,
@@ -183,43 +183,192 @@ def sb_marcar_cancelado(ids: list[str]):
 # ── Filtro de data ────────────────────────────────────────────────────────────
 
 def _set_calendar_input(page, inp, valor: str):
+    """
+    Preenche um campo p-calendar do PrimeNG/PJe.
+    O campo é um <input> dentro de <p-calendar>. O PrimeNG bloqueia digitação
+    direta em alguns casos, então usamos JavaScript para setar o valor e
+    disparar os eventos que o Angular precisa para reconhecer a mudança.
+    """
     try:
-        inp.click(force=True)
-        time.sleep(0.2)
-        inp.press("Control+a")
-        inp.type(valor, delay=40)
-        time.sleep(0.4)
+        # Fechar qualquer calendário popup aberto antes
+        page.keyboard.press("Escape")
+        time.sleep(0.1)
+
+        # Forçar o valor via JavaScript + disparo de eventos do Angular/PrimeNG
+        page.evaluate(
+            """(el, val) => {
+                // Setar o valor nativo
+                var nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                    window.HTMLInputElement.prototype, 'value'
+                ).set;
+                nativeInputValueSetter.call(el, val);
+
+                // Disparar eventos que o Angular/PrimeNG escuta
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+                el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+                el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+            }""",
+            inp.element_handle(),
+            valor,
+        )
+        time.sleep(0.3)
+
+        # Tab para confirmar e fechar o popup de calendário
+        inp.focus()
+        time.sleep(0.1)
         inp.press("Tab")
         time.sleep(0.3)
         page.keyboard.press("Escape")
         time.sleep(0.2)
     except Exception:
-        pass
+        # Fallback: digitação manual caractere a caractere
+        try:
+            inp.click(force=True)
+            time.sleep(0.2)
+            inp.press("Control+a")
+            inp.press("Delete")
+            inp.type(valor, delay=50)
+            time.sleep(0.3)
+            inp.press("Tab")
+            time.sleep(0.3)
+            page.keyboard.press("Escape")
+            time.sleep(0.2)
+        except Exception:
+            pass
+
+
+def _achar_inputs_data(page):
+    """
+    Localiza os dois inputs de data (De e Até) na pauta do PJe.
+    O PJe usa <p-calendar> do PrimeNG mas o input interno pode ter
+    diferentes estruturas dependendo da versão. Tenta múltiplos seletores.
+    Retorna (input_de, input_ate) — qualquer um pode ser None.
+    """
+    # Estratégia 1: p-calendar input (PrimeNG padrão)
+    cal = page.locator("p-calendar input")
+    if cal.count() >= 2:
+        log.debug("    inputs data via: p-calendar input")
+        return cal.nth(0), cal.nth(1)
+    if cal.count() == 1:
+        return cal.nth(0), None
+
+    # Estratégia 2: span.p-calendar > input
+    cal2 = page.locator("span.p-calendar input, div.p-calendar input, [class*='p-calendar'] input")
+    if cal2.count() >= 2:
+        log.debug("    inputs data via: [class*=p-calendar] input")
+        return cal2.nth(0), cal2.nth(1)
+
+    # Estratégia 3: inputs próximos aos labels "De" e "Até"
+    inp_de = None
+    inp_ate = None
+    for lbl_de in ["label:has-text('De')", "span:has-text('De *')", "*:has-text('De *')"]:
+        try:
+            lbl = page.locator(lbl_de).first
+            if lbl.count() > 0:
+                # Tentar input irmão ou filho próximo
+                parent = lbl.locator("xpath=..").first
+                inp = parent.locator("input").first
+                if inp.count() > 0:
+                    inp_de = inp
+                    break
+        except Exception:
+            pass
+
+    for lbl_ate in ["label:has-text('Até')", "span:has-text('Até *')", "*:has-text('Até *')"]:
+        try:
+            lbl = page.locator(lbl_ate).first
+            if lbl.count() > 0:
+                parent = lbl.locator("xpath=..").first
+                inp = parent.locator("input").first
+                if inp.count() > 0:
+                    inp_ate = inp
+                    break
+        except Exception:
+            pass
+
+    if inp_de or inp_ate:
+        log.debug("    inputs data via: label De/Até")
+        return inp_de, inp_ate
+
+    # Estratégia 4: todos os inputs visíveis na área de filtro (pegar os últimos 2)
+    todos = page.locator("input:visible").all()
+    # Filtrar inputs que parecem ser de data (curtos, sem placeholder longo)
+    candidatos = []
+    for inp in todos:
+        try:
+            ph = inp.get_attribute("placeholder") or ""
+            val = inp.input_value() or ""
+            cls = inp.get_attribute("class") or ""
+            # Excluir inputs de busca por número de processo
+            if any(x in ph.lower() for x in ["número", "processo", "cpf", "cnpj", "buscar", "pesquisar"]):
+                continue
+            if any(x in cls.lower() for x in ["search", "busca"]):
+                continue
+            candidatos.append(inp)
+        except Exception:
+            pass
+
+    if len(candidatos) >= 2:
+        log.debug(f"    inputs data via: fallback ({len(candidatos)} candidatos)")
+        return candidatos[-2], candidatos[-1]
+    if len(candidatos) == 1:
+        return candidatos[0], None
+
+    log.warning("    Nenhum input de data encontrado na pauta")
+    return None, None
+
+
+def _aguardar_pauta_carregar(page):
+    """Aguarda qualquer indicador de que a pauta Angular foi montada."""
+    # Tentar múltiplos seletores indicadores da pauta
+    for sel in [
+        "p-calendar input", "span.p-calendar", "[class*='p-calendar']",
+        "thead th:has-text('Processo')", ".p-datatable", "p-table",
+        "table tbody", ".p-paginator"
+    ]:
+        try:
+            page.locator(sel).first.wait_for(state="visible", timeout=3000)
+            return
+        except Exception:
+            continue
+    time.sleep(2.0)
 
 
 def definir_periodo(page):
-    """Define De=hoje, Até=hoje+DIAS_BUSCA nos campos p-calendar da pauta."""
+    """
+    Define De=hoje, Até=hoje+DIAS_BUSCA e dispara a busca.
+    """
     hoje   = datetime.today()
     fim    = hoje + timedelta(days=DIAS_BUSCA)
     hoje_s = hoje.strftime("%d/%m/%Y")
     fim_s  = fim.strftime("%d/%m/%Y")
 
+    _aguardar_pauta_carregar(page)
+
+    inp_de, inp_ate = _achar_inputs_data(page)
+    log.info(f"    De={hoje_s} Até={fim_s} | inp_de={inp_de is not None} inp_ate={inp_ate is not None}")
+
+    if inp_de:
+        _set_calendar_input(page, inp_de, hoje_s)
+        time.sleep(0.6)
+    if inp_ate:
+        _set_calendar_input(page, inp_ate, fim_s)
+        time.sleep(0.6)
+
+    # Disparar a busca: pressionar Enter no último campo preenchido
     try:
-        page.wait_for_load_state("domcontentloaded", timeout=15000)
-        time.sleep(1.5)
+        if inp_ate:
+            inp_ate.press("Enter")
+        elif inp_de:
+            inp_de.press("Enter")
+        time.sleep(1)
     except Exception:
         pass
 
-    cal = page.locator("p-calendar input")
-    n = cal.count()
-
-    if n >= 1:
-        _set_calendar_input(page, cal.nth(0), hoje_s)
-    if n >= 2:
-        _set_calendar_input(page, cal.nth(1), fim_s)
-
+    # Aguardar resultados
     try:
-        page.wait_for_load_state("networkidle", timeout=12000)
+        page.wait_for_load_state("networkidle", timeout=15000)
     except Exception:
         pass
     time.sleep(2)
@@ -501,24 +650,106 @@ def processar_sistema(ctx, sistema: dict, ext_id: str, popup: str) -> tuple[int,
     # Autenticar via Whom e capturar a página PJe que ele abre
     page = autenticar_e_capturar_pje_page(ctx, ext_id, popup, whom)
     if page is None:
-        log.warning(f"  {nome}: falha na autenticação via Whom")
+        log.warning(f"  {nome}: falha na autenticacao via Whom")
         return -1, 0
 
-    # Navegar para a pauta
-    pauta_url = f"{base}/pjekz/pauta-usuarios-externos"
-    log.info(f"  Pauta: {pauta_url}")
+    # Navegar para a pauta — usando a URL base extraída da URL atual (sessão ativa)
+    # O Whom redireciona para /pjekz/painel/usuario-externo; a base real do TRT
+    # está na URL atual da página, mais confiável que o fallback_base do .env
+    url_base_real = base
     try:
-        page.goto(pauta_url, wait_until="domcontentloaded", timeout=25000)
-    except Exception as e:
-        log.warning(f"  {nome}: erro ao navegar para pauta — {e}")
-        try: page.close()
-        except Exception: pass
-        return 0, 0
+        url_corrente = page.url
+        if ".jus.br" in url_corrente and "chrome-extension" not in url_corrente:
+            from urllib.parse import urlparse
+            parsed = urlparse(url_corrente)
+            url_base_real = f"{parsed.scheme}://{parsed.netloc}"
+    except Exception:
+        pass
 
-    if "login" in page.url.lower() or "token" in page.url.lower():
-        log.warning(f"  {nome}: redirecionado para login após auth")
+    pauta_url = f"{url_base_real}/pjekz/pauta-usuarios-externos"
+    log.info(f"  Pauta: {pauta_url}")
+
+    # ── Verificar se já existe aba com a pauta aberta ─────────────────────────
+    # O Whom às vezes abre a pauta diretamente em nova aba. Se já existir,
+    # usar ela em vez de navegar na aba do painel.
+    aba_pauta = None
+    for pg in ctx.pages:
+        try:
+            if "pauta-usuarios-externos" in pg.url and ".jus.br" in pg.url:
+                aba_pauta = pg
+                log.info(f"  {nome}: aba da pauta já aberta → {pg.url[:80]}")
+                break
+        except Exception:
+            pass
+
+    if aba_pauta and aba_pauta != page:
+        try:
+            page.close()
+        except Exception:
+            pass
+        page = aba_pauta
+
+    # ── Navegar para a pauta se ainda não estiver lá ─────────────────────────
+    if "pauta-usuarios-externos" not in page.url:
+        log.info(f"  {nome}: navegando via Angular Router para pauta...")
+        try:
+            # Usar evaluate para forçar o Angular Router a navegar internamente
+            # goto() com wait_until="commit" pode não funcionar em SPAs Angular
+            page.evaluate(f"window.location.href = '{pauta_url}'")
+            time.sleep(2)
+        except Exception as e:
+            log.warning(f"  {nome}: evaluate falhou ({e}), tentando goto...")
+            try:
+                page.goto(pauta_url, wait_until="commit", timeout=30000)
+            except Exception as e2:
+                log.warning(f"  {nome}: erro ao navegar para pauta — {e2}")
+                try: page.close()
+                except Exception: pass
+                return 0, 0
+
+    # Verificar acesso negado
+    url_atual = page.url.lower()
+    if any(k in url_atual for k in ["login", "token", "acesso-negado", "acesso_negado", "nao-autorizado"]):
+        log.warning(f"  {nome}: sessão inválida (URL: {page.url[:80]})")
         page.close()
         return -1, 0
+
+    # Aguardar Angular montar a tabela da pauta (qualquer indicador visível)
+    # O p-calendar pode não ser o componente PrimeNG — tentar múltiplos seletores
+    SELETORES_PAUTA = [
+        "p-calendar input",               # PrimeNG p-calendar
+        "input[placeholder*='De']",        # input com placeholder De
+        "input[placeholder*='Até']",       # input com placeholder Até
+        ".p-datepicker-trigger",           # botão trigger do datepicker
+        "span.p-calendar",                 # span wrapper do p-calendar
+        "[class*='p-calendar']",           # qualquer elemento com p-calendar na class
+        "p-table",                         # tabela de resultados
+        ".p-datatable",                    # datatable PrimeNG
+        "table.p-datatable-table",         # tabela real
+        "thead th:has-text('Processo')",   # cabeçalho da tabela de processos
+    ]
+    pauta_carregada = False
+    for sel in SELETORES_PAUTA:
+        try:
+            page.locator(sel).first.wait_for(state="visible", timeout=5000)
+            log.info(f"  {nome}: pauta carregada ✓ (via '{sel}')")
+            pauta_carregada = True
+            break
+        except Exception:
+            continue
+
+    if not pauta_carregada:
+        url_atual = page.url.lower()
+        if any(k in url_atual for k in ["login", "token", "acesso-negado", "nao-autorizado"]):
+            log.warning(f"  {nome}: redirecionado para login (URL: {page.url[:80]})")
+            page.close()
+            return -1, 0
+        if "pauta-usuarios-externos" not in url_atual:
+            log.warning(f"  {nome}: URL não é a pauta (URL: {page.url[:80]})")
+        log.warning(f"  {nome}: componentes da pauta não detectados. Continuando mesmo assim...")
+    
+    # Pausa extra para Angular finalizar renderização
+    time.sleep(2)
 
     log.info(f"  Período: hoje → +{DIAS_BUSCA} dias")
     definir_periodo(page)
@@ -579,47 +810,42 @@ def main():
         log.error("SUPABASE_URL e SUPABASE_KEY não configurados no .env")
         return
 
-    # Detectar extensão Whom (busca no sistema de arquivos, sem precisar do Chrome)
+    # Whom é obrigatório — autentica cada TRT antes do scrape
     ext_id, popup = encontrar_whom()
     if not ext_id:
-        log.error("Extensão Whom não encontrada. Configure WHOM_EXT_ID no .env. Abortando.")
+        log.error("Extensao Whom nao encontrada. Configure WHOM_EXT_ID no .env. Abortando.")
         return
     log.info(f"Whom: chrome-extension://{ext_id}/{popup}")
 
-    # Matar Chrome existente para poder abrir com controle total do Playwright
-    log.info("Encerrando Chrome existente...")
-    matar_todo_chrome()
-
-    modo_oculto = os.getenv("MODO_OCULTO", "false").lower() in ("true", "1", "sim", "s")
-    chrome_args = [
-        f"--profile-directory={CHROME_PROFILE}",
-        "--remote-allow-origins=*",
-        "--no-first-run",
-        "--no-default-browser-check",
-        "--disable-session-crashed-bubble",
-    ]
-    if modo_oculto:
-        chrome_args += ["--window-position=-10000,0", "--window-size=1280,800"]
+    # Garantir Chrome aberto com debug port (SEM matar abas existentes)
+    log.info("Verificando Chrome...")
+    if not garantir_chrome_aberto():
+        log.error("Nao foi possivel iniciar Chrome. Abortando.")
+        return
 
     resumo = {"ok": [], "sem_auth": [], "sem_aud": [], "erro": [], "total": 0, "cancelados": 0}
 
     with sync_playwright() as p:
-        log.info(f"Abrindo Chrome com perfil {CHROME_PROFILE}...")
-        ctx = p.chromium.launch_persistent_context(
-            user_data_dir=CHROME_USER_DATA,
-            channel="chrome",
-            headless=False,
-            args=chrome_args,
-            no_viewport=True,
-        )
-        log.info("Chrome iniciado — aguardando extensões carregarem...")
-        time.sleep(3)
+        log.info(f"Conectando ao Chrome via CDP (porta {CHROME_DEBUG_PORT})...")
+        browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{CHROME_DEBUG_PORT}")
+        ctx = browser.contexts[0] if browser.contexts else browser.new_context()
+        log.info("Conectado ao Chrome.")
 
         for sistema in SISTEMAS:
             nome = sistema["nome"]
             log.info(f"\n{'─' * 50}")
             log.info(f"[{nome}]")
             try:
+                # Verificar se o contexto ainda está vivo; reconectar se necessário
+                try:
+                    _ = ctx.pages
+                except Exception:
+                    log.warning("BrowserContext fechado. Reconectando ao Chrome...")
+                    browser, ctx = reconectar_contexto(p)
+                    if ctx is None:
+                        log.error("Não foi possível reconectar ao Chrome. Abortando.")
+                        break
+
                 enviados, cancelados = processar_sistema(ctx, sistema, ext_id, popup)
                 resumo["cancelados"] += cancelados
                 if enviados == -1:
@@ -632,9 +858,21 @@ def main():
             except Exception as e:
                 log.error(f"  {nome}: erro inesperado — {e}")
                 resumo["erro"].append(nome)
+                # Tentar reconectar se o contexto foi perdido
+                if "closed" in str(e).lower() or "context" in str(e).lower():
+                    log.warning("Tentando reconectar ao Chrome após erro de contexto...")
+                    try:
+                        browser, ctx = reconectar_contexto(p)
+                        if ctx is None:
+                            log.error("Reconexão falhou. Abortando.")
+                            break
+                    except Exception as re_e:
+                        log.error(f"Reconexão falhou: {re_e}. Abortando.")
+                        break
             time.sleep(1)
 
-        ctx.close()
+        # Chrome permanece aberto com todas as abas existentes
+        log.info("Scraping concluido. Chrome mantido aberto.")
 
     log.info("\n" + "=" * 60)
     log.info("RELATÓRIO FINAL")

@@ -109,9 +109,10 @@ def garantir_chrome_aberto() -> bool:
     Retorna True quando Chrome está disponível.
     """
     try:
-        requests.get(f"{CDP_BASE}/json/version", timeout=2)
-        log.info(f"Chrome já está na porta {CHROME_DEBUG_PORT}. Reutilizando sessão.")
-        return True
+        r = requests.get(f"{CDP_BASE}/json/version", timeout=3)
+        if r.status_code == 200:
+            log.info(f"Chrome já está na porta {CHROME_DEBUG_PORT}. Reutilizando sessão.")
+            return True
     except Exception:
         pass
 
@@ -156,10 +157,10 @@ def garantir_chrome_aberto() -> bool:
         "--no-first-run",
         "--no-default-browser-check",
         "--disable-session-crashed-bubble",
+        "--disable-background-networking",
         "about:blank",
     ]
     if MODO_OCULTO:
-        # Posiciona a janela fora da tela — extensões continuam funcionando
         chrome_args += ["--window-position=-10000,0", "--window-size=1280,800"]
 
     ps_args = ",".join(f'"{a}"' for a in chrome_args)
@@ -176,14 +177,30 @@ def garantir_chrome_aberto() -> bool:
     for _ in range(30):
         time.sleep(1)
         try:
-            requests.get(f"{CDP_BASE}/json/version", timeout=2)
-            log.info("Chrome pronto!")
-            return True
+            r = requests.get(f"{CDP_BASE}/json/version", timeout=2)
+            if r.status_code == 200:
+                log.info("Chrome pronto!")
+                return True
         except Exception:
             pass
 
     log.error(f"Chrome não respondeu na porta {CHROME_DEBUG_PORT} após 30 segundos.")
     return False
+
+
+def reconectar_contexto(p):
+    """
+    Reconecta ao Chrome via CDP e retorna (browser, ctx).
+    Usado quando o BrowserContext é fechado inesperadamente pelo Chrome.
+    """
+    try:
+        browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{CHROME_DEBUG_PORT}")
+        ctx = browser.contexts[0] if browser.contexts else browser.new_context()
+        log.info("Reconectado ao Chrome via CDP.")
+        return browser, ctx
+    except Exception as e:
+        log.error(f"Falha ao reconectar ao Chrome: {e}")
+        return None, None
 
 
 # ── Detectar extensão Whom ────────────────────────────────────────────────────
@@ -269,6 +286,84 @@ def _fechar_abas_whom(ext_id: str) -> None:
 
 # ── Automação da interface do Whom ────────────────────────────────────────────
 
+# Campo de CERTIFICADO (estado inicial — placeholder "Pesquise por certificado")
+_CERT_LOC = (
+    "input[placeholder*='certificado' i], "
+    "input[placeholder*='Pesquise por cert' i]"
+)
+
+# Campo de SISTEMA (estado após certificado selecionado — placeholder "Digite ou selecione um sistema pra acessar")
+_SI_LOC = (
+    "input[placeholder*='sistema' i], "
+    "input[placeholder*='pra acessar' i], "
+    "input[placeholder*='para acessar' i]"
+)
+
+def _variantes_sistema(sistema: str) -> list[str]:
+    """
+    Gera variantes do nome do sistema para lidar com diferenças tipográficas do Whom.
+    Ex: "TRT1 Pje - 1º grau" → também testa "TRT1 Pje - 1° Grau", "TRT1 PJe - 1° Grau", etc.
+    """
+    variantes = {sistema}
+
+    # Trocar ordinal º (U+00BA) ↔ grau ° (U+00B0)
+    for v in list(variantes):
+        if "º" in v:
+            variantes.add(v.replace("º", "°"))
+        if "°" in v:
+            variantes.add(v.replace("°", "º"))
+
+    # Capitalização do "grau" → "Grau"
+    for v in list(variantes):
+        if " grau" in v:
+            variantes.add(v.replace(" grau", " Grau"))
+        if " Grau" in v:
+            variantes.add(v.replace(" Grau", " grau"))
+
+    # "grau" com til: "1º grau" → "1o grau" e vice-versa (para .env sem acentos)
+    for v in list(variantes):
+        for par in [("1º", "1o"), ("2º", "2o"), ("1°", "1o"), ("2°", "2o")]:
+            if par[0] in v:
+                variantes.add(v.replace(par[0], par[1]))
+            if par[1] in v:
+                variantes.add(v.replace(par[1], par[0]))
+
+    return list(variantes)
+
+
+def _opcao_sistema(page, sistema: str):
+    """
+    Retorna o locator para o item da lista do Whom que corresponde ao sistema.
+    Tenta texto exato e todas as variantes de capitalização/símbolo ordinal.
+    O Whom usa role='menuitem' com texto dentro de <span>.
+    """
+    _SEL_ITEM = "[role='menuitem'], [role='option'], [role='listitem'], li"
+    for variante in _variantes_sistema(sistema):
+        loc = page.locator(f"{_SEL_ITEM}:has-text('{variante}')").first
+        try:
+            if loc.count() > 0:
+                return loc
+        except Exception:
+            pass
+    # Último recurso: busca pelo número do TRT no texto (ex: "TRT1" em "TRT1 Pje - 1° Grau")
+    import re as _re
+    m = _re.search(r"TRT(\d+)", sistema, _re.IGNORECASE)
+    if m:
+        num = m.group(1)
+        grau = "1" if "1" in sistema.split("TRT"+num)[-1][:5] else "2"
+        for v in [f"TRT{num} Pje - 1° Grau", f"TRT{num} Pje - 2° Grau",
+                  f"TRT{num} Pje - 1º Grau", f"TRT{num} Pje - 2º Grau",
+                  f"TRT{num} Pje - 1° grau", f"TRT{num} Pje - 2° grau"]:
+            if grau in v.split("TRT"+num)[-1][:10]:
+                loc = page.locator(f"{_SEL_ITEM}:has-text('{v}')").first
+                try:
+                    if loc.count() > 0:
+                        return loc
+                except Exception:
+                    pass
+    # Retorna o primeiro item genérico como fallback (para não travar)
+    return page.locator(f"{_SEL_ITEM}:has-text('{sistema}')").first
+
 def _abrir_whom_page(ctx, ext_id: str, popup: str):
     """Abre a extensão Whom numa nova aba (launch_persistent_context) e retorna a página."""
     ext_url = f"chrome-extension://{ext_id}/{popup}"
@@ -295,6 +390,70 @@ def _abrir_whom_page(ctx, ext_id: str, popup: str):
         return None
 
 
+def _selecionar_certificado(page, cert_name: str) -> bool:
+    """
+    Verifica se o Whom está na tela de seleção de certificado.
+    Se sim, digita o nome do certificado e clica no item correspondente.
+    Retorna True se o certificado foi selecionado ou já estava selecionado.
+    """
+    cert_input = page.locator(_CERT_LOC).first
+    try:
+        cert_input.wait_for(state="visible", timeout=5000)
+    except PWTimeout:
+        # Campo de certificado não apareceu → certificado já selecionado
+        return True
+
+    # Campo de certificado visível → selecionar pelo nome
+    try:
+        cert_input.click()
+        time.sleep(0.3)
+        if cert_name:
+            cert_input.fill(cert_name)
+            time.sleep(1.0)
+            # Clicar no item que corresponde ao certificado
+            item = page.locator(
+                f"[role='menuitem']:has-text('{cert_name}'), "
+                f"[role='option']:has-text('{cert_name}')"
+            ).first
+            try:
+                item.wait_for(state="visible", timeout=4000)
+                item.click()
+                time.sleep(1.5)
+                log.debug(f"Certificado selecionado: {cert_name}")
+                return True
+            except PWTimeout:
+                pass
+        # Fallback: clicar no primeiro item disponível
+        item = page.locator("[role='menuitem']:not([disabled])").first
+        item.wait_for(state="visible", timeout=4000)
+        item.click()
+        time.sleep(1.5)
+        return True
+    except Exception as e:
+        log.warning(f"Erro ao selecionar certificado: {e}")
+        return False
+
+
+def _esperar_campo_sistema(page, cert_name: str = "", timeout_ms=10000) -> bool:
+    """
+    Garante que o campo de sistema está visível.
+    1) Se o campo de certificado aparecer primeiro, seleciona o certificado.
+    2) Aguarda o campo de sistema aparecer.
+    Retorna True se o campo de sistema ficou visível.
+    """
+    # Primeiro: tentar selecionar certificado se necessário
+    _selecionar_certificado(page, cert_name)
+
+    # Agora aguardar o campo de sistema
+    si_loc = page.locator(_SI_LOC)
+    try:
+        si_loc.first.wait_for(state="visible", timeout=timeout_ms)
+        return True
+    except PWTimeout:
+        log.warning("Campo de sistema não ficou visível após seleção de certificado")
+        return False
+
+
 def autenticar_sistema(ctx, ext_id: str, popup: str, sistema: str) -> bool:
     """
     Abre o painel do Whom numa nova aba e executa o fluxo de autenticação.
@@ -312,49 +471,30 @@ def autenticar_sistema(ctx, ext_id: str, popup: str, sistema: str) -> bool:
             nps = page.locator("button:has-text('Responder depois')")
             nps.wait_for(state="visible", timeout=2500)
             nps.click()
-            time.sleep(1)
+            time.sleep(0.8)
             log.debug("NPS fechado")
         except PWTimeout:
             pass
 
-        # ── Selecionar certificado ────────────────────────────────────────────
-        # Verifica se o campo de sistema já está visível (cert já selecionado)
-        si_loc = page.locator("input[placeholder*='sistema' i], input[placeholder*='Digite' i]")
-        sistema_visivel = False
-        try:
-            si_loc.first.wait_for(state="visible", timeout=1500)
-            sistema_visivel = True
-        except PWTimeout:
-            pass
-
-        if not sistema_visivel:
-            cert_item = page.locator("[role='menuitem']:not([disabled])").first
-            try:
-                cert_item.wait_for(state="visible", timeout=5000)
-                cert_item.click()
-                time.sleep(2)
-            except PWTimeout:
-                log.warning(f"[{sistema}] Certificado não encontrado no Whom")
-                page.close()
-                return False
-
-        # ── Campo de sistema ──────────────────────────────────────────────────
-        si = page.locator("input[placeholder*='sistema' i], input[placeholder*='Digite' i]").first
-        try:
-            si.wait_for(state="visible", timeout=5000)
-        except PWTimeout:
-            log.warning(f"[{sistema}] Campo de sistema não ficou visível")
+        # ── Aguardar campo de sistema (certificado já pré-selecionado no v3.3.7+) ──
+        if not _esperar_campo_sistema(page, cert_name=CERT_NAME, timeout_ms=10000):
+            log.warning(f"[{sistema}] Campo de sistema não apareceu")
             page.close()
             return False
 
+        # ── Campo de sistema ──────────────────────────────────────────────────
+        si = page.locator(_SI_LOC).first
         si.click()
+        time.sleep(0.3)
+        si.fill("")
+        time.sleep(0.2)
         si.fill(sistema)
-        time.sleep(1.2)
+        time.sleep(1.5)
 
-        # ── Selecionar sistema no dropdown ────────────────────────────────────
-        opcao = page.locator(f"[role='menuitem']:has-text('{sistema}')").first
+        # ── Selecionar item na lista filtrada ─────────────────────────────────
+        opcao = _opcao_sistema(page, sistema)
         try:
-            opcao.wait_for(state="visible", timeout=3000)
+            opcao.wait_for(state="visible", timeout=4000)
             opcao.click()
             time.sleep(0.5)
         except PWTimeout:
@@ -376,7 +516,11 @@ def autenticar_sistema(ctx, ext_id: str, popup: str, sistema: str) -> bool:
             page.close()
             return False
 
-        acessar.click()
+        # JS click contorna overlay sc-gloWDX que intercepta pointer events
+        try:
+            acessar.evaluate("el => el.click()")
+        except Exception:
+            acessar.click(force=True)
         log.info(f"[OK] {sistema}")
         time.sleep(3)
 
@@ -408,6 +552,45 @@ def autenticar_sistema(ctx, ext_id: str, popup: str, sistema: str) -> bool:
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
+def _aguardar_pje_em_qualquer_aba(ctx, sistema: str, timeout_s: int = 90):
+    """
+    Varre TODAS as abas abertas procurando uma que chegue em .jus.br.
+    Retorna a primeira aba PJe válida encontrada, ou None se timeout.
+
+    Estratégia: não monitora uma aba específica — o Whom pode abrir
+    progress.html que depois redireciona para o PJe, ou pode abrir o PJe
+    diretamente. Qualquer aba .jus.br fora do chrome-extension é válida.
+    """
+    deadline = time.time() + timeout_s
+    ultimo_log = {}
+    while time.time() < deadline:
+        for pg in ctx.pages:
+            try:
+                url = pg.url
+            except Exception:
+                continue
+            if (".jus.br" in url
+                    and "chrome-extension" not in url
+                    and "about:" not in url
+                    and "acesso-negado" not in url):
+                log.info(f"[OK] {sistema} → {url[:80]}")
+                try:
+                    pg.wait_for_load_state("domcontentloaded", timeout=10000)
+                except Exception:
+                    pass
+                time.sleep(1.0)
+                return pg
+            # Logar mudanças sem spam por aba
+            if url != ultimo_log.get(id(pg)):
+                if "chrome-extension" in url and "progress" in url:
+                    log.info(f"[{sistema}] Doc9 processando cert A3...")
+                ultimo_log[id(pg)] = url
+        time.sleep(0.8)
+
+    log.warning(f"[{sistema}] Timeout ({timeout_s}s) — nenhuma aba PJe encontrada")
+    return None
+
+
 def autenticar_e_capturar_pje_page(ctx, ext_id: str, popup: str, sistema: str):
     """
     Autentica via Whom e retorna a página PJe aberta pelo Whom.
@@ -426,46 +609,29 @@ def autenticar_e_capturar_pje_page(ctx, ext_id: str, popup: str, sistema: str):
             nps = page.locator("button:has-text('Responder depois')")
             nps.wait_for(state="visible", timeout=2500)
             nps.click()
-            time.sleep(1)
+            time.sleep(0.8)
         except PWTimeout:
             pass
 
-        # Certificado
-        si_loc = page.locator("input[placeholder*='sistema' i], input[placeholder*='Digite' i]")
-        sistema_visivel = False
-        try:
-            si_loc.first.wait_for(state="visible", timeout=1500)
-            sistema_visivel = True
-        except PWTimeout:
-            pass
-
-        if not sistema_visivel:
-            cert_item = page.locator("[role='menuitem']:not([disabled])").first
-            try:
-                cert_item.wait_for(state="visible", timeout=5000)
-                cert_item.click()
-                time.sleep(2)
-            except PWTimeout:
-                log.warning(f"[{sistema}] Certificado não encontrado")
-                page.close()
-                return None
-
-        # Campo de sistema
-        si = page.locator("input[placeholder*='sistema' i], input[placeholder*='Digite' i]").first
-        try:
-            si.wait_for(state="visible", timeout=5000)
-        except PWTimeout:
-            log.warning(f"[{sistema}] Campo sistema não visível")
+        # ── Aguardar campo de sistema (certificado já pré-selecionado no v3.3.7+) ──
+        if not _esperar_campo_sistema(page, cert_name=CERT_NAME, timeout_ms=10000):
+            log.warning(f"[{sistema}] Campo de sistema não apareceu")
             page.close()
             return None
 
+        # Campo de sistema
+        si = page.locator(_SI_LOC).first
         si.click()
+        time.sleep(0.3)
+        si.fill("")
+        time.sleep(0.2)
         si.fill(sistema)
-        time.sleep(1.2)
+        time.sleep(1.5)
 
-        opcao = page.locator(f"[role='menuitem']:has-text('{sistema}')").first
+        # Selecionar item na lista filtrada
+        opcao = _opcao_sistema(page, sistema)
         try:
-            opcao.wait_for(state="visible", timeout=3000)
+            opcao.wait_for(state="visible", timeout=4000)
             opcao.click()
             time.sleep(0.5)
         except PWTimeout:
@@ -487,29 +653,37 @@ def autenticar_e_capturar_pje_page(ctx, ext_id: str, popup: str, sistema: str):
             page.close()
             return None
 
-        pje_page = None
-        try:
-            with ctx.expect_page(timeout=12000) as pje_info:
-                acessar.click()
-            pje_page = pje_info.value
+        # ── Clicar em Acessar e aguardar PJe em qualquer aba ────────────────
+        # Whom v3.3.9 modo aba: clicar Acessar abre progress.html em nova aba,
+        # que redireciona para pje.trtN.jus.br. O overlay sc-gloWDX bloqueia
+        # pointer events → JS click.
+        # Não tentamos rastrear qual aba — varremos todas até achar .jus.br.
+
+        def _clicar_acessar():
             try:
-                pje_page.wait_for_load_state("domcontentloaded", timeout=15000)
+                acessar.evaluate("el => el.click()")
+            except Exception:
+                try:
+                    acessar.click(force=True)
+                except Exception:
+                    acessar.click()
+
+        _clicar_acessar()
+
+        # Aguardar qualquer aba chegar em .jus.br (Doc9 pode demorar ~40s)
+        pje_page = _aguardar_pje_em_qualquer_aba(ctx, sistema, timeout_s=90)
+
+        if pje_page is None:
+            log.warning(f"[{sistema}] Nenhuma aba PJe encontrada após 90s")
+            return None
+
+        # Fechar aba do Whom se for diferente da aba PJe
+        if page != pje_page:
+            try:
+                page.close()
             except Exception:
                 pass
-            log.info(f"[OK] {sistema} → {pje_page.url[:80]}")
-        except Exception:
-            acessar.click()
-            time.sleep(4)
-            log.info(f"[OK] {sistema}")
-            for pg in ctx.pages:
-                u = pg.url
-                if (any(k in u for k in ["trt", "tst.jus.br", "pje"])
-                        and "chrome-extension" not in u
-                        and "about:" not in u):
-                    pje_page = pg
-                    break
 
-        page.close()
         return pje_page
 
     except Exception as e:
@@ -548,43 +722,43 @@ def main():
 
     log.info(f"URL do Whom: chrome-extension://{ext_id}/{popup_file}")
 
-    matar_todo_chrome()
-
-    chrome_args = [
-        f"--profile-directory={CHROME_PROFILE}",
-        "--remote-allow-origins=*",
-        "--no-first-run",
-        "--no-default-browser-check",
-        "--disable-session-crashed-bubble",
-    ]
-    if MODO_OCULTO:
-        chrome_args += ["--window-position=-10000,0", "--window-size=1280,800"]
+    log.info("Verificando Chrome...")
+    if not garantir_chrome_aberto():
+        log.error("Nao foi possivel iniciar Chrome. Abortando.")
+        return
 
     with sync_playwright() as p:
-        ctx = p.chromium.launch_persistent_context(
-            user_data_dir=CHROME_USER_DATA,
-            channel="chrome",
-            headless=False,
-            args=chrome_args,
-            no_viewport=True,
-        )
-        log.info("Chrome iniciado (launch_persistent_context)")
-        time.sleep(3)  # aguardar extensões carregarem
+        log.info(f"Conectando ao Chrome via CDP (porta {CHROME_DEBUG_PORT})...")
+        browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{CHROME_DEBUG_PORT}")
+        ctx = browser.contexts[0] if browser.contexts else browser.new_context()
+        log.info("Conectado ao Chrome.")
 
         ok = []
         nao_encontrado = []
 
         for sistema in WHOM_TRTS:
             log.info(f"Autenticando: {sistema}")
+            # Verificar se o contexto ainda está vivo
+            try:
+                _ = ctx.pages
+            except Exception:
+                log.warning("BrowserContext fechado. Reconectando ao Chrome...")
+                try:
+                    browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{CHROME_DEBUG_PORT}")
+                    ctx = browser.contexts[0] if browser.contexts else browser.new_context()
+                    log.info("Reconectado.")
+                except Exception as e:
+                    log.error(f"Reconexão falhou: {e}. Abortando.")
+                    break
+
             sucesso = autenticar_sistema(ctx, ext_id, popup_file, sistema)
             if sucesso:
                 ok.append(sistema)
             else:
                 nao_encontrado.append(sistema)
-            # Pequena pausa entre sistemas para não sobrecarregar
             time.sleep(0.5)
 
-        ctx.close()
+        # Chrome permanece aberto
 
     log.info("\n" + "=" * 60)
     log.info("RESULTADO")

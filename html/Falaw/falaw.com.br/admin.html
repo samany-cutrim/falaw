@@ -7199,6 +7199,19 @@ async function cliDashSaveExcel() {
           clients[cidxRep].reports = clients[cidxRep].reports || [];
           clients[cidxRep].reports.push(repEntry);
           await saveClients(clients);
+          // Salvar metadados na Cockroach API para que o download funcione no dispositivo do cliente
+          await apiSaveReportMeta({
+            id: repEntry.id,
+            clientId: _cliDashClientId,
+            title: repEntry.title,
+            period: repEntry.period,
+            description: repEntry.description,
+            fileName: repEntry.fileName,
+            fileUrl: repEntry.fileUrl,
+            fileSize: repEntry.fileSize,
+            uploadedAt: repEntry.uploadedAt,
+            stats: { dashPeriodId: periodId }
+          }).catch(e => console.warn('report-meta-api:', e));
         }
       }
     } catch(re) { console.warn('report-register:', re); }

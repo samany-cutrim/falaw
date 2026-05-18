@@ -946,7 +946,7 @@ async function downloadDashboardExcel() {
   const periodId = _dashPeriodId;
   const reports  = window._allReports || [];
   // Procura pelo dashPeriodId correspondente, ou pega o mais recente
-  const report = reports.find(r => r.dashPeriodId === periodId) || reports[0];
+  const report = reports.find(r => r.dashPeriodId === periodId || (r.stats && r.stats.dashPeriodId === periodId)) || reports[0];
   if (!report) { alert('Nenhum arquivo Excel disponível para este período.'); return; }
   await downloadReport(report);
 }
