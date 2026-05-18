@@ -4,3 +4,5 @@ window.SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJl
 window.BACKEND_API_URL='https://falaw-s1s1.onrender.com';
 window.SB_N8N_URL='https://flw.app.n8n.cloud/webhook/falaw-ia';
 window.SB_ADMIN_EMAIL='admin@falaw.com.br';
+/* Sempre sincroniza localStorage com a URL canônica */
+(function(){try{localStorage.setItem('fa_backend_api_url','https://falaw-s1s1.onrender.com');}catch(e){}})();
