@@ -1,5 +1,29 @@
 var FALAW_ARTICLES = [
   {
+    "id": "pec-fim-escala-6x1-reducao-jornada-mai2026",
+    "title": "PEC do fim da escala 6x1: o que mudou, o que ainda falta e o que as empresas precisam fazer agora",
+    "category": "Direito do Trabalho",
+    "excerpt": "A comissão especial da Câmara aprovou em 27/05/2026 a PEC que reduz a jornada para 40h e acaba com a escala 6x1. O texto vai ao plenário. Entenda o cronograma, as exceções para altos salários e o que as empresas precisam fazer antes da promulgação.",
+    "date": "Maio de 2026",
+    "readTime": "9 min",
+    "url": "blog/pec-fim-escala-6x1-reducao-jornada-mai2026.html",
+    "published": true,
+    "photo": "",
+    "content": ""
+  },
+  {
+    "id": "nr1-vigencia-fiscalizacao-pedagogica-mai2026",
+    "title": "NR-1 entrou em vigor: os primeiros 90 dias são pedagógicos — e isso não é prorrogação",
+    "category": "Direito do Trabalho",
+    "excerpt": "A NR-1 está em vigor desde 26 de maio de 2026. O Manual do MTE confirma 90 dias de fiscalização pedagógica — mas isso não suspende a norma nem a responsabilidade civil do empregador. Entenda o que muda agora e como usar essa janela a favor da sua empresa.",
+    "date": "Maio de 2026",
+    "readTime": "8 min",
+    "url": "blog/nr1-vigencia-fiscalizacao-pedagogica-mai2026.html",
+    "published": true,
+    "photo": "",
+    "content": ""
+  },
+  {
     "id": "stf-igualdade-salarial-lei-14611-mai2026",
     "title": "STF confirma por unanimidade a constitucionalidade da Lei de Igualdade Salarial",
     "category": "Direito do Trabalho",
