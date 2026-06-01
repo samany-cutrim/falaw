@@ -3708,16 +3708,17 @@ async function loadArticlesFromGitHub() {
         const { data, error } = await sb.from('articles').select('*');
         if (error || !data) return null;
         return data.map(a => ({
-          id:        a.id,
-          title:     a.title     || '',
-          category:  a.category  || '',
-          excerpt:   a.excerpt   || '',
-          date:      a.date      || '',
-          readTime:  a.readtime  || '',
-          url:       a.url       || '',
-          published: a.published !== false,
-          content:   a.content   || '',
-          photo:     a.photo     || ''
+          id:         a.id,
+          title:      a.title      || '',
+          category:   a.category   || '',
+          excerpt:    a.excerpt    || '',
+          date:       a.date       || '',
+          readTime:   a.readtime   || '',
+          url:        a.url        || '',
+          published:  a.published  !== false,
+          content:    a.content    || '',
+          photo:      a.photo      || '',
+          created_at: a.created_at || ''
         }));
       } catch(e) { console.warn('Supabase load:', e.message); return null; }
     })(),
@@ -5505,10 +5506,14 @@ function openDigestModal(type) {
     filtered = (ALL_ARTICLES || []).filter(a => {
       if (!a.published) return false;
       if (a.created_at) return new Date(a.created_at) >= weekAgo;
-      // fallback: mesmo mês/ano
+      // fallback: verifica mês atual e mês anterior (para os primeiros dias do mês)
       const d = (a.date || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-      const m = MONTHS_PT_LABEL[now.getMonth()].normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-      return d.includes(m) && d.includes(String(curYear));
+      const mCur  = MONTHS_PT_LABEL[now.getMonth()].normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const mPrev = MONTHS_PT_LABEL[prevMonth.getMonth()].normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const yCur  = String(now.getFullYear());
+      const yPrev = String(prevMonth.getFullYear());
+      return (d.includes(mCur) && d.includes(yCur)) || (d.includes(mPrev) && d.includes(yPrev));
     });
     // formata período "01/05 a 08/05/2026"
     const fmt = d => d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
