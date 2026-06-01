@@ -8360,7 +8360,12 @@ let _ifoodPeriods = [];
 // ── main loader ──────────────────────
 async function loadIfoodAdmin() {
   const { data, error } = await ifoodApi('/api/ifood/periods');
-  if (error) { showToast('Configure a Cockroach API em Configurações.'); return; }
+  if (error) {
+    showToast('Configure a Cockroach API em Configurações.');
+    const el = document.getElementById('ifood-periods-list');
+    if (el) el.innerHTML = '<div class="empty-state"><p>⚠️ Cockroach API não configurada. Vá em <strong>Configurações</strong> e preencha a URL da API.</p></div>';
+    return;
+  }
   _ifoodPeriods = (error ? [] : data) || [];
   renderIfoodPeriods();
   populateIfoodPeriodSelects();
