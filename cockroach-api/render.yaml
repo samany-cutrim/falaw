@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
     rootDir: cockroach-api
-    buildCommand: npm ci && npx prisma generate
+    buildCommand: npm ci && npx prisma generate && npx prisma db push --accept-data-loss
     startCommand: npm run start
     envVars:
       - key: DATABASE_URL
