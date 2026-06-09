@@ -3479,12 +3479,12 @@ const CAL_SUG_TS_KEY   = 'falaw_cal_sugestoes_ts';
 const CAL_SUG_MIN_INTERVAL = 6 * 60 * 60 * 1000; // 6 horas
 
 const _RSS_QUERIES = [
-  'direito+trabalhista+OR+CLT+OR+rescisão+OR+FGTS',
-  'direito+empresarial+OR+CNPJ+OR+MEI+OR+reforma+tributária',
-  'legislação+trabalhista+OR+portaria+MTE+OR+súmula+TST',
-  'eSocial+OR+SPED+OR+obrigações+fiscais+empresa',
-  'reforma+trabalhista+OR+terceirização+OR+home+office',
-  'decisão+TST+OR+STF+trabalhista+OR+empregado',
+  'direito+trabalhista+OR+CLT+OR+rescisão+OR+FGTS+when:7d',
+  'direito+empresarial+OR+CNPJ+OR+MEI+OR+reforma+tributária+when:7d',
+  'legislação+trabalhista+OR+portaria+MTE+OR+súmula+TST+when:7d',
+  'eSocial+OR+SPED+OR+obrigações+fiscais+empresa+when:7d',
+  'reforma+trabalhista+OR+terceirização+OR+home+office+when:7d',
+  'decisão+TST+OR+STF+trabalhista+OR+empregado+when:7d',
 ];
 
 function _calSugLoad() {
@@ -3492,20 +3492,75 @@ function _calSugLoad() {
 }
 function _calSugSave(items) { localStorage.setItem(CAL_SUG_KEY, JSON.stringify(items)); }
 
+function _parseRSSXML(xmlText) {
+  const items = [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, 'application/xml');
+  const nodes = doc.querySelectorAll('item');
+  nodes.forEach(node => {
+    const title   = node.querySelector('title')?.textContent || '';
+    const link    = node.querySelector('link')?.textContent || node.querySelector('guid')?.textContent || '';
+    const pubDate = node.querySelector('pubDate')?.textContent || '';
+    const desc    = node.querySelector('description')?.textContent || '';
+    const source  = node.querySelector('source')?.textContent || '';
+    let dateStr = '';
+    if (pubDate) { try { dateStr = new Date(pubDate).toISOString().slice(0,10); } catch { dateStr = ''; } }
+    items.push({
+      titulo: title.replace(/<[^>]*>/g,'').trim(),
+      link: link.trim(),
+      fonte: source || (link ? (() => { try { return new URL(link).hostname; } catch { return ''; } })() : ''),
+      data: dateStr || new Date().toISOString().slice(0,10),
+      resumo: desc.replace(/<[^>]*>/g,'').slice(0,200),
+    });
+  });
+  return items;
+}
+
 async function _fetchRSSQuery(query) {
   const rssUrl = `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt`;
-  const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=5`;
-  const r = await fetch(apiUrl);
-  if (!r.ok) return [];
-  const json = await r.json();
-  return (json.items || []).map(item => ({
-    titulo: item.title || '',
-    link: item.link || item.guid || '',
-    fonte: item.author || (item.link ? new URL(item.link).hostname : ''),
-    data: item.pubDate ? item.pubDate.slice(0,10) : new Date().toISOString().slice(0,10),
-    resumo: item.description ? item.description.replace(/<[^>]*>/g,'').slice(0,200) : '',
-  }));
+
+  // Proxy 1: rss2json.com
+  try {
+    const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=8`, { signal: AbortSignal.timeout(8000) });
+    if (r.ok) {
+      const json = await r.json();
+      if (json.items && json.items.length) {
+        return json.items.map(item => ({
+          titulo: item.title || '',
+          link: item.link || item.guid || '',
+          fonte: item.author || (item.link ? (() => { try { return new URL(item.link).hostname; } catch { return ''; } })() : ''),
+          data: item.pubDate ? item.pubDate.slice(0,10) : new Date().toISOString().slice(0,10),
+          resumo: item.description ? item.description.replace(/<[^>]*>/g,'').slice(0,200) : '',
+        }));
+      }
+    }
+  } catch {}
+
+  // Proxy 2: allorigins.win (retorna XML bruto)
+  try {
+    const r2 = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`, { signal: AbortSignal.timeout(10000) });
+    if (r2.ok) {
+      const j = await r2.json();
+      if (j.contents) {
+        const items = _parseRSSXML(j.contents);
+        if (items.length) return items;
+      }
+    }
+  } catch {}
+
+  // Proxy 3: corsproxy.io
+  try {
+    const r3 = await fetch(`https://corsproxy.io/?${encodeURIComponent(rssUrl)}`, { signal: AbortSignal.timeout(10000) });
+    if (r3.ok) {
+      const xml = await r3.text();
+      const items = _parseRSSXML(xml);
+      if (items.length) return items;
+    }
+  } catch {}
+
+  return [];
 }
+
 
 async function buscarTemasCalendario(forcar = false) {
   const btn = document.getElementById('cal-sug-btn');
@@ -3539,7 +3594,7 @@ async function buscarTemasCalendario(forcar = false) {
       }
     }
 
-    if (!noticias.length) throw new Error('Nenhuma notícia encontrada. Verifique a conexão.');
+    if (!noticias.length) throw new Error('Nenhuma notícia encontrada nos últimos 7 dias. Tente novamente em alguns minutos.');
 
     statusEl.textContent = `Encontradas ${noticias.length} notícias — classificando com IA…`;
 
