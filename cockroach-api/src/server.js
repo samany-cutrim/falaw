@@ -41,62 +41,6 @@ app.get('/health', async (_req, res) => {
   }
 });
 
-app.post('/api/files', async (req, res) => {
-  try {
-    const { kind, ownerId, fileName, dataUrl } = req.body || {};
-    if (!kind || !ownerId || !fileName || !dataUrl) {
-      return res.status(400).json({ error: 'Campos obrigatorios: kind, ownerId, fileName, dataUrl' });
-    }
-
-    const parsed = parseDataUrl(dataUrl);
-    if (!parsed) {
-      return res.status(400).json({ error: 'dataUrl invalido (esperado data:<mime>;base64,...)' });
-    }
-
-    const bytes = Buffer.from(parsed.base64, 'base64');
-    const row = await prisma.storedFile.create({
-      data: {
-        kind,
-        ownerId,
-        fileName,
-        mimeType: parsed.mimeType || 'application/octet-stream',
-        sizeBytes: bytes.length,
-        data: bytes
-      }
-    });
-
-    const url = `${baseUrl(req)}/api/files/${row.id}`;
-    return res.status(201).json({ id: row.id, url, sizeBytes: row.sizeBytes });
-  } catch (e) {
-    return res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
-app.get('/api/files/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const row = await prisma.storedFile.findUnique({ where: { id } });
-    if (!row) return res.status(404).send('Not found');
-
-    res.setHeader('Content-Type', row.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Length', String(row.sizeBytes || row.data.length));
-    res.setHeader('Content-Disposition', `inline; filename="${row.fileName.replace(/\"/g, '')}"`);
-    return res.send(Buffer.from(row.data));
-  } catch (e) {
-    return res.status(500).send(String(e.message || e));
-  }
-});
-
-app.delete('/api/files/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await prisma.storedFile.delete({ where: { id } });
-    return res.status(204).send();
-  } catch (e) {
-    return res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
 app.get('/api/reports/:clientId', async (req, res) => {
   try {
     const { clientId } = req.params;

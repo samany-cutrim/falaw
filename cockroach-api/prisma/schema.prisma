@@ -3,19 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-model StoredFile {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  kind       String
-  ownerId    String
-  fileName   String
-  mimeType   String
-  sizeBytes  Int
-  data       Bytes
-  createdAt  DateTime @default(now())
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model ClientReport {
@@ -31,6 +21,7 @@ model ClientReport {
   stats       Json?
 
   @@index([clientId, uploadedAt])
+
 }
 
 model IfoodPeriod {
@@ -41,6 +32,7 @@ model IfoodPeriod {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([monthYear])
+
 }
 
 model IfoodKpi {
@@ -58,6 +50,7 @@ model IfoodKpi {
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([periodId, tabKey, sortOrder])
+
 }
 
 model IfoodContent {
@@ -69,6 +62,7 @@ model IfoodContent {
 
   @@unique([periodId, tabKey])
   @@index([periodId])
+
 }
 
 model IfoodHighlight {
@@ -81,6 +75,7 @@ model IfoodHighlight {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([periodId, sortOrder])
+
 }
 
 model IfoodRawData {
@@ -91,6 +86,7 @@ model IfoodRawData {
   uploadedAt DateTime @default(now()) @map("uploaded_at")
 
   @@index([periodId, uploadedAt])
+
 }
 
 // ── Dashboard genérico por cliente (ex-empregados + terceirização) ──
@@ -104,6 +100,7 @@ model ClientDashPeriod {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([clientId, monthYear])
+
 }
 
 model ClientDashKpi {
@@ -122,6 +119,7 @@ model ClientDashKpi {
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([clientId, periodId, tabKey, sortOrder])
+
 }
 
 model ClientDashContent {
@@ -134,6 +132,7 @@ model ClientDashContent {
 
   @@unique([clientId, periodId, tabKey])
   @@index([clientId, periodId])
+
 }
 
 model ClientDashHighlight {
@@ -147,4 +146,5 @@ model ClientDashHighlight {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([clientId, periodId, sortOrder])
+
 }
