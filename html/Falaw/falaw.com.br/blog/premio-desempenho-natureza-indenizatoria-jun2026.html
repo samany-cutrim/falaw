@@ -98,7 +98,7 @@
 
   <!-- COVER -->
   <div class="article-cover">
-    <img src="https://raw.githubusercontent.com/samany-cutrim/falaw/master/assets/images/images/capa-premio.png" alt="Prêmio por Desempenho — Natureza Indenizatória" style="width:100%;display:block;border-radius:4px;aspect-ratio:16/9;object-fit:cover">
+    <img src="../../../../assets/images/images/capa-premio.png" alt="Prêmio por Desempenho — Natureza Indenizatória" style="width:100%;display:block;border-radius:4px;aspect-ratio:16/9;object-fit:cover">
     <p class="article-cover-caption">Prêmio por desempenho — Natureza Indenizatória · Art. 457 CLT · TRT-2 · Falaw Blog · Junho de 2026</p>
   </div>
 
@@ -281,6 +281,197 @@
       <span role="listitem">Política de Performance</span>
       <span role="listitem">Compliance Trabalhista</span>
       <span role="listitem">Remuneração Variável</span>
+    </div>
+
+    <div class="article-ornament" aria-hidden="true">✶ ✶ ✶</div>
+
+  </div><!-- /article-body -->
+
+  <!-- CTA -->
+  <div class="article-cta">
+    <p>Sua empresa estruturou corretamente a política de prêmios por desempenho?</p>
+    <a href="../contato/index.html" class="btn-primary">Fale com a Falaw</a>
+  </div>
+
+  <div class="article-end">
+    <p class="article-end-meta">Falaw · Blog Jurídico · Junho de 2026</p>
+    <div class="article-tags">
+      <span class="article-tag">Prêmio por Desempenho</span>
+      <span class="article-tag">Art. 457 CLT</span>
+      <span class="article-tag">Reforma Trabalhista</span>
+      <span class="article-tag">Natureza Indenizatória</span>
+      <span class="article-tag">TRT-2</span>
+      <span class="article-tag">Compliance Trabalhista</span>
+      <span class="article-tag">Remuneração Variável</span>
+    </div>
+  </div>
+
+  <!-- VOLTAR AO BLOG -->
+  <div class="article-back article-back--spaced">
+    <a href="../blog.html">← Voltar ao Blog</a>
+  </div>
+
+  <!-- COMENTÁRIOS -->
+  <section class="article-comments" id="comentarios">
+    <div class="article-comments__header">
+      <p class="article-comments__title">Comentários</p>
+      <button class="btn-comment-open" id="btn-comment-open">+ Deixar comentário</button>
+    </div>
+    <div class="article-comments__list" id="comments-list--premio-desempenho-natureza-indenizatoria-jun2026">
+      <!-- comentários aprovados carregados via JS -->
+    </div>
+  </section>
+
+  <!-- Modal de comentário -->
+  <div class="comment-modal" id="comment-modal" aria-modal="true" role="dialog" aria-label="Deixar comentário">
+    <div class="comment-modal__backdrop" id="comment-modal-backdrop"></div>
+    <div class="comment-modal__box">
+      <div class="comment-modal__head">
+        <p class="comment-modal__title">Deixar comentário</p>
+        <button class="comment-modal__close" id="comment-modal-close" aria-label="Fechar">&#x2715;</button>
+      </div>
+      <form class="comment-form" id="comment-form--premio-desempenho-natureza-indenizatoria-jun2026" onsubmit="submitComment(event, 'premio-desempenho-natureza-indenizatoria-jun2026')">
+        <div class="comment-form__row">
+          <div class="comment-form__field">
+            <label for="comment-nome--premio-desempenho-natureza-indenizatoria-jun2026">Nome *</label>
+            <input type="text" id="comment-nome--premio-desempenho-natureza-indenizatoria-jun2026" name="nome" required maxlength="120" placeholder="Seu nome">
+          </div>
+          <div class="comment-form__field">
+            <label for="comment-email--premio-desempenho-natureza-indenizatoria-jun2026">E-mail * <span style="font-size:9px;opacity:.5">(não publicado)</span></label>
+            <input type="email" id="comment-email--premio-desempenho-natureza-indenizatoria-jun2026" name="email" required maxlength="200" placeholder="seu@email.com">
+          </div>
+        </div>
+        <div class="comment-form__field">
+          <label for="comment-msg--premio-desempenho-natureza-indenizatoria-jun2026">Comentário *</label>
+          <textarea id="comment-msg--premio-desempenho-natureza-indenizatoria-jun2026" name="mensagem" required maxlength="2000" placeholder="Escreva seu comentário..."></textarea>
+        </div>
+        <div class="comment-form__actions">
+          <button type="submit" class="btn-primary comment-form__submit">Enviar comentário</button>
+          <p class="comment-form__msg" id="comment-msg-status--premio-desempenho-natureza-indenizatoria-jun2026"></p>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    var AID = "premio-desempenho-natureza-indenizatoria-jun2026";
+    var SB_URL = "https://yleofidqkimeanpuothv.supabase.co";
+    var SB_KEY = "sb_publishable_Lz028EaqbPI-84U8wRLJhQ_zKHb9tKD";
+
+    function openCommentModal() {
+      document.getElementById("comment-modal").classList.add("is-open");
+      document.body.style.overflow = "hidden";
+    }
+    function closeCommentModal() {
+      document.getElementById("comment-modal").classList.remove("is-open");
+      document.body.style.overflow = "";
+    }
+    document.getElementById("btn-comment-open").addEventListener("click", openCommentModal);
+    document.getElementById("comment-modal-close").addEventListener("click", closeCommentModal);
+    document.getElementById("comment-modal-backdrop").addEventListener("click", closeCommentModal);
+
+    function loadComments() {
+      var listEl = document.getElementById("comments-list--" + AID);
+      fetch(SB_URL + "/rest/v1/comments?article_id=eq." + encodeURIComponent(AID) + "&approved=eq.true&order=created_at.asc", {
+        headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data || data.length === 0) {
+          listEl.innerHTML = '<p class="article-comments__empty">Seja o primeiro a comentar.</p>';
+          return;
+        }
+        listEl.innerHTML = data.map(function(c) {
+          return '<div class="article-comment"><p class="article-comment__author">' + escHtml(c.nome) + '</p><p class="article-comment__body">' + escHtml(c.mensagem) + '</p></div>';
+        }).join("");
+      })
+      .catch(function() {
+        listEl.innerHTML = '<p class="article-comments__empty">Não foi possível carregar os comentários.</p>';
+      });
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    window.submitComment = function(e, aid) {
+      e.preventDefault();
+      var form = e.target;
+      var statusEl = document.getElementById("comment-msg-status--" + aid);
+      var nome = form.nome.value.trim();
+      var email = form.email.value.trim();
+      var mensagem = form.mensagem.value.trim();
+      statusEl.textContent = "Enviando…";
+      fetch(SB_URL + "/rest/v1/comments", {
+        method: "POST",
+        headers: {
+          "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY,
+          "Content-Type": "application/json", "Prefer": "return=minimal"
+        },
+        body: JSON.stringify({ article_id: aid, nome: nome, email: email, mensagem: mensagem, approved: false })
+      })
+      .then(function(r) {
+        if (r.ok || r.status === 201) {
+          statusEl.textContent = "Comentário enviado! Ele aparecerá após moderação.";
+          form.reset();
+        } else {
+          statusEl.textContent = "Erro ao enviar. Tente novamente.";
+        }
+      })
+      .catch(function() {
+        statusEl.textContent = "Erro de conexão. Tente novamente.";
+      });
+    };
+
+    loadComments();
+  })();
+  </script>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="site-footer" role="contentinfo">
+  <div class="footer-inner">
+    <div class="footer-col footer-brand">
+      <img loading="lazy"
+           src="../../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png"
+           alt="Falaw Advogados" class="footer-logo" />
+      <p class="footer-tagline">Direito com propósito.<br>Advocacia com precisão.</p>
+    </div>
+    <div class="footer-col">
+      <p class="footer-col-title">Navegação</p>
+      <ul>
+        <li><a href="../index.html">Home</a></li>
+        <li><a href="../founder.html">Founder</a></li>
+        <li><a href="../atuacoes/index.html">Atuações</a></li>
+        <li><a href="../equipe.html">Nossa Equipe</a></li>
+        <li><a href="../contato/index.html">Contato</a></li>
+        <li><a href="../blog.html">Blog</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <p class="footer-col-title">Contato</p>
+      <address style="font-style:normal;">
+        <p>Av. Francisco Matarazzo, 1752 · Salas 414 e 415<br>Água Branca · São Paulo · SP · 05001-200</p>
+        <p><a href="mailto:contato@falaw.com.br">contato@falaw.com.br</a></p>
+      </address>
+    </div>
+    <div class="footer-col">
+      <p class="footer-col-title">Redes</p>
+      <ul>
+        <li><a href="https://www.linkedin.com/company/falaw" target="_blank" rel="noopener">LinkedIn</a></li>
+        <li><a href="https://www.instagram.com/falaw.adv" target="_blank" rel="noopener">Instagram</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 Falaw Advogados · OAB/SP · Todos os direitos reservados</p>
+  </div>
+</footer>
+
+</body>
+</html>
     </div>
 
     <!-- END -->
