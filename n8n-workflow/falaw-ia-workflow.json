@@ -23,8 +23,23 @@
 
     {
       "parameters": {
-        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 8 * * *" }] }
+        "assignments": {
+          "assignments": [
+            { "id": "s1", "name": "OPENAI_API_KEY",  "value": "SUA_CHAVE_OPENAI_AQUI",  "type": "string" },
+            { "id": "s2", "name": "SUPABASE_URL",    "value": "https://yleofidqkimeanpuothv.supabase.co", "type": "string" },
+            { "id": "s3", "name": "SUPABASE_KEY",    "value": "SUA_CHAVE_SUPABASE_ANON_AQUI", "type": "string" }
+          ]
+        },
+        "options": {}
       },
+      "id": "node-keys-schedule",
+      "name": "Chaves Schedule",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [100, -350]
+    },
+
+    {
       "id": "node-schedule",
       "name": "Agendador Diário 08h",
       "type": "n8n-nodes-base.scheduleTrigger",
@@ -99,7 +114,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Configurar Chaves').item.json.OPENAI_API_KEY }}" },
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Chaves Schedule').item.json.OPENAI_API_KEY }}" },
             { "name": "Content-Type",  "value": "application/json" }
           ]
         },
@@ -129,12 +144,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $('Configurar Chaves').item.json.SUPABASE_URL + '/rest/v1/CalSugestao' }}",
+        "url": "={{ $('Chaves Schedule').item.json.SUPABASE_URL + '/rest/v1/CalSugestao' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey",        "value": "={{ $('Configurar Chaves').item.json.SUPABASE_KEY }}" },
-            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Configurar Chaves').item.json.SUPABASE_KEY }}" },
+            { "name": "apikey",        "value": "={{ $('Chaves Schedule').item.json.SUPABASE_KEY }}" },
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Chaves Schedule').item.json.SUPABASE_KEY }}" },
             { "name": "Content-Type",  "value": "application/json" },
             { "name": "Prefer",        "value": "resolution=ignore-duplicates" }
           ]
@@ -324,7 +339,8 @@
   ],
 
   "connections": {
-    "Agendador Diário 08h": { "main": [[{ "node": "Gerar URLs RSS", "type": "main", "index": 0 }]] },
+    "Agendador Diário 08h": { "main": [[{ "node": "Chaves Schedule", "type": "main", "index": 0 }]] },
+    "Chaves Schedule":       { "main": [[{ "node": "Gerar URLs RSS",   "type": "main", "index": 0 }]] },
     "Webhook IA":           { "main": [[{ "node": "Configurar Chaves", "type": "main", "index": 0 }]] },
     "Configurar Chaves":    { "main": [[{ "node": "É edição?", "type": "main", "index": 0 }]] },
     "Gerar URLs RSS":           { "main": [[{ "node": "Buscar RSS Google News",   "type": "main", "index": 0 }]] },
