@@ -5435,10 +5435,16 @@ async function callOpenAI(messages, temperature) {
 }
 
 async function callAI(messages, temperature) {
-  if (localStorage.getItem('fa_openai_key')) return callOpenAI(messages, temperature);
-  if (localStorage.getItem('fa_claude_key')) return callClaude(messages, temperature);
-  if (localStorage.getItem('fa_gemini_key')) return callGemini(messages, temperature);
-  return callN8N(messages, temperature);
+  const providers = [];
+  if (localStorage.getItem('fa_openai_key'))  providers.push(() => callOpenAI(messages, temperature));
+  if (localStorage.getItem('fa_claude_key'))  providers.push(() => callClaude(messages, temperature));
+  if (localStorage.getItem('fa_gemini_key'))  providers.push(() => callGemini(messages, temperature));
+  providers.push(() => callN8N(messages, temperature));
+  let lastErr;
+  for (const fn of providers) {
+    try { return await fn(); } catch(e) { lastErr = e; }
+  }
+  throw lastErr;
 }
 
 async function callN8N(messages, temperature, extraBody) {
