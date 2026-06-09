@@ -5314,6 +5314,47 @@ async function callGemini(messages, temperature) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
+async function callDALLE3(prompt) {
+  const apiKey = localStorage.getItem('fa_openai_key') || '';
+  if (!apiKey) throw new Error('Chave da API OpenAI não configurada.');
+  const res = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+    body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size: '1792x1024', quality: 'standard', response_format: 'b64_json' })
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error?.message || 'DALL-E HTTP ' + res.status);
+  }
+  const data = await res.json();
+  return data.data?.[0]?.b64_json || null;
+}
+
+async function generateCoverImage(art) {
+  const sb = getSB();
+  const title    = art.title    || '';
+  const category = art.category || 'Direito do Trabalho';
+  const lede     = art.lede     || '';
+  const dallePrompt = `Professional legal editorial cover image for a Brazilian labor law blog article. Title: "${title}". Category: ${category}. ${ lede ? 'Theme: ' + lede.slice(0,120) + '.' : '' } Style: cinematic, dark background with subtle deep navy blue gradient, elegant typography feel, abstract legal symbols (scales of justice, courthouse columns, document seals), soft gold accent light, high-end law firm aesthetic, ultra-realistic, no text overlaid, 16:9 horizontal format, premium quality.`;
+  const b64 = await callDALLE3(dallePrompt);
+  if (!b64) return null;
+  // Convert base64 → Blob and upload to Supabase Storage
+  const byteStr = atob(b64);
+  const arr = new Uint8Array(byteStr.length);
+  for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+  const blob = new Blob([arr], { type: 'image/png' });
+  const fileName = 'blog-covers/' + Date.now() + '.png';
+  if (sb) {
+    const { data, error } = await sb.storage.from('curriculos').upload(fileName, blob, { contentType: 'image/png', upsert: true });
+    if (!error && data) {
+      const { data: urlData } = sb.storage.from('curriculos').getPublicUrl(fileName);
+      if (urlData?.publicUrl) return urlData.publicUrl;
+    }
+  }
+  // Fallback: return as data URL (works without Supabase)
+  return 'data:image/png;base64,' + b64;
+}
+
 async function callOpenAI(messages, temperature) {
   const apiKey = localStorage.getItem('fa_openai_key') || '';
   if (!apiKey) throw new Error('Chave da API OpenAI não configurada.');
@@ -5471,6 +5512,14 @@ Retorne exatamente este JSON (substitua os exemplos pelo conteúdo real):
     }
     if (!art) throw lastErr;
 
+    status.textContent = 'Gerando imagem de capa…';
+    try {
+      const photoUrl = await generateCoverImage(art);
+      if (photoUrl) art.photo = photoUrl;
+    } catch(imgErr) {
+      console.warn('Capa DALL-E falhou, usando SVG:', imgErr.message);
+    }
+
     openArticlePreview(art, aiSelected, dateStr);
     status.textContent = '';
 
@@ -5587,7 +5636,7 @@ async function publishPreviewArticle() {
   const sendNewsletter = document.getElementById('chk-send-newsletter')?.checked;
   closeArticlePreview();
   const snapshot = ALL_ARTICLES.slice();
-  const newArticle = { id, title, category, excerpt, content, url, photo: '', date, readTime, published: true };
+  const newArticle = { id, title, category, excerpt, content, url, photo: artJSON.photo || '', date, readTime, published: true };
   ALL_ARTICLES.unshift(newArticle);
   showToast('Publicando…');
   const sbOk = await sbSaveArticle(newArticle);
@@ -5630,7 +5679,11 @@ function buildPreviewHTML(d) {
   }
   h += '</header>';
 
-  // SVG cover
+  // Cover image: real photo (DALL-E) or fallback SVG
+  if (d.photo) {
+    h += '<div class="article-cover"><img src="' + d.photo.replace(/"/g,'%22') + '" alt="' + e(d.title) + '" style="width:100%;display:block;border-radius:4px;aspect-ratio:16/9;object-fit:cover" loading="lazy"><p class="article-cover-caption">' + e(d.title) + ' · Falaw Blog · ' + e(d.date||'') + '</p></div>';
+  } else {
+  // SVG cover (fallback)
   const kicker = (d.kicker || d.category || '').toUpperCase().substring(0,42);
   const words = (d.title||'').split(' ');
   const mid = Math.ceil(words.length/2);
@@ -5659,6 +5712,7 @@ function buildPreviewHTML(d) {
     +'<text x="636" y="412" text-anchor="end" font-family="\'IBM Plex Mono\',monospace" font-size="9" fill="#5a7a9a" letter-spacing="1">FALAW BLOG</text>'
     +'</svg>';
   h += '<div class="article-cover">' + svg + '<p class="article-cover-caption">' + e(d.title) + ' · Falaw Blog · ' + e(d.date||'') + '</p></div>';
+  } // end SVG fallback
 
   // Stats
   if (d.stats && d.stats.length) {
