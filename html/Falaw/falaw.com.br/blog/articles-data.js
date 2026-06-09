@@ -1,5 +1,17 @@
 var FALAW_ARTICLES = [
   {
+    "id": "premio-desempenho-natureza-indenizatoria-jun2026",
+    "title": "Prêmio por desempenho tem natureza indenizatória: habitualidade e metas mensais não descaracterizam — o que muda para as empresas",
+    "category": "Direito do Trabalho",
+    "excerpt": "A 15ª Turma do TRT-2 reconheceu a natureza indenizatória do prêmio por desempenho, mesmo pago habitualmente e apurado mensalmente. A Desembargadora Relatora fundamentou a decisão em 8 pilares objetivos, com apoio na literalidade do art. 457, §§2º e 4º, da CLT pós-Reforma. Entenda os fundamentos e o que sua empresa precisa documentar.",
+    "date": "Junho de 2026",
+    "readTime": "9 min",
+    "url": "blog/premio-desempenho-natureza-indenizatoria-jun2026.html",
+    "published": true,
+    "photo": "",
+    "content": ""
+  },
+  {
     "id": "pec-fim-escala-6x1-reducao-jornada-mai2026",
     "title": "PEC do fim da escala 6x1: o que mudou, o que ainda falta e o que as empresas precisam fazer agora",
     "category": "Direito do Trabalho",
