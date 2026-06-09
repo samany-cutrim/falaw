@@ -10,7 +10,7 @@
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="./sb-config.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -2029,6 +2029,20 @@
       <!-- Grid do calendário -->
       <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px"></div>
 
+      <!-- Sugestões de temas IA -->
+      <div style="margin-bottom:24px;background:#FAFBFF;border:1px solid #e0e4f0;border-radius:6px;padding:16px 20px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+          <h3 style="margin:0;font-family:var(--f-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E">💡 Sugestões de Temas</h3>
+          <span id="cal-sug-badge" style="display:none;background:#C62828;color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700"></span>
+          <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+            <span id="cal-sug-lastfetch" style="font-size:10px;color:var(--c-muted)"></span>
+            <button class="btn btn-primary" id="cal-sug-btn" onclick="buscarTemasCalendario()" style="font-size:11px;padding:5px 14px">🔍 Buscar temas de hoje</button>
+          </div>
+        </div>
+        <div id="cal-sug-status" style="font-size:11px;color:var(--c-muted);display:none"></div>
+        <div id="cal-sugestoes"></div>
+      </div>
+
       <!-- Lista do mês atual -->
       <div style="margin-top:24px">
         <h3 style="font-family:var(--f-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--c-muted);margin-bottom:12px">Publicações do Mês</h3>
@@ -2074,6 +2088,10 @@
             <div>
               <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#555">Observações</label>
               <textarea id="cal-f-obs" rows="2" placeholder="Notas, links, tags..." style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-family:var(--f-mono);font-size:12px;resize:vertical;box-sizing:border-box"></textarea>
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:#555">Link da fonte</label>
+              <input id="cal-f-link" type="url" placeholder="https://..." style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-family:var(--f-mono);font-size:12px;box-sizing:border-box" />
             </div>
           </div>
           <div style="display:flex;justify-content:space-between;margin-top:20px;gap:8px">
@@ -2171,6 +2189,11 @@
         <div class="cfg-card">
           <h3 class="cfg-card-title">IA — Geração de Artigos</h3>
           <p class="cfg-card-desc">As chaves ficam salvas apenas neste navegador e nunca são enviadas ao repositório.</p>
+          <div class="form-field">
+            <label>Chave API — OpenAI (ChatGPT)</label>
+            <input type="password" id="cfg-openai-key" placeholder="sk-proj-…" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">Obtenha em <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>. Fica salva apenas neste navegador. Prioridade: OpenAI &gt; Claude &gt; Gemini &gt; n8n.</p>
+          </div>
           <div class="form-field">
             <label>Chave API — Anthropic (Claude)</label>
             <input type="password" id="cfg-claude-key" placeholder="sk-ant-api03-…" autocomplete="off" />
@@ -2514,99 +2537,62 @@ function backendApiBase() {
   return (localStorage.getItem(BACKEND_API_URL_KEY) || '').replace(/\/$/, '');
 }
 
-async function apiUploadFile(kind, ownerId, fileName, dataUrl) {
-  const base = backendApiBase();
-  if (!base) return null;
-  try {
-    const res = await fetch(base + '/api/files', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kind, ownerId, fileName, dataUrl })
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    return data && data.url ? data.url : null;
-  } catch (e) {
-    console.warn('Cockroach API upload:', e.message);
-    return null;
-  }
-}
-
-function apiExtractFileId(fileUrl) {
-  if (!fileUrl) return null;
-  try {
-    const m = fileUrl.match(/\/api\/files\/([^?#/]+)/);
-    return m ? decodeURIComponent(m[1]) : null;
-  } catch {
-    return null;
-  }
-}
-
-async function apiDeleteFile(fileUrl) {
-  const base = backendApiBase();
-  const id = apiExtractFileId(fileUrl);
-  if (!base || !id) return false;
-  try {
-    const res = await fetch(base + '/api/files/' + encodeURIComponent(id), { method: 'DELETE' });
-    return res.ok;
-  } catch (e) {
-    console.warn('Cockroach API delete:', e.message);
-    return false;
-  }
-}
+// apiUploadFile — mantido como no-op (uploads vão direto ao Supabase Storage)
+async function apiUploadFile() { return null; }
+function apiExtractFileId() { return null; }
+async function apiDeleteFile() { return false; }
 
 async function apiListReportsForClient(clientId) {
-  const base = backendApiBase();
-  if (!base || !clientId) return [];
+  const sb = getSB();
+  if (!sb || !clientId) return [];
   try {
-    const res = await fetch(base + '/api/reports/' + encodeURIComponent(clientId));
-    if (!res.ok) return [];
-    const data = await res.json();
+    const { data, error } = await sb.from('ClientReport')
+      .select('*').eq('clientId', clientId).order('uploadedAt', { ascending: false });
+    if (error) { console.warn('SB reports list:', error.message); return []; }
     return Array.isArray(data) ? data : [];
-  } catch (e) {
-    console.warn('Cockroach API reports list:', e.message);
-    return [];
-  }
+  } catch (e) { console.warn('SB reports list err:', e.message); return []; }
 }
 
 async function apiSaveReportMeta(report) {
-  const base = backendApiBase();
-  if (!base) return false;
+  const sb = getSB();
+  if (!sb || !report || !report.id) return false;
   try {
-    const res = await fetch(base + '/api/reports', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(report)
-    });
-    return res.ok;
-  } catch (e) {
-    console.warn('Cockroach API report save:', e.message);
-    return false;
-  }
+    const row = {
+      id: String(report.id),
+      clientId: String(report.clientId),
+      title: String(report.title),
+      period: report.period ? String(report.period) : null,
+      description: report.description ? String(report.description) : null,
+      fileName: String(report.fileName),
+      fileUrl: report.fileUrl ? String(report.fileUrl) : null,
+      fileSize: report.fileSize ? Number(report.fileSize) : null,
+      uploadedAt: report.uploadedAt || new Date().toISOString(),
+      stats: report.stats || null
+    };
+    const { error } = await sb.from('ClientReport').upsert(row);
+    if (error) { console.warn('SB report save:', error.message); return false; }
+    return true;
+  } catch (e) { console.warn('SB report save err:', e.message); return false; }
 }
 
 async function apiDeleteReportMeta(reportId) {
-  const base = backendApiBase();
-  if (!base || !reportId) return false;
+  const sb = getSB();
+  if (!sb || !reportId) return false;
   try {
-    const res = await fetch(base + '/api/reports/' + encodeURIComponent(reportId), { method: 'DELETE' });
-    return res.ok;
-  } catch (e) {
-    console.warn('Cockroach API report delete:', e.message);
-    return false;
-  }
+    const { error } = await sb.from('ClientReport').delete().eq('id', String(reportId));
+    if (error) { console.warn('SB report delete:', error.message); return false; }
+    return true;
+  } catch (e) { console.warn('SB report delete err:', e.message); return false; }
 }
 
 async function apiDeleteReportsByClient(clientId) {
-  const base = backendApiBase();
-  if (!base || !clientId) return false;
+  const sb = getSB();
+  if (!sb || !clientId) return false;
   try {
-    const res = await fetch(base + '/api/reports/by-client/' + encodeURIComponent(clientId), { method: 'DELETE' });
-    return res.ok;
-  } catch (e) {
-    console.warn('Cockroach API reports by client delete:', e.message);
-    return false;
-  }
+    const { error } = await sb.from('ClientReport').delete().eq('clientId', String(clientId));
+    if (error) { console.warn('SB reports by client delete:', error.message); return false; }
+    return true;
+  } catch (e) { console.warn('SB reports by client delete err:', e.message); return false; }
 }
 
 async function sbReadAdminPasswordHash() {
@@ -2719,9 +2705,6 @@ async function sbInsertCurriculo(entry) {
 }
 
 async function sbUploadCV(cvId, fileName, dataUrl) {
-  const apiUrl = await apiUploadFile('curriculo', cvId, fileName, dataUrl);
-  if (apiUrl) return apiUrl;
-
   const sb = getSB();
   if (!sb) return pushCurriculoFileToGitHub(cvId, fileName, dataUrl);
   try {
@@ -2802,9 +2785,6 @@ async function sbDeleteClientRecord(id) {
 }
 
 async function sbUploadReport(reportId, fileName, dataUrl) {
-  const apiUrl = await apiUploadFile('report', reportId, fileName, dataUrl);
-  if (apiUrl) return apiUrl;
-
   const sb = getSB();
   if (!sb) return pushReportFileToGitHub(reportId, fileName, dataUrl);
   try {
@@ -2822,9 +2802,6 @@ async function sbUploadReport(reportId, fileName, dataUrl) {
 }
 
 async function sbDeleteReport(fileUrl) {
-  const deletedByApi = await apiDeleteFile(fileUrl);
-  if (deletedByApi) return;
-
   const sb = getSB();
   if (!sb) { deleteReportFileFromGitHub(fileUrl); return; }
   const m = fileUrl.match(/\/object\/public\/reports\/(.+)$/);
@@ -3402,7 +3379,7 @@ function _renderCalLista(items) {
       <div style="width:3px;height:36px;border-radius:2px;background:${tipoCfg.color};flex-shrink:0"></div>
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:700;color:${publicado ? '#aaa' : '#0D2B5E'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${publicado ? 'text-decoration:line-through' : ''}">${it.titulo || '(sem título)'}</div>
-        <div style="font-size:10px;color:var(--c-muted);margin-top:2px">${it.autor ? `Por ${it.autor}` : ''}</div>
+        <div style="font-size:10px;color:var(--c-muted);margin-top:2px">${it.autor ? `Por ${it.autor}` : ''}${it.link ? ` · <a href="${it.link}" target="_blank" rel="noopener" style="color:#0D2B5E;text-decoration:none" onclick="event.stopPropagation()">🔗 fonte</a>` : ''}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <span style="background:${tipoCfg.bg};color:${tipoCfg.color};border-radius:3px;padding:2px 8px;font-size:10px;font-weight:700">${tipoCfg.label}</span>
@@ -3453,6 +3430,7 @@ function editarPublicacao(id) {
   document.getElementById('cal-f-data').value    = it.data    || '';
   document.getElementById('cal-f-autor').value   = it.autor   || '';
   document.getElementById('cal-f-obs').value     = it.obs     || '';
+  document.getElementById('cal-f-link').value    = it.link    || '';
   document.getElementById('cal-modal-titulo').textContent = 'Editar Publicação';
   document.getElementById('cal-modal-del').style.display = 'inline-flex';
   document.getElementById('cal-modal').style.display = 'flex';
@@ -3470,15 +3448,16 @@ function salvarPublicacao() {
   const data   = document.getElementById('cal-f-data').value;
   const autor  = document.getElementById('cal-f-autor').value.trim();
   const obs    = document.getElementById('cal-f-obs').value.trim();
+  const link   = document.getElementById('cal-f-link').value.trim();
 
   if (!data) { alert('Informe a data de publicação.'); return; }
 
   const items = _calLoad();
   if (id) {
     const idx = items.findIndex(i => i.id === id);
-    if (idx !== -1) items[idx] = { id, titulo, tipo, status, data, autor, obs };
+    if (idx !== -1) items[idx] = { id, titulo, tipo, status, data, autor, obs, link };
   } else {
-    items.push({ id: Date.now().toString(), titulo, tipo, status, data, autor, obs });
+    items.push({ id: Date.now().toString(), titulo, tipo, status, data, autor, obs, link });
   }
   _calSave(items);
   fecharModalCalendario();
@@ -3493,6 +3472,248 @@ function deletarPublicacao() {
   fecharModalCalendario();
   renderCalendario();
 }
+
+// ─── Sugestões de temas automáticas ──────────────────────────────────────────
+const CAL_SUG_KEY      = 'falaw_cal_sugestoes_v1';
+const CAL_SUG_TS_KEY   = 'falaw_cal_sugestoes_ts';
+const CAL_SUG_MIN_INTERVAL = 6 * 60 * 60 * 1000; // 6 horas
+
+const _RSS_QUERIES = [
+  'direito+trabalhista+OR+CLT+OR+rescisão+OR+FGTS',
+  'direito+empresarial+OR+CNPJ+OR+MEI+OR+reforma+tributária',
+  'legislação+trabalhista+OR+portaria+MTE+OR+súmula+TST',
+  'eSocial+OR+SPED+OR+obrigações+fiscais+empresa',
+  'reforma+trabalhista+OR+terceirização+OR+home+office',
+  'decisão+TST+OR+STF+trabalhista+OR+empregado',
+];
+
+function _calSugLoad() {
+  try { return JSON.parse(localStorage.getItem(CAL_SUG_KEY) || '[]'); } catch { return []; }
+}
+function _calSugSave(items) { localStorage.setItem(CAL_SUG_KEY, JSON.stringify(items)); }
+
+async function _fetchRSSQuery(query) {
+  const rssUrl = `https://news.google.com/rss/search?q=${query}&hl=pt-BR&gl=BR&ceid=BR:pt`;
+  const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=5`;
+  const r = await fetch(apiUrl);
+  if (!r.ok) return [];
+  const json = await r.json();
+  return (json.items || []).map(item => ({
+    titulo: item.title || '',
+    link: item.link || item.guid || '',
+    fonte: item.author || (item.link ? new URL(item.link).hostname : ''),
+    data: item.pubDate ? item.pubDate.slice(0,10) : new Date().toISOString().slice(0,10),
+    resumo: item.description ? item.description.replace(/<[^>]*>/g,'').slice(0,200) : '',
+  }));
+}
+
+async function buscarTemasCalendario(forcar = false) {
+  const btn = document.getElementById('cal-sug-btn');
+  const statusEl = document.getElementById('cal-sug-status');
+  const agora = Date.now();
+  const ultimaBusca = Number(localStorage.getItem(CAL_SUG_TS_KEY) || 0);
+
+  if (!forcar && agora - ultimaBusca < CAL_SUG_MIN_INTERVAL) {
+    _renderSugestoes();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Buscando…';
+  statusEl.style.display = 'block';
+  statusEl.textContent = 'Coletando notícias de fontes jurídicas…';
+
+  try {
+    // Coleta RSS em paralelo
+    const resultados = await Promise.allSettled(_RSS_QUERIES.map(_fetchRSSQuery));
+    const noticias = [];
+    const vistos = new Set();
+    for (const r of resultados) {
+      if (r.status !== 'fulfilled') continue;
+      for (const item of r.value) {
+        const key = item.link || item.titulo;
+        if (!vistos.has(key) && item.titulo) {
+          vistos.add(key);
+          noticias.push(item);
+        }
+      }
+    }
+
+    if (!noticias.length) throw new Error('Nenhuma notícia encontrada. Verifique a conexão.');
+
+    statusEl.textContent = `Encontradas ${noticias.length} notícias — classificando com IA…`;
+
+    // Usa IA para classificar e descrever cada item
+    const hoje = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+    const listaParaIA = noticias.slice(0, 20).map((n, i) =>
+      `${i+1}. [${n.titulo}] — Fonte: ${n.fonte} — Data: ${n.data}\nResumo: ${n.resumo || 'sem resumo'}`
+    ).join('\n\n');
+
+    const promptIA = [
+      { role: 'system', content: `Você é um assistente de marketing jurídico para o escritório Falaw (advocacia trabalhista e empresarial, localizado no Brasil). Hoje é ${hoje}.` },
+      { role: 'user', content: `Analise as seguintes notícias e selecione as 8 mais relevantes para um escritório de advocacia trabalhista e empresarial. Para cada uma escolhida, retorne um JSON com os campos:
+- "idx": número original (1-based) da notícia
+- "tema": título atrativo para conteúdo do escritório (máx 80 chars)
+- "angle": por que isso é relevante para empresários e empregados (máx 120 chars)
+- "tipo": um de "blog", "redes_sociais" ou "informativo" (para clientes)
+- "prioridade": 1=alta 2=media 3=baixa
+
+Retorne APENAS um array JSON sem markdown. Ex: [{"idx":1,"tema":"...","angle":"...","tipo":"blog","prioridade":1}]
+
+Notícias:
+${listaParaIA}` }
+    ];
+
+    let classificados = [];
+    try {
+      const raw = await callAI(promptIA, 0.3);
+      classificados = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    } catch {
+      // Se IA falhar, usa notícias brutas como sugestões
+      classificados = noticias.slice(0,8).map((n,i) => ({ idx: i+1, tema: n.titulo.slice(0,80), angle: n.resumo.slice(0,120), tipo: 'informativo', prioridade: 2 }));
+    }
+
+    // Monta objetos finais de sugestão
+    const hoje10 = new Date().toISOString().slice(0,10);
+    const novasSugestoes = classificados
+      .filter(c => c.idx >= 1 && c.idx <= noticias.length)
+      .sort((a,b) => (a.prioridade||2) - (b.prioridade||2))
+      .map(c => {
+        const noticia = noticias[c.idx - 1];
+        return {
+          id: 'sug_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+          tema: c.tema || noticia.titulo,
+          angle: c.angle || '',
+          tipo: c.tipo || 'informativo',
+          prioridade: c.prioridade || 2,
+          link: noticia.link,
+          fonte: noticia.fonte,
+          dataNoticia: noticia.data,
+          dataSugestao: hoje10,
+          status: 'pendente',
+        };
+      });
+
+    // Remove sugestões antigas com mesmos links, adiciona novas
+    const anteriores = _calSugLoad().filter(s => s.status === 'pendente' && s.dataSugestao === hoje10);
+    const linksNovos = new Set(novasSugestoes.map(s => s.link));
+    const mantidos = anteriores.filter(s => !linksNovos.has(s.link));
+    _calSugSave([...mantidos, ...novasSugestoes]);
+    localStorage.setItem(CAL_SUG_TS_KEY, String(Date.now()));
+
+    statusEl.style.display = 'none';
+    _renderSugestoes();
+    _atualizarBadgeSugestoes();
+
+  } catch(e) {
+    statusEl.textContent = 'Erro: ' + e.message;
+  }
+  btn.disabled = false;
+  btn.textContent = '🔍 Buscar temas de hoje';
+}
+
+function _renderSugestoes() {
+  const container = document.getElementById('cal-sugestoes');
+  if (!container) return;
+  const hoje10 = new Date().toISOString().slice(0,10);
+  const sugs = _calSugLoad().filter(s => s.status === 'pendente');
+  const ts = Number(localStorage.getItem(CAL_SUG_TS_KEY) || 0);
+  const lastFetchEl = document.getElementById('cal-sug-lastfetch');
+  if (lastFetchEl && ts) {
+    const diff = Math.round((Date.now() - ts) / 60000);
+    lastFetchEl.textContent = diff < 2 ? 'Atualizado agora' : `Atualizado há ${diff}min`;
+  }
+
+  if (!sugs.length) {
+    container.innerHTML = `<div style="font-size:11px;color:var(--c-muted);padding:4px 0">Nenhuma sugestão pendente. Clique em "Buscar temas de hoje" para gerar novas sugestões.</div>`;
+    return;
+  }
+
+  const PRIO_CFG = { 1: { label: 'Alta', bg: '#FFEBEE', color: '#C62828' }, 2: { label: 'Média', bg: '#FFF8E1', color: '#F57F17' }, 3: { label: 'Baixa', bg: '#F3F4F6', color: '#555' } };
+  const TIPO_CFG2 = { blog: { label: '📝 Blog', bg: '#E3F2FD', color: '#1565C0' }, redes_sociais: { label: '📱 Redes sociais', bg: '#F3E5F5', color: '#6A1B9A' }, informativo: { label: '📧 Informativo', bg: '#E8F5EE', color: '#1B7A4E' } };
+
+  container.innerHTML = sugs.map(s => {
+    const prio = PRIO_CFG[s.prioridade] || PRIO_CFG[2];
+    const tipo = TIPO_CFG2[s.tipo] || TIPO_CFG2.informativo;
+    const hostnameDisplay = s.fonte || (s.link ? (() => { try { return new URL(s.link).hostname; } catch { return s.link; } })() : '');
+    return `<div id="sug-${s.id}" style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:1px solid #e0e4f0;border-radius:4px;margin-bottom:6px;background:#fff">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:5px">
+          <span style="background:${prio.bg};color:${prio.color};border-radius:3px;padding:1px 7px;font-size:9px;font-weight:700">● ${prio.label}</span>
+          <span style="background:${tipo.bg};color:${tipo.color};border-radius:3px;padding:1px 7px;font-size:9px;font-weight:700">${tipo.label}</span>
+          <span style="font-size:9px;color:var(--c-muted)">${s.dataNoticia || s.dataSugestao}</span>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:#0D2B5E;margin-bottom:3px">${s.tema}</div>
+        ${s.angle ? `<div style="font-size:11px;color:#555;margin-bottom:4px">${s.angle}</div>` : ''}
+        ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener" style="font-size:10px;color:#0D2B5E;word-break:break-all">🔗 ${hostnameDisplay}</a>` : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
+        <button onclick="aprovarSugestao('${s.id}')" style="background:#0D2B5E;color:#fff;border:none;border-radius:4px;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">✓ Aprovar</button>
+        <button onclick="descartarSugestao('${s.id}')" style="background:#fff;color:#999;border:1px solid #ddd;border-radius:4px;padding:5px 12px;font-size:10px;cursor:pointer">✕ Descartar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function aprovarSugestao(id) {
+  const sugs = _calSugLoad();
+  const s = sugs.find(x => x.id === id);
+  if (!s) return;
+  s.status = 'aprovado';
+  _calSugSave(sugs);
+  // Pré-preenche modal de publicação
+  document.getElementById('cal-edit-id').value  = '';
+  document.getElementById('cal-f-titulo').value  = s.tema;
+  document.getElementById('cal-f-tipo').value    = s.tipo === 'blog' ? 'informativo' : (s.tipo === 'redes_sociais' ? 'redes_sociais' : 'informativo');
+  document.getElementById('cal-f-status').value  = 'planejado';
+  document.getElementById('cal-f-data').value    = new Date().toISOString().slice(0,10);
+  document.getElementById('cal-f-autor').value   = '';
+  document.getElementById('cal-f-obs').value     = s.angle || '';
+  document.getElementById('cal-f-link').value    = s.link || '';
+  document.getElementById('cal-modal-titulo').textContent = 'Aprovar Sugestão';
+  document.getElementById('cal-modal-del').style.display = 'none';
+  document.getElementById('cal-modal').style.display = 'flex';
+  // Remove do DOM imediatamente
+  const el = document.getElementById('sug-' + id);
+  if (el) el.remove();
+  _atualizarBadgeSugestoes();
+}
+
+function descartarSugestao(id) {
+  const sugs = _calSugLoad();
+  const idx = sugs.findIndex(x => x.id === id);
+  if (idx !== -1) { sugs[idx].status = 'descartado'; _calSugSave(sugs); }
+  const el = document.getElementById('sug-' + id);
+  if (el) el.remove();
+  _atualizarBadgeSugestoes();
+}
+
+function _atualizarBadgeSugestoes() {
+  const pendentes = _calSugLoad().filter(s => s.status === 'pendente').length;
+  const badge = document.getElementById('cal-sug-badge');
+  if (badge) {
+    badge.style.display = pendentes > 0 ? 'inline-block' : 'none';
+    badge.textContent = pendentes + ' pendente' + (pendentes !== 1 ? 's' : '');
+  }
+  // Badge no item do menu lateral
+  const menuItem = document.getElementById('ditem-calendario');
+  if (menuItem) {
+    let badgeMenu = menuItem.querySelector('.sug-menu-badge');
+    if (pendentes > 0) {
+      if (!badgeMenu) {
+        badgeMenu = document.createElement('span');
+        badgeMenu.className = 'sug-menu-badge';
+        badgeMenu.style.cssText = 'background:#C62828;color:#fff;border-radius:10px;padding:1px 6px;font-size:9px;font-weight:700;margin-left:6px';
+        menuItem.appendChild(badgeMenu);
+      }
+      badgeMenu.textContent = pendentes;
+    } else if (badgeMenu) {
+      badgeMenu.remove();
+    }
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 
 function switchTab(name) {
   // Update standalone tab active states
@@ -3541,7 +3762,14 @@ function switchTab(name) {
   if (name === 'ifood')         { loadIfoodAdmin(); }
   if (name === 'cli-dash')      { loadPortalFromSupabase().then(cliDashTabInit); }
   if (name === 'comentarios')   { clearBadge('comentarios'); loadComentariosAdmin('all'); }
-  if (name === 'calendario')    { renderCalendario(); }
+  if (name === 'calendario')    {
+    renderCalendario();
+    _renderSugestoes();
+    _atualizarBadgeSugestoes();
+    // Auto-busca se passou mais de 6h desde o último fetch
+    const ts = Number(localStorage.getItem(CAL_SUG_TS_KEY) || 0);
+    if (Date.now() - ts > CAL_SUG_MIN_INTERVAL) buscarTemasCalendario();
+  }
   if (name === 'audiencias')    { loadAudiencias(); }
 }
 
@@ -4411,6 +4639,7 @@ function loadConfig() {
   document.getElementById('cfg-linkedin').value     = cfg.linkedin  || '';
   document.getElementById('cfg-github-token').value = ghToken();
   document.getElementById('cfg-n8n-url').value = localStorage.getItem('fa_n8n_url') || window.SB_N8N_URL || '';
+  document.getElementById('cfg-openai-key').value = localStorage.getItem('fa_openai_key') || '';
   document.getElementById('cfg-claude-key').value = localStorage.getItem('fa_claude_key') || '';
   document.getElementById('cfg-gemini-key').value = localStorage.getItem('fa_gemini_key') || '';
   document.getElementById('cfg-supabase-url').value = sbUrl();
@@ -4483,6 +4712,8 @@ function saveConfig() {
   else localStorage.removeItem(KEYS.githubToken);
   const n8nUrl = document.getElementById('cfg-n8n-url').value.trim();
   if (n8nUrl) localStorage.setItem('fa_n8n_url', n8nUrl); else localStorage.removeItem('fa_n8n_url');
+  const openaiKey = document.getElementById('cfg-openai-key').value.trim();
+  if (openaiKey) localStorage.setItem('fa_openai_key', openaiKey); else localStorage.removeItem('fa_openai_key');
   const claudeKey = document.getElementById('cfg-claude-key').value.trim();
   if (claudeKey) localStorage.setItem('fa_claude_key', claudeKey); else localStorage.removeItem('fa_claude_key');
   const geminiKey = document.getElementById('cfg-gemini-key').value.trim();
@@ -4511,7 +4742,7 @@ function saveConfig() {
 function exportConfigBookmarklet() {
   const keys = [
     'fa_supabase_url','fa_supabase_key','fa_backend_api_url','fa_n8n_url',
-    'fa_admin_auth_email','fa_github_token','fa_claude_key','fa_gemini_key','fa_claude_model'
+    'fa_admin_auth_email','fa_github_token','fa_openai_key','fa_claude_key','fa_gemini_key','fa_claude_model'
   ];
   const data = {};
   keys.forEach(k => { const v = localStorage.getItem(k); if (v) data[k] = v; });
@@ -4786,16 +5017,61 @@ async function generateSocialPost() {
     ? `"${socialSelected.titulo}" — ângulo: "${socialSelected.angulo}"`
     : 'conteúdo fornecido abaixo';
   const conteudoExtra = customText
-    ? `\n\nConteúdo fornecido pelo usuário para transformar em slides:\n"""\n${customText}\n"""`
+    ? `\n\nBase de conteúdo fornecida pelo usuário:\n"""\n${customText}\n"""`
     : '';
 
   try {
-    const raw = await callAI([
-      { role: 'system', content: 'Você é especialista em marketing jurídico para redes sociais. Cria carrosséis para o escritório Falaw Advogados. Responda SOMENTE com JSON válido, sem texto fora. Nunca use aspas duplas dentro de valores de string.' },
-      { role: 'user',   content: `Crie um carrossel de posts para ${platformDesc} sobre: ${temaInfo}.${conteudoExtra}\n\nPadrão visual Falaw: use as cores exatas — "dark" = fundo vinho #550000, "gold" = fundo dourado #a59065, "light" = fundo cinza claro #f4f3f2 (texto escuro), "navy" = fundo azul marinho #242448. Logo FALAW advogados no rodapé de todos os slides.\n\nRetorne exatamente este JSON:\n{"slides":[{"num":1,"tipo":"capa","cor":"dark","titulo":"Título chamativo da capa","subtitulo":"subtítulo curto complementar"},{"num":2,"tipo":"conteudo","cor":"light","titulo":"Segundo slide - ponto 1","items":["Item A","Item B","Item C"]},{"num":3,"tipo":"conteudo","cor":"dark","titulo":"Terceiro slide - ponto 2","items":["Item A","Item B","Item C"]},{"num":4,"tipo":"conteudo","cor":"gold","titulo":"Quarto slide - ponto 3","items":["Item A","Item B"]},{"num":5,"tipo":"conteudo","cor":"dark","titulo":"Quinto slide - ponto 4","items":["Item A","Item B","Item C"]},{"num":6,"tipo":"cta","cor":"dark","titulo":"Mensagem de encerramento","cta":"Texto do botão de ação para ${isPlatformIG ? 'Instagram' : 'LinkedIn'}","rodape":"Fale com a Falaw Advogados"}],"legenda":"Legenda completa para ${isPlatformIG ? 'Instagram' : 'LinkedIn'} com emojis, hashtags e CTA. Máximo 2200 caracteres."}` }
-    ], 0.8);
+    let raw, data;
 
-    const data = parseJSON(raw);
+    if (socialPlatform === 'instagram') {
+      // Instagram: 5-7 slides com alternância de cores e estrutura premium
+      raw = await callAI([
+        { role: 'system', content: 'Você cria carrosséis premium para Instagram do escritório Falaw Advogados. Design institucional de advocacia. Responda SOMENTE com JSON válido, sem texto fora. Nunca use aspas duplas dentro de valores de string.' },
+        { role: 'user', content: `Crie um carrossel para Instagram sobre: ${temaInfo}.${conteudoExtra}
+
+Identidade visual Falaw — use SOMENTE estas cores:
+- "light" = fundo branco/off-white #f4f3f2 (texto bordô #550000)
+- "dark" = fundo bordô #550000 (texto branco #f4f3f2)
+- "gold" = fundo bege #a59065 (texto branco #f4f3f2)
+
+Alternância obrigatória dos fundos:
+Slide 1: "light" | Slide 2: "dark" | Slide 3: "gold" | Slide 4: "light" | Slide 5: "dark" | Slide 6: "gold" | Slide 7 se houver: "light"
+
+Estrutura dos slides:
+- Slide 1 (tipo "capa"): chamada principal forte sobre o tema
+- Slides 2-5 (tipo "conteudo"): desenvolvimento — o que aconteceu, o que muda, impactos para empresas, pontos de atenção
+- Slide final (tipo "cta"): recomendação estratégica ou chamada para salvar/compartilhar/falar com o escritório
+
+Regras:
+- De 5 a 7 slides no total
+- Texto claro, frases curtas e fortes, linguagem jurídica acessível para empresas
+- Máximo 3-4 itens por slide de conteúdo
+- Não numerar os slides
+- Logo FALAW advogados no rodapé de todos os slides
+
+Retorne exatamente este JSON:
+{"slides":[{"num":1,"tipo":"capa","cor":"light","titulo":"Título forte da capa","subtitulo":"subtítulo complementar curto"},{"num":2,"tipo":"conteudo","cor":"dark","titulo":"Título do slide 2","items":["Item A","Item B","Item C"]},{"num":3,"tipo":"conteudo","cor":"gold","titulo":"Título do slide 3","items":["Item A","Item B"]},{"num":4,"tipo":"conteudo","cor":"light","titulo":"Título do slide 4","items":["Item A","Item B","Item C"]},{"num":5,"tipo":"conteudo","cor":"dark","titulo":"Título do slide 5","items":["Item A","Item B"]},{"num":6,"tipo":"cta","cor":"gold","titulo":"Mensagem de encerramento","cta":"Salve este post","rodape":"Fale com a Falaw Advogados"}],"legenda":"Legenda completa para Instagram com emojis estratégicos, 3-5 parágrafos, CTA e hashtags jurídicas relevantes. Máximo 2200 caracteres."}` }
+      ], 0.8);
+
+    } else {
+      // LinkedIn: apenas 1 slide institucional
+      raw = await callAI([
+        { role: 'system', content: 'Você cria slides institucionais premium para LinkedIn do escritório Falaw Advogados. Design sofisticado e profissional. Responda SOMENTE com JSON válido, sem texto fora. Nunca use aspas duplas dentro de valores de string.' },
+        { role: 'user', content: `Crie 1 slide institucional para LinkedIn sobre: ${temaInfo}.${conteudoExtra}
+
+Use cor "dark" (fundo bordô #550000) para o slide.
+
+O slide deve ter:
+- Título forte e direto (máximo 10 palavras)
+- 3 a 4 pontos-chave objetivos
+- Tipo "conteudo"
+
+Retorne exatamente este JSON:
+{"slides":[{"num":1,"tipo":"conteudo","cor":"dark","titulo":"Título forte e direto","items":["Ponto 1","Ponto 2","Ponto 3"]}],"legenda":"Post de LinkedIn profissional com gancho na primeira linha, 3-4 parágrafos objetivos, dados ou citação de destaque, CTA claro ao final. Máximo 1300 caracteres. Hashtags jurídicas no final. Tom executivo, sem excesso de emojis."}` }
+      ], 0.75);
+    }
+
+    data = parseJSON(raw);
     _socialSlides = data.slides || [];
     _socialLegenda = data.legenda || '';
     renderSocialSlides(_socialSlides, _socialLegenda);
@@ -4807,7 +5083,7 @@ async function generateSocialPost() {
   }
 
   btn.disabled = false;
-  btn.textContent = isPlatformIG ? 'Gerar carrossel →' : (linkedInMode === 'text' ? 'Gerar post →' : 'Gerar carrossel →');
+  btn.textContent = socialPlatform === 'instagram' ? 'Gerar carrossel →' : (linkedInMode === 'text' ? 'Gerar post →' : 'Gerar carrossel →');
 }
 
 async function generateLinkedInText() {
@@ -4940,109 +5216,37 @@ function closeSlideEdit() {
   document.getElementById('slide-edit-modal').classList.remove('open');
 }
 
-function exportToPPT() {
-  if (!_socialSlides.length) return;
-  const pptx = new PptxGenJS();
-  pptx.defineLayout({ name: 'SQUARE', width: 10, height: 10 });
-  pptx.layout = 'SQUARE';
-
-  const COLORS = {
-    dark:  { bg: '550000', text: 'F4F3F2', tagBg: 'FFFFFF', tagTxt: '550000', logoTxt: 'F4F3F2', logoSub: 'D4C9A8', line: 'FFFFFF' },
-    gold:  { bg: 'A59065', text: 'FFFFFF', tagBg: 'FFFFFF', tagTxt: '550000', logoTxt: 'FFFFFF', logoSub: 'F4F3F2', line: 'FFFFFF' },
-    light: { bg: 'F4F3F2', text: '242448', tagBg: 'A59065', tagTxt: 'FFFFFF', logoTxt: '550000', logoSub: 'A59065', line: '550000' },
-    navy:  { bg: '242448', text: 'F4F3F2', tagBg: 'FFFFFF', tagTxt: '242448', logoTxt: 'F4F3F2', logoSub: 'D4C9A8', line: 'FFFFFF' }
-  };
-
-  _socialSlides.forEach(s => {
-    const c = COLORS[s.cor] || COLORS.dark;
-    const slide = pptx.addSlide();
-    slide.background = { color: c.bg };
-
-    // Background photo + semi-transparent overlay
-    if (s.imageUrl) {
-      const imgParam = s.imageUrl.startsWith('data:')
-        ? { data: s.imageUrl }
-        : { path: s.imageUrl };
-      slide.addImage({ ...imgParam, x: 0, y: 0, w: 10, h: 10 });
-      slide.addShape('rect', {
-        x: 0, y: 0, w: 10, h: 10,
-        fill: { color: c.bg, transparency: 28 },
-        line: { width: 0 }
-      });
-    }
-
-    // Title
-    slide.addText(s.titulo || '', {
-      x: 0.35, y: 0.5, w: 9.3, h: 2.8,
-      fontSize: 28, color: c.text, fontFace: 'Calibri', bold: true,
-      align: 'left', valign: 'top', wrap: true, charSpacing: 0.5
-    });
-
-    // Subtitle or CTA text
-    const subText = s.subtitulo || (s.tipo === 'cta' ? s.cta : '');
-    if (subText) {
-      slide.addText(subText, {
-        x: 0.35, y: 3.0, w: 9.3, h: 1.0,
-        fontSize: 15, color: c.text, fontFace: 'Calibri', bold: false,
-        align: 'left', wrap: true, transparency: 15
-      });
-    }
-
-    // Items as tags
-    if (s.items && s.items.length) {
-      let yOff = subText ? 4.0 : 3.1;
-      s.items.forEach(item => {
-        slide.addText('• ' + item, {
-          x: 0.35, y: yOff, w: 9.3, h: 0.5,
-          fontSize: 13, color: c.text, fontFace: 'Calibri',
-          align: 'left', wrap: true
-        });
-        yOff += 0.58;
-      });
-    }
-
-    // CTA rodape (for cta slides)
-    if (s.tipo === 'cta' && s.rodape) {
-      slide.addText(s.rodape, {
-        x: 0.35, y: 7.8, w: 9.3, h: 0.4,
-        fontSize: 11, color: c.logoSub, fontFace: 'Calibri', align: 'left'
-      });
-    }
-
-    // Separator — thin rect (PptxGenJS line shape not reliable in browser bundle)
-    slide.addShape('rect', {
-      x: 0.35, y: 8.82, w: 9.3, h: 0.04,
-      fill: { color: c.line, transparency: 55 },
-      line: { width: 0 }
-    });
-
-    // Logo
-    slide.addText('FALAW', {
-      x: 0.35, y: 9.0, w: 4, h: 0.38,
-      fontSize: 12, color: c.logoTxt, fontFace: 'Calibri', bold: true,
-      align: 'left', charSpacing: 3
-    });
-    const rodapeText = (s.tipo === 'cta' && s.rodape) ? '' : 'a d v o g a d o s';
-    if (rodapeText) {
-      slide.addText(rodapeText, {
-        x: 0.35, y: 9.42, w: 4, h: 0.28,
-        fontSize: 8, color: c.logoSub, fontFace: 'Calibri',
-        align: 'left', charSpacing: 2, transparency: 20
-      });
-    }
-  });
-
+async function exportSlidePNGs() {
+  const slideEls = document.querySelectorAll('#social-slides .social-slide');
+  if (!slideEls.length) return;
+  const btn = document.querySelector('[onclick="exportSlidePNGs()"]');
+  const statusEl = document.getElementById('social-copy-status');
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando PNGs…'; }
+  statusEl.textContent = 'Processando slides…';
   const titulo = (socialSelected && socialSelected.titulo)
-    ? socialSelected.titulo.replace(/[^a-zA-Z0-9À-ú\s]/g, '').trim().substring(0, 40)
-    : 'falaw-slides';
-  pptx.writeFile({ fileName: `${titulo}.pptx` }).then(() => {
-    const s = document.getElementById('social-copy-status');
-    s.textContent = '✓ PPT exportado!';
-    setTimeout(() => s.textContent = '', 3000);
-  }).catch(err => {
-    const s = document.getElementById('social-copy-status');
-    s.textContent = 'Erro ao exportar: ' + err.message;
-  });
+    ? socialSelected.titulo.replace(/[^a-zA-Z0-9\u00C0-\u00FF\s]/g,'').trim().substring(0,30).replace(/\s+/g,'-').toLowerCase()
+    : 'falaw';
+  try {
+    for (let i = 0; i < slideEls.length; i++) {
+      statusEl.textContent = `Exportando slide ${i+1}/${slideEls.length}…`;
+      const el = slideEls[i];
+      // Esconde botão de editar antes de capturar
+      const editBtn = el.querySelector('.slide-edit-btn');
+      if (editBtn) editBtn.style.display = 'none';
+      const canvas = await html2canvas(el, { scale: 3, useCORS: true, backgroundColor: null, logging: false });
+      if (editBtn) editBtn.style.display = '';
+      const link = document.createElement('a');
+      link.download = `falaw-${titulo}-slide-${i+1}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      await new Promise(r => setTimeout(r, 300));
+    }
+    statusEl.textContent = `✓ ${slideEls.length} slides baixados!`;
+    setTimeout(() => { statusEl.textContent = ''; }, 3000);
+  } catch(e) {
+    statusEl.textContent = 'Erro: ' + e.message;
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '⬇ Baixar slides PNG'; }
 }
 
 async function callClaude(messages, temperature) {
@@ -5110,7 +5314,34 @@ async function callGemini(messages, temperature) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
+async function callOpenAI(messages, temperature) {
+  const apiKey = localStorage.getItem('fa_openai_key') || '';
+  if (!apiKey) throw new Error('Chave da API OpenAI não configurada.');
+  const body = {
+    model: 'gpt-4o',
+    messages,
+    temperature: temperature || 0.7,
+    max_tokens: 4096
+  };
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    const msg = e.error?.message || '';
+    if (res.status === 401) throw new Error('Chave da API OpenAI inválida. Verifique a chave em Configurações.');
+    throw new Error(msg || 'HTTP ' + res.status);
+  }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
 async function callAI(messages, temperature) {
+  if (localStorage.getItem('fa_openai_key')) return callOpenAI(messages, temperature);
+  if (localStorage.getItem('fa_claude_key')) return callClaude(messages, temperature);
+  if (localStorage.getItem('fa_gemini_key')) return callGemini(messages, temperature);
   return callN8N(messages, temperature);
 }
 
@@ -6737,25 +6968,108 @@ function renderCurriculos() {
    IFOOD ADMIN
 ══════════════════════════════════════ */
 
-// ── helpers ──────────────────────────
-function ifoodApiBase() {
-  return backendApiBase();
-}
+// ── ifoodApi — agora usa Supabase diretamente ──
+function ifoodApiBase() { return getSB() ? 'supabase' : null; }
 
 async function ifoodApi(path, options) {
-  const base = ifoodApiBase();
-  if (!base) return { data: null, error: { message: 'Configure a URL da Cockroach API em Configurações.' } };
+  const sb = getSB();
+  if (!sb) return { data: null, error: { message: 'Configure o Supabase nas Configurações.' } };
   try {
-    const res = await fetch(base + path, options || {});
-    const text = await res.text();
-    let data = null;
-    if (text) {
-      try { data = JSON.parse(text); } catch { data = text; }
+    const method = (options && options.method) ? options.method.toUpperCase() : 'GET';
+    const body = options && options.body ? JSON.parse(options.body) : null;
+    const qs = path.includes('?') ? path.split('?')[1] : '';
+    const params = new URLSearchParams(qs);
+
+    // ── /api/ifood/periods ──
+    if (path.startsWith('/api/ifood/periods')) {
+      if (method === 'GET') {
+        const { data, error } = await sb.from('IfoodPeriod').select('*').order('month_year', { ascending: false });
+        return { data: error ? null : data, error: error || null };
+      }
+      if (method === 'POST') {
+        const row = { id: body.id, label: body.label, month_year: body.month_year, is_active: !!body.is_active, created_at: body.created_at || new Date().toISOString() };
+        const { data, error } = await sb.from('IfoodPeriod').upsert(row).select().single();
+        return { data: error ? null : data, error: error || null };
+      }
+      if (method === 'DELETE') {
+        const id = path.split('/').pop();
+        const { error } = await sb.from('IfoodPeriod').delete().eq('id', id);
+        return { data: null, error: error || null };
+      }
     }
-    if (!res.ok) {
-      return { data: null, error: { message: (data && data.error) ? data.error : ('HTTP ' + res.status) } };
+
+    // ── /api/ifood/kpis/bulk ──
+    if (path === '/api/ifood/kpis/bulk' && method === 'POST') {
+      const rows = Array.isArray(body) ? body : body.kpis || [];
+      const { error } = await sb.from('IfoodKpi').upsert(rows);
+      return { data: error ? null : { inserted: rows.length }, error: error || null };
     }
-    return { data, error: null };
+
+    // ── /api/ifood/kpis/by-period/:id DELETE ──
+    if (path.includes('/api/ifood/kpis/by-period/') && method === 'DELETE') {
+      const periodId = decodeURIComponent(path.split('/').pop());
+      const { error } = await sb.from('IfoodKpi').delete().eq('period_id', periodId);
+      return { data: null, error: error || null };
+    }
+
+    // ── /api/ifood/kpis GET ──
+    if (path.startsWith('/api/ifood/kpis') && method === 'GET') {
+      const periodId = params.get('periodId');
+      let q = sb.from('IfoodKpi').select('*');
+      if (periodId) q = q.eq('period_id', periodId);
+      q = q.order('sort_order', { ascending: true });
+      const { data, error } = await q;
+      return { data: error ? null : data, error: error || null };
+    }
+
+    // ── /api/ifood/content ──
+    if (path.startsWith('/api/ifood/content')) {
+      if (method === 'GET') {
+        const tabKey = params.get('tab_key');
+        const periodId = params.get('period_id');
+        let q = sb.from('IfoodContent').select('*');
+        if (tabKey) q = q.eq('tab_key', tabKey);
+        if (periodId) q = q.eq('period_id', periodId);
+        const { data, error } = await q;
+        return { data: error ? null : data, error: error || null };
+      }
+      if (method === 'POST') {
+        const { error } = await sb.from('IfoodContent').upsert(body);
+        return { data: null, error: error || null };
+      }
+    }
+
+    // ── /api/ifood/highlights ──
+    if (path.startsWith('/api/ifood/highlights')) {
+      if (method === 'GET') {
+        const periodId = params.get('periodId');
+        let q = sb.from('IfoodHighlight').select('*');
+        if (periodId) q = q.eq('period_id', periodId);
+        q = q.order('sort_order', { ascending: true });
+        const { data, error } = await q;
+        return { data: error ? null : data, error: error || null };
+      }
+      if (method === 'POST') {
+        const rows = Array.isArray(body) ? body : [body];
+        const { error } = await sb.from('IfoodHighlight').upsert(rows);
+        return { data: null, error: error || null };
+      }
+      if (method === 'DELETE') {
+        const periodId = params.get('periodId') || (body && body.period_id);
+        const { error } = await sb.from('IfoodHighlight').delete().eq('period_id', periodId);
+        return { data: null, error: error || null };
+      }
+    }
+
+    // ── /api/ifood/raw-data ──
+    if (path.startsWith('/api/ifood/raw-data')) {
+      if (method === 'POST') {
+        const { error } = await sb.from('IfoodRawData').upsert(body);
+        return { data: null, error: error || null };
+      }
+    }
+
+    return { data: null, error: { message: 'Rota não mapeada: ' + path } };
   } catch (e) {
     return { data: null, error: { message: e.message || String(e) } };
   }
@@ -8361,8 +8675,8 @@ let _ifoodPeriods = [];
 async function loadIfoodAdmin() {
   const el = document.getElementById('ifood-periods-list');
   if (!ifoodApiBase()) {
-    showToast('Configure a Cockroach API em Configurações.');
-    if (el) el.innerHTML = '<div class="empty-state"><p>⚠️ Cockroach API não configurada. Vá em <strong>Configurações</strong> e preencha a URL da API.</p></div>';
+    showToast('Configure o Supabase nas Configurações.');
+    if (el) el.innerHTML = '<div class="empty-state"><p>⚠️ Supabase não configurado. Vá em <strong>Configurações</strong> e preencha as credenciais.</p></div>';
     return;
   }
   if (el) el.innerHTML = '<div class="empty-state"><p>Carregando períodos…</p></div>';
@@ -9974,7 +10288,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
 }
 
 async function ifoodSaveExcel() {
-  if (!ifoodApiBase()) { showToast('Configure a Cockroach API em Configurações.'); return; }
+  if (!ifoodApiBase()) { showToast('Configure o Supabase nas Configurações.'); return; }
   if (!_ifoodExcelData) { showToast('Selecione um arquivo primeiro.'); return; }
   const periodId = document.getElementById('ifood-xl-period').value;
   if (!periodId) { showToast('Selecione um período.'); return; }
@@ -10035,11 +10349,22 @@ async function ifoodSaveExcel() {
     let ifoodExcelFileUrl = null;
     if (file) {
       try {
-        setStatus('Enviando arquivo Excel bruto para Cockroach…');
+        setStatus('Enviando arquivo Excel para Supabase Storage…');
         const dataUrl = await fileToDataUrl(file);
-        ifoodExcelFileUrl = await apiUploadFile('ifood_excel', periodId, filename, dataUrl);
+        const sbClient = getSB();
+        if (sbClient) {
+          const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+          const byteStr = atob(base64);
+          const arr = new Uint8Array(byteStr.length);
+          for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+          const ct = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+          const sbPath = 'ifood_' + periodId + '_' + filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+          const { error: sbErr } = await sbClient.storage.from('reports').upload(sbPath, arr, { contentType: ct, upsert: true });
+          if (!sbErr) ifoodExcelFileUrl = sbClient.storage.from('reports').getPublicUrl(sbPath).data.publicUrl;
+          else console.warn('iFood excel upload (Supabase):', sbErr.message);
+        }
       } catch (e) {
-        console.warn('iFood excel upload (Cockroach):', e.message);
+        console.warn('iFood excel upload:', e.message);
       }
     }
 
