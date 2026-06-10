@@ -2039,7 +2039,7 @@
             <button class="btn btn-primary" id="cal-sug-btn" onclick="buscarTemasCalendario(true)" style="font-size:11px;padding:5px 14px">🔄 Atualizar sugestões</button>
           </div>
         </div>
-        <div id="cal-sug-status" style="font-size:11px;color:var(--c-muted);display:none"></div>
+        <div id="cal-sug-status" style="font-size:11px;color:#C62828;display:none;padding:4px 0"></div>
         <div id="cal-sugestoes"></div>
       </div>
 
@@ -3482,7 +3482,7 @@ async function buscarTemasCalendario(forcar = false) {
   const sb = getSB();
   if (!sb) {
     statusEl.style.display = 'block';
-    statusEl.textContent = '⚠ Supabase não configurado. Configure em Configurações.';
+    statusEl.innerHTML = '⚠ Supabase não configurado. <a href="#" onclick="switchTab(\'configuracoes\');return false" style="color:#C62828;font-weight:700">Abrir Configurações →</a>';
     return;
   }
 
