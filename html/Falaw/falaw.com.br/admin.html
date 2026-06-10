@@ -3490,8 +3490,9 @@ async function buscarTemasCalendario(forcar = false) {
   btn.textContent = '⏳ Carregando…';
   statusEl.style.display = 'block';
 
-  // Se forçado, tenta disparar o N8N para gerar novas sugestões
+  // Se forçado, limpa cache e tenta disparar o N8N para gerar novas sugestões
   if (forcar) {
+    localStorage.removeItem(CAL_SUG_TS_KEY);
     const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/webhook\/falaw-ia.*$/, '').replace(/\/$/, '');
     if (n8nBase) {
       try {
@@ -3502,7 +3503,7 @@ async function buscarTemasCalendario(forcar = false) {
           body: JSON.stringify({ origem: 'admin', ts: Date.now() })
         });
         statusEl.textContent = '⏳ N8N iniciado, aguardando resultados…';
-        await new Promise(r => setTimeout(r, 12000));
+        await new Promise(r => setTimeout(r, 25000));
       } catch(e) { /* N8N inacessível, continua com leitura direta */ }
     }
   }
