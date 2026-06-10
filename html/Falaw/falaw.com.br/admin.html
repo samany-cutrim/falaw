@@ -3489,6 +3489,24 @@ async function buscarTemasCalendario(forcar = false) {
   btn.disabled = true;
   btn.textContent = '⏳ Carregando…';
   statusEl.style.display = 'block';
+
+  // Se forçado, tenta disparar o N8N para gerar novas sugestões
+  if (forcar) {
+    const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/webhook\/falaw-ia.*$/, '').replace(/\/$/, '');
+    if (n8nBase) {
+      try {
+        statusEl.textContent = '🔍 Disparando busca no N8N…';
+        await fetch(n8nBase + '/webhook/falaw-monitor-manual', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ origem: 'admin', ts: Date.now() })
+        });
+        statusEl.textContent = '⏳ N8N iniciado, aguardando resultados…';
+        await new Promise(r => setTimeout(r, 12000));
+      } catch(e) { /* N8N inacessível, continua com leitura direta */ }
+    }
+  }
+
   statusEl.textContent = 'Buscando sugestões do Supabase…';
 
   try {
