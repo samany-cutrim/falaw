@@ -27,7 +27,8 @@
           "assignments": [
             { "id": "s1", "name": "OPENAI_API_KEY",  "value": "SUA_CHAVE_OPENAI_AQUI",  "type": "string" },
             { "id": "s2", "name": "SUPABASE_URL",    "value": "https://yleofidqkimeanpuothv.supabase.co", "type": "string" },
-            { "id": "s3", "name": "SUPABASE_KEY",    "value": "SUA_CHAVE_SUPABASE_ANON_AQUI", "type": "string" }
+            { "id": "s3", "name": "SUPABASE_KEY",    "value": "SUA_CHAVE_SUPABASE_ANON_AQUI", "type": "string" },
+            { "id": "s4", "name": "SERPAPI_KEY",     "value": "SUA_CHAVE_SERPAPI_AQUI", "type": "string" }
           ]
         },
         "options": {}
@@ -40,46 +41,150 @@
     },
 
     {
-      "id": "node-schedule",
-      "name": "Agendador Diário 08h",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [-200, -200]
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "m1", "name": "OPENAI_API_KEY",  "value": "SUA_CHAVE_OPENAI_AQUI",  "type": "string" },
+            { "id": "m2", "name": "SUPABASE_URL",    "value": "https://yleofidqkimeanpuothv.supabase.co", "type": "string" },
+            { "id": "m3", "name": "SUPABASE_KEY",    "value": "SUA_CHAVE_SUPABASE_ANON_AQUI", "type": "string" },
+            { "id": "m4", "name": "SERPAPI_KEY",     "value": "SUA_CHAVE_SERPAPI_AQUI", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-keys-manual",
+      "name": "Chaves Manual",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [100, -550]
     },
 
     {
       "parameters": {
-        "jsCode": "const queries = [\n  'direito trabalhista CLT rescisão FGTS when:7d',\n  'direito empresarial CNPJ MEI reforma tributária when:7d',\n  'legislação trabalhista portaria MTE súmula TST when:7d',\n  'eSocial SPED obrigações fiscais empresa when:7d',\n  'reforma trabalhista terceirização home office when:7d',\n  'decisão TST STF trabalhista empregado when:7d'\n];\nreturn queries.map(q => ({\n  json: {\n    url: 'https://news.google.com/rss/search?q=' + encodeURIComponent(q) + '&hl=pt-BR&gl=BR&ceid=BR:pt'\n  }\n}));"
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 23 * * *"
+            }
+          ]
+        }
       },
-      "id": "node-rss-urls",
-      "name": "Gerar URLs RSS",
+      "id": "node-schedule",
+      "name": "Agendador Diário 20h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-200, -200],
+      "notes": "20h Brasília = 23h UTC. Ajuste se seu servidor N8N estiver em outro fuso."
+    },
+
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "falaw-monitor-manual",
+        "responseMode": "lastNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "node-manual-webhook",
+      "name": "Webhook Busca Manual",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-200, -500],
+      "notes": "Dispare POST em /falaw-monitor-manual para rodar manualmente a qualquer hora"
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const queries = [\n  'direito trabalhista CLT rescisão FGTS after:2025-01-01',\n  'TST jurisprudência trabalhista acórdão after:2025-01-01',\n  'eSocial SPED obrigações fiscais empresa after:2025-01-01',\n  'reforma trabalhista terceirização pejotização after:2025-01-01',\n  'INSS contribuição previdenciária empresa after:2025-01-01',\n  'MTE portaria instrução normativa trabalhista after:2025-01-01',\n  'grupo econômico responsabilidade subsidiária TST after:2025-01-01',\n  'NR-1 riscos psicossociais saúde trabalho empresa after:2025-01-01',\n  'eSocial S-2500 processos trabalhistas after:2025-01-01',\n  'STF trabalhista Tema 1291 plataformas digitais after:2025-01-01'\n];\nreturn queries.map(q => ({\n  json: { query: q }\n}));"
+      },
+      "id": "node-search-queries",
+      "name": "Gerar Queries de Busca",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [100, -200]
+      "position": [400, -350]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const queries = [\n  'direito trabalhista CLT rescisão FGTS after:2025-01-01',\n  'TST jurisprudência trabalhista acórdão after:2025-01-01',\n  'eSocial SPED obrigações fiscais empresa after:2025-01-01',\n  'reforma trabalhista terceirização pejotização after:2025-01-01',\n  'INSS contribuição previdenciária empresa after:2025-01-01',\n  'MTE portaria instrução normativa trabalhista after:2025-01-01',\n  'grupo econômico responsabilidade subsidiária TST after:2025-01-01',\n  'NR-1 riscos psicossociais saúde trabalho empresa after:2025-01-01',\n  'eSocial S-2500 processos trabalhistas after:2025-01-01',\n  'STF trabalhista Tema 1291 plataformas digitais after:2025-01-01'\n];\nreturn queries.map(q => ({\n  json: { query: q }\n}));"
+      },
+      "id": "node-search-queries-manual",
+      "name": "Gerar Queries Manual",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, -550]
     },
 
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $json.url }}",
+        "url": "https://serpapi.com/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "engine",   "value": "google" },
+            { "name": "q",        "value": "={{ $json.query }}" },
+            { "name": "api_key",  "value": "={{ $('Chaves Schedule').item.json.SERPAPI_KEY }}" },
+            { "name": "hl",       "value": "pt" },
+            { "name": "gl",       "value": "br" },
+            { "name": "num",      "value": "10" },
+            { "name": "tbm",      "value": "nws" }
+          ]
+        },
         "options": { "response": { "response": { "neverError": true } } }
       },
-      "id": "node-fetch-rss",
-      "name": "Buscar RSS Google News",
+      "id": "node-serpapi",
+      "name": "SerpAPI Buscar Internet",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [400, -200]
+      "position": [700, -350]
     },
 
     {
       "parameters": {
-        "jsCode": "const xml = typeof $input.item.json.data === 'string' ? $input.item.json.data : JSON.stringify($input.item.json);\nconst items = [];\nconst re = /<item>([\\s\\S]*?)<\\/item>/g;\nlet m;\nwhile ((m = re.exec(xml)) !== null) {\n  const block = m[1];\n  const title  = (block.match(/<title>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/title>/) || [])[1] || '';\n  const link   = (block.match(/<link>([\\s\\S]*?)<\\/link>/) || block.match(/<guid[^>]*>([\\s\\S]*?)<\\/guid>/) || [])[1] || '';\n  const pubD   = (block.match(/<pubDate>([\\s\\S]*?)<\\/pubDate>/) || [])[1] || '';\n  const src    = (block.match(/<source[^>]*>([\\s\\S]*?)<\\/source>/) || [])[1] || '';\n  const desc   = (block.match(/<description>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/description>/) || [])[1] || '';\n  const titulo = title.replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim();\n  const linkClean = link.trim();\n  if (!titulo || !linkClean) continue;\n  let dateStr = '';\n  try { dateStr = pubD ? new Date(pubD.trim()).toISOString().slice(0,10) : ''; } catch {}\n  const fonte = src.replace(/<[^>]*>/g,'').trim() || ((() => { try { return new URL(linkClean).hostname; } catch { return ''; } })());\n  const resumo = desc.replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').trim().slice(0,200);\n  items.push({ titulo, link: linkClean, fonte, data: dateStr || new Date().toISOString().slice(0,10), resumo });\n}\nreturn items.slice(0,8).map(it => ({ json: it }));"
+        "method": "GET",
+        "url": "https://serpapi.com/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "engine",   "value": "google" },
+            { "name": "q",        "value": "={{ $json.query }}" },
+            { "name": "api_key",  "value": "={{ $('Chaves Manual').item.json.SERPAPI_KEY }}" },
+            { "name": "hl",       "value": "pt" },
+            { "name": "gl",       "value": "br" },
+            { "name": "num",      "value": "10" },
+            { "name": "tbm",      "value": "nws" }
+          ]
+        },
+        "options": { "response": { "response": { "neverError": true } } }
       },
-      "id": "node-parse-rss",
-      "name": "Parsear RSS XML",
+      "id": "node-serpapi-manual",
+      "name": "SerpAPI Manual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, -550]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst noticias = [];\nconst results = data.news_results || data.organic_results || [];\nfor (const r of results) {\n  const titulo = r.title || '';\n  const link = r.link || r.url || '';\n  const fonte = r.source?.name || r.displayed_link || '';\n  const data_pub = r.date || r.published_date || new Date().toISOString().slice(0,10);\n  const resumo = (r.snippet || r.description || '').slice(0,300);\n  if (!titulo || !link) continue;\n  noticias.push({ titulo, link, fonte, data: data_pub, resumo });\n}\nreturn noticias.map(n => ({ json: n }));"
+      },
+      "id": "node-parse-serp",
+      "name": "Parsear Resultados SerpAPI",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [700, -200]
+      "position": [1000, -350]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const data = $input.item.json;\nconst noticias = [];\nconst results = data.news_results || data.organic_results || [];\nfor (const r of results) {\n  const titulo = r.title || '';\n  const link = r.link || r.url || '';\n  const fonte = r.source?.name || r.displayed_link || '';\n  const data_pub = r.date || r.published_date || new Date().toISOString().slice(0,10);\n  const resumo = (r.snippet || r.description || '').slice(0,300);\n  if (!titulo || !link) continue;\n  noticias.push({ titulo, link, fonte, data: data_pub, resumo });\n}\nreturn noticias.map(n => ({ json: n }));"
+      },
+      "id": "node-parse-serp-manual",
+      "name": "Parsear Resultados Manual",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, -550]
     },
 
     {
@@ -93,18 +198,43 @@
       "name": "Agregar Notícias",
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
-      "position": [1000, -200]
+      "position": [1300, -350]
     },
 
     {
       "parameters": {
-        "jsCode": "const raw = $input.item.json.noticias || [];\nconst vistos = new Set();\nconst noticias = [];\nfor (const item of raw) {\n  const it = item.titulo ? item : (item.json || {});\n  if (!it.titulo || !it.link || vistos.has(it.link)) continue;\n  vistos.add(it.link);\n  noticias.push(it);\n}\nconst hojeStr = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });\nconst lista = noticias.slice(0,20).map((n,i) =>\n  (i+1) + '. [' + n.titulo + '] — Fonte: ' + n.fonte + ' — Data: ' + n.data + '\\nResumo: ' + (n.resumo || 'sem resumo')\n).join('\\n\\n');\nconst prompt = 'Você é um assistente de marketing jurídico para o escritório Falaw (advocacia trabalhista e empresarial, Brasil). Hoje é ' + hojeStr + '.\\n\\nAnalise as notícias abaixo e selecione as 8 mais relevantes para um escritório de advocacia trabalhista e empresarial. Para cada uma, retorne um JSON com os campos:\\n- \"idx\": número original (1-based)\\n- \"tema\": título atrativo para conteúdo do escritório (máx 80 chars)\\n- \"angle\": por que é relevante para empresários/empregados (máx 120 chars)\\n- \"tipo\": um de \"blog\", \"redes_sociais\" ou \"informativo\"\\n- \"prioridade\": 1=alta 2=media 3=baixa\\n\\nRetorne APENAS um array JSON, sem markdown.\\n\\nNotícias:\\n' + lista;\nreturn [{ json: { noticias, prompt } }];"
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "noticias",
+        "include": "allFields",
+        "options": {}
+      },
+      "id": "node-aggregate-manual",
+      "name": "Agregar Notícias Manual",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1300, -550]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.item.json.noticias || [];\nconst vistos = new Set();\nconst noticias = [];\nfor (const item of raw) {\n  const it = item.titulo ? item : (item.json || {});\n  if (!it.titulo || !it.link || vistos.has(it.link)) continue;\n  vistos.add(it.link);\n  noticias.push(it);\n}\nconst hojeStr = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });\nconst lista = noticias.slice(0,30).map((n,i) =>\n  (i+1) + '. [' + n.titulo + '] — Fonte: ' + n.fonte + ' — Data: ' + n.data + '\\nResumo: ' + (n.resumo || 'sem resumo')\n).join('\\n\\n');\nconst prompt = 'Você é um assistente de marketing jurídico para o escritório Falaw (advocacia trabalhista e empresarial, Brasil). Hoje é ' + hojeStr + '.\\n\\nAnalise as notícias abaixo — coletadas de toda a internet — e selecione as 8 mais relevantes para um escritório de advocacia trabalhista e empresarial com foco em defesa de empresas. Para cada uma, retorne um JSON com os campos:\\n- \"idx\": número original (1-based)\\n- \"tema\": título atrativo para o calendário de conteúdo do escritório (máx 80 chars)\\n- \"angle\": por que é relevante para empresários/RH/DP (máx 120 chars)\\n- \"tipo\": um de \"blog\", \"redes_sociais\" ou \"informativo\"\\n- \"prioridade\": 1=alta 2=media 3=baixa\\n- \"data_sugerida\": data sugerida para publicação no formato YYYY-MM-DD (distribua ao longo dos próximos 7 dias)\\n\\nRetorne APENAS um array JSON, sem markdown.\\n\\nNotícias:\\n' + lista;\nreturn [{ json: { noticias, prompt } }];"
       },
       "id": "node-prep-ia",
       "name": "Preparar Prompt IA",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1300, -200]
+      "position": [1600, -350]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.item.json.noticias || [];\nconst vistos = new Set();\nconst noticias = [];\nfor (const item of raw) {\n  const it = item.titulo ? item : (item.json || {});\n  if (!it.titulo || !it.link || vistos.has(it.link)) continue;\n  vistos.add(it.link);\n  noticias.push(it);\n}\nconst hojeStr = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });\nconst lista = noticias.slice(0,30).map((n,i) =>\n  (i+1) + '. [' + n.titulo + '] — Fonte: ' + n.fonte + ' — Data: ' + n.data + '\\nResumo: ' + (n.resumo || 'sem resumo')\n).join('\\n\\n');\nconst prompt = 'Você é um assistente de marketing jurídico para o escritório Falaw (advocacia trabalhista e empresarial, Brasil). Hoje é ' + hojeStr + '.\\n\\nAnalise as notícias abaixo — coletadas de toda a internet — e selecione as 8 mais relevantes para um escritório de advocacia trabalhista e empresarial com foco em defesa de empresas. Para cada uma, retorne um JSON com os campos:\\n- \"idx\": número original (1-based)\\n- \"tema\": título atrativo para o calendário de conteúdo do escritório (máx 80 chars)\\n- \"angle\": por que é relevante para empresários/RH/DP (máx 120 chars)\\n- \"tipo\": um de \"blog\", \"redes_sociais\" ou \"informativo\"\\n- \"prioridade\": 1=alta 2=media 3=baixa\\n- \"data_sugerida\": data sugerida para publicação no formato YYYY-MM-DD (distribua ao longo dos próximos 7 dias)\\n\\nRetorne APENAS um array JSON, sem markdown.\\n\\nNotícias:\\n' + lista;\nreturn [{ json: { noticias, prompt } }];"
+      },
+      "id": "node-prep-ia-manual",
+      "name": "Preparar Prompt IA Manual",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, -550]
     },
 
     {
@@ -127,18 +257,52 @@
       "name": "OpenAI Classificar Temas",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1600, -200]
+      "position": [1900, -350]
     },
 
     {
       "parameters": {
-        "jsCode": "const r = $input.item.json;\nconst noticias = $('Preparar Prompt IA').item.json.noticias || [];\nconst hoje10 = new Date().toISOString().slice(0,10);\nlet classificados = [];\ntry {\n  const raw = r.choices?.[0]?.message?.content || '';\n  classificados = JSON.parse(raw.replace(/```json|```/g,'').trim());\n} catch(e) {\n  classificados = noticias.slice(0,8).map((n,i) => ({ idx: i+1, tema: n.titulo.slice(0,80), angle: n.resumo.slice(0,120), tipo: 'informativo', prioridade: 2 }));\n}\nconst sugestoes = classificados\n  .filter(c => c.idx >= 1 && c.idx <= noticias.length)\n  .sort((a,b) => (a.prioridade||2) - (b.prioridade||2))\n  .map(c => {\n    const n = noticias[c.idx - 1];\n    const id = 'sug_' + hoje10.replace(/-/g,'') + '_' + String(c.idx) + '_' + Math.random().toString(36).slice(2,6);\n    return { id, tema: c.tema || n.titulo, angle: c.angle || '', tipo: c.tipo || 'informativo', prioridade: c.prioridade || 2, link: n.link, fonte: n.fonte, dataNoticia: n.data, dataSugestao: hoje10, status: 'pendente' };\n  });\nreturn sugestoes.map(s => ({ json: s }));"
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Chaves Manual').item.json.OPENAI_API_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o', messages: [{ role: 'user', content: $json.prompt }], temperature: 0.3, max_tokens: 2048 }) }}",
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "node-openai-classify-manual",
+      "name": "OpenAI Classificar Manual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1900, -550]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const r = $input.item.json;\nconst noticias = $('Preparar Prompt IA').item.json.noticias || [];\nconst hoje10 = new Date().toISOString().slice(0,10);\nlet classificados = [];\ntry {\n  const raw = r.choices?.[0]?.message?.content || '';\n  classificados = JSON.parse(raw.replace(/```json|```/g,'').trim());\n} catch(e) {\n  classificados = noticias.slice(0,8).map((n,i) => ({ idx: i+1, tema: n.titulo.slice(0,80), angle: n.resumo.slice(0,120), tipo: 'informativo', prioridade: 2, data_sugerida: hoje10 }));\n}\nconst sugestoes = classificados\n  .filter(c => c.idx >= 1 && c.idx <= noticias.length)\n  .sort((a,b) => (a.prioridade||2) - (b.prioridade||2))\n  .map(c => {\n    const n = noticias[c.idx - 1];\n    const id = 'sug_' + hoje10.replace(/-/g,'') + '_' + String(c.idx) + '_' + Math.random().toString(36).slice(2,6);\n    return {\n      id,\n      tema: c.tema || n.titulo,\n      angle: c.angle || '',\n      tipo: c.tipo || 'informativo',\n      prioridade: c.prioridade || 2,\n      link: n.link,\n      fonte: n.fonte,\n      dataNoticia: n.data,\n      dataSugestao: hoje10,\n      dataPublicacao: c.data_sugerida || hoje10,\n      origem: 'automatico',\n      status: 'pendente'\n    };\n  });\nreturn sugestoes.map(s => ({ json: s }));"
       },
       "id": "node-parse-classify",
       "name": "Montar Sugestões",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1900, -200]
+      "position": [2200, -350]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const r = $input.item.json;\nconst noticias = $('Preparar Prompt IA Manual').item.json.noticias || [];\nconst hoje10 = new Date().toISOString().slice(0,10);\nlet classificados = [];\ntry {\n  const raw = r.choices?.[0]?.message?.content || '';\n  classificados = JSON.parse(raw.replace(/```json|```/g,'').trim());\n} catch(e) {\n  classificados = noticias.slice(0,8).map((n,i) => ({ idx: i+1, tema: n.titulo.slice(0,80), angle: n.resumo.slice(0,120), tipo: 'informativo', prioridade: 2, data_sugerida: hoje10 }));\n}\nconst sugestoes = classificados\n  .filter(c => c.idx >= 1 && c.idx <= noticias.length)\n  .sort((a,b) => (a.prioridade||2) - (b.prioridade||2))\n  .map(c => {\n    const n = noticias[c.idx - 1];\n    const id = 'sug_manual_' + hoje10.replace(/-/g,'') + '_' + String(c.idx) + '_' + Math.random().toString(36).slice(2,6);\n    return {\n      id,\n      tema: c.tema || n.titulo,\n      angle: c.angle || '',\n      tipo: c.tipo || 'informativo',\n      prioridade: c.prioridade || 2,\n      link: n.link,\n      fonte: n.fonte,\n      dataNoticia: n.data,\n      dataSugestao: hoje10,\n      dataPublicacao: c.data_sugerida || hoje10,\n      origem: 'manual',\n      status: 'pendente'\n    };\n  });\nreturn sugestoes.map(s => ({ json: s }));"
+      },
+      "id": "node-parse-classify-manual",
+      "name": "Montar Sugestões Manual",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2200, -550]
     },
 
     {
@@ -163,7 +327,45 @@
       "name": "Salvar no Supabase",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2200, -200]
+      "position": [2500, -350]
+    },
+
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Chaves Manual').item.json.SUPABASE_URL + '/rest/v1/CalSugestao' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $('Chaves Manual').item.json.SUPABASE_KEY }}" },
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Chaves Manual').item.json.SUPABASE_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" },
+            { "name": "Prefer",        "value": "resolution=ignore-duplicates" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "node-save-supabase-manual",
+      "name": "Salvar no Supabase Manual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2500, -550]
+    },
+
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"message\": \"Busca manual concluída. Sugestões salvas no calendário Falaw.\", \"executedAt\": \"{{ $now }}\" }",
+        "options": {}
+      },
+      "id": "node-respond-manual",
+      "name": "Responder Busca Manual",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2800, -550]
     },
 
     {
@@ -182,6 +384,25 @@
 
     {
       "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "k1", "name": "OPENAI_API_KEY",  "value": "SUA_CHAVE_OPENAI_AQUI",  "type": "string" },
+            { "id": "k2", "name": "GITHUB_TOKEN",    "value": "SEU_TOKEN_GITHUB_AQUI",  "type": "string" },
+            { "id": "k3", "name": "SUPABASE_URL",    "value": "https://yleofidqkimeanpuothv.supabase.co", "type": "string" },
+            { "id": "k4", "name": "SUPABASE_KEY",    "value": "SUA_CHAVE_SUPABASE_ANON_AQUI", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-keys-ia",
+      "name": "Configurar Chaves IA",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [100, 300]
+    },
+
+    {
+      "parameters": {
         "conditions": {
           "string": [
             { "value1": "={{ $('Webhook IA').item.json.body.edit_instructions }}", "operation": "isNotEmpty" }
@@ -192,7 +413,7 @@
       "name": "É edição?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [100, 300]
+      "position": [400, 300]
     },
 
     {
@@ -202,7 +423,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Configurar Chaves').item.json.OPENAI_API_KEY }}" },
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Configurar Chaves IA').item.json.OPENAI_API_KEY }}" },
             { "name": "Content-Type",  "value": "application/json" }
           ]
         },
@@ -215,7 +436,7 @@
       "name": "OpenAI Gerar Conteúdo",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [500, 160]
+      "position": [700, 160]
     },
 
     {
@@ -226,7 +447,7 @@
       "name": "Extrair Resposta",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [800, 160]
+      "position": [1000, 160]
     },
 
     {
@@ -235,7 +456,7 @@
       "name": "Responder",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1050, 160]
+      "position": [1300, 160]
     },
 
     {
@@ -246,7 +467,7 @@
       "name": "Preparar Edição",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [500, 440]
+      "position": [700, 440]
     },
 
     {
@@ -256,7 +477,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Configurar Chaves').item.json.OPENAI_API_KEY }}" },
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $('Configurar Chaves IA').item.json.OPENAI_API_KEY }}" },
             { "name": "Content-Type",  "value": "application/json" }
           ]
         },
@@ -269,7 +490,7 @@
       "name": "OpenAI Editar Artigo",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [800, 440]
+      "position": [1000, 440]
     },
 
     {
@@ -280,7 +501,7 @@
       "name": "Extrair Edição",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1050, 440]
+      "position": [1300, 440]
     },
 
     {
@@ -289,7 +510,7 @@
       "name": "Responder Edição",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1300, 440]
+      "position": [1600, 440]
     },
 
     {
@@ -339,30 +560,43 @@
   ],
 
   "connections": {
-    "Agendador Diário 08h": { "main": [[{ "node": "Chaves Schedule", "type": "main", "index": 0 }]] },
-    "Chaves Schedule":       { "main": [[{ "node": "Gerar URLs RSS",   "type": "main", "index": 0 }]] },
-    "Webhook IA":           { "main": [[{ "node": "Configurar Chaves", "type": "main", "index": 0 }]] },
-    "Configurar Chaves":    { "main": [[{ "node": "É edição?", "type": "main", "index": 0 }]] },
-    "Gerar URLs RSS":           { "main": [[{ "node": "Buscar RSS Google News",   "type": "main", "index": 0 }]] },
-    "Buscar RSS Google News":   { "main": [[{ "node": "Parsear RSS XML",          "type": "main", "index": 0 }]] },
-    "Parsear RSS XML":          { "main": [[{ "node": "Agregar Notícias",         "type": "main", "index": 0 }]] },
-    "Agregar Notícias":         { "main": [[{ "node": "Preparar Prompt IA",       "type": "main", "index": 0 }]] },
-    "Preparar Prompt IA":       { "main": [[{ "node": "OpenAI Classificar Temas", "type": "main", "index": 0 }]] },
-    "OpenAI Classificar Temas": { "main": [[{ "node": "Montar Sugestões",         "type": "main", "index": 0 }]] },
-    "Montar Sugestões":         { "main": [[{ "node": "Salvar no Supabase",       "type": "main", "index": 0 }]] },
+
+    "Agendador Diário 20h":         { "main": [[{ "node": "Chaves Schedule",             "type": "main", "index": 0 }]] },
+    "Chaves Schedule":               { "main": [[{ "node": "Gerar Queries de Busca",      "type": "main", "index": 0 }]] },
+    "Gerar Queries de Busca":        { "main": [[{ "node": "SerpAPI Buscar Internet",      "type": "main", "index": 0 }]] },
+    "SerpAPI Buscar Internet":       { "main": [[{ "node": "Parsear Resultados SerpAPI",   "type": "main", "index": 0 }]] },
+    "Parsear Resultados SerpAPI":    { "main": [[{ "node": "Agregar Notícias",             "type": "main", "index": 0 }]] },
+    "Agregar Notícias":              { "main": [[{ "node": "Preparar Prompt IA",           "type": "main", "index": 0 }]] },
+    "Preparar Prompt IA":            { "main": [[{ "node": "OpenAI Classificar Temas",     "type": "main", "index": 0 }]] },
+    "OpenAI Classificar Temas":      { "main": [[{ "node": "Montar Sugestões",             "type": "main", "index": 0 }]] },
+    "Montar Sugestões":              { "main": [[{ "node": "Salvar no Supabase",           "type": "main", "index": 0 }]] },
+
+    "Webhook Busca Manual":          { "main": [[{ "node": "Chaves Manual",               "type": "main", "index": 0 }]] },
+    "Chaves Manual":                 { "main": [[{ "node": "Gerar Queries Manual",        "type": "main", "index": 0 }]] },
+    "Gerar Queries Manual":          { "main": [[{ "node": "SerpAPI Manual",              "type": "main", "index": 0 }]] },
+    "SerpAPI Manual":                { "main": [[{ "node": "Parsear Resultados Manual",   "type": "main", "index": 0 }]] },
+    "Parsear Resultados Manual":     { "main": [[{ "node": "Agregar Notícias Manual",     "type": "main", "index": 0 }]] },
+    "Agregar Notícias Manual":       { "main": [[{ "node": "Preparar Prompt IA Manual",   "type": "main", "index": 0 }]] },
+    "Preparar Prompt IA Manual":     { "main": [[{ "node": "OpenAI Classificar Manual",   "type": "main", "index": 0 }]] },
+    "OpenAI Classificar Manual":     { "main": [[{ "node": "Montar Sugestões Manual",     "type": "main", "index": 0 }]] },
+    "Montar Sugestões Manual":       { "main": [[{ "node": "Salvar no Supabase Manual",   "type": "main", "index": 0 }]] },
+    "Salvar no Supabase Manual":     { "main": [[{ "node": "Responder Busca Manual",      "type": "main", "index": 0 }]] },
+
+    "Webhook IA":                    { "main": [[{ "node": "Configurar Chaves IA",        "type": "main", "index": 0 }]] },
+    "Configurar Chaves IA":          { "main": [[{ "node": "É edição?",                   "type": "main", "index": 0 }]] },
     "É edição?": {
       "main": [
         [{ "node": "Preparar Edição",       "type": "main", "index": 0 }],
         [{ "node": "OpenAI Gerar Conteúdo", "type": "main", "index": 0 }]
       ]
     },
-    "OpenAI Gerar Conteúdo": { "main": [[{ "node": "Extrair Resposta", "type": "main", "index": 0 }]] },
-    "Extrair Resposta":      { "main": [[{ "node": "Responder",        "type": "main", "index": 0 }]] },
-    "Preparar Edição":       { "main": [[{ "node": "OpenAI Editar Artigo", "type": "main", "index": 0 }]] },
-    "OpenAI Editar Artigo":  { "main": [[{ "node": "Extrair Edição",      "type": "main", "index": 0 }]] },
-    "Extrair Edição":        { "main": [[{ "node": "Responder Edição",    "type": "main", "index": 0 }]] },
-    "Newsletter Webhook":    { "main": [[{ "node": "Enviar Newsletter",   "type": "main", "index": 0 }]] },
-    "Enviar Newsletter":     { "main": [[{ "node": "Responder Newsletter","type": "main", "index": 0 }]] }
+    "OpenAI Gerar Conteúdo":         { "main": [[{ "node": "Extrair Resposta",            "type": "main", "index": 0 }]] },
+    "Extrair Resposta":              { "main": [[{ "node": "Responder",                   "type": "main", "index": 0 }]] },
+    "Preparar Edição":               { "main": [[{ "node": "OpenAI Editar Artigo",        "type": "main", "index": 0 }]] },
+    "OpenAI Editar Artigo":          { "main": [[{ "node": "Extrair Edição",              "type": "main", "index": 0 }]] },
+    "Extrair Edição":                { "main": [[{ "node": "Responder Edição",            "type": "main", "index": 0 }]] },
+    "Newsletter Webhook":            { "main": [[{ "node": "Enviar Newsletter",           "type": "main", "index": 0 }]] },
+    "Enviar Newsletter":             { "main": [[{ "node": "Responder Newsletter",        "type": "main", "index": 0 }]] }
   },
 
   "pinData": {},
