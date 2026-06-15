@@ -407,6 +407,293 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 ══════════════════════════════════════════ -->
 <section id="page-visao-geral" class="page active" data-figma-frame="true">
 
+  <!-- ══ METAS SUB-SEÇÃO ══ -->
+  <div style="background:#fff;border:2px solid var(--dark);border-radius:var(--radius);margin-bottom:22px;overflow:hidden">
+    <!-- Header da sub-seção -->
+    <div style="background:var(--dark);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-size:18px">🎯</span>
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:#fff">Metas Estratégicas — Acompanhamento</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.65)">Ciclo 2026 · Baseline definido em Jan/26 · Comparativo Abril vs Maio</div>
+      </div>
+      <!-- Sub-tabs -->
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap" id="st-metas-vg">
+        <button class="stab active" style="font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,.5);background:rgba(255,255,255,.15);color:#fff;cursor:pointer" onclick="stabMetasVg('maio',this)">Maio/26</button>
+        <button class="stab" style="font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.7);cursor:pointer" onclick="stabMetasVg('comparativo',this)">Comparativo Abr vs Mai</button>
+      </div>
+    </div>
+
+    <!-- Sub-tab: Metas Maio/26 -->
+    <div id="metas-vg-maio" style="padding:20px">
+      <!-- 4 KPIs de metas -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+
+        <!-- Meta 1 -->
+        <div style="border-radius:var(--radius);padding:16px;border:1px solid var(--gray);border-top:4px solid var(--red);background:var(--red-light)">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gray-text);margin-bottom:6px">Meta 1 · Encerramentos</div>
+          <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--red);line-height:1">20</div>
+          <div style="font-size:10px;color:var(--gray-text);margin:2px 0 6px">processos encerrados</div>
+          <div style="height:6px;background:var(--gray);border-radius:3px;overflow:hidden;margin-bottom:6px">
+            <div style="height:6px;width:7.6%;background:var(--red);border-radius:3px"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px">
+            <span style="color:var(--red);font-weight:700">1,52% alcançado</span>
+            <span style="color:var(--gray-text)">meta: 20%</span>
+          </div>
+          <div style="margin-top:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block">✗ ABAIXO</div>
+        </div>
+
+        <!-- Meta 2 -->
+        <div style="border-radius:var(--radius);padding:16px;border:1px solid var(--gray);border-top:4px solid var(--green);background:var(--green-light)">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gray-text);margin-bottom:6px">Meta 2 · Êxito 1ª Instância</div>
+          <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--green);line-height:1">57,1%</div>
+          <div style="font-size:10px;color:var(--gray-text);margin:2px 0 6px">4 vitórias de 7 decisões</div>
+          <div style="height:6px;background:var(--gray);border-radius:3px;overflow:hidden;margin-bottom:6px">
+            <div style="height:6px;width:100%;background:var(--green);border-radius:3px"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px">
+            <span style="color:var(--green);font-weight:700">+13,0 p.p. acima</span>
+            <span style="color:var(--gray-text)">meta: 44,09%</span>
+          </div>
+          <div style="margin-top:8px;background:var(--green);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block">✓ ACIMA</div>
+        </div>
+
+        <!-- Meta 3 -->
+        <div style="border-radius:var(--radius);padding:16px;border:1px solid var(--gray);border-top:4px solid var(--green);background:var(--green-light)">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gray-text);margin-bottom:6px">Meta 3 · Êxito 2ª Instância</div>
+          <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--green);line-height:1">42,9%</div>
+          <div style="font-size:10px;color:var(--gray-text);margin:2px 0 6px">9 vitórias de 21 acórdãos</div>
+          <div style="height:6px;background:var(--gray);border-radius:3px;overflow:hidden;margin-bottom:6px">
+            <div style="height:6px;width:100%;background:var(--green);border-radius:3px"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px">
+            <span style="color:var(--green);font-weight:700">+13,0 p.p. acima</span>
+            <span style="color:var(--gray-text)">meta: 29,87%</span>
+          </div>
+          <div style="margin-top:8px;background:var(--green);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block">✓ ACIMA</div>
+        </div>
+
+        <!-- Meta 4 -->
+        <div style="border-radius:var(--radius);padding:16px;border:1px solid var(--gray);border-top:4px solid var(--yellow);background:var(--yellow-light)">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gray-text);margin-bottom:6px">Meta 4 · Economia em Acordos</div>
+          <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--yellow);line-height:1">3</div>
+          <div style="font-size:10px;color:var(--gray-text);margin:2px 0 6px">acordos realizados no mês</div>
+          <div style="height:6px;background:var(--gray);border-radius:3px;overflow:hidden;margin-bottom:6px">
+            <div style="height:6px;width:50%;background:var(--yellow);border-radius:3px"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px">
+            <span style="color:var(--yellow);font-weight:700">sem dados de valor</span>
+            <span style="color:var(--gray-text)">meta: 15% econ.</span>
+          </div>
+          <div style="margin-top:8px;background:var(--yellow);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block">⚠ PARCIAL</div>
+        </div>
+      </div>
+
+      <!-- Detalhamento das metas -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <!-- Consolidação decisões -->
+        <div style="background:var(--cream);border-radius:var(--radius);padding:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--dark);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">📊 Consolidação de Decisões — Mês Atual</div>
+          <div id="metas-dec-consolidacao">
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+            <div style="text-align:center;flex:1">
+              <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--dark)">28</div>
+              <div style="font-size:10px;color:var(--gray-text);text-transform:uppercase">Total Decisões</div>
+            </div>
+            <div style="text-align:center;flex:1">
+              <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--green)">13</div>
+              <div style="font-size:10px;color:var(--gray-text);text-transform:uppercase">Vitórias (46,4%)</div>
+            </div>
+            <div style="text-align:center;flex:1">
+              <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--red)">15</div>
+              <div style="font-size:10px;color:var(--gray-text);text-transform:uppercase">Derrotas (53,6%)</div>
+            </div>
+          </div>
+          <div style="height:10px;background:var(--gray);border-radius:5px;overflow:hidden">
+            <div style="height:10px;width:46.4%;background:var(--green);border-radius:5px 0 0 5px;float:left"></div>
+            <div style="height:10px;width:53.6%;background:var(--red);border-radius:0 5px 5px 0;float:left"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px">
+            <span><strong>1ª Inst.:</strong> 4 fav / 3 desf → 57,1%</span>
+            <span><strong>2ª Inst.:</strong> 9 fav / 12 desf → 42,9%</span>
+          </div>
+          </div><!-- /metas-dec-consolidacao -->
+        </div>
+
+        <!-- Acordos do mês -->
+        <div style="background:var(--cream);border-radius:var(--radius);padding:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--dark);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">🤝 Acordos Realizados — Maio/26</div>
+          <div id="metas-acordos-list" style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:6px;padding:8px 12px;border-left:3px solid var(--orange-ol)">
+              <div>
+                <div style="font-size:11px;font-weight:700">Acordo por Nós</div>
+                <div style="font-size:10px;color:var(--gray-text)">OL · TRT-8 · Toniel Silva Araujo</div>
+              </div>
+              <span style="font-size:9px;font-weight:700;background:var(--orange-ol);color:#fff;padding:2px 7px;border-radius:3px">OL</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:6px;padding:8px 12px;border-left:3px solid var(--blue-nuvem)">
+              <div>
+                <div style="font-size:11px;font-weight:700">Acordo pela PACT</div>
+                <div style="font-size:10px;color:var(--gray-text)">OL · TRT-8 · Werverson Rocha Coelho</div>
+              </div>
+              <span style="font-size:9px;font-weight:700;background:var(--blue-nuvem);color:#fff;padding:2px 7px;border-radius:3px">OL</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:6px;padding:8px 12px;border-left:3px solid var(--blue-nuvem)">
+              <div>
+                <div style="font-size:11px;font-weight:700">Acordo pela PACT</div>
+                <div style="font-size:10px;color:var(--gray-text)">OL · TRT-15 · Julio Cesar de Souza</div>
+              </div>
+              <span style="font-size:9px;font-weight:700;background:var(--blue-nuvem);color:#fff;padding:2px 7px;border-radius:3px">OL</span>
+            </div>
+          </div>
+          <div class="ibox warn" style="margin-top:10px;font-size:10px">Valores de risco não informados — economia % não calculável neste ciclo</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub-tab: Comparativo Abril vs Maio -->
+    <div id="metas-vg-comparativo" style="padding:20px;display:none">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:var(--dark);color:#fff">
+              <th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-radius:6px 0 0 0">Meta</th>
+              <th style="padding:10px 14px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Alvo</th>
+              <th style="padding:10px 14px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:#2A2A2A">Abril/26</th>
+              <th style="padding:10px 14px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Maio/26</th>
+              <th style="padding:10px 14px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-radius:0 6px 0 0">Variação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Meta 1 -->
+            <tr style="border-bottom:1px solid var(--gray)">
+              <td style="padding:12px 14px">
+                <div style="font-weight:700;color:var(--dark)">Meta 1 · Encerramentos</div>
+                <div style="font-size:10px;color:var(--gray-text)">Encerrar 20% da base (262 processos)</div>
+              </td>
+              <td style="padding:12px 14px;text-align:center">
+                <span style="font-weight:700;color:var(--dark)">20%</span><br>
+                <span style="font-size:10px;color:var(--gray-text)">262 processos</span>
+              </td>
+              <td style="padding:12px 14px;text-align:center;background:var(--red-light)">
+                <span style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--red)">−0,38%</span><br>
+                <span style="font-size:10px;color:var(--gray-text)">−5 processos</span><br>
+                <span style="font-size:9px;font-weight:700;background:var(--red);color:#fff;padding:1px 6px;border-radius:3px">✗ ABAIXO</span>
+              </td>
+              <td style="padding:12px 14px;text-align:center;background:#FFF8E6">
+                <span style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--yellow)">1,52%</span><br>
+                <span style="font-size:10px;color:var(--gray-text)">20 processos</span><br>
+                <span style="font-size:9px;font-weight:700;background:var(--yellow);color:#fff;padding:1px 6px;border-radius:3px">✗ ABAIXO</span>
+              </td>
+              <td style="padding:12px 14px;text-align:center">
+                <span style="font-size:13px;font-weight:700;color:var(--green)">↑ +1,90 p.p.</span><br>
+                <span style="font-size:10px;color:var(--gray-text)">melhora</span>
+              </td>
+            </tr>
+            <!-- Meta 2 -->
+            <tr style="border-bottom:1px solid var(--gray);background:var(--cream)">
+              <td style="padding:12px 14px">
+                <div style="font-weight:700;color:var(--dark)">Meta 2 · Êxito 1ª Instância</div>
+                <div style="font-size:10px;color:var(--gray-text)">Baseline: 38,34% → Alvo: 44,09%</div>
+              </td>
+              <td style="padding:12px 14px;text-align:center">
+                <span style="font-weight:700;color:var(--dark)">44,09%</span><br>
+                <span style="font-size:10px;color:var(--gray-text)">+15% vs baseline</span>
+              </td>
+              <td style="padding:12px 14px;text-align:center;background:var(--red-light)">
+                <span style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--red)">0,00%</span><br>
+                <span style="font-size:10px;color:var(--gray-text)">0 fav / 7 decisões</span><br>
+                <span style="font-size:9px;font-weight:700;background:var(--red);color:#fff;padding:1px 6px;border-radius:3px">✗ ABAIXO</span>
+              </td>
+              <td style="padding:12px 14px;text-align:center;background:var(--green-light)">
+                <span style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--green)">57,14%</span><br>
+                <span style="font-size:10px;color:var(--gray-text)">4 fav / 7 decisões</span><br>
+                <span style="font-size:9px;font-weight:700;background:var(--green);color:#fff;padding:1px 6px;border-radius:3px">✓ ACIMA</span>
+              </td>
+              <td style="padding:12px 14px;text-align:center;background:var(--cream)">
+                <span style="font-size:13px;font-weight:700;color:var(--green)">↑ +57,14 p.p.</span><br>
+                <span style="font-size:10px;color:var(--green);font-weight:600">grande avanço</span>
+              </td>
+            </tr>
+            <!-- Meta 3 -->
+            <tr style="border-bottom:1px solid var(--gray)">
+              <td style="padding:12px 14px">
+                <div style="font-weight:700;color:var(--dark)">Meta 3 · Êxito 2ª Instância</div>
+                <div style="font-size:10px;color:var(--gray-text)">Baseline: 25,97% → Alvo: 29,87%</div>
+              </td>
+              <td style="padding:12px 14px;text-align:center">
+                <span style="font-weight:700;color:var(--dark)">29,87%</span><br>
+                <span style="font-size:10px;color:var(--gray-text)">+15% vs baseline</span>
+              </td>
+              <td style="padding:12px 14px;text-align:center;background:#FFF8E6">
+                <span style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--yellow)">25,00%</span><br>
+                <span style="font-size:10px;color:var(--gray-text)">6 fav / 24 decisões</span><br>
+                <span style="font-size:9px;font-weight:700;background:var(--yellow);color:#fff;padding:1px 6px;border-radius:3px">✗ ABAIXO</span>
+              </td>
+              <td style="padding:12px 14px;text-align:center;background:var(--green-light)">
+                <span style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--green)">42,86%</span><br>
+                <span style="font-size:10px;color:var(--gray-text)">9 fav / 21 acórdãos</span><br>
+                <span style="font-size:9px;font-weight:700;background:var(--green);color:#fff;padding:1px 6px;border-radius:3px">✓ ACIMA</span>
+              </td>
+              <td style="padding:12px 14px;text-align:center">
+                <span style="font-size:13px;font-weight:700;color:var(--green)">↑ +17,86 p.p.</span><br>
+                <span style="font-size:10px;color:var(--green);font-weight:600">grande avanço</span>
+              </td>
+            </tr>
+            <!-- Meta 4 -->
+            <tr>
+              <td style="padding:12px 14px">
+                <div style="font-weight:700;color:var(--dark)">Meta 4 · Economia em Acordos</div>
+                <div style="font-size:10px;color:var(--gray-text)">15% de economia sobre valor de risco</div>
+              </td>
+              <td style="padding:12px 14px;text-align:center">
+                <span style="font-weight:700;color:var(--dark)">≥ 15%</span><br>
+                <span style="font-size:10px;color:var(--gray-text)">economia p/ acordo</span>
+              </td>
+              <td style="padding:12px 14px;text-align:center;background:var(--red-light)">
+                <span style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--red)">0</span><br>
+                <span style="font-size:10px;color:var(--gray-text)">nenhum acordo</span><br>
+                <span style="font-size:9px;font-weight:700;background:var(--red);color:#fff;padding:1px 6px;border-radius:3px">✗ ABAIXO</span>
+              </td>
+              <td style="padding:12px 14px;text-align:center;background:#FFF8E6">
+                <span style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--yellow)">3</span><br>
+                <span style="font-size:10px;color:var(--gray-text)">acordos (sem valor)</span><br>
+                <span style="font-size:9px;font-weight:700;background:var(--yellow);color:#fff;padding:1px 6px;border-radius:3px">⚠ PARCIAL</span>
+              </td>
+              <td style="padding:12px 14px;text-align:center">
+                <span style="font-size:13px;font-weight:700;color:var(--yellow)">↑ +3</span><br>
+                <span style="font-size:10px;color:var(--yellow);font-weight:600">acordos retomados</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Placar geral -->
+      <div style="margin-top:16px;background:var(--cream);border-radius:var(--radius);padding:16px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--dark);margin-bottom:12px">📋 Placar Geral por Mês</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+          <div style="background:#fff;border-radius:6px;padding:12px;text-align:center;border-top:3px solid var(--red)">
+            <div style="font-size:10px;font-weight:700;color:var(--gray-text);text-transform:uppercase;margin-bottom:4px">Abril/26</div>
+            <div style="font-size:11px;margin-bottom:2px"><span style="color:var(--green);font-weight:700">0 metas ✓</span> · <span style="color:var(--red);font-weight:700">4 metas ✗</span></div>
+            <div style="font-size:10px;color:var(--gray-text)">0/4 metas atingidas</div>
+          </div>
+          <div style="background:#fff;border-radius:6px;padding:12px;text-align:center;border-top:3px solid var(--yellow)">
+            <div style="font-size:10px;font-weight:700;color:var(--gray-text);text-transform:uppercase;margin-bottom:4px">Maio/26</div>
+            <div style="font-size:11px;margin-bottom:2px"><span style="color:var(--green);font-weight:700">2 metas ✓</span> · <span style="color:var(--yellow);font-weight:700">1 parcial</span> · <span style="color:var(--red);font-weight:700">1 ✗</span></div>
+            <div style="font-size:10px;color:var(--gray-text)">2/4 metas atingidas (+2 vs abr)</div>
+          </div>
+          <div style="background:#fff;border-radius:6px;padding:12px;text-align:center;border-top:3px solid var(--green)">
+            <div style="font-size:10px;font-weight:700;color:var(--gray-text);text-transform:uppercase;margin-bottom:4px">Evolução</div>
+            <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--green)">↑ 50%</div>
+            <div style="font-size:10px;color:var(--gray-text)">metas atingidas em mai/26</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ══ FIM METAS ══ -->
+
   <!-- KPI Strip — 5 cards principais -->
   <div class="g5">
     <div class="kpi k-blue">
@@ -639,6 +926,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
     </div>
   </div>
 
+  <!-- Linha 9: Casos Encerrados -->
+  <div class="g2" style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Encerrados por Motivo — Maio/26</div>
+      <canvas id="chart-enc-motivo" style="max-height:240px"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Encerrados por Causa Raiz — Maio/26</div>
+      <div style="max-height:220px;display:flex;justify-content:center;position:relative">
+        <canvas id="chart-enc-causa"></canvas>
+      </div>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:5px" id="enc-causa-legend"></div>
+    </div>
+  </div>
+
 </section>
 
 <!-- ══════════════════════════════════════════
@@ -717,6 +1019,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
     </div>
 
     <div class="ibox info" style="margin-bottom:16px"><strong>Fev/26:</strong> 16 decisões · 9 acórdãos favoráveis (64,3% em 2ºG) · Tema 1291 STF: suspensão ativa (TRT-19, R$1M) · Sem tribunal dominante em condenações</div>
+
+    <!-- Julgadores Nuvem -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title"><span class="dot" style="background:var(--blue-nuvem)"></span>Julgadores — Nuvem (Vínculo iFood)</div>
+      <div id="julgadores-nuvem-list"></div>
+    </div>
   </div>
 </section>
 
@@ -818,7 +1126,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
     </div>
 
     <!-- Súmula 331 critérios -->
-    <div class="card">
+    <div class="card" style="margin-bottom:16px">
       <div class="card-title"><span class="dot" style="background:var(--orange-ol)"></span>Súmula 331 TST — Critérios de Defesa</div>
       <div class="mrow"><div class="mrow-lbl">Fiscalização regular do contrato com a OL</div><span class="badge bg">68% sucesso</span></div>
       <div class="mrow"><div class="mrow-lbl">Ausência de culpa in vigilando comprovada</div><span class="badge bg">62% sucesso</span></div>
@@ -826,6 +1134,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
       <div class="mrow"><div class="mrow-lbl">Contrato com cláusulas trabalhistas</div><span class="badge by">40% sucesso</span></div>
       <div class="mrow"><div class="mrow-lbl">OL inativa — risco de responsabilização direta</div><span class="badge br">12% sucesso</span></div>
       <div class="ibox danger" style="margin-top:12px;font-size:11px">6 OLs identificadas como <strong>inativas</strong> na carteira — risco crítico de execução direta do iFood</div>
+    </div>
+
+    <!-- Julgadores OL -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title"><span class="dot" style="background:var(--orange-ol)"></span>Julgadores — Operador Logístico (Resp. Subsidiária)</div>
+      <div id="julgadores-ol-list"></div>
     </div>
   </div>
 </section>
@@ -1255,6 +1569,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
       </table>
     </div>
     <div style="font-size:10px;color:var(--gray-text);margin-top:10px">▸ Clique em qualquer linha para expandir os fundamentos da decisão.</div>
+
+    <!-- Julgadores Ex-Foodlover -->
+    <div class="card" style="margin-top:20px;margin-bottom:16px">
+      <div class="card-title"><span class="dot" style="background:var(--purple-ex)"></span>Julgadores — Ex-Foodlover (Ex-Empregados iFood)</div>
+      <div id="julgadores-exfl-list"></div>
+    </div>
   </div>
 
 </section>
@@ -2101,7 +2421,11 @@ const D = {
       'Monitorar juízes Cleusa Coelho, Patricia Velloso e Des. Maria Roseli Alencar.',
       'Atenção com Danilo Batista, Tâmara Rasia, Olga Pilegis — 100% desf. em 1ºG.'
     ]
-  }
+  },
+  julgadores:[
+    {trt:'TST',juiz:'AUGUSTO CÉSAR LEITE DE CARVALHO',vara:'6ª TURMA',favNuvem:'O fundamento central do Ministro sobre o vínculo de emprego é que ele só pode ser reconhecido quando há prova clara de subordinação, habitualidade e dependência econômica, mas, na ausência desses elementos, prevalece o entendimento de que a relação entre entregadores e o iFood é de natureza civil e autônoma, não se configurando vínculo empregatício.',disfNuvem:null,favOL:null,disfOL:'O fundamento central do Ministro sobre a responsabilidade subsidiária é que o iFood, ao se beneficiar diretamente da força de trabalho dos entregadores e ao exercer ingerência sobre a forma de prestação dos serviços, deve responder subsidiariamente por todas as verbas trabalhistas inadimplidas pela empresa contratada, garantindo a efetividade da execução e a proteção dos direitos dos trabalhadores.',favExfl:'O Ministro trata os pedidos dos ex-foodlovers de forma bastante rigorosa, mas equilibrada. Quando há provas sólidas de condutas graves, como fraudes em prospecções ou irregularidades na execução das atividades, ele entende que o iFood se desincumbiu do ônus da prova e que a gravidade da conduta rompeu a confiança necessária para manter o contrato. Nesses casos, confirma a dispensa por justa causa e afasta o pagamento de verbas rescisórias, reforçando que não houve perdão tácito, já que a empresa realizou investigação interna antes de aplicar a penalidade. Por outro lado, também afasta pedidos de horas extras e adicionais quando verifica que o trabalho era externo e não havia controle efetivo de jornada, aplicando a exceção do artigo 62 da CLT. Ele sustenta que não cabe reexame de provas em recurso de revista, de modo que prevalece a decisão regional que reconhece a autonomia do trabalhador e a ausência de fiscalização direta. Além disso, em questões processuais, como a deserção de recurso por irregularidade em seguro garantia judicial, o Ministro admite flexibilizações que permitem o prosseguimento do recurso do iFood, afastando formalismos excessivos e garantindo o direito de defesa da empresa.',disfExfl:null},
+    {trt:'1',juiz:'ALBA VALERIA GUEDES FERNANDES DA SILVA',vara:'10ª TURMA',favNuvem:null,disfNuvem:null,favOL:'Em acórdão mais recente, a Desembargadora excluiu a responsabilidade subsidiária do iFood. Como a plataforma negou expressamente a prestação de serviços na contestação, o ônus passou ao reclamante, que não produziu prova documental nem oral suficiente — o preposto apenas reconheceu que as OLs atuavam na plataforma, o que não comprova que aquele trabalhador específico prestou serviços ao iFood. A confissão ficta das rés revéis também não supriu essa lacuna. A existência de contrato de intermediação entre as empresas, por si só, não basta para gerar responsabilidade subsidiária. No geral, a posição da Desembargadora é casuística: mantém a responsabilidade quando há prova da prestação de serviços em favor do iFood; afasta quando o iFood nega e o autor não comprova individualmente esse vínculo.',disfOL:'A Desembargadora manteve a responsabilidade subsidiária do iFood porque o conjunto probatório era robusto: a própria preposta confirmou em depoimento a existência de contrato com a operadora logística, que o cadastro no iFood era obrigatório para o entregador trabalhar e que era a plataforma quem encaminhava os pedidos. Com isso, o ônus se inverteu para o iFood, que não conseguiu provar a ausência de benefício. A Desembargadora acrescentou ainda o argumento econômico — o iFood cobra comissão maior dos restaurantes no Plano Entrega (23% contra 12% do Plano Básico) sem repassar esse valor aos entregadores, o que evidencia benefício econômico direto. A relação foi enquadrada como terceirização, atraindo a Súmula 331 do TST.',favExfl:null,disfExfl:null}
+  ]
 };
 
 // ═══ CHART REGISTRY ═══
@@ -2135,6 +2459,19 @@ function stab(causa,sub,btn){
   document.querySelectorAll('#st-'+causa+' .stab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   setTimeout(()=>renderSubTab(causa,sub),60);
+}
+
+function stabMetasVg(sub, btn){
+  document.getElementById('metas-vg-maio').style.display = sub==='maio' ? '' : 'none';
+  document.getElementById('metas-vg-comparativo').style.display = sub==='comparativo' ? '' : 'none';
+  document.querySelectorAll('#st-metas-vg .stab').forEach(b=>{
+    b.style.background = 'transparent';
+    b.style.border = '1.5px solid rgba(255,255,255,.25)';
+    b.style.color = 'rgba(255,255,255,.7)';
+  });
+  btn.style.background = 'rgba(255,255,255,.15)';
+  btn.style.border = '1.5px solid rgba(255,255,255,.5)';
+  btn.style.color = '#fff';
 }
 
 // ═══ RENDER BY TAB ═══
@@ -2715,6 +3052,100 @@ function renderBrazilHeatmap(){
       </div>
     </div>`;
   }).join('');
+
+  // ─── Encerrados Maio/26 ─────────────────────────────────────────────────
+  // Dados da aba ENCERRADOS: 20 casos
+  mk('chart-enc-motivo',{
+    type:'bar',
+    data:{
+      labels:['Improcedente p/ iFood','Acordo pela PACT','Accord. Satisfeita Adecco','Exec. Satisfeita iFood','Reclamante Desistiu','Acordo por Nós'],
+      datasets:[{
+        data:[13,3,1,1,1,1],
+        backgroundColor:['#1B7A4E','#1565C0','#607D8B','#2E7D32','#D97B00','#6A1B9A'],
+        borderRadius:5
+      }]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+               tooltip:{callbacks:{label:ctx=>`${ctx.parsed.x} caso${ctx.parsed.x>1?'s':''}`}}},
+      scales:{
+        x:{grid:{color:gridColor},ticks:{font:FONT},title:{display:true,text:'Qtd. casos',font:FONT}},
+        y:{grid:{display:false},ticks:{font:{...FONT,size:10}}}
+      }}
+  });
+
+  // Donut por causa raiz — encerrados
+  const encByCausa=[
+    {label:'OL',vol:9,cor:'#E65100'},
+    {label:'Nuvem',vol:7,cor:'#1565C0'},
+    {label:'Terceirização',vol:3,cor:'#2E7D32'},
+    {label:'Ex-Foodlover',vol:1,cor:'#6A1B9A'}
+  ];
+  mk('chart-enc-causa',{
+    type:'doughnut',
+    data:{
+      labels:encByCausa.map(d=>d.label),
+      datasets:[{data:encByCausa.map(d=>d.vol),backgroundColor:encByCausa.map(d=>d.cor),borderWidth:3,borderColor:'#fff'}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+               tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed} (${(ctx.parsed/20*100).toFixed(0)}%)`}}},
+      cutout:'60%'}
+  });
+  const encLeg=document.getElementById('enc-causa-legend');
+  if(encLeg) encLeg.innerHTML=encByCausa.map(d=>`
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px">
+        <span style="width:9px;height:9px;border-radius:2px;background:${d.cor};display:inline-block;flex-shrink:0"></span>${d.label}
+      </div>
+      <span style="font-size:11px;font-weight:700">${d.vol}</span>
+    </div>
+  `).join('');
+}
+
+
+// ═══ JULGADORES POR CAUSA RAIZ ═══
+function renderJulgadoresList(containerId, causa){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const causaMap = {nuvem:['favNuvem','disfNuvem'],ol:['favOL','disfOL'],exfl:['favExfl','disfExfl']};
+  const [favKey, disfKey] = causaMap[causa] || [];
+  const causeColor = {nuvem:'var(--blue-nuvem)',ol:'var(--orange-ol)',exfl:'var(--purple-ex)'};
+  const color = causeColor[causa] || 'var(--red)';
+
+  const relevant = D.julgadores.filter(j => j[favKey] || j[disfKey]);
+  if(!relevant.length){
+    el.innerHTML = '<div style="font-size:12px;color:var(--gray-text);padding:12px 0">Nenhum julgador registrado para esta causa raiz.</div>';
+    return;
+  }
+
+  el.innerHTML = relevant.map(j => {
+    const hasFav = !!j[favKey];
+    const hasDesf = !!j[disfKey];
+    const trtLabel = j.trt === 'TST' ? 'TST' : ('TRT-' + j.trt);
+    let blocks = '';
+    if(hasFav) blocks += \`
+      <div style="border-left:3px solid var(--green);padding:10px 12px;background:var(--green-light);border-radius:0 6px 6px 0;margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">✅ Entendimento Favorável ao iFood</div>
+        <div style="font-size:11px;color:var(--dark);line-height:1.7">\${j[favKey]}</div>
+      </div>\`;
+    if(hasDesf) blocks += \`
+      <div style="border-left:3px solid var(--red);padding:10px 12px;background:var(--red-light);border-radius:0 6px 6px 0;margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">⚠ Entendimento Desfavorável ao iFood</div>
+        <div style="font-size:11px;color:var(--dark);line-height:1.7">\${j[disfKey]}</div>
+      </div>\`;
+    return \`
+      <div style="border:1px solid var(--gray);border-radius:var(--radius);padding:14px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+          <span style="background:\${color};color:#fff;font-size:10px;font-weight:700;padding:2px 9px;border-radius:4px">\${trtLabel}</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--dark)">\${j.juiz}</div>
+            <div style="font-size:11px;color:var(--gray-text)">\${j.vara}</div>
+          </div>
+        </div>
+        \${blocks}
+      </div>\`;
+  }).join('');
 }
 
 // ═══ NUVEM ═══
@@ -2763,6 +3194,7 @@ function renderNuvemGeral(){
     data:{labels:nvTRTs.map(d=>d.t),datasets:[{data:nvTRTs.map(d=>d.v),backgroundColor:'#1565C0',borderRadius:5}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:gridColor},ticks:{font:FONT}},y:{grid:{display:false},ticks:{font:{...FONT,size:9}}}}}
   });
+  renderJulgadoresList('julgadores-nuvem-list','nuvem');
 }
 function renderNuvemDecisoes(){
   mk('chart-nuvem-dec-breakdown',{type:'doughnut',data:{labels:['Ac. Fav','Ac. Desf','Sent. Desf'],datasets:[{data:[9,5,2],backgroundColor:['#1B7A4E','#E8002D','#FCA5A5'],borderWidth:3,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:FONT,boxWidth:10}}},cutout:'50%'}});
@@ -2784,6 +3216,7 @@ function renderOLGeral(){
   const olTRTs=[{t:'TRT-24 (MS)',p:100},{t:'TRT-04 (RS)',p:75.6},{t:'TRT-14 (RO)',p:75},{t:'TRT-12 (SC)',p:73.9},{t:'TRT-08 (PA)',p:72.4},{t:'TRT-01 (RJ)',p:65.4}];
   mk('chart-ol-trts-dom',{type:'bar',data:{labels:olTRTs.map(d=>d.t),datasets:[{data:olTRTs.map(d=>d.p),backgroundColor:'#E65100',borderRadius:5}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:gridColor},max:100,ticks:{font:FONT}},y:{grid:{display:false},ticks:{font:{...FONT,size:10}}}}}});
   mk('chart-ol-trend',{type:'line',data:{labels:['Set/25','Out/25','Nov/25','Dez/25','Jan/26','Fev/26'],datasets:[{label:'Fav.',data:[5,4,6,5,1,11],borderColor:'#1B7A4E',backgroundColor:'rgba(27,122,78,.08)',tension:.4,pointRadius:4},{label:'Desf.',data:[8,9,7,8,10,12],borderColor:'#E8002D',backgroundColor:'rgba(232,0,45,.08)',tension:.4,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:FONT,boxWidth:8}}},scales:{x:{grid:{color:gridColor},ticks:{font:FONT}},y:{grid:{color:gridColor},ticks:{font:FONT}}}}});
+  renderJulgadoresList('julgadores-ol-list','ol');
 }
 function renderOLDecisoes(){
   mk('chart-ol-dec-pie',{type:'doughnut',data:{labels:['Sent. Fav','Sent. Desf','Ac. Fav','Ac. Desf'],datasets:[{data:[2,5,9,7],backgroundColor:['#1B7A4E','#E8002D','#2E7D32','#B8001F'],borderWidth:3,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:FONT,boxWidth:10}}},cutout:'50%'}});
@@ -2815,6 +3248,7 @@ function renderExflGeral(){
   mk('chart-exfl-res',{type:'bar',data:{labels:['Sentenças','Acórdãos'],datasets:[{label:'Fav.',data:[1,1],backgroundColor:'#6A1B9A',borderRadius:4},{label:'Desf.',data:[2,2],backgroundColor:'#E8002D',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:FONT,boxWidth:8}}},scales:{x:{grid:{display:false},ticks:{font:FONT}},y:{grid:{color:gridColor},ticks:{font:FONT}}}}});
   mk('chart-exfl-trt',{type:'doughnut',data:{labels:['TRT-2 (SP) — 3 dec','TRT-5 (BA) — 1 dec','TRT-17 (ES) — 1 dec','TRT-3 (MG) — 1 dec'],datasets:[{data:[3,1,1,1],backgroundColor:['#6A1B9A','#9C27B0','#AB47BC','#CE93D8'],borderWidth:3,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:FONT,boxWidth:10}}},cutout:'50%'}});
   mk('chart-exfl-trend',{type:'line',data:{labels:['Set/25','Out/25','Nov/25','Dez/25','Jan/26','Fev/26'],datasets:[{label:'Fav.',data:[2,3,1,2,1,2],borderColor:'#6A1B9A',backgroundColor:'rgba(106,27,154,.08)',tension:.4,pointRadius:4},{label:'Desf.',data:[3,2,4,3,4,4],borderColor:'#E8002D',backgroundColor:'rgba(232,0,45,.08)',tension:.4,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:FONT,boxWidth:8}}},scales:{x:{grid:{color:gridColor},ticks:{font:FONT}},y:{grid:{color:gridColor},ticks:{font:FONT}}}}});
+  renderJulgadoresList('julgadores-exfl-list','exfl');
   renderTema1046();
 }
 function renderExflDecisoes(){
@@ -3007,24 +3441,538 @@ function renderSumario(){
 // ═══ UPLOAD ═══
 function openUploadModal(){document.getElementById('modal-upload').classList.add('open');}
 function closeModal(){document.getElementById('modal-upload').classList.remove('open');}
+// ─── Upload state ────────────────────────────────────────────────────────────
+let _uploadedWB = null;
+
 function handleUpload(e){
-  const f=e.target.files[0];if(!f)return;
-  document.getElementById('up-preview').style.display='block';
-  document.getElementById('btn-proc').style.display='flex';
-  const r=new FileReader();
-  r.onload=ev=>{
-    try{
-      const wb=XLSX.read(ev.target.result,{type:'binary'});
-      document.getElementById('up-tabs').innerHTML=wb.SheetNames.map(s=>`<span class="badge bb">${s}</span>`).join('');
-      toast('Arquivo carregado!','success');
-    }catch(err){toast('Erro ao ler o arquivo.','error');}
+  const f = e.target.files[0]; if(!f) return;
+  document.getElementById('up-preview').style.display = 'block';
+  document.getElementById('btn-proc').style.display = 'flex';
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      _uploadedWB = XLSX.read(ev.target.result, {type:'binary'});
+      document.getElementById('up-tabs').innerHTML =
+        _uploadedWB.SheetNames.map(s => `<span class="badge bb">${s}</span>`).join('');
+      toast('Arquivo carregado! Clique em Processar para atualizar.', 'success');
+    } catch(err) { toast('Erro ao ler o arquivo: ' + err.message, 'error'); }
   };
   r.readAsBinaryString(f);
 }
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+function _sheetRows(wb, name){
+  const ws = wb.Sheets[name]; if(!ws) return [];
+  return XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+}
+
+function _causeKey(raw){
+  if(!raw) return null;
+  const s = String(raw).trim().toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(s.includes('NUVEM')) return 'Nuvem';
+  if(s.includes('OL') || s.includes('ENTREGADOR OL') || s.includes('OPERADOR')) return 'OL';
+  if(s.includes('EX-FOOD') || s.includes('EXFL') || s.includes('FOODLOVER')) return 'Ex-Foodlover';
+  if(s.includes('TERCEIR')) return 'Terceirização';
+  if(s.includes('MARKET')) return 'Marketplace';
+  return raw.trim();
+}
+
+function _trtNum(raw){
+  if(!raw) return null;
+  const s = String(raw).trim();
+  // formula like ="TRT "&MID(...)
+  const m = s.match(/(\d+)/);
+  return m ? parseInt(m[1]) : null;
+}
+
+function _normResult(raw){
+  if(!raw) return null;
+  const s = String(raw).trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(s.includes('acordao') && s.includes('fav')) return 'ac_fav';
+  if(s.includes('acordao') && (s.includes('desf') || s.includes('desfa'))) return 'ac_desf';
+  if(s.includes('sentenca') && s.includes('fav')) return 'sent_fav';
+  if(s.includes('sentenca') && (s.includes('desf') || s.includes('desfa'))) return 'sent_desf';
+  if(s.includes('improcedente')) return 'sent_fav';
+  return null;
+}
+
+// ─── Main parser ─────────────────────────────────────────────────────────────
 function processUpload(){
-  const p=document.getElementById('up-prog'),b=document.getElementById('prog-bar');
-  p.style.display='block';let pct=0;
-  const iv=setInterval(()=>{pct+=8;b.style.width=pct+'%';if(pct>=100){clearInterval(iv);setTimeout(()=>{closeModal();toast('Dashboard atualizado — Fevereiro 2026','success');},300);}},70);
+  if(!_uploadedWB){ toast('Carregue um arquivo primeiro.','error'); return; }
+
+  const p = document.getElementById('up-prog'), b = document.getElementById('prog-bar');
+  p.style.display = 'block'; b.style.width = '5%';
+
+  try {
+    const wb = _uploadedWB;
+    const prog = v => { b.style.width = v + '%'; };
+
+    // ── 1. TODOS ─────────────────────────────────────────────────────────────
+    prog(10);
+    const todosRows = _sheetRows(wb, 'TODOS');
+    const todosHdr = todosRows[0] || [];
+    const iCausa = todosHdr.findIndex(h => h && /CAUSA/i.test(h));
+    const iStatus = todosHdr.findIndex(h => h && /STATUS/i.test(h));
+    const iFase = todosHdr.findIndex(h => h && /FASE/i.test(h));
+    const iTRT = todosHdr.findIndex(h => h && /^TRT$/i.test(String(h)));
+
+    // trt label map (TRT column is often a formula string)
+    const trtLabelMap = {
+      1:'TRT-01 (RJ)',2:'TRT-02 (SP)',3:'TRT-03 (MG)',4:'TRT-04 (RS)',
+      5:'TRT-05 (BA)',6:'TRT-06 (PE)',7:'TRT-07 (CE)',8:'TRT-08 (PA/AP)',
+      9:'TRT-09 (PR)',10:'TRT-10 (DF/TO)',11:'TRT-11 (AM/RR)',12:'TRT-12 (SC)',
+      13:'TRT-13 (PB)',14:'TRT-14 (RO/AC)',15:'TRT-15 (SP-Int)',
+      16:'TRT-16 (MA)',17:'TRT-17 (ES)',18:'TRT-18 (GO)',19:'TRT-19 (AL)',
+      20:'TRT-20 (SE)',21:'TRT-21 (RN)',22:'TRT-22 (PI)',23:'TRT-23 (MT)',
+      24:'TRT-24 (MS)'
+    };
+    const trtDomainPhrases = {
+      'Nuvem':  'Nuvem — Vínculo iFood',
+      'OL':     'OL — Resp. Subsidiária',
+      'Ex-Foodlover': 'Ex-Empregado',
+      'Terceirização':'Terceirização',
+      'Marketplace':  'Marketplace'
+    };
+    const causeColors = {
+      'Nuvem':'#1565C0','OL':'#E65100','Ex-Foodlover':'#6A1B9A',
+      'Terceirização':'#2E7D32','Marketplace':'#00695C'
+    };
+
+    // Accumulators
+    const causaVol = {}, trtVol = {}, trtCausa = {}, faseVol = {}, causaFase = {};
+    let totalAtivos = 0, totalEncerrados = 0;
+
+    for(const row of todosRows.slice(1)){
+      if(!row || row.every(c => c === null)) continue;
+      const causa = _causeKey(row[iCausa]);
+      const status = row[iStatus] ? String(row[iStatus]).trim().toUpperCase() : null;
+      const fase = row[iFase] ? String(row[iFase]).trim().toUpperCase() : null;
+      const trtRaw = row[iTRT];
+      const trtNum = _trtNum(trtRaw);
+
+      if(status === 'ATIVO'){
+        totalAtivos++;
+        if(causa){
+          causaVol[causa] = (causaVol[causa]||0) + 1;
+          if(trtNum){
+            if(!trtVol[trtNum]) trtVol[trtNum] = {total:0, causes:{}};
+            trtVol[trtNum].total++;
+            trtVol[trtNum].causes[causa] = (trtVol[trtNum].causes[causa]||0) + 1;
+          }
+          if(fase && fase !== 'ENCERRADO'){
+            const faseLabel = fase.charAt(0) + fase.slice(1).toLowerCase();
+            if(!causaFase[causa]) causaFase[causa] = {};
+            causaFase[causa][faseLabel] = (causaFase[causa][faseLabel]||0) + 1;
+            faseVol[faseLabel] = (faseVol[faseLabel]||0) + 1;
+          }
+        }
+      } else if(status === 'ENCERRADO'){
+        totalEncerrados++;
+      }
+    }
+
+    // Build causaRaiz array (ordered by volume)
+    const causeOrder = ['Nuvem','OL','Ex-Foodlover','Terceirização','Marketplace'];
+    const causaRaizNew = causeOrder
+      .filter(c => causaVol[c])
+      .map(c => ({label:c, vol:causaVol[c], cor:causeColors[c]}));
+    // add unknowns
+    for(const [k,v] of Object.entries(causaVol)){
+      if(!causeOrder.includes(k)) causaRaizNew.push({label:k,vol:v,cor:'#9E9E9E'});
+    }
+
+    prog(25);
+
+    // Build trtFull + trts top10
+    const trtFullNew = Object.entries(trtVol)
+      .sort((a,b) => b[1].total - a[1].total)
+      .map(([num, data]) => {
+        const n = parseInt(num);
+        const label = trtLabelMap[n] || ('TRT-' + String(n).padStart(2,'0'));
+        let domCause = null, domVol = 0;
+        for(const [c,v] of Object.entries(data.causes)){
+          if(v > domVol){ domVol = v; domCause = c; }
+        }
+        const domPhrase = domCause ? (trtDomainPhrases[domCause]||domCause) : '—';
+        const pct = data.total > 0 ? +(domVol/data.total*100).toFixed(1) : 0;
+        return {trt:label, vol:data.total, dom:domPhrase, pct, decFev:0};
+      });
+
+    const trtsNew = [...trtFullNew]
+      .sort((a,b) => b.vol - a.vol)
+      .slice(0,10)
+      .map(t => {
+        const domSimple = causeOrder.find(c => t.dom.includes(c.split('-')[0].substring(0,4))) || t.dom;
+        return {trt:t.trt, vol:t.vol, dom:domSimple, pct:t.pct};
+      });
+
+    prog(40);
+
+    // ── 2. DECISÕES ───────────────────────────────────────────────────────────
+    const decRows = _sheetRows(wb, 'Decisões');
+    const decHdr = decRows[0] || [];
+    const iResCol = decHdr.findIndex(h => h && /RESULTADO/i.test(h));
+    const iJuizCol = decHdr.findIndex(h => h && /JUIZ/i.test(h));
+    const iVaraTCol = decHdr.findIndex(h => h && /VARA/i.test(h));
+    const iCausaDec = decHdr.findIndex(h => h && /CAUSA/i.test(h));
+    const iTRTDec = decHdr.findIndex(h => h && /^TRT$/i.test(String(h)));
+
+    let acFav=0, acDesf=0, sentFav=0, sentDesf=0;
+    const decByCausa = {}; // causa -> {ac_fav,ac_desf,sent_fav,sent_desf}
+    const decByTRT = {};
+
+    for(const row of decRows.slice(1)){
+      if(!row) continue;
+      const res = _normResult(row[iResCol]);
+      if(!res) continue;
+      if(res==='ac_fav') acFav++;
+      else if(res==='ac_desf') acDesf++;
+      else if(res==='sent_fav') sentFav++;
+      else if(res==='sent_desf') sentDesf++;
+
+      const causa = _causeKey(row[iCausaDec]);
+      if(causa){
+        if(!decByCausa[causa]) decByCausa[causa] = {ac_fav:0,ac_desf:0,sent_fav:0,sent_desf:0};
+        decByCausa[causa][res]++;
+      }
+      const trtDecNum = _trtNum(row[iTRTDec]);
+      if(trtDecNum){
+        if(!decByTRT[trtDecNum]) decByTRT[trtDecNum] = {fav:0,desf:0};
+        if(res.includes('fav')) decByTRT[trtDecNum].fav++;
+        else decByTRT[trtDecNum].desf++;
+      }
+    }
+
+    const total1g = sentFav + sentDesf;
+    const total2g = acFav + acDesf;
+    const taxa1g = total1g > 0 ? +(sentFav/total1g*100).toFixed(2) : 0;
+    const taxa2g = total2g > 0 ? +(acFav/total2g*100).toFixed(2) : 0;
+    const totalDec = total1g + total2g;
+    const totalFav = sentFav + acFav;
+    const totalDesf = sentDesf + acDesf;
+
+    prog(55);
+
+    // ── 3. ENCERRADOS ─────────────────────────────────────────────────────────
+    const encRows = _sheetRows(wb, 'ENCERRADOS');
+    const encHdr = encRows[0] || [];
+    const iEncCausa = encHdr.findIndex(h => h && /CAUSA/i.test(h));
+    const iEncMotivo = encHdr.findIndex(h => h && /MOTIVO/i.test(h));
+
+    const encByCausa = {}, encByMotivo = {};
+    const acordos = [];
+
+    for(const row of encRows.slice(1)){
+      if(!row) continue;
+      const causa = _causeKey(row[iEncCausa]);
+      const motivo = row[iEncMotivo] ? String(row[iEncMotivo]).trim() : null;
+      if(causa) encByCausa[causa] = (encByCausa[causa]||0) + 1;
+      if(motivo){
+        encByMotivo[motivo] = (encByMotivo[motivo]||0) + 1;
+        if(motivo.toUpperCase().includes('ACORDO')){
+          acordos.push({
+            causa: causa||'—',
+            trt: row[1] ? String(row[1]) : '—',
+            processo: row[2] ? String(row[2]) : '—',
+            reclamante: row[3] ? String(row[3]) : '—',
+            motivo
+          });
+        }
+      }
+    }
+    const totalEnc = encRows.length - 1;
+
+    prog(65);
+
+    // ── 4. JULGADORES ─────────────────────────────────────────────────────────
+    const julgRows = _sheetRows(wb, 'JULGADORES');
+    const julgHdr = julgRows[0] || [];
+    const iJTRT = julgHdr.findIndex(h => h && /^TRT$/i.test(String(h)));
+    const iJJuiz = julgHdr.findIndex(h => h && /JUIZ/i.test(h));
+    const iJVara = julgHdr.findIndex(h => h && /VARA/i.test(h));
+    const iJFavN = julgHdr.findIndex(h => h && /FAV.*NUVEM/i.test(h));
+    const iJDesfN = julgHdr.findIndex(h => h && /DESF.*NUVEM/i.test(h));
+    const iJFavOL = julgHdr.findIndex(h => h && /FAV.*OL/i.test(h));
+    const iJDesfOL = julgHdr.findIndex(h => h && /DESF.*OL/i.test(h));
+    const iJFavEx = julgHdr.findIndex(h => h && /FAV.*EX/i.test(h));
+    const iJDesfEx = julgHdr.findIndex(h => h && /DESF.*EX/i.test(h));
+
+    const julgNew = [];
+    for(const row of julgRows.slice(1)){
+      if(!row || !row[iJJuiz]) continue;
+      const na = v => (!v || String(v).trim().toUpperCase() === 'N/A') ? null : String(v).trim();
+      julgNew.push({
+        trt: row[iJTRT] ? String(row[iJTRT]).trim() : '',
+        juiz: row[iJJuiz] ? String(row[iJJuiz]).trim() : '',
+        vara: row[iJVara] ? String(row[iJVara]).trim() : '',
+        favNuvem:  na(row[iJFavN]),  disfNuvem: na(row[iJDesfN]),
+        favOL:     na(row[iJFavOL]), disfOL:    na(row[iJDesfOL]),
+        favExfl:   na(row[iJFavEx]), disfExfl:  na(row[iJDesfEx])
+      });
+    }
+
+    prog(78);
+
+    // ── 5. Novos Casos Recebidos (para "novas ações") ─────────────────────────
+    const novosRows = _sheetRows(wb, 'Novos Casos Recebidos');
+    let totalNovos = 0;
+    for(const row of novosRows.slice(1)){
+      if(!row || !row[1]) continue;
+      const v = parseFloat(String(row[1]).replace(',','.'));
+      if(!isNaN(v)) totalNovos += v;
+    }
+    // Fallback: count from TODOS (rows added this month won't be known, so 0 if sheet empty)
+    if(totalNovos === 0 && novosRows.length <= 2) totalNovos = 0;
+
+    // ── 6. Detect month from sheet name or first data row ────────────────────
+    const mesDetect = (() => {
+      const nomes = wb.SheetNames.join(' ');
+      const m = nomes.match(/(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[A-Z]*[\s\/\-]*(\d{4})/i);
+      if(m){
+        const map={JAN:'Janeiro',FEV:'Fevereiro',MAR:'Março',ABR:'Abril',
+          MAI:'Maio',JUN:'Junho',JUL:'Julho',AGO:'Agosto',
+          SET:'Setembro',OUT:'Outubro',NOV:'Novembro',DEZ:'Dezembro'};
+        return (map[m[1].toUpperCase().substring(0,3)]||m[1]) + ' ' + m[2];
+      }
+      return D.mes; // keep existing if not detected
+    })();
+
+    prog(88);
+
+    // ── 7. Metas dinâmicas ───────────────────────────────────────────────────
+    // Base line from existing D (or 1313 for cycle baseline)
+    const baselineEnc = 1313;
+    const metaEncPct = +(totalEnc/baselineEnc*100).toFixed(2);
+    const metaEnc_ok = metaEncPct >= 20;
+
+    const meta2_target = 44.09, meta3_target = 29.87;
+    const meta2_ok = taxa1g >= meta2_target;
+    const meta3_ok = taxa2g >= meta3_target;
+    const meta4_ok = acordos.length > 0 ? 'parcial' : false;
+
+    // ── 8. Patch D object ────────────────────────────────────────────────────
+    prog(92);
+
+    // Core arrays
+    D.mes = mesDetect;
+    D.causaRaiz = causaRaizNew;
+    D.trts = trtsNew;
+    D.trtFull = trtFullNew;
+    D.julgadores = julgNew;
+
+    // Decisões summary (stored so renderVisaoGeral can use)
+    D._dec = { acFav, acDesf, sentFav, sentDesf, total1g, total2g,
+               totalDec, totalFav, totalDesf, taxa1g, taxa2g };
+
+    // Encerrados
+    D._enc = { totalEnc, byCausa: encByCausa, byMotivo: encByMotivo, acordos };
+
+    // Metas
+    D._metas = {
+      enc: { val: totalEnc, pct: metaEncPct, ok: metaEnc_ok },
+      m2:  { val: taxa1g,   total1g, sentFav, sentDesf, ok: meta2_ok },
+      m3:  { val: taxa2g,   total2g, acFav,   acDesf,   ok: meta3_ok },
+      m4:  { acordos, ok: meta4_ok }
+    };
+
+    // Novos
+    D._novos = totalNovos;
+
+    prog(96);
+
+    // ── 9. Refresh UI ────────────────────────────────────────────────────────
+    // Update static KPI cards in Visão Geral
+    _updateKPICards(totalAtivos, totalEncerrados, totalFav, totalDesf, totalNovos, mesDetect);
+
+    // Update title
+    const titleEl = document.querySelector('title');
+    if(titleEl) titleEl.textContent = `FA Advogados × iFood — Gestão Jurídica Trabalhista — ${mesDetect}`;
+
+    // Update metas section
+    _updateMetasSection();
+
+    // Destroy all charts and re-render current tab
+    Object.keys(CH).forEach(k => { try{ CH[k].destroy(); }catch(e){} delete CH[k]; });
+    setTimeout(() => renderTab(activeTab), 80);
+
+    prog(100);
+    setTimeout(() => {
+      closeModal();
+      toast(`Dashboard atualizado — ${mesDetect}`, 'success');
+      p.style.display = 'none'; b.style.width = '0%';
+    }, 400);
+
+  } catch(err) {
+    toast('Erro ao processar: ' + err.message, 'error');
+    console.error(err);
+  }
+}
+
+// ── Update static KPI strip ───────────────────────────────────────────────────
+function _updateKPICards(ativos, encTotal, favDec, desfDec, novos, mes){
+  const totalDec = favDec + desfDec;
+  const pctFav = totalDec > 0 ? (favDec/totalDec*100).toFixed(1) : '0.0';
+  const qs = s => document.querySelector(s);
+  // Processos Ativos
+  const kvs = document.querySelectorAll('.kpi-value');
+  const klbs = document.querySelectorAll('.kpi-label');
+  kvs.forEach((el,i) => {
+    const lbl = klbs[i] ? klbs[i].textContent.trim() : '';
+    if(lbl.includes('Processos Ativos')) el.textContent = ativos.toLocaleString('pt-BR');
+    if(lbl.includes('Encerrados') && !lbl.includes('Decisão')) el.textContent = encTotal.toLocaleString('pt-BR');
+    if(lbl.includes('Favoráveis') && lbl.includes('Decisões')) el.textContent = favDec;
+    if(lbl.includes('Desfavoráveis') && lbl.includes('Decisões')) el.textContent = desfDec;
+    if(lbl.includes('Novas Ações')) el.textContent = novos;
+  });
+  // Donut center
+  const dc = document.querySelector('#chart-donut-causa')?.parentElement?.querySelector('div > div');
+  if(dc) { const sp = dc.querySelectorAll('div'); if(sp[0]) sp[0].textContent = ativos.toLocaleString('pt-BR'); }
+}
+
+// ── Update Metas section ──────────────────────────────────────────────────────
+function _updateMetasSection(){
+  if(!D._metas) return;
+  const m = D._metas;
+  const enc = m.enc, m2 = m.m2, m3 = m.m3, m4 = m.m4;
+
+  // Helper to update a meta card
+  function patchCard(idx, val, subtext, pctBar, achouLabel, ok){
+    const cards = document.querySelectorAll('#metas-vg-maio > div:first-child > div');
+    const card = cards[idx]; if(!card) return;
+    const big = card.querySelector('div[style*="Playfair Display"]');
+    const sub = big ? big.nextElementSibling : null;
+    const bar = card.querySelector('div[style*="height:6px"]>div');
+    const badge = card.querySelector('div[style*="display:inline-block"]');
+    if(big) big.textContent = val;
+    if(sub) sub.textContent = subtext;
+    if(bar){ bar.style.width = Math.min(pctBar,100).toFixed(1)+'%'; }
+    if(badge){
+      if(ok === true){ badge.textContent='✓ ACIMA'; badge.style.background='var(--green)'; card.style.borderTopColor='var(--green)'; card.style.background='var(--green-light)'; }
+      else if(ok === 'parcial'){ badge.textContent='⚠ PARCIAL'; badge.style.background='var(--yellow)'; card.style.borderTopColor='var(--yellow)'; card.style.background='var(--yellow-light)'; }
+      else { badge.textContent='✗ ABAIXO'; badge.style.background='var(--red)'; card.style.borderTopColor='var(--red)'; card.style.background='var(--red-light)'; }
+    }
+    // label row
+    const spans = card.querySelectorAll('div[style*="justify-content:space-between"] span');
+    if(spans[0]) spans[0].textContent = achouLabel;
+  }
+
+  patchCard(0,
+    enc.val + '',
+    enc.val + ' processo' + (enc.val!==1?'s':'') + ' encerrado' + (enc.val!==1?'s':''),
+    enc.pct / 20 * 100,
+    enc.pct.toFixed(2) + '% alcançado',
+    enc.ok
+  );
+  patchCard(1,
+    m2.val.toFixed(1) + '%',
+    m2.sentFav + ' vitória' + (m2.sentFav!==1?'s':'') + ' de ' + m2.total1g + ' decisões',
+    m2.val / 44.09 * 100,
+    m2.ok ? '+' + (m2.val - 44.09).toFixed(1) + ' p.p. acima' : (m2.val - 44.09).toFixed(1) + ' p.p.',
+    m2.ok
+  );
+  patchCard(2,
+    m3.val.toFixed(1) + '%',
+    m3.acFav + ' vitória' + (m3.acFav!==1?'s':'') + ' de ' + m3.total2g + ' acórdãos',
+    m3.val / 29.87 * 100,
+    m3.ok ? '+' + (m3.val - 29.87).toFixed(1) + ' p.p. acima' : (m3.val - 29.87).toFixed(1) + ' p.p.',
+    m3.ok
+  );
+  patchCard(3,
+    String(m4.acordos.length),
+    m4.acordos.length + ' acordo' + (m4.acordos.length!==1?'s':'') + ' no mês',
+    m4.acordos.length > 0 ? 50 : 0,
+    m4.acordos.length > 0 ? m4.acordos.length + ' acordo(s) realizados' : 'nenhum acordo',
+    m4.ok
+  );
+
+  // Consolidação decisões
+  const d = D._dec;
+  const cEls = document.querySelectorAll('#metas-vg-maio .consolidacao-num');
+  // Use data-target attribute approach — simpler: just re-render the block
+  const consEl = document.getElementById('metas-dec-consolidacao');
+  if(consEl && d){
+    const tot = d.totalDec, fav = d.totalFav, desf = d.totalDesf;
+    const pf = tot>0 ? (fav/tot*100).toFixed(1) : '0.0';
+    const pd = tot>0 ? (desf/tot*100).toFixed(1) : '0.0';
+    consEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+        <div style="text-align:center;flex:1"><div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--dark)">${tot}</div><div style="font-size:10px;color:var(--gray-text);text-transform:uppercase">Total Decisões</div></div>
+        <div style="text-align:center;flex:1"><div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--green)">${fav}</div><div style="font-size:10px;color:var(--gray-text);text-transform:uppercase">Vitórias (${pf}%)</div></div>
+        <div style="text-align:center;flex:1"><div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--red)">${desf}</div><div style="font-size:10px;color:var(--gray-text);text-transform:uppercase">Derrotas (${pd}%)</div></div>
+      </div>
+      <div style="height:10px;background:var(--gray);border-radius:5px;overflow:hidden">
+        <div style="height:10px;width:${pf}%;background:var(--green);border-radius:5px 0 0 5px;float:left"></div>
+        <div style="height:10px;width:${pd}%;background:var(--red);border-radius:0 5px 5px 0;float:left"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px">
+        <span><strong>1ª Inst.:</strong> ${d.sentFav} fav / ${d.sentDesf} desf → ${d.taxa1g.toFixed(1)}%</span>
+        <span><strong>2ª Inst.:</strong> ${d.acFav} fav / ${d.acDesf} desf → ${d.taxa2g.toFixed(1)}%</span>
+      </div>`;
+  }
+
+  // Acordos list
+  const acEl = document.getElementById('metas-acordos-list');
+  if(acEl){
+    if(m4.acordos.length === 0){
+      acEl.innerHTML = '<div class="ibox warn" style="font-size:11px">Nenhum acordo registrado neste mês.</div>';
+    } else {
+      acEl.innerHTML = m4.acordos.map(a => `
+        <div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:6px;padding:8px 12px;margin-bottom:6px;border-left:3px solid ${causeColors[a.causa]||'#9E9E9E'}">
+          <div>
+            <div style="font-size:11px;font-weight:700">${a.motivo}</div>
+            <div style="font-size:10px;color:var(--gray-text)">${a.causa} · TRT-${a.trt} · ${a.reclamante}</div>
+          </div>
+          <span style="font-size:9px;font-weight:700;background:${causeColors[a.causa]||'#9E9E9E'};color:#fff;padding:2px 7px;border-radius:3px">${a.causa}</span>
+        </div>`).join('');
+    }
+  }
+
+  // Encerrados charts
+  _updateEncChart();
+}
+const causeColors = {'Nuvem':'#1565C0','OL':'#E65100','Ex-Foodlover':'#6A1B9A','Terceirização':'#2E7D32','Marketplace':'#00695C'};
+
+function _updateEncChart(){
+  if(!D._enc) return;
+  const e = D._enc;
+  // Sort motivo by count desc
+  const motivos = Object.entries(e.byMotivo).sort((a,b)=>b[1]-a[1]);
+  mk('chart-enc-motivo',{
+    type:'bar',
+    data:{
+      labels: motivos.map(([k])=>k),
+      datasets:[{data:motivos.map(([,v])=>v),
+        backgroundColor:['#1B7A4E','#1565C0','#607D8B','#2E7D32','#D97B00','#6A1B9A'],
+        borderRadius:5}]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.parsed.x} caso${ctx.parsed.x>1?'s':''}`}}},
+      scales:{x:{grid:{color:gridColor},ticks:{font:FONT}},y:{grid:{display:false},ticks:{font:{...FONT,size:10}}}}}
+  });
+  const encCausaOrder = Object.entries(e.byCausa).sort((a,b)=>b[1]-a[1]);
+  const total = encCausaOrder.reduce((s,[,v])=>s+v,0);
+  mk('chart-enc-causa',{
+    type:'doughnut',
+    data:{
+      labels:encCausaOrder.map(([k])=>k),
+      datasets:[{data:encCausaOrder.map(([,v])=>v),
+        backgroundColor:encCausaOrder.map(([k])=>causeColors[k]||'#9E9E9E'),
+        borderWidth:3,borderColor:'#fff'}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed} (${total>0?(ctx.parsed/total*100).toFixed(0):0}%)`}}},
+      cutout:'60%'}
+  });
+  const encLeg = document.getElementById('enc-causa-legend');
+  if(encLeg) encLeg.innerHTML = encCausaOrder.map(([k,v])=>`
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px">
+        <span style="width:9px;height:9px;border-radius:2px;background:${causeColors[k]||'#9E9E9E'};display:inline-block;flex-shrink:0"></span>${k}
+      </div>
+      <span style="font-size:11px;font-weight:700">${v}</span>
+    </div>`).join('');
 }
 const dz=document.getElementById('dz');
 if(dz){

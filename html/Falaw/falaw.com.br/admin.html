@@ -9733,11 +9733,26 @@ function _xlChartOutcomeByGroup(labels, favData, desfData, detailTitle, favDetai
 
 function _xlFaseValida(fase) { return fase && !fase.toLowerCase().includes('arquiv'); }
 
-function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391, decisoesTabela, julgadoresData) {
+function _xlParseEncerrados(rawRows) {
+  // Colunas esperadas: CAUSA RAIZ(0), TRT(1), PROCESSO Nº(2), RECLAMANTE(3), MOTIVO DO ENCERRAMENTO(4)
+  return rawRows.map(r => {
+    if (!r || !r[2]) return null;
+    return {
+      causa_raiz: String(r[0] || '').trim(),
+      trt:        String(r[1] || '').trim(),
+      processo:   String(r[2] || '').trim(),
+      reclamante: String(r[3] || '').trim(),
+      motivo:     String(r[4] || '').trim(),
+    };
+  }).filter(Boolean).filter(r => r.processo);
+}
+
+function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391, decisoesTabela, julgadoresData, encerradosData) {
   // decisoesTabela: decisões do arquivo separado — aparecem apenas nas tabelas, não nos contadores
   // julgadoresData: linhas da aba Julgadores — usadas para table_fund_vg
   decisoesTabela = decisoesTabela || [];
   julgadoresData = julgadoresData || [];
+  encerradosData = encerradosData || [];
   const rows = []; let so = 0;
   const push = (tabKey, kpiKey, label, value, unit, chartData, chartTitle) => {
     rows.push({ id:ifoodId(), period_id:periodId, tab_key:tabKey, kpi_key:kpiKey, label, value:String(value), unit:unit||'', chart_data:chartData||null, chart_title:chartTitle||'', sort_order:so++, trend_pct:null });
@@ -9836,7 +9851,48 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   push('visao-geral','decisoes_fav','Decisões Favoráveis',_xlFmtBr(decF),`(${_xlFmtPct(decF,decTot)})`);
   push('visao-geral','decisoes_desf','Decisões Desfavoráveis',_xlFmtBr(decD),`(${_xlFmtPct(decD,decTot)})`);
 
-  // Novos casos por causa raiz
+  // ── ENCERRADOS — gráficos da aba ENCERRADOS ───────────────────────────────
+  if (encerradosData.length) {
+    // Gráfico 1: por motivo (barra horizontal)
+    const motivoC = _xlCounter(encerradosData.map(r => r.motivo || 'Não informado'));
+    const motivoTop = _xlTopN(motivoC, 15);
+    if (motivoTop.length) {
+      push('visao-geral','chart_enc_motivo','Encerrados por Motivo','','',
+        _xlChartBar(motivoTop.map(([l])=>l), motivoTop.map(([,v])=>v), 'Processos', '#0D2B5E', true),
+        'Encerrados por Motivo de Encerramento');
+    }
+    // Gráfico 2: por causa raiz (donut)
+    const encCrC = _xlCounter(encerradosData.map(r => {
+      const tab = _XL_CR_TABS.find(t => t.cr === _xlCanonCR(r.causa_raiz));
+      return tab ? tab.label : (r.causa_raiz || 'Outros');
+    }));
+    const encCrTop = _xlTopN(encCrC, 10);
+    if (encCrTop.length) {
+      push('visao-geral','chart_enc_causa','Encerrados por Causa Raiz',_xlFmtBr(encerradosData.length),'encerrados',
+        _xlChartDoughnut(encCrTop.map(([l])=>l), encCrTop.map(([,v])=>v)),
+        'Encerrados por Causa Raiz');
+    }
+    // Acordos: motivos que contêm "ACORDO"
+    const acordos = encerradosData.filter(r => r.motivo && r.motivo.toUpperCase().includes('ACORDO'));
+    push('visao-geral','enc_acordos_total','Acordos no Período',_xlFmtBr(acordos.length),'acordos');
+    // Meta de improcedência: casos encerrados com "IMPROCEDENTE PARA O IFOOD"
+    const improcedentes = encerradosData.filter(r => r.motivo && r.motivo.toUpperCase().includes('IMPROCEDENTE'));
+    if (improcedentes.length) {
+      push('visao-geral','enc_improcedentes','Encerrados — Improcedentes',_xlFmtBr(improcedentes.length),'encerrados');
+    }
+  }
+
+  // ── METAS — taxas de favorabilidade por instância ─────────────────────────
+  {
+    const _dec1G = decisoes.filter(d => d.tipo === 'Sentença');
+    const _dec2G = decisoes.filter(d => d.tipo === 'Acórdão' || d.tipo === 'TST');
+    const _fav1G = _dec1G.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
+    const _fav2G = _dec2G.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
+    if (_dec1G.length) push('visao-geral','meta_taxa_1g','Taxa Favorabilidade 1ª Instância',_xlFmtPct(_fav1G, _dec1G.length),'%');
+    if (_dec2G.length) push('visao-geral','meta_taxa_2g','Taxa Favorabilidade 2ª Instância',_xlFmtPct(_fav2G, _dec2G.length),'%');
+    const taxa_geral = decTot > 0 ? Math.round(100 * decF / decTot) : null;
+    if (taxa_geral !== null) push('visao-geral','meta_taxa_geral','Taxa Favorabilidade Geral',String(taxa_geral),'%');
+  }
   for (const [cr, cnt] of Object.entries(novosByCR)) {
     const crTab = _XL_CR_TABS.find(t=>t.cr===cr);
     const crLabel = crTab ? crTab.label : cr;
@@ -10254,8 +10310,11 @@ async function ifoodSaveExcel() {
     const susp1291Sh = findSh('Suspensos Tema 1291','1291','susp 1291');
     const susp1291 = susp1291Sh ? XLSX.utils.sheet_to_json(susp1291Sh,{header:1,defval:''}).slice(1) : [];
 
+    const encSh = findSh('ENCERRADOS','Encerrados','encerrados');
+    const encerradosData = encSh ? _xlParseEncerrados(XLSX.utils.sheet_to_json(encSh,{header:1,defval:''}).slice(1)) : [];
+
     setStatus(`Computando KPIs… (${decisoes.length} decisões, ${novos.total} novos casos)`);
-    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291, decisoesTabela, julgadoresData);
+    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291, decisoesTabela, julgadoresData, encerradosData);
 
     // Upload do arquivo Excel bruto para Cockroach (quando API configurada)
     let ifoodExcelFileUrl = null;
