@@ -1858,42 +1858,39 @@
         <!-- META 1 -->
         <div class="metas-card">
           <h4>🏁 Meta 1 — Encerramento da Base</h4>
+          <p style="font-size:11px;color:var(--c-muted);margin:0 0 10px">Base inicial é lida automaticamente dos ativos do período anterior. No <strong>primeiro período</strong>, informe manualmente. Realizado é calculado pelo Excel.</p>
           <div class="metas-grid">
-            <div class="form-field"><label>Base Inicial (processos)</label><input type="number" id="m1_base" placeholder="1313"></div>
-            <div class="form-field"><label>Meta % Encerramento</label><input type="number" id="m1_meta_pct" placeholder="20" step="0.01"></div>
-            <div class="form-field"><label>Encerrados no Mês</label><input type="number" id="m1_realizado" placeholder="-5"></div>
-            <div class="form-field"><label>Base Atual (remanescente)</label><input type="number" id="m1_base_atual" placeholder="1318"></div>
+            <div class="form-field"><label>Base Inicial do Ciclo (processos)</label><input type="number" id="m1_base_ciclo" placeholder="1313"></div>
+            <div class="form-field"><label>Meta % Encerramento (contrato)</label><input type="number" id="m1_meta_pct" placeholder="20" step="0.01"></div>
           </div>
         </div>
 
         <!-- META 2 -->
         <div class="metas-card">
           <h4>⚖️ Meta 2 — Taxa de Êxito em 1ª Instância</h4>
+          <p style="font-size:11px;color:var(--c-muted);margin:0 0 10px">Decisões e favoráveis são calculados automaticamente pelo Excel. Configure apenas baseline e alvo.</p>
           <div class="metas-grid">
             <div class="form-field"><label>Baseline Histórico (%)</label><input type="number" id="m2_baseline" placeholder="38.34" step="0.01"></div>
-            <div class="form-field"><label>Meta Alvo (%)</label><input type="number" id="m2_alvo" placeholder="44.09" step="0.01"></div>
-            <div class="form-field"><label>Total Decisões 1G</label><input type="number" id="m2_decisoes" placeholder="7"></div>
-            <div class="form-field"><label>Decisões Favoráveis 1G</label><input type="number" id="m2_favoraveis" placeholder="0"></div>
+            <div class="form-field"><label>Meta Alvo (%) <small style="font-weight:400">ex: baseline × 1.15</small></label><input type="number" id="m2_alvo" placeholder="44.09" step="0.01"></div>
           </div>
         </div>
 
         <!-- META 3 -->
         <div class="metas-card">
           <h4>🏛️ Meta 3 — Taxa de Êxito em 2ª Instância</h4>
+          <p style="font-size:11px;color:var(--c-muted);margin:0 0 10px">Decisões e favoráveis são calculados automaticamente pelo Excel. Configure apenas baseline e alvo.</p>
           <div class="metas-grid">
             <div class="form-field"><label>Baseline Histórico (%)</label><input type="number" id="m3_baseline" placeholder="25.97" step="0.01"></div>
-            <div class="form-field"><label>Meta Alvo (%)</label><input type="number" id="m3_alvo" placeholder="29.87" step="0.01"></div>
-            <div class="form-field"><label>Total Decisões 2G</label><input type="number" id="m3_decisoes" placeholder="24"></div>
-            <div class="form-field"><label>Decisões Favoráveis 2G</label><input type="number" id="m3_favoraveis" placeholder="6"></div>
+            <div class="form-field"><label>Meta Alvo (%) <small style="font-weight:400">ex: baseline × 1.15</small></label><input type="number" id="m3_alvo" placeholder="29.87" step="0.01"></div>
           </div>
         </div>
 
         <!-- META 4 -->
         <div class="metas-card">
           <h4>🤝 Meta 4 — Economia em Acordos</h4>
+          <p style="font-size:11px;color:var(--c-muted);margin:0 0 10px">Quantidade de acordos é calculada automaticamente (ENCERRADOS com motivo "ACORDO"). Informe a meta contratual e a economia obtida após fechar os acordos.</p>
           <div class="metas-grid">
-            <div class="form-field"><label>Meta Economia (%)</label><input type="number" id="m4_meta_pct" placeholder="15" step="0.01"></div>
-            <div class="form-field"><label>Acordos Realizados</label><input type="number" id="m4_acordos" placeholder="0"></div>
+            <div class="form-field"><label>Meta Economia (% contrato)</label><input type="number" id="m4_meta_pct" placeholder="15" step="0.01"></div>
             <div class="form-field"><label>Economia Obtida (%)</label><input type="number" id="m4_economia" placeholder="0" step="0.01"></div>
           </div>
         </div>
@@ -8781,20 +8778,13 @@ async function ifoodLoadMetas() {
   if (!Array.isArray(data)) return;
   const fk = key => data.find(k => k.kpi_key === key);
   const val = key => { const k = fk(key); return k ? String(k.value) : ''; };
-  document.getElementById('m1_base').value       = val('meta_m1_base');
+  document.getElementById('m1_base_ciclo').value = val('meta_m1_base_ciclo');
   document.getElementById('m1_meta_pct').value   = val('meta_m1_pct_alvo');
-  document.getElementById('m1_realizado').value  = val('meta_m1_realizado');
-  document.getElementById('m1_base_atual').value = val('meta_m1_base_atual');
   document.getElementById('m2_baseline').value   = val('meta_m2_baseline');
   document.getElementById('m2_alvo').value       = val('meta_m2_alvo');
-  document.getElementById('m2_decisoes').value   = val('meta_m2_decisoes');
-  document.getElementById('m2_favoraveis').value = val('meta_m2_favoraveis');
   document.getElementById('m3_baseline').value   = val('meta_m3_baseline');
   document.getElementById('m3_alvo').value       = val('meta_m3_alvo');
-  document.getElementById('m3_decisoes').value   = val('meta_m3_decisoes');
-  document.getElementById('m3_favoraveis').value = val('meta_m3_favoraveis');
   document.getElementById('m4_meta_pct').value   = val('meta_m4_meta_pct');
-  document.getElementById('m4_acordos').value    = val('meta_m4_acordos');
   document.getElementById('m4_economia').value   = val('meta_m4_economia');
 }
 
@@ -8805,85 +8795,26 @@ async function ifoodSaveMetas() {
   st.style.display = 'block'; st.textContent = 'Salvando…';
 
   const gn = id => parseFloat(document.getElementById(id)?.value || '0') || 0;
-  const m1_base       = gn('m1_base');
+  const m1_base_ciclo = gn('m1_base_ciclo');
   const m1_meta_pct   = gn('m1_meta_pct');
-  const m1_realizado  = gn('m1_realizado');
-  const m1_base_atual = gn('m1_base_atual');
   const m2_baseline   = gn('m2_baseline');
   const m2_alvo       = gn('m2_alvo');
-  const m2_decisoes   = gn('m2_decisoes');
-  const m2_favoraveis = gn('m2_favoraveis');
   const m3_baseline   = gn('m3_baseline');
   const m3_alvo       = gn('m3_alvo');
-  const m3_decisoes   = gn('m3_decisoes');
-  const m3_favoraveis = gn('m3_favoraveis');
   const m4_meta_pct   = gn('m4_meta_pct');
-  const m4_acordos    = gn('m4_acordos');
   const m4_economia   = gn('m4_economia');
 
-  const m2_realizado = m2_decisoes > 0 ? Math.round(100*m2_favoraveis/m2_decisoes*10)/10 : 0;
-  const m3_realizado = m3_decisoes > 0 ? Math.round(100*m3_favoraveis/m3_decisoes*10)/10 : 0;
-  const m1_pct_real  = m1_base > 0 ? Math.round(100*m1_realizado/m1_base*100)/100 : 0;
-  const m1_meta_qtd  = Math.round(m1_base * m1_meta_pct / 100);
-  const m2_status    = m2_realizado >= m2_alvo ? 'ok' : 'nok';
-  const m3_status    = m3_realizado >= m3_alvo ? 'ok' : 'nok';
-  const m1_status    = m1_realizado >= m1_meta_qtd ? 'ok' : 'nok';
-  const m4_status    = m4_acordos > 0 && m4_economia >= m4_meta_pct ? 'ok' : 'nok';
-
-  const chartData = {
-    type: 'chart_metas_ciclo',
-    metas: [
-      {
-        id: 1, titulo: 'Encerramento da Base',
-        base_inicial: m1_base, meta_pct: m1_meta_pct, meta_qtd: m1_meta_qtd,
-        realizado: m1_realizado, pct_realizado: m1_pct_real,
-        base_atual: m1_base_atual, status: m1_status,
-      },
-      {
-        id: 2, titulo: 'Taxa de Êxito — 1ª Instância',
-        baseline: m2_baseline, alvo: m2_alvo,
-        decisoes: m2_decisoes, favoraveis: m2_favoraveis,
-        realizado: m2_realizado, variacao: Math.round((m2_realizado-m2_baseline)*100)/100,
-        status: m2_status,
-      },
-      {
-        id: 3, titulo: 'Taxa de Êxito — 2ª Instância',
-        baseline: m3_baseline, alvo: m3_alvo,
-        decisoes: m3_decisoes, favoraveis: m3_favoraveis,
-        realizado: m3_realizado, variacao: Math.round((m3_realizado-m3_baseline)*100)/100,
-        status: m3_status,
-      },
-      {
-        id: 4, titulo: 'Economia em Acordos',
-        meta_pct: m4_meta_pct, acordos: m4_acordos,
-        economia: m4_economia, status: m4_status,
-      },
-    ],
-    consolidacao: {
-      total_decisoes: m2_decisoes + m3_decisoes,
-      total_vitorias: m2_favoraveis + m3_favoraveis,
-      total_derrotas: (m2_decisoes - m2_favoraveis) + (m3_decisoes - m3_favoraveis),
-    }
-  };
-
-  // Salva KPIs auxiliares + o gráfico de metas
+  // Estes campos são calculados pelo Excel — só persistimos os de configuração
+  // Salva apenas os KPIs de config (baseline/alvo/meta_pct) para serem lidos no próximo upload
   const rows = [
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m1_base',       label:'Meta 1 Base Inicial',    value:String(m1_base),       unit:'processos', chart_data:null, chart_title:'', sort_order:900, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m1_pct_alvo',   label:'Meta 1 % Alvo',          value:String(m1_meta_pct),   unit:'%',         chart_data:null, chart_title:'', sort_order:901, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m1_realizado',  label:'Meta 1 Realizado',       value:String(m1_realizado),  unit:'enc',       chart_data:null, chart_title:'', sort_order:902, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m1_base_atual', label:'Meta 1 Base Atual',      value:String(m1_base_atual), unit:'processos', chart_data:null, chart_title:'', sort_order:903, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m2_baseline',   label:'Meta 2 Baseline',        value:String(m2_baseline),   unit:'%',         chart_data:null, chart_title:'', sort_order:904, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m2_alvo',       label:'Meta 2 Alvo',            value:String(m2_alvo),       unit:'%',         chart_data:null, chart_title:'', sort_order:905, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m2_decisoes',   label:'Meta 2 Decisões 1G',     value:String(m2_decisoes),   unit:'dec',       chart_data:null, chart_title:'', sort_order:906, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m2_favoraveis', label:'Meta 2 Favoráveis 1G',   value:String(m2_favoraveis), unit:'fav',       chart_data:null, chart_title:'', sort_order:907, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m3_baseline',   label:'Meta 3 Baseline',        value:String(m3_baseline),   unit:'%',         chart_data:null, chart_title:'', sort_order:908, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m3_alvo',       label:'Meta 3 Alvo',            value:String(m3_alvo),       unit:'%',         chart_data:null, chart_title:'', sort_order:909, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m3_decisoes',   label:'Meta 3 Decisões 2G',     value:String(m3_decisoes),   unit:'dec',       chart_data:null, chart_title:'', sort_order:910, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m3_favoraveis', label:'Meta 3 Favoráveis 2G',   value:String(m3_favoraveis), unit:'fav',       chart_data:null, chart_title:'', sort_order:911, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m4_meta_pct',   label:'Meta 4 % Alvo Acordos',  value:String(m4_meta_pct),   unit:'%',         chart_data:null, chart_title:'', sort_order:912, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m4_acordos',    label:'Meta 4 Acordos',         value:String(m4_acordos),    unit:'acordos',   chart_data:null, chart_title:'', sort_order:913, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m4_economia',   label:'Meta 4 Economia Obtida', value:String(m4_economia),   unit:'%',         chart_data:null, chart_title:'', sort_order:914, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'chart_metas_ciclo',  label:'Metas do Ciclo',         value:'',                    unit:'',          chart_data: chartData, chart_title:'Metas do Ciclo — Performance do Período', sort_order:1, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m1_base_ciclo', label:'Meta 1 Base Ciclo',      value:String(m1_base_ciclo), unit:'processos', chart_data:null, chart_title:'', sort_order:900, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m1_pct_alvo',   label:'Meta 1 % Alvo',          value:String(m1_meta_pct),  unit:'%', chart_data:null, chart_title:'', sort_order:901, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m2_baseline',   label:'Meta 2 Baseline',        value:String(m2_baseline),  unit:'%', chart_data:null, chart_title:'', sort_order:904, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m2_alvo',       label:'Meta 2 Alvo',            value:String(m2_alvo),      unit:'%', chart_data:null, chart_title:'', sort_order:905, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m3_baseline',   label:'Meta 3 Baseline',        value:String(m3_baseline),  unit:'%', chart_data:null, chart_title:'', sort_order:908, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m3_alvo',       label:'Meta 3 Alvo',            value:String(m3_alvo),      unit:'%', chart_data:null, chart_title:'', sort_order:909, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m4_meta_pct',   label:'Meta 4 % Alvo Acordos',  value:String(m4_meta_pct),  unit:'%', chart_data:null, chart_title:'', sort_order:912, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m4_economia',   label:'Meta 4 Economia Obtida', value:String(m4_economia),  unit:'%', chart_data:null, chart_title:'', sort_order:914, trend_pct:null },
   ];
 
   const { error } = await ifoodApi('/api/ifood/kpis/bulk', { method:'POST', body: JSON.stringify({ rows }) });
@@ -10416,6 +10347,74 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     });
   }
 
+  // ── METAS DO CICLO — calculadas automaticamente a partir do Excel ───────────
+  {
+    const p = prevPeriodData || {};
+    // recomputa 1G/2G (mesmo critério do bloco chart_metas acima)
+    const _mc1G   = decisoes.filter(d => d.tipo === 'Sentença');
+    const _mc2G   = decisoes.filter(d => d.tipo === 'Acórdão' || d.tipo === 'TST');
+    const _mcFav1 = _mc1G.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
+    const _mcFav2 = _mc2G.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
+
+    // M1 — Encerramento da Base
+    // base_inicial: ativos do período anterior > base manual do ciclo > 0
+    const m1BaseInicial = p.ativos || p.m1_base_ciclo || 0;
+    const m1MetaPct     = p.m1_meta_pct != null ? p.m1_meta_pct : 20;
+    const m1MetaQtd     = Math.round(m1BaseInicial * m1MetaPct / 100);
+    // Realizado M1: base_inicial - base_atual (positivo = base reduziu = bom)
+    const m1Realizado   = m1BaseInicial > 0 ? m1BaseInicial - ativos : encerradosData.length;
+    const m1PctReal     = m1BaseInicial > 0 ? Math.round(m1Realizado / m1BaseInicial * 10000) / 100 : 0;
+    const m1Status      = m1Realizado >= m1MetaQtd ? 'ok' : 'nok';
+
+    // M2 — Taxa de Êxito 1G
+    const m2Baseline = p.m2_baseline != null ? p.m2_baseline : (p.pct_1g != null ? p.pct_1g : 0);
+    const m2Alvo     = p.m2_alvo != null ? p.m2_alvo : 0;
+    const m2Realizado = _mc1G.length > 0 ? Math.round(100 * _mcFav1 / _mc1G.length * 10) / 10 : 0;
+    const m2Status   = m2Alvo > 0 ? (m2Realizado >= m2Alvo ? 'ok' : 'nok') : 'nok';
+
+    // M3 — Taxa de Êxito 2G
+    const m3Baseline = p.m3_baseline != null ? p.m3_baseline : (p.pct_2g != null ? p.pct_2g : 0);
+    const m3Alvo     = p.m3_alvo != null ? p.m3_alvo : 0;
+    const m3Realizado = _mc2G.length > 0 ? Math.round(100 * _mcFav2 / _mc2G.length * 10) / 10 : 0;
+    const m3Status   = m3Alvo > 0 ? (m3Realizado >= m3Alvo ? 'ok' : 'nok') : 'nok';
+
+    // M4 — Economia em Acordos
+    const m4MetaPct  = p.m4_meta_pct != null ? p.m4_meta_pct : 15;
+    const m4Acordos  = encerradosData.filter(r => r.motivo && r.motivo.toUpperCase().includes('ACORDO')).length;
+    const m4Economia = p.m4_economia != null ? p.m4_economia : 0; // % economia não vem do Excel
+    const m4Status   = m4Acordos > 0 && m4Economia >= m4MetaPct ? 'ok' : 'nok';
+
+    const chartMetasCiclo = {
+      type: 'chart_metas_ciclo',
+      metas: [
+        { id:1, titulo:'Encerramento da Base', base_inicial:m1BaseInicial, meta_pct:m1MetaPct, meta_qtd:m1MetaQtd, realizado:m1Realizado, pct_realizado:m1PctReal, base_atual:ativos, status:m1Status },
+        { id:2, titulo:'Taxa de Êxito — 1ª Instância', baseline:m2Baseline, alvo:m2Alvo, decisoes:_mc1G.length, favoraveis:_mcFav1, realizado:m2Realizado, variacao:Math.round((m2Realizado-m2Baseline)*100)/100, status:m2Status },
+        { id:3, titulo:'Taxa de Êxito — 2ª Instância', baseline:m3Baseline, alvo:m3Alvo, decisoes:_mc2G.length, favoraveis:_mcFav2, realizado:m3Realizado, variacao:Math.round((m3Realizado-m3Baseline)*100)/100, status:m3Status },
+        { id:4, titulo:'Economia em Acordos', meta_pct:m4MetaPct, acordos:m4Acordos, economia:m4Economia, status:m4Status },
+      ],
+      consolidacao: { total_decisoes: _mc1G.length + _mc2G.length, total_vitorias: _mcFav1 + _mcFav2, total_derrotas: (_mc1G.length - _mcFav1) + (_mc2G.length - _mcFav2) },
+    };
+
+    // Salva os aux KPIs de config (baseline/alvo/meta_pct) para serem relidos no próximo upload
+    const _mSo = 900;
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m1_base',       label:'Meta 1 Base Inicial',    value:String(m1BaseInicial), unit:'processos', chart_data:null, chart_title:'', sort_order:_mSo+0,  trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m1_pct_alvo',   label:'Meta 1 % Alvo',          value:String(m1MetaPct),     unit:'%',         chart_data:null, chart_title:'', sort_order:_mSo+1,  trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m1_realizado',  label:'Meta 1 Realizado',       value:String(m1Realizado),   unit:'enc',       chart_data:null, chart_title:'', sort_order:_mSo+2,  trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m1_base_atual', label:'Meta 1 Base Atual',      value:String(ativos),        unit:'processos', chart_data:null, chart_title:'', sort_order:_mSo+3,  trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m2_baseline',   label:'Meta 2 Baseline',        value:String(m2Baseline),    unit:'%',         chart_data:null, chart_title:'', sort_order:_mSo+4,  trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m2_alvo',       label:'Meta 2 Alvo',            value:String(m2Alvo),        unit:'%',         chart_data:null, chart_title:'', sort_order:_mSo+5,  trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m2_decisoes',   label:'Meta 2 Decisões 1G',     value:String(_mc1G.length),  unit:'dec',       chart_data:null, chart_title:'', sort_order:_mSo+6,  trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m2_favoraveis', label:'Meta 2 Favoráveis 1G',   value:String(_mcFav1),       unit:'fav',       chart_data:null, chart_title:'', sort_order:_mSo+7,  trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m3_baseline',   label:'Meta 3 Baseline',        value:String(m3Baseline),    unit:'%',         chart_data:null, chart_title:'', sort_order:_mSo+8,  trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m3_alvo',       label:'Meta 3 Alvo',            value:String(m3Alvo),        unit:'%',         chart_data:null, chart_title:'', sort_order:_mSo+9,  trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m3_decisoes',   label:'Meta 3 Decisões 2G',     value:String(_mc2G.length),  unit:'dec',       chart_data:null, chart_title:'', sort_order:_mSo+10, trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m3_favoraveis', label:'Meta 3 Favoráveis 2G',   value:String(_mcFav2),       unit:'fav',       chart_data:null, chart_title:'', sort_order:_mSo+11, trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m4_meta_pct',   label:'Meta 4 % Alvo Acordos',  value:String(m4MetaPct),     unit:'%',         chart_data:null, chart_title:'', sort_order:_mSo+12, trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m4_acordos',    label:'Meta 4 Acordos',         value:String(m4Acordos),     unit:'acordos',   chart_data:null, chart_title:'', sort_order:_mSo+13, trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'meta_m4_economia',   label:'Meta 4 Economia Obtida', value:String(m4Economia),    unit:'%',         chart_data:null, chart_title:'', sort_order:_mSo+14, trend_pct:null });
+    rows.push({ id:ifoodId(), period_id:periodId, tab_key:'visao-geral', kpi_key:'chart_metas_ciclo',  label:'Metas do Ciclo',         value:'',                    unit:'',          chart_data:chartMetasCiclo, chart_title:'Metas do Ciclo — Performance do Período', sort_order:1, trend_pct:null });
+  }
+
   // Tabela consolidada — comparativo entre segmentos (causa raiz)
   {
     const crRows = _XL_CR_TABS.map(tab => {
@@ -10717,11 +10716,45 @@ async function ifoodSaveExcel() {
               fav_2g:     cntVal(fk('meta_fav_2g')),
               dec_geral:  cntVal(fk('meta_dec_geral')),
               fav_geral:  cntVal(fk('meta_fav_geral')),
+              // meta config — carregados do período anterior para persistir entre uploads
+              ativos:         cntVal(fk('ativos')),
+              m1_meta_pct:    pctVal(fk('meta_m1_pct_alvo')),
+              m2_baseline:    pctVal(fk('meta_m2_baseline')),
+              m2_alvo:        pctVal(fk('meta_m2_alvo')),
+              m3_baseline:    pctVal(fk('meta_m3_baseline')),
+              m3_alvo:        pctVal(fk('meta_m3_alvo')),
+              m4_meta_pct:    pctVal(fk('meta_m4_meta_pct')),
+              m4_economia:    pctVal(fk('meta_m4_economia')),
             };
           }
         }
       }
     } catch(e) { console.warn('prev period fetch:', e.message); }
+
+    // Ler config de metas do período ATUAL (salva via form "Metas do Ciclo")
+    // sobrescreve valores do período anterior — permite ajuste por período
+    try {
+      const { data: curKpis } = await ifoodApi('/api/ifood/kpis?periodId=' + encodeURIComponent(periodId));
+      if (Array.isArray(curKpis) && curKpis.length) {
+        const fk = key => curKpis.find(k => k.kpi_key === key);
+        const pctVal = k => k ? parseFloat(String(k.value).replace(',','.')) : null;
+        const cntVal = k => k ? parseInt(String(k.value).replace(/\D/g,'')) || 0 : 0;
+        if (!prevPeriodData) prevPeriodData = {};
+        // override com valores do período atual se disponíveis
+        const ov = (field, key, fn) => { const v = fn(fk(key)); if (v !== null) prevPeriodData[field] = v; };
+        ov('m1_meta_pct',   'meta_m1_pct_alvo',  pctVal);
+        ov('m2_baseline',   'meta_m2_baseline',  pctVal);
+        ov('m2_alvo',       'meta_m2_alvo',       pctVal);
+        ov('m3_baseline',   'meta_m3_baseline',   pctVal);
+        ov('m3_alvo',       'meta_m3_alvo',       pctVal);
+        ov('m4_meta_pct',   'meta_m4_meta_pct',   pctVal);
+        ov('m4_economia',   'meta_m4_economia',    pctVal);
+        // base inicial manual (primeiro período do ciclo)
+        ov('m1_base_ciclo', 'meta_m1_base_ciclo', cntVal);
+        // ativos do período anterior (para M1 base_inicial) — só usa se prevPeriodData não trouxe
+        if (prevPeriodData.ativos == null) ov('ativos', 'ativos', cntVal);
+      }
+    } catch(e) { console.warn('cur period meta fetch:', e.message); }
 
     const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291, decisoesTabela, julgadoresData, encerradosData, valoresElevadosData, prevPeriodData);
 
