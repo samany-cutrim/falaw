@@ -367,6 +367,34 @@
     }
     .highlight-card.is-box .highlight-seq { margin-bottom: 6px; }
     .highlight-card.is-box .highlight-card-footer { display: none; }
+    /* List type */
+    .highlight-card.is-list {
+      grid-column: 1 / -1;
+    }
+    .highlight-card.is-list .highlight-card-body { padding-bottom: 4px; }
+    .highlight-list {
+      list-style: none; margin: 8px 0 0; padding: 0;
+      display: flex; flex-direction: column; gap: 0;
+    }
+    .highlight-list-item {
+      display: flex; align-items: baseline; gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12.5px; font-family: 'IBM Plex Mono', monospace;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .highlight-list-item:last-child { border-bottom: none; }
+    .highlight-list-num {
+      font-size: 10px; color: var(--muted-l); min-width: 18px;
+      font-variant-numeric: tabular-nums;
+    }
+    .highlight-list-text { flex: 1; }
+    .highlight-list-tag {
+      font-size: 10px; color: var(--muted-l);
+      background: rgba(0,0,0,0.045);
+      border-radius: 3px; padding: 1px 6px; white-space: nowrap;
+    }
     .highlight-footer-brand {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
@@ -1756,17 +1784,35 @@ function renderHighlights(highlights) {
   if (countEl) countEl.textContent = highlights.length + (highlights.length === 1 ? ' destaque' : ' destaques');
   const total = highlights.length;
   el.innerHTML = highlights.map((h, i) => {
-    const isBox = h.highlight_type === 'box';
+    const isBox  = h.highlight_type === 'box';
+    const isList = h.highlight_type === 'list';
+    let bodyHtml = '';
+    if (isList) {
+      const lines = (h.body || '').split('\n').map(l => l.trim()).filter(Boolean);
+      const items = lines.map((line, idx) => {
+        // Detecta padrão: "texto (tag)" — tag entre parênteses no fim
+        const tagMatch = line.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+        const text = tagMatch ? tagMatch[1] : line;
+        const tag  = tagMatch ? tagMatch[2] : null;
+        return `<li class="highlight-list-item">
+          <span class="highlight-list-num">${String(idx+1).padStart(2,'0')}</span>
+          <span class="highlight-list-text">${escHtml(text)}</span>
+          ${tag ? `<span class="highlight-list-tag">${escHtml(tag)}</span>` : ''}
+        </li>`;
+      }).join('');
+      bodyHtml = `<ol class="highlight-list">${items}</ol>`;
+    } else {
+      bodyHtml = `<div class="highlight-body">${escHtml(h.body)}</div>`;
+    }
     return `
-    <div class="highlight-card${isBox ? ' is-box' : ''}">
+    <div class="highlight-card${isBox ? ' is-box' : isList ? ' is-list' : ''}">
       <div class="highlight-card-stripe"></div>
       <div class="highlight-card-body">
-        ${isBox ? '' : `<span class="highlight-seq">${String(i+1).padStart(2,'0')} / ${String(total).padStart(2,'0')}</span>`}
+        ${isBox || isList ? '' : `<span class="highlight-seq">${String(i+1).padStart(2,'0')} / ${String(total).padStart(2,'0')}</span>`}
         <div class="highlight-icon-badge">${escHtml(h.icon || '★')}</div>
         <div style="flex:1">
-          ${isBox ? '' : ''}
           <div class="highlight-title">${escHtml(h.title)}</div>
-          <div class="highlight-body">${escHtml(h.body)}</div>
+          ${bodyHtml}
         </div>
       </div>
       <div class="highlight-card-footer">
