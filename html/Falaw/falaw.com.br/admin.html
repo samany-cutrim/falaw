@@ -8988,8 +8988,13 @@ function renderIfoodKpis() {
     el.innerHTML = '<div class="empty-state"><p>Nenhum KPI nesta aba para este período.</p></div>';
     return;
   }
-  el.innerHTML = '<div class="item-list">' + [..._ifoodKpis].sort((a,b) => (a.sort_order||0) - (b.sort_order||0)).map(k => `
+  const sorted = [..._ifoodKpis].sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+  el.innerHTML = '<div class="item-list">' + sorted.map((k, idx) => `
     <div class="item-card">
+      <div style="display:flex;flex-direction:column;gap:2px;padding:4px 6px 4px 0;align-self:center">
+        <button type="button" class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:14px;line-height:1" title="Mover para cima" onclick="ifoodKpiMoveOrder('${k.id}',-1)" ${idx===0?'disabled':''}>▲</button>
+        <button type="button" class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:14px;line-height:1" title="Mover para baixo" onclick="ifoodKpiMoveOrder('${k.id}',1)" ${idx===sorted.length-1?'disabled':''}>▼</button>
+      </div>
       <div class="item-card-body">
         <div class="item-card-title">${escHtml(k.label)} <span style="font-family:var(--f-mono);font-size:20px;font-weight:400">${escHtml(k.value)}${k.unit ? ' <small style="font-size:11px">' + escHtml(k.unit) + '</small>' : ''}</span></div>
         <div class="item-card-meta">chave: ${escHtml(k.kpi_key)} · ordem ${k.sort_order}${k.trend_pct != null ? ' · tendência: ' + k.trend_pct + '%' : ''}${k.chart_title ? ' · gráfico: ' + escHtml(k.chart_title) : ''}</div>
@@ -9001,7 +9006,27 @@ function renderIfoodKpis() {
     </div>`).join('') + '</div>';
 }
 
-function ifoodOpenKpiModal(id) {
+async function ifoodKpiMoveOrder(id, dir) {
+  const sorted = [..._ifoodKpis].sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+  const idx = sorted.findIndex(k => k.id === id);
+  const swapIdx = idx + dir;
+  if (swapIdx < 0 || swapIdx >= sorted.length) return;
+  const a = sorted[idx], b = sorted[swapIdx];
+  const soA = a.sort_order, soB = b.sort_order;
+  // Swap sort_orders (if equal, force separation)
+  a.sort_order = soB === soA ? soA + dir : soB;
+  b.sort_order = soA;
+  // Persist both
+  const res = await Promise.all([
+    ifoodApi('/api/ifood/kpis/bulk', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ rows: [{ ...a }] }) }),
+    ifoodApi('/api/ifood/kpis/bulk', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ rows: [{ ...b }] }) }),
+  ]);
+  const err = res.find(r => r.error);
+  if (err) { showToast('Erro ao reordenar: ' + err.error.message); return; }
+  renderIfoodKpis();
+}
+
+
   const k = id ? _ifoodKpis.find(x => x.id === id) : null;
   document.getElementById('ifoodKpiModalTitle').textContent = k ? 'Editar KPI' : 'Novo KPI';
   document.getElementById('ifk-id').value          = k ? k.id : '';
