@@ -1336,8 +1336,26 @@ function generateArticlesJS(articles) {
   return 'var FALAW_ARTICLES = [\n  ' + lines.join(',\n  ') + '\n];\n';
 }
 
+async function syncBlogFromGitHub() {
+  showToast('Buscando artigos do GitHub…');
+  try {
+    const ghArticles = await fetchGitHubArticles();
+    if (!ghArticles.length) { showToast('⚠ Nenhum artigo encontrado no GitHub.'); return; }
+    const existingIds = new Set(ALL_ARTICLES.map(a => a.id));
+    const missing = ghArticles.filter(a => !existingIds.has(a.id));
+    if (!missing.length) { showToast('Tudo já sincronizado — nenhum artigo novo no GitHub.'); return; }
+    const sb = getSB();
+    if (sb) await Promise.all(missing.map(a => sbSaveArticle(a)));
+    ALL_ARTICLES = [...missing, ...ALL_ARTICLES];
+    localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
+    renderBlog();
+    showToast(`✓ ${missing.length} artigo(s) importado(s) do GitHub.`);
+  } catch(e) {
+    showToast('Erro ao sincronizar: ' + e.message);
+  }
+}
+
 async function mergeGitHubArticlesIntoSupabase() {
-  // Upsert no Supabase artigos que estão no GitHub mas não no Supabase
   try {
     const ghArticles = await fetchGitHubArticles();
     if (!ghArticles.length) return;
