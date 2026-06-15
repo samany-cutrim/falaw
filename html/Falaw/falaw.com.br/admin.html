@@ -1684,6 +1684,7 @@
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('content')">✍️ Textos das Abas</div>
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('highlights')">⭐ Destaques do Mês</div>
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('excel')">📁 Upload Excel</div>
+        <div class="ifood-sub-tab"        onclick="ifoodSubTab('metas')">🎯 Metas</div>
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('comparativo')">📊 Comparativo</div>
       </div>
 
@@ -1830,6 +1831,77 @@
         </div>
         <div id="ifood-xl-status" style="display:none;font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-bottom:12px;"></div>
         <button type="button" class="btn btn-primary" onclick="ifoodSaveExcel()">Salvar dados no Supabase</button>
+      </div>
+
+      <!-- SUB: METAS DO CICLO -->
+      <div id="ifood-sub-metas" style="display:none">
+        <p style="font-size:13px;color:var(--c-muted);margin-bottom:20px;">Configure as metas e a performance do período selecionado. Os dados aparecem no dashboard do cliente como gráfico de metas antes da seção de análise.</p>
+        <div style="margin-bottom:16px">
+          <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Período *</label>
+          <select id="ifood-metas-period" style="width:100%;max-width:360px;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;margin-top:4px;display:block">
+            <option value="">— Selecione —</option>
+          </select>
+        </div>
+
+        <style>
+          .metas-card{background:#fafaf8;border:1px solid var(--c-divider);border-radius:6px;padding:20px 22px;margin-bottom:18px}
+          .metas-card h4{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E;margin:0 0 14px}
+          .metas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+          .metas-grid .form-field{margin:0}
+          .metas-grid label{font-size:11px;color:var(--c-muted);font-weight:600;display:block;margin-bottom:3px}
+          .metas-grid input{width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:8px 10px;font-family:var(--f-mono);font-size:13px;color:var(--c-dark);background:#fff;box-sizing:border-box}
+          .metas-status{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700}
+          .metas-status.ok{background:#e8f5ee;color:#1B7A4E}
+          .metas-status.nok{background:#ffebee;color:#c62828}
+        </style>
+
+        <!-- META 1 -->
+        <div class="metas-card">
+          <h4>🏁 Meta 1 — Encerramento da Base</h4>
+          <div class="metas-grid">
+            <div class="form-field"><label>Base Inicial (processos)</label><input type="number" id="m1_base" placeholder="1313"></div>
+            <div class="form-field"><label>Meta % Encerramento</label><input type="number" id="m1_meta_pct" placeholder="20" step="0.01"></div>
+            <div class="form-field"><label>Encerrados no Mês</label><input type="number" id="m1_realizado" placeholder="-5"></div>
+            <div class="form-field"><label>Base Atual (remanescente)</label><input type="number" id="m1_base_atual" placeholder="1318"></div>
+          </div>
+        </div>
+
+        <!-- META 2 -->
+        <div class="metas-card">
+          <h4>⚖️ Meta 2 — Taxa de Êxito em 1ª Instância</h4>
+          <div class="metas-grid">
+            <div class="form-field"><label>Baseline Histórico (%)</label><input type="number" id="m2_baseline" placeholder="38.34" step="0.01"></div>
+            <div class="form-field"><label>Meta Alvo (%)</label><input type="number" id="m2_alvo" placeholder="44.09" step="0.01"></div>
+            <div class="form-field"><label>Total Decisões 1G</label><input type="number" id="m2_decisoes" placeholder="7"></div>
+            <div class="form-field"><label>Decisões Favoráveis 1G</label><input type="number" id="m2_favoraveis" placeholder="0"></div>
+          </div>
+        </div>
+
+        <!-- META 3 -->
+        <div class="metas-card">
+          <h4>🏛️ Meta 3 — Taxa de Êxito em 2ª Instância</h4>
+          <div class="metas-grid">
+            <div class="form-field"><label>Baseline Histórico (%)</label><input type="number" id="m3_baseline" placeholder="25.97" step="0.01"></div>
+            <div class="form-field"><label>Meta Alvo (%)</label><input type="number" id="m3_alvo" placeholder="29.87" step="0.01"></div>
+            <div class="form-field"><label>Total Decisões 2G</label><input type="number" id="m3_decisoes" placeholder="24"></div>
+            <div class="form-field"><label>Decisões Favoráveis 2G</label><input type="number" id="m3_favoraveis" placeholder="6"></div>
+          </div>
+        </div>
+
+        <!-- META 4 -->
+        <div class="metas-card">
+          <h4>🤝 Meta 4 — Economia em Acordos</h4>
+          <div class="metas-grid">
+            <div class="form-field"><label>Meta Economia (%)</label><input type="number" id="m4_meta_pct" placeholder="15" step="0.01"></div>
+            <div class="form-field"><label>Acordos Realizados</label><input type="number" id="m4_acordos" placeholder="0"></div>
+            <div class="form-field"><label>Economia Obtida (%)</label><input type="number" id="m4_economia" placeholder="0" step="0.01"></div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button type="button" class="btn btn-primary" onclick="ifoodSaveMetas()">Salvar Metas</button>
+          <div id="ifood-metas-status" style="font-size:13px;color:var(--c-muted);display:none"></div>
+        </div>
       </div>
 
       <div id="ifood-sub-comparativo" style="display:none">
@@ -8655,13 +8727,15 @@ async function loadIfoodAdmin() {
     return;
   }
   _ifoodPeriods = data || [];
+  window._ifoodPeriodsList = _ifoodPeriods;
   renderIfoodPeriods();
   populateIfoodPeriodSelects();
+  ifoodMetasPeriodPopulate();
   ifoodSubTab('periods');
 }
 
 // ── sub-tab switch ────────────────────
-const IFOOD_SUBS = ['periods','kpis','content','highlights','excel','comparativo'];
+const IFOOD_SUBS = ['periods','kpis','content','highlights','excel','metas','comparativo'];
 function ifoodSubTab(name) {
   const nav = document.getElementById('ifoodSubNav');
   nav.querySelectorAll('.ifood-sub-tab').forEach((t, i) => {
@@ -8671,6 +8745,7 @@ function ifoodSubTab(name) {
     const el = document.getElementById('ifood-sub-' + s);
     if (el) el.style.display = s === name ? 'block' : 'none';
   });
+  if (name === 'metas') ifoodLoadMetas();
 }
 
 // ── populate selects ──────────────────
@@ -8681,6 +8756,140 @@ function populateIfoodPeriodSelects() {
     if (el) el.innerHTML = '<option value="">— Selecione —</option>' + opts;
   });
   ifoodLoadComparativoList();
+}
+
+// ── METAS DO CICLO ──────────────────────
+function ifoodMetasPeriodPopulate() {
+  const sel = document.getElementById('ifood-metas-period');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Selecione —</option>';
+  (window._ifoodPeriodsList || []).forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id; opt.textContent = p.label;
+    if (p.id === cur) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+async function ifoodLoadMetas() {
+  ifoodMetasPeriodPopulate();
+  // Tenta carregar metas salvas do período selecionado
+  const periodId = document.getElementById('ifood-metas-period')?.value;
+  if (!periodId) return;
+  const { data } = await ifoodApi('/api/ifood/kpis?periodId=' + encodeURIComponent(periodId));
+  if (!Array.isArray(data)) return;
+  const fk = key => data.find(k => k.kpi_key === key);
+  const val = key => { const k = fk(key); return k ? String(k.value) : ''; };
+  document.getElementById('m1_base').value       = val('meta_m1_base');
+  document.getElementById('m1_meta_pct').value   = val('meta_m1_pct_alvo');
+  document.getElementById('m1_realizado').value  = val('meta_m1_realizado');
+  document.getElementById('m1_base_atual').value = val('meta_m1_base_atual');
+  document.getElementById('m2_baseline').value   = val('meta_m2_baseline');
+  document.getElementById('m2_alvo').value       = val('meta_m2_alvo');
+  document.getElementById('m2_decisoes').value   = val('meta_m2_decisoes');
+  document.getElementById('m2_favoraveis').value = val('meta_m2_favoraveis');
+  document.getElementById('m3_baseline').value   = val('meta_m3_baseline');
+  document.getElementById('m3_alvo').value       = val('meta_m3_alvo');
+  document.getElementById('m3_decisoes').value   = val('meta_m3_decisoes');
+  document.getElementById('m3_favoraveis').value = val('meta_m3_favoraveis');
+  document.getElementById('m4_meta_pct').value   = val('meta_m4_meta_pct');
+  document.getElementById('m4_acordos').value    = val('meta_m4_acordos');
+  document.getElementById('m4_economia').value   = val('meta_m4_economia');
+}
+
+async function ifoodSaveMetas() {
+  const periodId = document.getElementById('ifood-metas-period')?.value;
+  if (!periodId) { showToast('Selecione um período.'); return; }
+  const st = document.getElementById('ifood-metas-status');
+  st.style.display = 'block'; st.textContent = 'Salvando…';
+
+  const gn = id => parseFloat(document.getElementById(id)?.value || '0') || 0;
+  const m1_base       = gn('m1_base');
+  const m1_meta_pct   = gn('m1_meta_pct');
+  const m1_realizado  = gn('m1_realizado');
+  const m1_base_atual = gn('m1_base_atual');
+  const m2_baseline   = gn('m2_baseline');
+  const m2_alvo       = gn('m2_alvo');
+  const m2_decisoes   = gn('m2_decisoes');
+  const m2_favoraveis = gn('m2_favoraveis');
+  const m3_baseline   = gn('m3_baseline');
+  const m3_alvo       = gn('m3_alvo');
+  const m3_decisoes   = gn('m3_decisoes');
+  const m3_favoraveis = gn('m3_favoraveis');
+  const m4_meta_pct   = gn('m4_meta_pct');
+  const m4_acordos    = gn('m4_acordos');
+  const m4_economia   = gn('m4_economia');
+
+  const m2_realizado = m2_decisoes > 0 ? Math.round(100*m2_favoraveis/m2_decisoes*10)/10 : 0;
+  const m3_realizado = m3_decisoes > 0 ? Math.round(100*m3_favoraveis/m3_decisoes*10)/10 : 0;
+  const m1_pct_real  = m1_base > 0 ? Math.round(100*m1_realizado/m1_base*100)/100 : 0;
+  const m1_meta_qtd  = Math.round(m1_base * m1_meta_pct / 100);
+  const m2_status    = m2_realizado >= m2_alvo ? 'ok' : 'nok';
+  const m3_status    = m3_realizado >= m3_alvo ? 'ok' : 'nok';
+  const m1_status    = m1_realizado >= m1_meta_qtd ? 'ok' : 'nok';
+  const m4_status    = m4_acordos > 0 && m4_economia >= m4_meta_pct ? 'ok' : 'nok';
+
+  const chartData = {
+    type: 'chart_metas_ciclo',
+    metas: [
+      {
+        id: 1, titulo: 'Encerramento da Base',
+        base_inicial: m1_base, meta_pct: m1_meta_pct, meta_qtd: m1_meta_qtd,
+        realizado: m1_realizado, pct_realizado: m1_pct_real,
+        base_atual: m1_base_atual, status: m1_status,
+      },
+      {
+        id: 2, titulo: 'Taxa de Êxito — 1ª Instância',
+        baseline: m2_baseline, alvo: m2_alvo,
+        decisoes: m2_decisoes, favoraveis: m2_favoraveis,
+        realizado: m2_realizado, variacao: Math.round((m2_realizado-m2_baseline)*100)/100,
+        status: m2_status,
+      },
+      {
+        id: 3, titulo: 'Taxa de Êxito — 2ª Instância',
+        baseline: m3_baseline, alvo: m3_alvo,
+        decisoes: m3_decisoes, favoraveis: m3_favoraveis,
+        realizado: m3_realizado, variacao: Math.round((m3_realizado-m3_baseline)*100)/100,
+        status: m3_status,
+      },
+      {
+        id: 4, titulo: 'Economia em Acordos',
+        meta_pct: m4_meta_pct, acordos: m4_acordos,
+        economia: m4_economia, status: m4_status,
+      },
+    ],
+    consolidacao: {
+      total_decisoes: m2_decisoes + m3_decisoes,
+      total_vitorias: m2_favoraveis + m3_favoraveis,
+      total_derrotas: (m2_decisoes - m2_favoraveis) + (m3_decisoes - m3_favoraveis),
+    }
+  };
+
+  // Salva KPIs auxiliares + o gráfico de metas
+  const rows = [
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m1_base',       label:'Meta 1 Base Inicial',    value:String(m1_base),       unit:'processos', chart_data:null, chart_title:'', sort_order:900, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m1_pct_alvo',   label:'Meta 1 % Alvo',          value:String(m1_meta_pct),   unit:'%',         chart_data:null, chart_title:'', sort_order:901, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m1_realizado',  label:'Meta 1 Realizado',       value:String(m1_realizado),  unit:'enc',       chart_data:null, chart_title:'', sort_order:902, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m1_base_atual', label:'Meta 1 Base Atual',      value:String(m1_base_atual), unit:'processos', chart_data:null, chart_title:'', sort_order:903, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m2_baseline',   label:'Meta 2 Baseline',        value:String(m2_baseline),   unit:'%',         chart_data:null, chart_title:'', sort_order:904, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m2_alvo',       label:'Meta 2 Alvo',            value:String(m2_alvo),       unit:'%',         chart_data:null, chart_title:'', sort_order:905, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m2_decisoes',   label:'Meta 2 Decisões 1G',     value:String(m2_decisoes),   unit:'dec',       chart_data:null, chart_title:'', sort_order:906, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m2_favoraveis', label:'Meta 2 Favoráveis 1G',   value:String(m2_favoraveis), unit:'fav',       chart_data:null, chart_title:'', sort_order:907, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m3_baseline',   label:'Meta 3 Baseline',        value:String(m3_baseline),   unit:'%',         chart_data:null, chart_title:'', sort_order:908, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m3_alvo',       label:'Meta 3 Alvo',            value:String(m3_alvo),       unit:'%',         chart_data:null, chart_title:'', sort_order:909, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m3_decisoes',   label:'Meta 3 Decisões 2G',     value:String(m3_decisoes),   unit:'dec',       chart_data:null, chart_title:'', sort_order:910, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m3_favoraveis', label:'Meta 3 Favoráveis 2G',   value:String(m3_favoraveis), unit:'fav',       chart_data:null, chart_title:'', sort_order:911, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m4_meta_pct',   label:'Meta 4 % Alvo Acordos',  value:String(m4_meta_pct),   unit:'%',         chart_data:null, chart_title:'', sort_order:912, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m4_acordos',    label:'Meta 4 Acordos',         value:String(m4_acordos),    unit:'acordos',   chart_data:null, chart_title:'', sort_order:913, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m4_economia',   label:'Meta 4 Economia Obtida', value:String(m4_economia),   unit:'%',         chart_data:null, chart_title:'', sort_order:914, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'chart_metas_ciclo',  label:'Metas do Ciclo',         value:'',                    unit:'',          chart_data: chartData, chart_title:'Metas do Ciclo — Performance do Período', sort_order:1, trend_pct:null },
+  ];
+
+  const { error } = await ifoodApi('/api/ifood/kpis/bulk', { method:'POST', body: JSON.stringify({ rows }) });
+  if (error) { st.textContent = 'Erro: ' + error.message; return; }
+  st.textContent = '✓ Metas salvas com sucesso! Recarregue o dashboard para visualizar.';
+  showToast('Metas salvas.');
 }
 
 // ── COMPARATIVO ──────────────────────
@@ -9819,13 +10028,14 @@ function _xlParseValoresElevados(rawRows) {
   }).filter(Boolean).filter(r => r.processo);
 }
 
-function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391, decisoesTabela, julgadoresData, encerradosData, valoresElevadosData) {
+function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391, decisoesTabela, julgadoresData, encerradosData, valoresElevadosData, prevPeriodData) {
   // decisoesTabela: decisões do arquivo separado — aparecem apenas nas tabelas, não nos contadores
   // julgadoresData: linhas da aba Julgadores — usadas para table_fund_vg
-  decisoesTabela = decisoesTabela || [];
-  julgadoresData = julgadoresData || [];
-  encerradosData = encerradosData || [];
+  decisoesTabela    = decisoesTabela    || [];
+  julgadoresData    = julgadoresData    || [];
+  encerradosData    = encerradosData    || [];
   valoresElevadosData = valoresElevadosData || [];
+  prevPeriodData    = prevPeriodData    || null;
   const rows = []; let so = 0;
   const push = (tabKey, kpiKey, label, value, unit, chartData, chartTitle) => {
     rows.push({ id:ifoodId(), period_id:periodId, tab_key:tabKey, kpi_key:kpiKey, label, value:String(value), unit:unit||'', chart_data:chartData||null, chart_title:chartTitle||'', sort_order:so++, trend_pct:null });
@@ -9955,16 +10165,94 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     }
   }
 
-  // ── METAS — taxas de favorabilidade por instância ─────────────────────────
+  // ── METAS — gráfico comparativo de taxas de favorabilidade por instância ───
   {
-    const _dec1G = decisoes.filter(d => d.tipo === 'Sentença');
-    const _dec2G = decisoes.filter(d => d.tipo === 'Acórdão' || d.tipo === 'TST');
-    const _fav1G = _dec1G.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
-    const _fav2G = _dec2G.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
-    if (_dec1G.length) push('visao-geral','meta_taxa_1g','Taxa Favorabilidade 1ª Instância',_xlFmtPct(_fav1G, _dec1G.length),'%');
-    if (_dec2G.length) push('visao-geral','meta_taxa_2g','Taxa Favorabilidade 2ª Instância',_xlFmtPct(_fav2G, _dec2G.length),'%');
-    const taxa_geral = decTot > 0 ? Math.round(100 * decF / decTot) : null;
-    if (taxa_geral !== null) push('visao-geral','meta_taxa_geral','Taxa Favorabilidade Geral',String(taxa_geral),'%');
+    const _dec1G  = decisoes.filter(d => d.tipo === 'Sentença');
+    const _dec2G  = decisoes.filter(d => d.tipo === 'Acórdão' || d.tipo === 'TST');
+    const _fav1G  = _dec1G.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
+    const _fav2G  = _dec2G.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
+    const _pct1G  = _dec1G.length  ? Math.round(100*_fav1G/_dec1G.length)  : 0;
+    const _pct2G  = _dec2G.length  ? Math.round(100*_fav2G/_dec2G.length)  : 0;
+    const _pctGer = decTot > 0     ? Math.round(100*decF/decTot)           : 0;
+
+    // KPIs auxiliares — usados como source de comparativo para o próximo mês
+    push('visao-geral','meta_dec_1g',  'Decisões 1G',    String(_dec1G.length), 'sent',  null, '');
+    push('visao-geral','meta_fav_1g',  'Favoráveis 1G',  String(_fav1G),        'fav',   null, '');
+    push('visao-geral','meta_pct_1g',  'Taxa 1G',        String(_pct1G),        '%',     null, '');
+    push('visao-geral','meta_dec_2g',  'Decisões 2G',    String(_dec2G.length), 'ac/tst',null, '');
+    push('visao-geral','meta_fav_2g',  'Favoráveis 2G',  String(_fav2G),        'fav',   null, '');
+    push('visao-geral','meta_pct_2g',  'Taxa 2G',        String(_pct2G),        '%',     null, '');
+    push('visao-geral','meta_dec_geral','Decisões Geral', String(decTot),        'dec',   null, '');
+    push('visao-geral','meta_fav_geral','Favoráveis Geral',String(decF),         'fav',   null, '');
+    push('visao-geral','meta_pct_geral','Taxa Geral',     String(_pctGer),       '%',     null, '');
+
+    if (_dec1G.length || _dec2G.length) {
+      const labels  = ['1ª Instância (Sentença)', '2ª Instância (Acórdão / TST)', 'Geral'];
+      const curPcts = [_pct1G, _pct2G, _pctGer];
+      const curFavs = [_fav1G, _fav2G, decF];
+      const curDecs = [_dec1G.length, _dec2G.length, decTot];
+
+      // currentPeriodLabel: extraído do periodId (ex: "maio-2026" → "Maio/26")
+      const curLabel = (function(){
+        const period = document.getElementById ? document.getElementById('ifood-xl-period') : null;
+        if (period) { const opt = period.options[period.selectedIndex]; if(opt) return opt.text; }
+        return 'Mês Atual';
+      })();
+
+      const datasets = [
+        {
+          label: curLabel,
+          data: curPcts,
+          backgroundColor: 'rgba(13,43,94,0.85)',
+          borderRadius: 5,
+          maxBarThickness: 36,
+        }
+      ];
+
+      if (prevPeriodData && (prevPeriodData.dec_1g || prevPeriodData.dec_2g || prevPeriodData.dec_geral)) {
+        datasets.push({
+          label: prevPeriodData.label || 'Mês Anterior',
+          data: [prevPeriodData.pct_1g||0, prevPeriodData.pct_2g||0, prevPeriodData.pct_geral||0],
+          backgroundColor: 'rgba(180,190,210,0.75)',
+          borderRadius: 5,
+          maxBarThickness: 36,
+        });
+      }
+
+      push('visao-geral', 'chart_metas', 'Metas — Taxas de Favorabilidade',
+        String(_pctGer) + '%', 'favorabilidade geral',
+        {
+          type: 'bar',
+          data: { labels, datasets },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top', labels: { font: { family: 'IBM Plex Mono', size: 11 } } },
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) {
+                    const idx = ctx.dataIndex;
+                    const isC = ctx.datasetIndex === 0;
+                    const fav = isC ? curFavs[idx] : (prevPeriodData ? [prevPeriodData.fav_1g,prevPeriodData.fav_2g,prevPeriodData.fav_geral][idx]||0 : 0);
+                    const dec = isC ? curDecs[idx] : (prevPeriodData ? [prevPeriodData.dec_1g,prevPeriodData.dec_2g,prevPeriodData.dec_geral][idx]||0 : 0);
+                    return ` ${ctx.parsed.y}% favorável  (${fav}/${dec} decisões)`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { font: { family: 'IBM Plex Mono', size: 11 } } },
+              y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%', font: { family: 'IBM Plex Mono', size: 11 } }, grid: { color: 'rgba(0,0,0,0.06)' } }
+            }
+          },
+          falaw_meta: {
+            cur:  { pcts: curPcts,  favs: curFavs,  decs: curDecs,  label: curLabel },
+            prev: prevPeriodData || null
+          }
+        },
+        'Metas: Taxas de Favorabilidade por Instância'
+      );
+    }
   }
   for (const [cr, cnt] of Object.entries(novosByCR)) {
     const crTab = _XL_CR_TABS.find(t=>t.cr===cr);
@@ -10104,14 +10392,14 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
       if (!entry.fav  && d.fund_fav)  entry.fav  = d.fund_fav;
       if (!entry.desf && d.fund_desf) entry.desf = d.fund_desf;
     });
-    const crFundRows = _XL_CR_TABS.map(tab => {
+    _XL_CR_TABS.forEach(tab => {
       const data = fundByCR[tab.cr];
-      if (!data || data.julgadores.size === 0) return null;
-      const julgList  = [...data.julgadores.entries()];
-      const decs      = decisoes.filter(d => _xlCanonCR(d.causa_raiz) === tab.cr);
+      if (!data || data.julgadores.size === 0) return;
+      const julgList   = [...data.julgadores.entries()];
+      const decs       = decisoes.filter(d => _xlCanonCR(d.causa_raiz) === tab.cr);
       const uniqueFav  = [...new Set(julgList.map(([,v]) => v.fav).filter(Boolean))];
       const uniqueDesf = [...new Set(julgList.map(([,v]) => v.desf).filter(Boolean))];
-      return {
+      const row = {
         label:       tab.label,
         total_dec:   decs.length,
         fav_dec:     decs.filter(d => _xlClassifyDec(d.resultado) === 'F').length,
@@ -10122,12 +10410,10 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
         status_fav:  uniqueFav.length  <= 1 ? 'Uniforme' : 'Divergente',
         status_desf: uniqueDesf.length <= 1 ? 'Uniforme' : 'Divergente',
       };
-    }).filter(Boolean);
-    if (crFundRows.length) {
-      push('visao-geral', 'table_fund_vg', 'Análise de Fundamentos dos Julgadores por Causa Raiz', '', '',
-        { type: 'table_fund_cr', rows: crFundRows },
+      push(tab.tabKey, 'table_fund_cr_' + tab.tabKey, 'Análise de Fundamentos dos Julgadores', '', '',
+        { type: 'table_fund_cr', rows: [row] },
         'Análise de Fundamentos dos Julgadores por Causa Raiz');
-    }
+    });
   }
 
   // Tabela consolidada — comparativo entre segmentos (causa raiz)
@@ -10406,7 +10692,38 @@ async function ifoodSaveExcel() {
     const valoresElevadosData = valSh ? _xlParseValoresElevados(XLSX.utils.sheet_to_json(valSh,{header:1,defval:''}).slice(1)) : [];
 
     setStatus(`Computando KPIs… (${decisoes.length} decisões, ${novos.total} novos casos)`);
-    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291, decisoesTabela, julgadoresData, encerradosData, valoresElevadosData);
+
+    // Buscar dados do período anterior para comparativo de metas
+    let prevPeriodData = null;
+    try {
+      const { data: allPds } = await ifoodApi('/api/ifood/periods');
+      if (Array.isArray(allPds) && allPds.length > 1) {
+        const sorted = allPds.filter(p => p.id !== periodId).sort((a,b) => (b.month_year||'').localeCompare(a.month_year||''));
+        const prev = sorted[0];
+        if (prev) {
+          const { data: prevKpis } = await ifoodApi('/api/ifood/kpis?periodId=' + encodeURIComponent(prev.id));
+          if (Array.isArray(prevKpis)) {
+            const fk = key => prevKpis.find(k => k.kpi_key === key);
+            const pctVal = k => k ? parseFloat(String(k.value).replace(',','.')) : null;
+            const cntVal = k => k ? parseInt(String(k.value).replace(/\D/g,'')) || 0 : 0;
+            prevPeriodData = {
+              label:      prev.label,
+              pct_1g:     pctVal(fk('meta_pct_1g')),
+              pct_2g:     pctVal(fk('meta_pct_2g')),
+              pct_geral:  pctVal(fk('meta_pct_geral')),
+              dec_1g:     cntVal(fk('meta_dec_1g')),
+              fav_1g:     cntVal(fk('meta_fav_1g')),
+              dec_2g:     cntVal(fk('meta_dec_2g')),
+              fav_2g:     cntVal(fk('meta_fav_2g')),
+              dec_geral:  cntVal(fk('meta_dec_geral')),
+              fav_geral:  cntVal(fk('meta_fav_geral')),
+            };
+          }
+        }
+      }
+    } catch(e) { console.warn('prev period fetch:', e.message); }
+
+    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291, decisoesTabela, julgadoresData, encerradosData, valoresElevadosData, prevPeriodData);
 
     // Upload do arquivo Excel bruto para Cockroach (quando API configurada)
     let ifoodExcelFileUrl = null;

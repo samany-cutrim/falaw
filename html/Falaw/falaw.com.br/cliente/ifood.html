@@ -849,9 +849,12 @@ function trendHtml(pct) {
 function renderKpis(tabKey, kpis) {
   const el = document.getElementById('kpis-' + tabKey);
   if (!el) return;
+  // Prefixos usados como auxílio interno — não exibir como cards
+  const _hiddenPrefixes = ['meta_dec_','meta_fav_','meta_pct_'];
   const filtered = kpis.filter(k => {
     if (k.tab_key !== tabKey) return false;
     if (k.chart_data) return false; // charts go to renderCharts, not KPI cards
+    if (_hiddenPrefixes.some(p => (k.kpi_key||'').startsWith(p))) return false;
     const v = String(k.value ?? '').trim();
     if (!v || v === '0' || v === '0,0' || v === '0.0') return false;
     return true;
@@ -971,7 +974,14 @@ function enhanceFalawChart(cfg) {
 async function renderCharts(tabKey, kpis) {
   const el = document.getElementById('charts-' + tabKey);
   if (!el) return;
-  const withCharts = kpis.filter(k => k.tab_key === tabKey && k.chart_data);
+  const withCharts = kpis
+    .filter(k => k.tab_key === tabKey && k.chart_data)
+    // chart_metas_ciclo e chart_metas sempre primeiros
+    .sort((a,b) => {
+      const pri = key => key === 'chart_metas_ciclo' ? 0 : key === 'chart_metas' ? 1 : 2;
+      const pa = pri(a.kpi_key), pb = pri(b.kpi_key);
+      return pa !== pb ? pa - pb : (a.sort_order||0) - (b.sort_order||0);
+    });
   if (!withCharts.length) {
     el.innerHTML = '<div class="analysis-empty">Nenhum gráfico disponível para esta aba.</div>';
     return;
@@ -981,8 +991,8 @@ async function renderCharts(tabKey, kpis) {
   const hasChoropleth = false; // geo simulation — no external fetch needed
   const brazilGeo = null;
 
-  const wideKeys    = new Set(['chart_dist_ano', 'chart_dist_2026', 'table_cr_consolidado', 'table_dec_exfl', 'table_fund_vg']);
-  const tableKeys    = new Set(['table_cr_consolidado', 'table_fund_vg']);
+  const wideKeys    = new Set(['chart_dist_ano', 'chart_dist_2026', 'table_cr_consolidado', 'table_dec_exfl', 'chart_metas', 'chart_metas_ciclo']);
+  const tableKeys    = new Set(['table_cr_consolidado']);
   const tableDecKeys = new Set(['table_dec_exfl']);
   const featureKeys  = new Set(['chart_cr_dist','chart_novos_cr']);
   const tallKeys     = new Set(['chart_trt_overview','chart_dec_vt','chart_dec_julgador','chart_coreus','chart_julg_fav','chart_julg_desf','chart_radar_cr','chart_julgadores']);
@@ -994,6 +1004,8 @@ async function renderCharts(tabKey, kpis) {
     const isTable    = cfg.type === 'table_cr' || tableKeys.has(k.kpi_key);
     const isTableDec = cfg.type === 'table_decisions' || tableDecKeys.has(k.kpi_key);
     const isTableVE  = cfg.type === 'table_valores_elevados';
+    const isTableFund = cfg.type === 'table_fund_cr';
+    const isMetasCiclo = cfg.type === 'chart_metas_ciclo';
     const isChoropleth = cfg.type === 'choropleth' || mapKeys.has(k.kpi_key);
     const isTreemap = cfg.type === 'treemap' || treemapKeys.has(k.kpi_key);
     const isBubble = cfg.type === 'bubble';
@@ -1004,11 +1016,11 @@ async function renderCharts(tabKey, kpis) {
     const isHoriz  = cfg.options && cfg.options.indexAxis === 'y';
     const isWide   = wideKeys.has(k.kpi_key);
     const isTall   = tallKeys.has(k.kpi_key);
-    const h = (isTable || isTableDec || isTableVE) ? 'auto' : isChoropleth ? '420px' : isTreemap ? '360px' : isBubble ? '400px' : isRadar ? '340px' : isLine ? '300px' : isPolar ? '310px' : isDonut ? '290px' : k.kpi_key === 'chart_julgadores' ? '480px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
+    const h = (isTable || isTableDec || isTableVE || isTableFund || isMetasCiclo) ? 'auto' : isChoropleth ? '420px' : isTreemap ? '360px' : isBubble ? '400px' : isRadar ? '340px' : isLine ? '300px' : isPolar ? '310px' : isDonut ? '290px' : k.kpi_key === 'chart_julgadores' ? '480px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
     const classes = ['chart-card'];
-    if (isWide || isTable || isTableDec || isTableVE) classes.push('wide');
+    if (isWide || isTable || isTableDec || isTableVE || isTableFund || isMetasCiclo) classes.push('wide');
     if (featureKeys.has(k.kpi_key)) classes.push('featured');
-    const inner = (isTable || isTableDec || isTableVE)
+    const inner = (isTable || isTableDec || isTableVE || isTableFund || isMetasCiclo)
       ? `<div class="chart-table-wrap" id="chart-${tabKey}-${i}"></div>`
       : `<div class="chart-wrap" style="height:${h}"><canvas id="chart-${tabKey}-${i}"></canvas></div>`;
     return `<div class="${classes.join(' ')}" data-kpi-key="${escHtml(k.kpi_key || '')}">
@@ -1257,6 +1269,68 @@ async function renderCharts(tabKey, kpis) {
             </tbody>
           </table></div>
           <div style="font-size:10px;color:#999;margin-top:8px">▸ Clique em qualquer linha para expandir os fundamentos.</div>`;
+        return;
+      }
+
+      // ── Metas do Ciclo ─────────────────────────────────────────────────
+      if (cfg.type === 'chart_metas_ciclo') {
+        const wrap = document.getElementById(canvasId);
+        if (!wrap) return;
+        const metas = cfg.metas || [];
+        const cons  = cfg.consolidacao || {};
+        const statusBadge = s => s === 'ok'
+          ? '<span style="background:#e8f5ee;color:#1b7a4e;border-radius:3px;padding:2px 8px;font-size:11px;font-weight:700">✔ Atingida</span>'
+          : '<span style="background:#ffebee;color:#c62828;border-radius:3px;padding:2px 8px;font-size:11px;font-weight:700">✗ Abaixo</span>';
+        const fmtPct = v => (v != null ? Number(v).toFixed(2).replace('.',',') + '%' : '—');
+        const fmtN   = v => (v != null ? Number(v).toLocaleString('pt-BR') : '—');
+
+        const metaHtml = metas.map(m => {
+          if (m.id === 1) return `
+            <div style="background:#fff;border:1px solid #e8eaf0;border-radius:8px;padding:18px 20px;flex:1;min-width:220px">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E;margin-bottom:10px">🏁 Meta 1 — Encerramento da Base</div>
+              <table style="width:100%;font-size:12px;font-family:'IBM Plex Mono',monospace;border-collapse:collapse">
+                <tr><td style="color:#888;padding:3px 0">Base inicial</td><td style="text-align:right;font-weight:600">${fmtN(m.base_inicial)} processos</td></tr>
+                <tr><td style="color:#888;padding:3px 0">Meta (${fmtPct(m.meta_pct)})</td><td style="text-align:right;font-weight:600">${fmtN(m.meta_qtd)} encerramentos</td></tr>
+                <tr><td style="color:#888;padding:3px 0">Realizado no mês</td><td style="text-align:right;font-weight:700;color:${m.realizado>=0?'#1b7a4e':'#c62828'}">${m.realizado>=0?'+':''}${fmtN(m.realizado)} (${fmtPct(m.pct_realizado)})</td></tr>
+                <tr><td style="color:#888;padding:3px 0">Base atual</td><td style="text-align:right">${fmtN(m.base_atual)} processos</td></tr>
+              </table>
+              <div style="margin-top:10px">${statusBadge(m.status)}</div>
+            </div>`;
+          if (m.id === 2 || m.id === 3) return `
+            <div style="background:#fff;border:1px solid #e8eaf0;border-radius:8px;padding:18px 20px;flex:1;min-width:220px">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E;margin-bottom:10px">${m.id===2?'⚖️':'🏛️'} Meta ${m.id} — ${escHtml(m.titulo)}</div>
+              <table style="width:100%;font-size:12px;font-family:'IBM Plex Mono',monospace;border-collapse:collapse">
+                <tr><td style="color:#888;padding:3px 0">Baseline histórico</td><td style="text-align:right">${fmtPct(m.baseline)}</td></tr>
+                <tr><td style="color:#888;padding:3px 0">Meta alvo</td><td style="text-align:right;font-weight:600">${fmtPct(m.alvo)}</td></tr>
+                <tr><td style="color:#888;padding:3px 0">Decisões</td><td style="text-align:right">${fmtN(m.decisoes)} (${fmtN(m.favoraveis)} fav.)</td></tr>
+                <tr><td style="color:#888;padding:3px 0">Taxa obtida</td><td style="text-align:right;font-weight:700;color:${m.realizado>=m.alvo?'#1b7a4e':'#c62828'}">${fmtPct(m.realizado)}</td></tr>
+                <tr><td style="color:#888;padding:3px 0">Variação vs baseline</td><td style="text-align:right;color:${m.variacao>=0?'#1b7a4e':'#c62828'}">${m.variacao>=0?'+':''}${fmtPct(m.variacao)}</td></tr>
+              </table>
+              <div style="margin-top:10px">${statusBadge(m.status)}</div>
+            </div>`;
+          if (m.id === 4) return `
+            <div style="background:#fff;border:1px solid #e8eaf0;border-radius:8px;padding:18px 20px;flex:1;min-width:220px">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E;margin-bottom:10px">🤝 Meta 4 — Economia em Acordos</div>
+              <table style="width:100%;font-size:12px;font-family:'IBM Plex Mono',monospace;border-collapse:collapse">
+                <tr><td style="color:#888;padding:3px 0">Meta economia</td><td style="text-align:right;font-weight:600">${fmtPct(m.meta_pct)}</td></tr>
+                <tr><td style="color:#888;padding:3px 0">Acordos realizados</td><td style="text-align:right;font-weight:700">${fmtN(m.acordos)}</td></tr>
+                <tr><td style="color:#888;padding:3px 0">Economia obtida</td><td style="text-align:right">${fmtPct(m.economia)}</td></tr>
+              </table>
+              <div style="margin-top:10px">${statusBadge(m.status)}</div>
+            </div>`;
+          return '';
+        }).join('');
+
+        const consolidacaoHtml = (cons.total_decisoes != null) ? `
+          <div style="margin-top:18px;padding:14px 18px;background:#f0f2f8;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:12px">
+            <span style="font-weight:700;color:#0D2B5E">Consolidação (1G + 2G):</span>
+            &nbsp; ${fmtN(cons.total_decisoes)} decisões &nbsp;·&nbsp;
+            <span style="color:#1b7a4e;font-weight:700">${fmtN(cons.total_vitorias)} vitórias (${cons.total_decisoes>0?Math.round(100*cons.total_vitorias/cons.total_decisoes)+'%':'—'})</span>
+            &nbsp;·&nbsp;
+            <span style="color:#c62828;font-weight:700">${fmtN(cons.total_derrotas)} derrotas (${cons.total_decisoes>0?Math.round(100*cons.total_derrotas/cons.total_decisoes)+'%':'—'})</span>
+          </div>` : '';
+
+        wrap.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:14px">${metaHtml}</div>${consolidacaoHtml}`;
         return;
       }
 
