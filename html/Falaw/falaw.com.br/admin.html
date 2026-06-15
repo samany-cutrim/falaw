@@ -1829,7 +1829,7 @@
           <p style="font-size:11px;color:var(--c-muted);margin-top:8px">Exibindo as primeiras 20 linhas. O arquivo completo será processado ao salvar.</p>
         </div>
         <div id="ifood-xl-status" style="display:none;font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-bottom:12px;"></div>
-        <button type="button" class="btn btn-primary" onclick="ifoodSaveExcel()">Salvar dados no Cockroach</button>
+        <button type="button" class="btn btn-primary" onclick="ifoodSaveExcel()">Salvar dados no Supabase</button>
       </div>
 
       <div id="ifood-sub-comparativo" style="display:none">
@@ -6912,7 +6912,7 @@ async function ifoodApi(path, options) {
 
     // ── /api/ifood/kpis/bulk ──
     if (path === '/api/ifood/kpis/bulk' && method === 'POST') {
-      const rows = Array.isArray(body) ? body : body.kpis || [];
+      const rows = Array.isArray(body) ? body : (body.rows || body.kpis || []);
       const { error } = await sb.from('IfoodKpi').upsert(rows);
       return { data: error ? null : { inserted: rows.length }, error: error || null };
     }
@@ -10494,7 +10494,7 @@ async function ifoodSaveExcel() {
       console.warn('ifood_raw_data upsert:', e.message);
     }
 
-    setStatus(`✓ Concluído! ${kpiRows.length} KPIs computados e salvos no Cockroach a partir de "${filename}". Recarregue o dashboard do cliente para visualizar os dados.`);
+    setStatus(`✓ Concluído! ${kpiRows.length} KPIs computados e salvos no Supabase a partir de "${filename}". Recarregue o dashboard do cliente para visualizar os dados.`);
     showToast('Excel processado com sucesso!');
   } catch(e) {
     setStatus('Erro: ' + e.message);

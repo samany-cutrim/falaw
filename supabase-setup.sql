@@ -194,3 +194,59 @@ CREATE TABLE IF NOT EXISTS pauta_audiencias (
 ALTER TABLE pauta_audiencias ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "anon full access" ON pauta_audiencias;
 CREATE POLICY "anon full access" ON pauta_audiencias FOR ALL TO anon USING (true) WITH CHECK (true);
+
+
+-- ── iFood Dashboard ──────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS "IfoodPeriod" (
+  id          TEXT PRIMARY KEY,
+  label       TEXT NOT NULL,
+  month_year  TEXT,
+  is_active   BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE "IfoodPeriod" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon full access" ON "IfoodPeriod";
+CREATE POLICY "anon full access" ON "IfoodPeriod" FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS "IfoodKpi" (
+  id          TEXT PRIMARY KEY,
+  period_id   TEXT NOT NULL REFERENCES "IfoodPeriod"(id) ON DELETE CASCADE,
+  tab_key     TEXT NOT NULL,
+  kpi_key     TEXT NOT NULL,
+  label       TEXT,
+  value       TEXT,
+  unit        TEXT,
+  chart_data  JSONB,
+  chart_title TEXT,
+  sort_order  INTEGER NOT NULL DEFAULT 0,
+  trend_pct   NUMERIC,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE "IfoodKpi" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon full access" ON "IfoodKpi";
+CREATE POLICY "anon full access" ON "IfoodKpi" FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS "IfoodContent" (
+  id          TEXT PRIMARY KEY,
+  period_id   TEXT NOT NULL REFERENCES "IfoodPeriod"(id) ON DELETE CASCADE,
+  tab_key     TEXT NOT NULL,
+  content     TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE "IfoodContent" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon full access" ON "IfoodContent";
+CREATE POLICY "anon full access" ON "IfoodContent" FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS "IfoodHighlight" (
+  id          TEXT PRIMARY KEY,
+  period_id   TEXT NOT NULL REFERENCES "IfoodPeriod"(id) ON DELETE CASCADE,
+  icon        TEXT,
+  title       TEXT,
+  description TEXT,
+  sort_order  INTEGER NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE "IfoodHighlight" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon full access" ON "IfoodHighlight";
+CREATE POLICY "anon full access" ON "IfoodHighlight" FOR ALL TO anon USING (true) WITH CHECK (true);
