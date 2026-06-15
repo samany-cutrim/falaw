@@ -9036,10 +9036,10 @@ async function ifoodSaveKpi() {
     trend_pct: trendRaw !== '' ? parseFloat(trendRaw) : null,
     sort_order: order, chart_title: chartTitle, chart_data: chartData
   };
-  const { error } = await ifoodApi('/api/ifood/kpis', {
+  const { error } = await ifoodApi('/api/ifood/kpis/bulk', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(row)
+    body: JSON.stringify({ rows: [row] })
   });
   if (error) { showToast('Erro: ' + error.message); return; }
   ifoodCloseKpiModal();

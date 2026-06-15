@@ -849,8 +849,8 @@ function trendHtml(pct) {
 function renderKpis(tabKey, kpis) {
   const el = document.getElementById('kpis-' + tabKey);
   if (!el) return;
-  // Prefixos usados como auxílio interno — não exibir como cards
-  const _hiddenPrefixes = ['meta_dec_','meta_fav_','meta_pct_'];
+  // Prefixos internos auxiliares — não exibir como cards
+  const _hiddenPrefixes = ['meta_dec_','meta_fav_','meta_pct_','meta_m1_','meta_m2_','meta_m3_','meta_m4_'];
   const filtered = kpis.filter(k => {
     if (k.tab_key !== tabKey) return false;
     if (k.chart_data) return false; // charts go to renderCharts, not KPI cards
