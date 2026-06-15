@@ -3900,19 +3900,30 @@ function generateArticlesJS(articles) {
 }
 
 async function syncBlogFromGitHub() {
-  showToast('Buscando artigos do GitHub…');
+  showToast('Buscando artigos…');
   try {
-    const ghArticles = await fetchGitHubArticles();
-    if (!ghArticles.length) { showToast('⚠ Nenhum artigo encontrado no GitHub.'); return; }
+    // Tenta buscar articles-data.js do mesmo servidor (same-origin, sempre funciona)
+    let ghArticles = [];
+    try {
+      const res = await fetch('blog/articles-data.js?t=' + Date.now());
+      if (res.ok) {
+        const code = await res.text();
+        const match = code.match(/FALAW_ARTICLES\s*=\s*(\[[\s\S]*?\]);/);
+        if (match) ghArticles = JSON.parse(match[1]) || [];
+      }
+    } catch(_) {}
+    // Fallback: tenta GitHub (precisa de token para repo privado)
+    if (!ghArticles.length) ghArticles = await fetchGitHubArticles();
+    if (!ghArticles.length) { showToast('⚠ Não foi possível carregar os artigos.'); return; }
     const existingIds = new Set(ALL_ARTICLES.map(a => a.id));
     const missing = ghArticles.filter(a => !existingIds.has(a.id));
-    if (!missing.length) { showToast('Tudo já sincronizado — nenhum artigo novo no GitHub.'); return; }
+    if (!missing.length) { showToast('Tudo já sincronizado — nenhum artigo novo.'); return; }
     const sb = getSB();
     if (sb) await Promise.all(missing.map(a => sbSaveArticle(a)));
     ALL_ARTICLES = [...missing, ...ALL_ARTICLES];
     localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
     renderBlog();
-    showToast(`✓ ${missing.length} artigo(s) importado(s) do GitHub.`);
+    showToast(`✓ ${missing.length} artigo(s) importado(s).`);
   } catch(e) {
     showToast('Erro ao sincronizar: ' + e.message);
   }
