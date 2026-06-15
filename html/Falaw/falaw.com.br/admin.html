@@ -6894,6 +6894,19 @@ async function ifoodApi(path, options) {
 
     // ── /api/ifood/periods ──
     if (path.startsWith('/api/ifood/periods')) {
+      // /activate
+      if (path.includes('/activate') && method === 'POST') {
+        const id = path.replace(/\/activate.*$/, '').split('/').pop();
+        await sb.from('IfoodPeriod').update({ is_active: false }).neq('id', id);
+        const { error } = await sb.from('IfoodPeriod').update({ is_active: true }).eq('id', id);
+        return { data: null, error: error || null };
+      }
+      // /clear-text
+      if (path.includes('/clear-text') && method === 'POST') {
+        const id = path.replace(/\/clear-text.*$/, '').split('/').pop();
+        const { error } = await sb.from('IfoodContent').delete().eq('period_id', id);
+        return { data: null, error: error || null };
+      }
       if (method === 'GET') {
         const { data, error } = await sb.from('IfoodPeriod').select('*').order('month_year', { ascending: false });
         return { data: error ? null : data, error: error || null };
@@ -6904,7 +6917,7 @@ async function ifoodApi(path, options) {
         return { data: error ? null : data, error: error || null };
       }
       if (method === 'DELETE') {
-        const id = path.split('/').pop();
+        const id = decodeURIComponent(path.split('/').pop());
         const { error } = await sb.from('IfoodPeriod').delete().eq('id', id);
         return { data: null, error: error || null };
       }
@@ -6924,6 +6937,20 @@ async function ifoodApi(path, options) {
       return { data: null, error: error || null };
     }
 
+    // ── /api/ifood/kpis/:id DELETE (single) ──
+    if (path.match(/\/api\/ifood\/kpis\/[^/]+$/) && method === 'DELETE') {
+      const id = decodeURIComponent(path.split('/').pop());
+      const { error } = await sb.from('IfoodKpi').delete().eq('id', id);
+      return { data: null, error: error || null };
+    }
+
+    // ── /api/ifood/kpis/:id PUT/PATCH (single update) ──
+    if (path.match(/\/api\/ifood\/kpis\/[^/]+$/) && (method === 'PUT' || method === 'PATCH')) {
+      const id = decodeURIComponent(path.split('/').pop());
+      const { data, error } = await sb.from('IfoodKpi').update(body).eq('id', id).select().single();
+      return { data: error ? null : data, error: error || null };
+    }
+
     // ── /api/ifood/kpis GET ──
     if (path.startsWith('/api/ifood/kpis') && method === 'GET') {
       const periodId = params.get('periodId');
@@ -6936,23 +6963,52 @@ async function ifoodApi(path, options) {
 
     // ── /api/ifood/content ──
     if (path.startsWith('/api/ifood/content')) {
+      // content/:id DELETE (single)
+      if (path.match(/\/api\/ifood\/content\/[^/]+$/) && method === 'DELETE') {
+        const id = decodeURIComponent(path.split('/').pop());
+        const { error } = await sb.from('IfoodContent').delete().eq('id', id);
+        return { data: null, error: error || null };
+      }
       if (method === 'GET') {
-        const tabKey = params.get('tab_key');
-        const periodId = params.get('period_id');
+        const tabKey   = params.get('tab_key') || params.get('tabKey');
+        const periodId = params.get('period_id') || params.get('periodId');
         let q = sb.from('IfoodContent').select('*');
-        if (tabKey) q = q.eq('tab_key', tabKey);
+        if (tabKey)   q = q.eq('tab_key', tabKey);
         if (periodId) q = q.eq('period_id', periodId);
         const { data, error } = await q;
         return { data: error ? null : data, error: error || null };
       }
       if (method === 'POST') {
-        const { error } = await sb.from('IfoodContent').upsert(body);
+        const rows = Array.isArray(body) ? body : [body];
+        const { error } = await sb.from('IfoodContent').upsert(rows);
         return { data: null, error: error || null };
       }
     }
 
     // ── /api/ifood/highlights ──
     if (path.startsWith('/api/ifood/highlights')) {
+      // highlights/by-period/:id DELETE
+      if (path.includes('/highlights/by-period/') && method === 'DELETE') {
+        const periodId = decodeURIComponent(path.split('/').pop());
+        const { error } = await sb.from('IfoodHighlight').delete().eq('period_id', periodId);
+        return { data: null, error: error || null };
+      }
+      // highlights/replace POST — delete + insert
+      if (path.includes('/highlights/replace') && method === 'POST') {
+        const rows = Array.isArray(body) ? body : (body.rows || []);
+        if (rows.length) {
+          await sb.from('IfoodHighlight').delete().eq('period_id', rows[0].period_id);
+          const { error } = await sb.from('IfoodHighlight').insert(rows);
+          return { data: null, error: error || null };
+        }
+        return { data: null, error: null };
+      }
+      // highlights/:id DELETE (single)
+      if (path.match(/\/api\/ifood\/highlights\/[^/]+$/) && method === 'DELETE') {
+        const id = decodeURIComponent(path.split('/').pop());
+        const { error } = await sb.from('IfoodHighlight').delete().eq('id', id);
+        return { data: null, error: error || null };
+      }
       if (method === 'GET') {
         const periodId = params.get('periodId');
         let q = sb.from('IfoodHighlight').select('*');
