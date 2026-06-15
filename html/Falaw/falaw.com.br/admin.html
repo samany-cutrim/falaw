@@ -2046,6 +2046,13 @@
               </div>
             </div>
             <div class="form-field">
+              <label>Tipo de exibição</label>
+              <select id="ifh-type" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:8px 10px;font-family:var(--f-body);font-size:13px">
+                <option value="card">Card (padrão)</option>
+                <option value="box">Quadro em destaque (largura total)</option>
+              </select>
+            </div>
+            <div class="form-field">
               <label>Descrição</label>
               <textarea id="ifh-body" rows="4" placeholder="Descreva o destaque em detalhes…"></textarea>
             </div>
@@ -9208,7 +9215,7 @@ function renderIfoodHighlights(periodId) {
     <div class="item-card">
       <div style="font-size:28px;flex-shrink:0">${escHtml(h.icon || '★')}</div>
       <div class="item-card-body">
-        <div class="item-card-title">${escHtml(h.title)}</div>
+        <div class="item-card-title">${escHtml(h.title)} <span style="font-size:11px;background:${h.highlight_type==='box'?'#0D2B5E':'#e8eaf0'};color:${h.highlight_type==='box'?'#fff':'#555'};padding:2px 7px;border-radius:3px;font-weight:400">${h.highlight_type==='box'?'Quadro':'Card'}</span></div>
         <div class="item-card-preview">${escHtml(h.body)}</div>
         <div class="item-card-meta">ordem ${h.sort_order}</div>
       </div>
@@ -9228,6 +9235,7 @@ function ifoodOpenHighlightModal(id) {
   document.getElementById('ifh-icon').value   = h ? (h.icon || '★') : '★';
   document.getElementById('ifh-title').value  = h ? h.title : '';
   document.getElementById('ifh-body').value   = h ? (h.body || '') : '';
+  document.getElementById('ifh-type').value   = h ? (h.highlight_type || 'card') : 'card';
   document.getElementById('ifh-order').value  = h ? h.sort_order : _ifoodHighlights.length;
   document.getElementById('ifoodHlModal').classList.add('open');
 }
@@ -9239,9 +9247,10 @@ async function ifoodSaveHighlight() {
   const icon     = document.getElementById('ifh-icon').value.trim() || '★';
   const title    = document.getElementById('ifh-title').value.trim();
   const body     = document.getElementById('ifh-body').value.trim();
+  const hlType   = document.getElementById('ifh-type').value || 'card';
   const order    = parseInt(document.getElementById('ifh-order').value, 10) || 0;
   if (!periodId || !title) { showToast('Selecione um período e preencha o título.'); return; }
-  const row = { id: id || ifoodId(), period_id: periodId, icon, title, body, sort_order: order };
+  const row = { id: id || ifoodId(), period_id: periodId, icon, title, body, highlight_type: hlType, sort_order: order };
   const { error } = await ifoodApi('/api/ifood/highlights', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -10366,8 +10375,8 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     const m1BaseInicial = p.ativos || p.m1_base_ciclo || 0;
     const m1MetaPct     = p.m1_meta_pct != null ? p.m1_meta_pct : 20;
     const m1MetaQtd     = Math.round(m1BaseInicial * m1MetaPct / 100);
-    // Realizado M1: base_inicial - base_atual (positivo = base reduziu = bom)
-    const m1Realizado   = m1BaseInicial > 0 ? m1BaseInicial - ativos : encerradosData.length;
+    // Realizado M1: sempre da aba ENCERRADOS (processos encerrados no mês)
+    const m1Realizado   = encerradosData.length;
     const m1PctReal     = m1BaseInicial > 0 ? Math.round(m1Realizado / m1BaseInicial * 10000) / 100 : 0;
     const m1Status      = m1Realizado >= m1MetaQtd ? 'ok' : 'nok';
 
@@ -10476,7 +10485,9 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     const td = decs.filter(d=>_xlClassifyDec(d.resultado)==='D').length;
 
     // Suspensos para esta causa raiz
-    const tSusp1389 = susp1389.filter(s=>_xlCanonCR(String(s[2]||''))===cr);
+    // 1389: [0]=RECLAMANTE [1]=PROCESSO [2]=TRT [3]=CAUSA RAIZ [4]=TRIBUNAL [5]=TURMA [6]=RELATOR [7]=DATA
+    // 1291: [0]=RECLAMANTE [1]=PROCESSO [2]=CAUSA RAIZ [3]=TRIBUNAL [4]=TURMA [5]=RELATOR [6]=OBS
+    const tSusp1389 = susp1389.filter(s=>_xlCanonCR(String(s[3]||''))===cr);
     const tSusp1291 = susp1291.filter(s=>_xlCanonCR(String(s[2]||''))===cr);
     const tSusp = tSusp1389.length + tSusp1291.length;
 
@@ -10484,6 +10495,17 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     push(tabKey,'ativos','Processos Ativos',_xlFmtBr(ta),'ativos');
     push(tabKey,'encerrados','Processos Encerrados',_xlFmtBr(te),'encerrados');
     if(tSusp>0) push(tabKey,'suspensos','Processos Suspensos',_xlFmtBr(tSusp),'suspensos');
+
+    // Tabela de suspensos por tema
+    if (tSusp1389.length || tSusp1291.length) {
+      const _suspRows = [
+        ...tSusp1389.map(s => ({ reclamante: String(s[0]||''), processo: String(s[1]||''), trt: String(s[2]||''), tribunal: String(s[4]||''), turma: String(s[5]||''), relator: String(s[6]||''), tema: '1389', obs: String(s[7]||'') })),
+        ...tSusp1291.map(s => ({ reclamante: String(s[0]||''), processo: String(s[1]||''), trt: '', tribunal: String(s[3]||''), turma: String(s[4]||''), relator: String(s[5]||''), tema: '1291', obs: String(s[6]||'') })),
+      ];
+      push(tabKey, 'table_suspensos_cr', `Suspensos por Tema (${tSusp})`, '', '',
+        { type: 'table_suspensos', rows: _suspRows },
+        `Processos Suspensos — ${label}`);
+    }
     if(decs.length>0) {
       push(tabKey,'decisoes_fav','Decisões Favoráveis',_xlFmtBr(tf),`(${_xlFmtPct(tf,decs.length)})`);
       push(tabKey,'decisoes_desf','Decisões Desfavoráveis',_xlFmtBr(td),`(${_xlFmtPct(td,decs.length)})`);

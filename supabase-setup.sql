@@ -239,14 +239,19 @@ DROP POLICY IF EXISTS "anon full access" ON "IfoodContent";
 CREATE POLICY "anon full access" ON "IfoodContent" FOR ALL TO anon USING (true) WITH CHECK (true);
 
 CREATE TABLE IF NOT EXISTS "IfoodHighlight" (
-  id          TEXT PRIMARY KEY,
-  period_id   TEXT NOT NULL REFERENCES "IfoodPeriod"(id) ON DELETE CASCADE,
-  icon        TEXT,
-  title       TEXT,
-  description TEXT,
-  sort_order  INTEGER NOT NULL DEFAULT 0,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id              TEXT PRIMARY KEY,
+  period_id       TEXT NOT NULL REFERENCES "IfoodPeriod"(id) ON DELETE CASCADE,
+  icon            TEXT,
+  title           TEXT,
+  body            TEXT,
+  description     TEXT,
+  highlight_type  TEXT NOT NULL DEFAULT 'card',
+  sort_order      INTEGER NOT NULL DEFAULT 0,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Migração: adiciona colunas se já existir a tabela
+ALTER TABLE "IfoodHighlight" ADD COLUMN IF NOT EXISTS body TEXT;
+ALTER TABLE "IfoodHighlight" ADD COLUMN IF NOT EXISTS highlight_type TEXT NOT NULL DEFAULT 'card';
 ALTER TABLE "IfoodHighlight" ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "anon full access" ON "IfoodHighlight";
 CREATE POLICY "anon full access" ON "IfoodHighlight" FOR ALL TO anon USING (true) WITH CHECK (true);

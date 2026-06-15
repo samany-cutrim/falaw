@@ -344,6 +344,29 @@
       background: rgba(0,0,0,0.018);
       display: flex; align-items: center; justify-content: space-between;
     }
+    /* Box type — quadro de destaque em largura total */
+    .highlight-card.is-box {
+      grid-column: 1 / -1;
+      flex-direction: row;
+      border-color: var(--gold);
+      box-shadow: 0 4px 24px rgba(123,26,46,0.10);
+    }
+    .highlight-card.is-box .highlight-card-stripe {
+      width: 6px; height: auto;
+      background: linear-gradient(180deg, var(--gold) 0%, #0D2B5E 100%);
+    }
+    .highlight-card.is-box .highlight-card-body {
+      display: flex; align-items: flex-start; gap: 20px; padding: 24px 28px;
+    }
+    .highlight-card.is-box .highlight-icon-badge {
+      width: 56px; height: 56px; flex-shrink: 0; font-size: 26px;
+      background: linear-gradient(135deg, var(--gold-dim), rgba(13,43,94,0.10));
+    }
+    .highlight-card.is-box .highlight-title {
+      font-size: 17px; margin-bottom: 8px;
+    }
+    .highlight-card.is-box .highlight-seq { margin-bottom: 6px; }
+    .highlight-card.is-box .highlight-card-footer { display: none; }
     .highlight-footer-brand {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
@@ -1004,6 +1027,7 @@ async function renderCharts(tabKey, kpis) {
     const isTable    = cfg.type === 'table_cr' || tableKeys.has(k.kpi_key);
     const isTableDec = cfg.type === 'table_decisions' || tableDecKeys.has(k.kpi_key);
     const isTableVE  = cfg.type === 'table_valores_elevados';
+    const isTableSusp = cfg.type === 'table_suspensos';
     const isTableFund = cfg.type === 'table_fund_cr';
     const isMetasCiclo = cfg.type === 'chart_metas_ciclo';
     const isChoropleth = cfg.type === 'choropleth' || mapKeys.has(k.kpi_key);
@@ -1016,11 +1040,11 @@ async function renderCharts(tabKey, kpis) {
     const isHoriz  = cfg.options && cfg.options.indexAxis === 'y';
     const isWide   = wideKeys.has(k.kpi_key);
     const isTall   = tallKeys.has(k.kpi_key);
-    const h = (isTable || isTableDec || isTableVE || isTableFund || isMetasCiclo) ? 'auto' : isChoropleth ? '420px' : isTreemap ? '360px' : isBubble ? '400px' : isRadar ? '340px' : isLine ? '300px' : isPolar ? '310px' : isDonut ? '290px' : k.kpi_key === 'chart_julgadores' ? '480px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
+    const h = (isTable || isTableDec || isTableVE || isTableSusp || isTableFund || isMetasCiclo) ? 'auto' : isChoropleth ? '420px' : isTreemap ? '360px' : isBubble ? '400px' : isRadar ? '340px' : isLine ? '300px' : isPolar ? '310px' : isDonut ? '290px' : k.kpi_key === 'chart_julgadores' ? '480px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
     const classes = ['chart-card'];
-    if (isWide || isTable || isTableDec || isTableVE || isTableFund || isMetasCiclo) classes.push('wide');
+    if (isWide || isTable || isTableDec || isTableVE || isTableSusp || isTableFund || isMetasCiclo) classes.push('wide');
     if (featureKeys.has(k.kpi_key)) classes.push('featured');
-    const inner = (isTable || isTableDec || isTableVE || isTableFund || isMetasCiclo)
+    const inner = (isTable || isTableDec || isTableVE || isTableSusp || isTableFund || isMetasCiclo)
       ? `<div class="chart-table-wrap" id="chart-${tabKey}-${i}"></div>`
       : `<div class="chart-wrap" style="height:${h}"><canvas id="chart-${tabKey}-${i}"></canvas></div>`;
     return `<div class="${classes.join(' ')}" data-kpi-key="${escHtml(k.kpi_key || '')}">
@@ -1319,6 +1343,54 @@ async function renderCharts(tabKey, kpis) {
           </div>` : '';
 
         wrap.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:14px">${metaHtml}</div>${consolidacaoHtml}`;
+        return;
+      }
+
+      // ── Tabela de Processos Suspensos ──────────────────────────────────────
+      if (cfg.type === 'table_suspensos') {
+        const wrap = document.getElementById(canvasId);
+        if (!wrap) return;
+        const rows = cfg.rows || [];
+        const tema1389 = rows.filter(r => r.tema === '1389');
+        const tema1291 = rows.filter(r => r.tema === '1291');
+        const renderTema = (tRows, tema) => {
+          if (!tRows.length) return '';
+          const temaLabel = tema === '1389' ? 'Tema 1389 — Gestão por Aplicativo' : 'Tema 1291 — Vínculo Empregatício OL';
+          return `
+            <div style="margin-bottom:20px">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E;margin-bottom:8px;padding:6px 10px;background:#e8eef8;border-radius:4px">
+                ${escHtml(temaLabel)} <span style="font-weight:400;color:#555">(${tRows.length} processo${tRows.length!==1?'s':''})</span>
+              </div>
+              <div style="overflow-x:auto">
+              <table style="width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:11px">
+                <thead><tr style="background:#0D2B5E;color:#fff">
+                  <th style="padding:8px 10px;text-align:left;white-space:nowrap">Reclamante</th>
+                  <th style="padding:8px 10px;text-align:left;white-space:nowrap">Nº Processo</th>
+                  <th style="padding:8px 10px;text-align:left;white-space:nowrap">TRT</th>
+                  <th style="padding:8px 10px;text-align:left;white-space:nowrap">Tribunal</th>
+                  <th style="padding:8px 10px;text-align:left;white-space:nowrap">Turma</th>
+                  <th style="padding:8px 10px;text-align:left;white-space:nowrap">Relator</th>
+                  <th style="padding:8px 10px;text-align:left">Obs.</th>
+                </tr></thead>
+                <tbody>
+                  ${tRows.map((r,i) => `<tr style="background:${i%2===0?'#fff':'#f5f7fc'}">
+                    <td style="padding:7px 10px;border-bottom:1px solid #e8eaf0">${escHtml(r.reclamante||'')}</td>
+                    <td style="padding:7px 10px;border-bottom:1px solid #e8eaf0;white-space:nowrap">${escHtml(r.processo||'')}</td>
+                    <td style="padding:7px 10px;border-bottom:1px solid #e8eaf0;white-space:nowrap">${escHtml(r.trt||'')}</td>
+                    <td style="padding:7px 10px;border-bottom:1px solid #e8eaf0;white-space:nowrap">${escHtml(r.tribunal||'')}</td>
+                    <td style="padding:7px 10px;border-bottom:1px solid #e8eaf0;white-space:nowrap">${escHtml(r.turma||'')}</td>
+                    <td style="padding:7px 10px;border-bottom:1px solid #e8eaf0">${escHtml(r.relator||'')}</td>
+                    <td style="padding:7px 10px;border-bottom:1px solid #e8eaf0;color:#666">${escHtml(r.obs||'')}</td>
+                  </tr>`).join('')}
+                </tbody>
+              </table>
+              </div>
+            </div>`;
+        };
+        wrap.innerHTML =
+          `<div style="font-size:12px;color:#555;margin-bottom:12px">${rows.length} processo${rows.length!==1?'s':''} suspenso${rows.length!==1?'s':''}</div>` +
+          renderTema(tema1389, '1389') +
+          renderTema(tema1291, '1291');
         return;
       }
 
@@ -1683,20 +1755,26 @@ function renderHighlights(highlights) {
   }
   if (countEl) countEl.textContent = highlights.length + (highlights.length === 1 ? ' destaque' : ' destaques');
   const total = highlights.length;
-  el.innerHTML = highlights.map((h, i) => `
-    <div class="highlight-card">
+  el.innerHTML = highlights.map((h, i) => {
+    const isBox = h.highlight_type === 'box';
+    return `
+    <div class="highlight-card${isBox ? ' is-box' : ''}">
       <div class="highlight-card-stripe"></div>
       <div class="highlight-card-body">
-        <span class="highlight-seq">${String(i+1).padStart(2,'0')} / ${String(total).padStart(2,'0')}</span>
+        ${isBox ? '' : `<span class="highlight-seq">${String(i+1).padStart(2,'0')} / ${String(total).padStart(2,'0')}</span>`}
         <div class="highlight-icon-badge">${escHtml(h.icon || '★')}</div>
-        <div class="highlight-title">${escHtml(h.title)}</div>
-        <div class="highlight-body">${escHtml(h.body)}</div>
+        <div style="flex:1">
+          ${isBox ? '' : ''}
+          <div class="highlight-title">${escHtml(h.title)}</div>
+          <div class="highlight-body">${escHtml(h.body)}</div>
+        </div>
       </div>
       <div class="highlight-card-footer">
         <span class="highlight-footer-brand">Falaw Advogados · iFood</span>
         <span class="highlight-footer-dot"></span>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 
