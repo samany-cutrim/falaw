@@ -10756,6 +10756,22 @@ async function ifoodSaveExcel() {
       }
     } catch(e) { console.warn('cur period meta fetch:', e.message); }
 
+    // Lê também os valores diretamente do form (evita precisar salvar o form antes do upload)
+    {
+      const gf = id => { const el = document.getElementById(id); return el && el.value.trim() !== '' ? parseFloat(el.value) : null; };
+      const gi = id => { const el = document.getElementById(id); return el && el.value.trim() !== '' ? parseInt(el.value) : null; };
+      if (!prevPeriodData) prevPeriodData = {};
+      const setIfNotNull = (field, val) => { if (val !== null && !isNaN(val)) prevPeriodData[field] = val; };
+      setIfNotNull('m1_base_ciclo', gi('m1_base_ciclo'));
+      setIfNotNull('m1_meta_pct',   gf('m1_meta_pct'));
+      setIfNotNull('m2_baseline',   gf('m2_baseline'));
+      setIfNotNull('m2_alvo',       gf('m2_alvo'));
+      setIfNotNull('m3_baseline',   gf('m3_baseline'));
+      setIfNotNull('m3_alvo',       gf('m3_alvo'));
+      setIfNotNull('m4_meta_pct',   gf('m4_meta_pct'));
+      setIfNotNull('m4_economia',   gf('m4_economia'));
+    }
+
     const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291, decisoesTabela, julgadoresData, encerradosData, valoresElevadosData, prevPeriodData);
 
     // Upload do arquivo Excel bruto para Cockroach (quando API configurada)

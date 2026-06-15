@@ -1284,7 +1284,7 @@ async function renderCharts(tabKey, kpis) {
         const fmtPct = v => (v != null ? Number(v).toFixed(2).replace('.',',') + '%' : '—');
         const fmtN   = v => (v != null ? Number(v).toLocaleString('pt-BR') : '—');
 
-        const metaHtml = metas.map(m => {
+        const metaHtml = metas.filter(m => m.id !== 4).map(m => {
           if (m.id === 1) return `
             <div style="background:#fff;border:1px solid #e8eaf0;border-radius:8px;padding:18px 20px;flex:1;min-width:220px">
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E;margin-bottom:10px">🏁 Meta 1 — Encerramento da Base</div>
@@ -1302,19 +1302,7 @@ async function renderCharts(tabKey, kpis) {
               <table style="width:100%;font-size:12px;font-family:'IBM Plex Mono',monospace;border-collapse:collapse">
                 <tr><td style="color:#888;padding:3px 0">Baseline histórico</td><td style="text-align:right">${fmtPct(m.baseline)}</td></tr>
                 <tr><td style="color:#888;padding:3px 0">Meta alvo</td><td style="text-align:right;font-weight:600">${fmtPct(m.alvo)}</td></tr>
-                <tr><td style="color:#888;padding:3px 0">Decisões</td><td style="text-align:right">${fmtN(m.decisoes)} (${fmtN(m.favoraveis)} fav.)</td></tr>
-                <tr><td style="color:#888;padding:3px 0">Taxa obtida</td><td style="text-align:right;font-weight:700;color:${m.realizado>=m.alvo?'#1b7a4e':'#c62828'}">${fmtPct(m.realizado)}</td></tr>
-                <tr><td style="color:#888;padding:3px 0">Variação vs baseline</td><td style="text-align:right;color:${m.variacao>=0?'#1b7a4e':'#c62828'}">${m.variacao>=0?'+':''}${fmtPct(m.variacao)}</td></tr>
-              </table>
-              <div style="margin-top:10px">${statusBadge(m.status)}</div>
-            </div>`;
-          if (m.id === 4) return `
-            <div style="background:#fff;border:1px solid #e8eaf0;border-radius:8px;padding:18px 20px;flex:1;min-width:220px">
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E;margin-bottom:10px">🤝 Meta 4 — Economia em Acordos</div>
-              <table style="width:100%;font-size:12px;font-family:'IBM Plex Mono',monospace;border-collapse:collapse">
-                <tr><td style="color:#888;padding:3px 0">Meta economia</td><td style="text-align:right;font-weight:600">${fmtPct(m.meta_pct)}</td></tr>
-                <tr><td style="color:#888;padding:3px 0">Acordos realizados</td><td style="text-align:right;font-weight:700">${fmtN(m.acordos)}</td></tr>
-                <tr><td style="color:#888;padding:3px 0">Economia obtida</td><td style="text-align:right">${fmtPct(m.economia)}</td></tr>
+                <tr><td style="color:#888;padding:3px 0">Taxa obtida</td><td style="text-align:right;font-weight:700;color:${m.realizado>=(m.alvo||0)?'#1b7a4e':'#c62828'}">${fmtPct(m.realizado)}</td></tr>
               </table>
               <div style="margin-top:10px">${statusBadge(m.status)}</div>
             </div>`;
