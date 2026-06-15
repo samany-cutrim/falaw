@@ -7023,8 +7023,10 @@ async function ifoodApi(path, options) {
     // ── /api/ifood/kpis GET ──
     if (path.startsWith('/api/ifood/kpis') && method === 'GET') {
       const periodId = params.get('periodId');
+      const tabKey   = params.get('tabKey') || params.get('tab_key');
       let q = sb.from('IfoodKpi').select('*');
       if (periodId) q = q.eq('period_id', periodId);
+      if (tabKey)   q = q.eq('tab_key', tabKey);
       q = q.order('sort_order', { ascending: true });
       const { data, error } = await q;
       return { data: error ? null : data, error: error || null };
@@ -9083,7 +9085,10 @@ async function ifoodSaveContent() {
     ? document.getElementById('ifood-cnt-source').value
     : document.getElementById('ifood-cnt-editor').innerHTML;
   if (!periodId || !tabKey) { showToast('Selecione período e aba.'); return; }
-  const row = { id: ifoodId(), period_id: periodId, tab_key: tabKey, content_html: html, updated_at: new Date().toISOString() };
+  // Busca ID existente para fazer upsert correto (evitar duplicate key)
+  const { data: existing } = await ifoodApi('/api/ifood/content?periodId=' + encodeURIComponent(periodId) + '&tabKey=' + encodeURIComponent(tabKey));
+  const existingId = (Array.isArray(existing) && existing.length) ? existing[0].id : null;
+  const row = { id: existingId || ifoodId(), period_id: periodId, tab_key: tabKey, content_html: html, updated_at: new Date().toISOString() };
   const { error } = await ifoodApi('/api/ifood/content', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
