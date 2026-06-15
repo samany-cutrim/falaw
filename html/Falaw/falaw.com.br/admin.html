@@ -8988,7 +8988,7 @@ function renderIfoodKpis() {
     el.innerHTML = '<div class="empty-state"><p>Nenhum KPI nesta aba para este período.</p></div>';
     return;
   }
-  el.innerHTML = '<div class="item-list">' + _ifoodKpis.map(k => `
+  el.innerHTML = '<div class="item-list">' + [..._ifoodKpis].sort((a,b) => (a.sort_order||0) - (b.sort_order||0)).map(k => `
     <div class="item-card">
       <div class="item-card-body">
         <div class="item-card-title">${escHtml(k.label)} <span style="font-family:var(--f-mono);font-size:20px;font-weight:400">${escHtml(k.value)}${k.unit ? ' <small style="font-size:11px">' + escHtml(k.unit) + '</small>' : ''}</span></div>
@@ -10830,6 +10830,15 @@ async function ifoodSaveExcel() {
     const { data: existingKpisResp, error: existingKpisErr } = await ifoodApi('/api/ifood/kpis?periodId=' + encodeURIComponent(periodId));
     if (existingKpisErr) throw new Error('Erro ao ler KPIs existentes: ' + existingKpisErr.message);
     const existingKpis = Array.isArray(existingKpisResp) ? existingKpisResp : [];
+    // Preservar sort_order customizado — se o usuário editou a ordem no admin, manter após re-upload
+    const existingSortMap = {};
+    existingKpis.forEach(k => { existingSortMap[k.tab_key + '||' + k.kpi_key] = k.sort_order; });
+    // Aplicar sort_order salvo aos rows auto-gerados (apenas se o valor foi alterado vs auto-incrementado)
+    // Estratégia: se o auto-gerado tem um sort_order diferente do salvo, usa o salvo
+    kpiRows.forEach(r => {
+      const key = r.tab_key + '||' + r.kpi_key;
+      if (key in existingSortMap) r.sort_order = existingSortMap[key];
+    });
     const autoKeySet = new Set(kpiRows.map(r => r.tab_key + '||' + r.kpi_key));
     // Chaves sempre geradas automaticamente — nunca preservar como manuais mesmo se ausentes
     const alwaysAutoKeys = new Set([
