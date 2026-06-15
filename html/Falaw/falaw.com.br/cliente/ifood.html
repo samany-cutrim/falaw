@@ -1027,12 +1027,7 @@ async function renderCharts(tabKey, kpis) {
   if (!el) return;
   const withCharts = kpis
     .filter(k => k.tab_key === tabKey && k.chart_data)
-    // chart_metas_ciclo e chart_metas sempre primeiros
-    .sort((a,b) => {
-      const pri = key => key === 'chart_metas_ciclo' ? 0 : key === 'chart_metas' ? 1 : 2;
-      const pa = pri(a.kpi_key), pb = pri(b.kpi_key);
-      return pa !== pb ? pa - pb : (a.sort_order||0) - (b.sort_order||0);
-    });
+    .sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
   if (!withCharts.length) {
     el.innerHTML = '<div class="analysis-empty">Nenhum gráfico disponível para esta aba.</div>';
     return;
