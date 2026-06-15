@@ -2214,9 +2214,9 @@ async function init() {
   document.getElementById('sidebarEmail').textContent = displayEmail;
   document.getElementById('topbarCompany').textContent = displayCompany;
 
-  if (!apiBase()) {
+  if (!getSB()) {
     document.getElementById('loadingOverlay').style.display = 'none';
-    showToast('Cockroach API não configurada. Configure em Configurações no admin.');
+    showToast('Supabase não configurado. Verifique o sb-config.js no servidor.');
     return;
   }
 
