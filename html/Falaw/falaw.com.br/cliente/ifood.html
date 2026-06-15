@@ -17,6 +17,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <!-- PptxGenJS (export PPT) -->
   <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <!-- App config -->
   <script src="../sb-config.js" onerror="void 0"></script>
 
@@ -773,19 +775,17 @@ function closeSidebar() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   COCKROACH API INIT
+   SUPABASE CLIENT
 ═══════════════════════════════════════════════════════════ */
-function apiBase() {
-  const cfg = (localStorage.getItem('fa_backend_api_url') || window.BACKEND_API_URL || '').trim();
-  return cfg.replace(/\/$/, '');
-}
-
-async function apiGet(path) {
-  const base = apiBase();
-  if (!base) throw new Error('Cockroach API não configurada');
-  const res = await fetch(base + path);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return res.json();
+let _sbClient = null;
+function getSB() {
+  if (_sbClient) return _sbClient;
+  const url = (window.SB_URL || localStorage.getItem('fa_supabase_url') || '').trim();
+  const key = (window.SB_KEY || localStorage.getItem('fa_supabase_key') || '').trim();
+  if (url && key && window.supabase) {
+    _sbClient = window.supabase.createClient(url, key);
+  }
+  return _sbClient;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -793,45 +793,45 @@ async function apiGet(path) {
 ═══════════════════════════════════════════════════════════ */
 async function loadPeriods() {
   try {
-    const data = await apiGet('/api/ifood/periods');
+    const sb = getSB();
+    if (!sb) { console.warn('Supabase não configurado'); return []; }
+    const { data, error } = await sb.from('IfoodPeriod').select('*').order('month_year', { ascending: false });
+    if (error) throw new Error(error.message);
     return Array.isArray(data) ? data : [];
-  } catch (e) {
-    console.warn('ifood_periods:', e.message);
-    return [];
-  }
+  } catch (e) { console.warn('ifood_periods:', e.message); return []; }
 }
 
 async function loadKpis(periodId) {
   if (!periodId) return [];
   try {
-    const data = await apiGet('/api/ifood/kpis?periodId=' + encodeURIComponent(periodId));
+    const sb = getSB();
+    if (!sb) return [];
+    const { data, error } = await sb.from('IfoodKpi').select('*').eq('period_id', periodId).order('sort_order', { ascending: true });
+    if (error) throw new Error(error.message);
     return Array.isArray(data) ? data : [];
-  } catch (e) {
-    console.warn('ifood_kpis:', e.message);
-    return [];
-  }
+  } catch (e) { console.warn('ifood_kpis:', e.message); return []; }
 }
 
 async function loadContent(periodId) {
   if (!periodId) return [];
   try {
-    const data = await apiGet('/api/ifood/content?periodId=' + encodeURIComponent(periodId));
+    const sb = getSB();
+    if (!sb) return [];
+    const { data, error } = await sb.from('IfoodContent').select('*').eq('period_id', periodId);
+    if (error) throw new Error(error.message);
     return Array.isArray(data) ? data : [];
-  } catch (e) {
-    console.warn('ifood_content:', e.message);
-    return [];
-  }
+  } catch (e) { console.warn('ifood_content:', e.message); return []; }
 }
 
 async function loadHighlights(periodId) {
   if (!periodId) return [];
   try {
-    const data = await apiGet('/api/ifood/highlights?periodId=' + encodeURIComponent(periodId));
+    const sb = getSB();
+    if (!sb) return [];
+    const { data, error } = await sb.from('IfoodHighlight').select('*').eq('period_id', periodId).order('sort_order', { ascending: true });
+    if (error) throw new Error(error.message);
     return Array.isArray(data) ? data : [];
-  } catch (e) {
-    console.warn('ifood_highlights:', e.message);
-    return [];
-  }
+  } catch (e) { console.warn('ifood_highlights:', e.message); return []; }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -993,6 +993,7 @@ async function renderCharts(tabKey, kpis) {
     let cfg; try { cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; } catch(e) { cfg = {}; }
     const isTable    = cfg.type === 'table_cr' || tableKeys.has(k.kpi_key);
     const isTableDec = cfg.type === 'table_decisions' || tableDecKeys.has(k.kpi_key);
+    const isTableVE  = cfg.type === 'table_valores_elevados';
     const isChoropleth = cfg.type === 'choropleth' || mapKeys.has(k.kpi_key);
     const isTreemap = cfg.type === 'treemap' || treemapKeys.has(k.kpi_key);
     const isBubble = cfg.type === 'bubble';
@@ -1003,11 +1004,11 @@ async function renderCharts(tabKey, kpis) {
     const isHoriz  = cfg.options && cfg.options.indexAxis === 'y';
     const isWide   = wideKeys.has(k.kpi_key);
     const isTall   = tallKeys.has(k.kpi_key);
-    const h = (isTable || isTableDec) ? 'auto' : isChoropleth ? '420px' : isTreemap ? '360px' : isBubble ? '400px' : isRadar ? '340px' : isLine ? '300px' : isPolar ? '310px' : isDonut ? '290px' : k.kpi_key === 'chart_julgadores' ? '480px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
+    const h = (isTable || isTableDec || isTableVE) ? 'auto' : isChoropleth ? '420px' : isTreemap ? '360px' : isBubble ? '400px' : isRadar ? '340px' : isLine ? '300px' : isPolar ? '310px' : isDonut ? '290px' : k.kpi_key === 'chart_julgadores' ? '480px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
     const classes = ['chart-card'];
-    if (isWide || isTable || isTableDec) classes.push('wide');
+    if (isWide || isTable || isTableDec || isTableVE) classes.push('wide');
     if (featureKeys.has(k.kpi_key)) classes.push('featured');
-    const inner = (isTable || isTableDec)
+    const inner = (isTable || isTableDec || isTableVE)
       ? `<div class="chart-table-wrap" id="chart-${tabKey}-${i}"></div>`
       : `<div class="chart-wrap" style="height:${h}"><canvas id="chart-${tabKey}-${i}"></canvas></div>`;
     return `<div class="${classes.join(' ')}" data-kpi-key="${escHtml(k.kpi_key || '')}">
@@ -1256,6 +1257,56 @@ async function renderCharts(tabKey, kpis) {
             </tbody>
           </table></div>
           <div style="font-size:10px;color:#999;margin-top:8px">▸ Clique em qualquer linha para expandir os fundamentos.</div>`;
+        return;
+      }
+
+      // ── Tabela de casos com valores elevados ──────────────────────────────
+      if (cfg.type === 'table_valores_elevados') {
+        const wrap = document.getElementById(canvasId);
+        if (!wrap) return;
+        const rows = cfg.rows || [];
+        const totalValor = rows.reduce((s, r) => s + (r.valor || 0), 0);
+        const fmtBRL = v => Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL', minimumFractionDigits:2 });
+        const uid = canvasId + '_ve';
+        wrap.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:6px">
+            <span style="font-size:12px;color:#555">${rows.length} caso${rows.length!==1?'s':''}</span>
+            <span style="background:#FFF3E0;color:#E65100;padding:3px 12px;border-radius:4px;font-size:11px;font-weight:700">Total provisionado: ${fmtBRL(totalValor)}</span>
+          </div>
+          <style>
+            .ve-tbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:11px}
+            .ve-tbl th{padding:9px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#fff;background:#7B1A2E;white-space:nowrap}
+            .ve-tbl td{padding:9px 12px;border-bottom:1px solid #F5E5E8;vertical-align:top;line-height:1.5}
+            .ve-tbl tr:nth-child(even) td{background:#FDF5F6}
+            .ve-tbl tr:hover td{background:#FCE4EC;cursor:pointer}
+            .ve-expand{display:none;background:#FFF8F8}
+            .ve-expand.open{display:table-row}
+            .ve-expand td{padding:10px 14px;font-size:11px;line-height:1.8;border-bottom:1px solid #F5E5E8;color:#444}
+          </style>
+          <div style="overflow-x:auto">
+          <table class="ve-tbl" id="${uid}">
+            <thead><tr>
+              <th>Valor Provisionado</th>
+              <th>Processo</th>
+              <th>Partes</th>
+              <th>Tribunal</th>
+              <th>Fase</th>
+            </tr></thead>
+            <tbody>
+              ${rows.map((r, ri) => {
+                const expandId = uid + '_exp_' + ri;
+                return `<tr onclick="document.getElementById('${expandId}').classList.toggle('open')">
+                  <td style="font-weight:700;color:#7B1A2E;white-space:nowrap">${fmtBRL(r.valor)}</td>
+                  <td style="font-size:10px;color:#555;white-space:nowrap">${escHtml(r.processo)}</td>
+                  <td style="font-weight:600">${escHtml(r.partes)}</td>
+                  <td><span style="background:#FCEAEA;color:#7B1A2E;border-radius:3px;padding:1px 6px;font-weight:700;font-size:10px">${escHtml(r.tribunal)}</span></td>
+                  <td style="font-size:10px;color:#555">${escHtml(r.fase)}</td>
+                </tr>
+                ${r.resumo ? `<tr class="ve-expand" id="${expandId}"><td colspan="5"><strong style="color:#7B1A2E">Resumo:</strong> ${escHtml(r.resumo)}</td></tr>` : ''}`;
+              }).join('')}
+            </tbody>
+          </table></div>
+          <div style="font-size:10px;color:#999;margin-top:8px">▸ Clique em qualquer linha para ver o resumo da última decisão.</div>`;
         return;
       }
 
