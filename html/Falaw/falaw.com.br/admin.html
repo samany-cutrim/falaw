@@ -9879,6 +9879,33 @@ function _xlChartRadar(labels, datasets) {
 }
 
 /** Stacked horizontal bar — Favorável vs Desfavorável empilhados */
+/** Barras empilhadas genérico — múltiplas séries, ideal para mês × segmento */
+function _xlChartStackedBar(labels, datasets) {
+  const pal = ['#7B1A2E','#0D2B5E','#0F9E76','#B7791F','#1A4080','#5B7FA6','#4E342E','#00695C'];
+  return {
+    type:'bar',
+    data:{ labels, datasets: datasets.map((ds, i) => ({
+      label: ds.label,
+      data: ds.data,
+      backgroundColor: pal[i % pal.length],
+      stack: 'stk',
+      borderRadius: 2,
+    }))},
+    options:{ responsive:true, maintainAspectRatio:false,
+      animation:{ duration:800, easing:'easeOutQuart' },
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ position:'bottom', labels:{ font:{ family:'IBM Plex Mono', size:10 }, padding:14, boxWidth:14 } },
+        tooltip:{ mode:'index', intersect:false }
+      },
+      scales:{
+        x:{ stacked:true, grid:{ color:'rgba(0,0,0,0.04)' }, ticks:{ font:{ family:'IBM Plex Mono', size:11 } } },
+        y:{ stacked:true, beginAtZero:true, grid:{ color:'rgba(0,0,0,0.06)' }, ticks:{ precision:0, font:{ family:'IBM Plex Mono', size:11 } } }
+      }
+    }
+  };
+}
+
 function _xlChartStackedOutcome(labels, favData, desfData) {
   return {
     type:'bar',
@@ -10139,12 +10166,10 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
         if(!hasAny) continue;
         _datasets2026.push({ label: crLabel, data:_months.map(m=>(moCounts[m]||0)) });
       }
-      // Donut: total por segmento (soma de todos os meses, excluindo série "Total")
-      const _donutSegments = _datasets2026.filter(ds => ds.label !== 'Total');
-      const _donutLabels = _donutSegments.map(ds => ds.label);
-      const _donutData   = _donutSegments.map(ds => ds.data.reduce((s,v) => s+v, 0));
+      // Barras empilhadas: meses no eixo X, segmentos como camadas (exclui série "Total")
+      const _stackedDs = _datasets2026.filter(ds => ds.label !== 'Total');
       push('visao-geral','chart_dist_2026','Distribuídos em 2026 por Mês','','',
-        _xlChartDoughnut(_donutLabels, _donutData), 'Ações Distribuídas em 2026 por Mês');
+        _xlChartStackedBar(_labels, _stackedDs), 'Ações Distribuídas em 2026 por Mês');
     }
   }
 
