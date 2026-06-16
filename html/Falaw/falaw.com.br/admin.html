@@ -1864,7 +1864,7 @@
           <p style="font-size:11px;color:var(--c-muted);margin:0 0 10px">Base inicial é lida automaticamente dos ativos do período anterior. No <strong>primeiro período</strong>, informe manualmente. Realizado é calculado pelo Excel.</p>
           <div class="metas-grid">
             <div class="form-field"><label>Base Inicial do Ciclo (processos)</label><input type="number" id="m1_base_ciclo" placeholder="1313"></div>
-            <div class="form-field"><label>Meta % Encerramento (contrato)</label><input type="number" id="m1_meta_pct" placeholder="20" step="0.01"></div>
+            <div class="form-field"><label>Meta Encerramentos (nº casos)</label><input type="number" id="m1_meta_pct" placeholder="262" step="1"></div>
           </div>
         </div>
 
@@ -8852,7 +8852,7 @@ async function ifoodSaveMetas() {
   // Salva apenas os KPIs de config (baseline/alvo/meta_pct) para serem lidos no próximo upload
   const rows = [
     { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m1_base_ciclo', label:'Meta 1 Base Ciclo',      value:String(m1_base_ciclo), unit:'processos', chart_data:null, chart_title:'', sort_order:900, trend_pct:null },
-    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m1_pct_alvo',   label:'Meta 1 % Alvo',          value:String(m1_meta_pct),  unit:'%', chart_data:null, chart_title:'', sort_order:901, trend_pct:null },
+    { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m1_pct_alvo',   label:'Meta 1 Casos Alvo',      value:String(m1_meta_pct),  unit:'casos', chart_data:null, chart_title:'', sort_order:901, trend_pct:null },
     { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m2_baseline',   label:'Meta 2 Baseline',        value:String(m2_baseline),  unit:'%', chart_data:null, chart_title:'', sort_order:904, trend_pct:null },
     { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m2_alvo',       label:'Meta 2 Alvo',            value:String(m2_alvo),      unit:'%', chart_data:null, chart_title:'', sort_order:905, trend_pct:null },
     { id: ifoodId(), period_id: periodId, tab_key:'visao-geral', kpi_key:'meta_m3_baseline',   label:'Meta 3 Baseline',        value:String(m3_baseline),  unit:'%', chart_data:null, chart_title:'', sort_order:908, trend_pct:null },
@@ -9753,7 +9753,7 @@ function _xlChartLine(labels, datasets) {
       pointRadius: 5,
       pointHoverRadius: 8,
       pointBackgroundColor: pal[i%pal.length],
-      tension: 0.35,
+      tension: 0.45,
       fill: datasets.length===1
     })) },
     options:{ responsive:true, maintainAspectRatio:false,
@@ -10033,12 +10033,24 @@ function _xlParseValoresElevados(rawRows) {
   }).filter(Boolean).filter(r => r.processo);
 }
 
-function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391, decisoesTabela, julgadoresData, encerradosData, valoresElevadosData, prevPeriodData) {
+function _xlParseAcordos(headerRow, rawRows) {
+  // Parser genérico: usa a linha de cabeçalho para mapear todas as colunas
+  const headers = (headerRow || []).map(h => String(h || '').trim());
+  return rawRows.map(r => {
+    if (!r || r.every(c => c === '' || c == null)) return null;
+    const obj = { _headers: headers, _values: [] };
+    headers.forEach((h, i) => { obj[h] = String(r[i] == null ? '' : r[i]).trim(); obj._values.push(String(r[i] == null ? '' : r[i]).trim()); });
+    return obj;
+  }).filter(Boolean);
+}
+
+function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391, decisoesTabela, julgadoresData, encerradosData, valoresElevadosData, prevPeriodData, acordosData) {
   // decisoesTabela: decisões do arquivo separado — aparecem apenas nas tabelas, não nos contadores
   // julgadoresData: linhas da aba Julgadores — usadas para table_fund_vg
   decisoesTabela    = decisoesTabela    || [];
   julgadoresData    = julgadoresData    || [];
   encerradosData    = encerradosData    || [];
+  acordosData       = acordosData       || [];
   valoresElevadosData = valoresElevadosData || [];
   prevPeriodData    = prevPeriodData    || null;
   const rows = []; let so = 0;
@@ -10433,8 +10445,8 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     // M1 — Encerramento da Base
     // base_inicial: ativos do período anterior > base manual do ciclo > 0
     const m1BaseInicial = p.ativos || p.m1_base_ciclo || 0;
-    const m1MetaPct     = p.m1_meta_pct != null ? p.m1_meta_pct : 20;
-    const m1MetaQtd     = Math.round(m1BaseInicial * m1MetaPct / 100);
+    const m1MetaQtd     = p.m1_meta_pct != null ? Math.round(p.m1_meta_pct) : 0;
+    const m1MetaPct     = m1BaseInicial > 0 ? Math.round(m1MetaQtd / m1BaseInicial * 10000) / 100 : 0;
     // Realizado M1: sempre da aba ENCERRADOS (processos encerrados no mês)
     const m1Realizado   = encerradosData.length;
     const m1PctReal     = m1BaseInicial > 0 ? Math.round(m1Realizado / m1BaseInicial * 10000) / 100 : 0;
@@ -10713,6 +10725,13 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
       'Casos com Valores Elevados — Visão Geral');
   }
 
+  // Tabela de acordos — visão geral (exclusivamente aba ACORDOS)
+  if (acordosData.length) {
+    push('visao-geral', 'table_acordos', 'Acordos Realizados no Mês', _xlFmtBr(acordosData.length), 'acordos',
+      { type: 'table_acordos', headers: acordosData[0]._headers, rows: acordosData },
+      'Acordos Realizados no Mês — Visão Geral');
+  }
+
   return rows;
 }
 
@@ -10774,6 +10793,13 @@ async function ifoodSaveExcel() {
     const encSh = findSh('ENCERRADOS','Encerrados','encerrados');
     const encerradosData = encSh ? _xlParseEncerrados(XLSX.utils.sheet_to_json(encSh,{header:1,defval:''}).slice(1)) : [];
 
+    const acordosSh = findSh('ACORDOS','Acordos','acordos');
+    let acordosData = [];
+    if (acordosSh) {
+      const acordosRaw = XLSX.utils.sheet_to_json(acordosSh, { header:1, defval:'' });
+      if (acordosRaw.length > 1) acordosData = _xlParseAcordos(acordosRaw[0], acordosRaw.slice(1));
+    }
+
     const valSh = findSh('VALORES ELEVADOS','Valores Elevados','valores elevados','valores');
     const valoresElevadosData = valSh ? _xlParseValoresElevados(XLSX.utils.sheet_to_json(valSh,{header:1,defval:''}).slice(1)) : [];
 
@@ -10805,7 +10831,7 @@ async function ifoodSaveExcel() {
               fav_geral:  cntVal(fk('meta_fav_geral')),
               // meta config — carregados do período anterior para persistir entre uploads
               ativos:         cntVal(fk('ativos')),
-              m1_meta_pct:    pctVal(fk('meta_m1_pct_alvo')),
+              m1_meta_pct:    cntVal(fk('meta_m1_pct_alvo')),
               m2_baseline:    pctVal(fk('meta_m2_baseline')),
               m2_alvo:        pctVal(fk('meta_m2_alvo')),
               m3_baseline:    pctVal(fk('meta_m3_baseline')),
@@ -10829,7 +10855,7 @@ async function ifoodSaveExcel() {
         if (!prevPeriodData) prevPeriodData = {};
         // override com valores do período atual se disponíveis
         const ov = (field, key, fn) => { const v = fn(fk(key)); if (v !== null) prevPeriodData[field] = v; };
-        ov('m1_meta_pct',   'meta_m1_pct_alvo',  pctVal);
+        ov('m1_meta_pct',   'meta_m1_pct_alvo',  cntVal);
         ov('m2_baseline',   'meta_m2_baseline',  pctVal);
         ov('m2_alvo',       'meta_m2_alvo',       pctVal);
         ov('m3_baseline',   'meta_m3_baseline',   pctVal);
@@ -10859,7 +10885,7 @@ async function ifoodSaveExcel() {
       setIfNotNull('m4_economia',   gf('m4_economia'));
     }
 
-    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291, decisoesTabela, julgadoresData, encerradosData, valoresElevadosData, prevPeriodData);
+    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291, decisoesTabela, julgadoresData, encerradosData, valoresElevadosData, prevPeriodData, acordosData);
 
     // Upload do arquivo Excel bruto para Cockroach (quando API configurada)
     let ifoodExcelFileUrl = null;

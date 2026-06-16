@@ -1051,6 +1051,7 @@ async function renderCharts(tabKey, kpis) {
     const isTableDec = cfg.type === 'table_decisions' || tableDecKeys.has(k.kpi_key);
     const isTableVE  = cfg.type === 'table_valores_elevados';
     const isTableSusp = cfg.type === 'table_suspensos';
+    const isTableAcordos = cfg.type === 'table_acordos';
     const isTableFund = cfg.type === 'table_fund_cr';
     const isMetasCiclo = cfg.type === 'chart_metas_ciclo';
     const isChoropleth = cfg.type === 'choropleth' || mapKeys.has(k.kpi_key);
@@ -1063,11 +1064,11 @@ async function renderCharts(tabKey, kpis) {
     const isHoriz  = cfg.options && cfg.options.indexAxis === 'y';
     const isWide   = wideKeys.has(k.kpi_key);
     const isTall   = tallKeys.has(k.kpi_key);
-    const h = (isTable || isTableDec || isTableVE || isTableSusp || isTableFund || isMetasCiclo) ? 'auto' : isChoropleth ? '420px' : isTreemap ? '360px' : isBubble ? '400px' : isRadar ? '340px' : isLine ? '300px' : isPolar ? '310px' : isDonut ? '290px' : k.kpi_key === 'chart_julgadores' ? '480px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
+    const h = (isTable || isTableDec || isTableVE || isTableSusp || isTableFund || isMetasCiclo || isTableAcordos) ? 'auto' : isChoropleth ? '420px' : isTreemap ? '360px' : isBubble ? '400px' : isRadar ? '340px' : isLine ? '300px' : isPolar ? '310px' : isDonut ? '290px' : k.kpi_key === 'chart_julgadores' ? '480px' : isTall ? '430px' : isHoriz ? '340px' : isWide ? '320px' : '290px';
     const classes = ['chart-card'];
-    if (isWide || isTable || isTableDec || isTableVE || isTableSusp || isTableFund || isMetasCiclo) classes.push('wide');
+    if (isWide || isTable || isTableDec || isTableVE || isTableSusp || isTableFund || isMetasCiclo || isTableAcordos) classes.push('wide');
     if (featureKeys.has(k.kpi_key)) classes.push('featured');
-    const inner = (isTable || isTableDec || isTableVE || isTableSusp || isTableFund || isMetasCiclo)
+    const inner = (isTable || isTableDec || isTableVE || isTableSusp || isTableFund || isMetasCiclo || isTableAcordos)
       ? `<div class="chart-table-wrap" id="chart-${tabKey}-${i}"></div>`
       : `<div class="chart-wrap" style="height:${h}"><canvas id="chart-${tabKey}-${i}"></canvas></div>`;
     return `<div class="${classes.join(' ')}" data-kpi-key="${escHtml(k.kpi_key || '')}">
@@ -1337,7 +1338,7 @@ async function renderCharts(tabKey, kpis) {
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E;margin-bottom:10px">🏁 Meta 1 — Encerramento da Base</div>
               <table style="width:100%;font-size:12px;font-family:'IBM Plex Mono',monospace;border-collapse:collapse">
                 <tr><td style="color:#888;padding:3px 0">Base inicial</td><td style="text-align:right;font-weight:600">${fmtN(m.base_inicial)} processos</td></tr>
-                <tr><td style="color:#888;padding:3px 0">Meta (${fmtPct(m.meta_pct)})</td><td style="text-align:right;font-weight:600">${fmtN(m.meta_qtd)} encerramentos</td></tr>
+                <tr><td style="color:#888;padding:3px 0">Meta (${fmtPct(m.meta_pct)})</td><td style="text-align:right;font-weight:600">${fmtN(m.meta_qtd)} casos</td></tr>
                 <tr><td style="color:#888;padding:3px 0">Realizado no mês</td><td style="text-align:right;font-weight:700;color:${m.realizado>=0?'#1b7a4e':'#c62828'}">${m.realizado>=0?'+':''}${fmtN(m.realizado)} (${fmtPct(m.pct_realizado)})</td></tr>
                 <tr><td style="color:#888;padding:3px 0">Base atual</td><td style="text-align:right">${fmtN(m.base_atual)} processos</td></tr>
               </table>
@@ -1464,6 +1465,32 @@ async function renderCharts(tabKey, kpis) {
             </tbody>
           </table></div>
           <div style="font-size:10px;color:#999;margin-top:8px">▸ Clique em qualquer linha para ver o resumo da última decisão.</div>`;
+        return;
+      }
+
+      // ── Tabela de acordos realizados no mês ──────────────────────────────────────────
+      if (cfg.type === 'table_acordos') {
+        const wrap = document.getElementById(canvasId);
+        if (!wrap) return;
+        const headers = cfg.headers || [];
+        const rows    = cfg.rows    || [];
+        const uid = canvasId + '_ac';
+        wrap.innerHTML = `
+          <div style="margin-bottom:10px;font-size:12px;color:#555">${rows.length} acordo${rows.length !== 1 ? 's' : ''} registrado${rows.length !== 1 ? 's' : ''} no mês</div>
+          <style>
+            .ac-tbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:11px}
+            .ac-tbl th{padding:9px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#fff;background:#0F9E76;white-space:nowrap}
+            .ac-tbl td{padding:9px 12px;border-bottom:1px solid #E3F5EF;vertical-align:top;line-height:1.5}
+            .ac-tbl tr:nth-child(even) td{background:#F4FBF8}
+            .ac-tbl tr:hover td{background:#D6F0E7;cursor:default}
+          </style>
+          <div style="overflow-x:auto">
+          <table class="ac-tbl" id="${uid}">
+            <thead><tr>${headers.map(h => `<th>${escHtml(h)}</th>`).join('')}</tr></thead>
+            <tbody>
+              ${rows.map(r => `<tr>${(r._values || []).map(v => `<td>${escHtml(v)}</td>`).join('')}</tr>`).join('')}
+            </tbody>
+          </table></div>`;
         return;
       }
 
