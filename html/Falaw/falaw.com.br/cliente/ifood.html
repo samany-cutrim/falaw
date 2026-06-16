@@ -610,7 +610,7 @@
       <div class="tab-btn" data-tab="ex-foodlover">Ex-Foodlover</div>
       <div class="tab-btn" data-tab="terceirizacao">Terceirização</div>
       <div class="tab-btn" data-tab="marketplace">Marketplace</div>
-      <div class="tab-btn" data-tab="destaques">Destaques do Mês</div>
+      <div class="tab-btn" data-tab="destaques">Casos Estratégicos</div>
       <div class="tab-btn tab-btn-comparativo" data-tab="comparativo" id="tabBtnComparativo" style="display:none">⚖️ Comparativo</div>
     </nav>
 
@@ -718,12 +718,12 @@
       <!-- ── DESTAQUES DO MÊS ── -->
       <div class="tab-panel" id="panel-destaques">
         <div class="page-header">
-          <div class="page-label">Destaques do Mês</div>
-          <div class="page-title">Principais conquistas — <span id="destaquesMonth">—</span></div>
+          <div class="page-label">Casos Estratégicos</div>
+          <div class="page-title">Casos em monitoramento estratégico — <span id="destaquesMonth">—</span></div>
           <div class="page-subtitle">Resultados, marcos e fatos relevantes do período em destaque.</div>
         </div>
         <div class="highlights-section-header">
-          <span class="highlights-section-label">Destaques</span>
+          <span class="highlights-section-label">Casos Estratégicos</span>
           <span class="highlights-section-rule"></span>
           <span class="highlights-section-count" id="highlights-count"></span>
         </div>
@@ -1379,7 +1379,7 @@ async function renderCharts(tabKey, kpis) {
         const tema1291 = rows.filter(r => r.tema === '1291');
         const renderTema = (tRows, tema) => {
           if (!tRows.length) return '';
-          const temaLabel = tema === '1389' ? 'Tema 1389 — Gestão por Aplicativo' : 'Tema 1291 — Vínculo Empregatício OL';
+          const temaLabel = tema === '1389' ? 'Tema 1389 — Gestão por Aplicativo' : 'Tema 1291';
           return `
             <div style="margin-bottom:20px">
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E;margin-bottom:8px;padding:6px 10px;background:#e8eef8;border-radius:4px">
@@ -2084,7 +2084,7 @@ async function exportarPDF() {
     pdf.setFontSize(7); pdf.setTextColor(165, 144, 101);
     pdf.text('DOCUMENTO CONFIDENCIAL  ·  USO RESTRITO', pgW / 2, pgH * 0.88, { align: 'center' });
 
-    const tabLabels = { 'visao-geral':'Visão Geral','nuvem':'Nuvem','op-logistico':'Op. Logístico','ex-foodlover':'Ex-Foodlover','terceirizacao':'Terceirização','marketplace':'Marketplace','destaques':'Destaques do Mês','metas':'Metas' };
+    const tabLabels = { 'visao-geral':'Visão Geral','nuvem':'Nuvem','op-logistico':'Op. Logístico','ex-foodlover':'Ex-Foodlover','terceirizacao':'Terceirização','marketplace':'Marketplace','destaques':'Casos Estratégicos','metas':'Metas' };
     const hH = 10; // mm header
 
     for (let i = 0; i < TAB_KEYS.length; i++) {
@@ -2190,7 +2190,7 @@ async function exportarPPT() {
     // Rodapé
     capa.addText('DOCUMENTO CONFIDENCIAL  ·  USO RESTRITO', { x: 0.5, y: sH - 0.4, w: sW - 1, h: 0.25, fontSize: 8, color: 'A59065', fontFace: 'Arial', align: 'center' });
 
-    const tabLabels = { 'visao-geral':'Visão Geral','nuvem':'Nuvem','op-logistico':'Op. Logístico','ex-foodlover':'Ex-Foodlover','terceirizacao':'Terceirização','marketplace':'Marketplace','destaques':'Destaques do Mês','metas':'Metas' };
+    const tabLabels = { 'visao-geral':'Visão Geral','nuvem':'Nuvem','op-logistico':'Op. Logístico','ex-foodlover':'Ex-Foodlover','terceirizacao':'Terceirização','marketplace':'Marketplace','destaques':'Casos Estratégicos','metas':'Metas' };
     const hH = 0.65; // header height inches
 
     for (let i = 0; i < TAB_KEYS.length; i++) {

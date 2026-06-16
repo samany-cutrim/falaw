@@ -1209,7 +1209,7 @@
           <div class="ifood-sub-tab active" onclick="cliDashSubTab('periods')">📅 Períodos</div>
           <div class="ifood-sub-tab"        onclick="cliDashSubTab('kpis')">📊 KPIs / Gráficos</div>
           <div class="ifood-sub-tab"        onclick="cliDashSubTab('content')">✍️ Textos das Abas</div>
-          <div class="ifood-sub-tab"        onclick="cliDashSubTab('highlights')">⭐ Destaques do Mês</div>
+          <div class="ifood-sub-tab"        onclick="cliDashSubTab('highlights')">⭐ Casos Estratégicos</div>
           <div class="ifood-sub-tab"        onclick="cliDashSubTab('excel')">📁 Upload Excel</div>
         </div>
 
@@ -1685,7 +1685,7 @@
         <div class="ifood-sub-tab active" onclick="ifoodSubTab('periods')">📅 Períodos</div>
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('kpis')">📊 KPIs / Gráficos</div>
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('content')">✍️ Textos das Abas</div>
-        <div class="ifood-sub-tab"        onclick="ifoodSubTab('highlights')">⭐ Destaques do Mês</div>
+        <div class="ifood-sub-tab"        onclick="ifoodSubTab('highlights')">⭐ Casos Estratégicos</div>
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('excel')">📁 Upload Excel</div>
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('metas')">🎯 Metas</div>
         <div class="ifood-sub-tab"        onclick="ifoodSubTab('comparativo')">📊 Comparativo</div>
@@ -1743,7 +1743,7 @@
               <option value="ex-foodlover">Ex-Foodlover</option>
               <option value="terceirizacao">Subsidiária</option>
               <option value="marketplace">Marketplace</option>
-              <option value="destaques">Destaques do Mês</option>
+              <option value="destaques">Casos Estratégicos</option>
               <option value="metas">Metas</option>
             </select>
           </div>
@@ -10740,20 +10740,13 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
         _xlChartBar(pedTop.map(([l])=>l),pedTop.map(([,v])=>v),'Ocorrências','#0D2B5E',true), `Ranking de Pedidos — ${label}`);
     }
 
-    // Tabela de valores elevados — filtrada por causa raiz
-    const crValores = valoresElevadosData.filter(v => _xlCanonCR(v.causa_raiz) === cr);
-    if (crValores.length) {
-      push(tabKey, 'table_valores_elevados', 'Casos com Valores Elevados', _xlFmtBr(crValores.length), 'casos',
-        { type: 'table_valores_elevados', rows: crValores.sort((a,b)=>b.valor-a.valor) },
-        `Casos com Valores Elevados — ${label}`);
-    }
   }
 
-  // Tabela de valores elevados — visão geral (todos os segmentos)
+  // Tabela de valores elevados — Casos Estratégicos (única localização)
   if (valoresElevadosData.length) {
-    push('visao-geral', 'table_valores_elevados', 'Casos com Valores Elevados', _xlFmtBr(valoresElevadosData.length), 'casos',
+    push('destaques', 'table_valores_elevados', 'Casos com Valores Elevados', _xlFmtBr(valoresElevadosData.length), 'casos',
       { type: 'table_valores_elevados', rows: valoresElevadosData.slice().sort((a,b)=>b.valor-a.valor) },
-      'Casos com Valores Elevados — Visão Geral');
+      'Casos com Valores Elevados');
   }
 
   // Tabela de acordos — visão geral (exclusivamente aba ACORDOS)
