@@ -10473,8 +10473,9 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     const _mcFav2 = _mc2G.filter(d => _xlClassifyDec(d.resultado) === 'F').length;
 
     // M1 — Encerramento da Base
-    // base_inicial: ativos do período anterior > base manual do ciclo > 0
-    const m1BaseInicial = p.ativos || p.m1_base_ciclo || 0;
+    // base_inicial = ativos atuais + encerrados do mês (todos estavam na base antes dos encerramentos)
+    // base_atual   = somente ativos no momento
+    const m1BaseInicial = ativos + encerradosData.length;
     const m1MetaQtd     = p.m1_meta_pct != null ? Math.round(p.m1_meta_pct) : 0;
     const m1MetaPct     = m1BaseInicial > 0 ? Math.round(m1MetaQtd / m1BaseInicial * 10000) / 100 : 0;
     // Realizado M1: sempre da aba ENCERRADOS (processos encerrados no mês)
