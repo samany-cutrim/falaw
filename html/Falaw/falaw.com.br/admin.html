@@ -10139,8 +10139,12 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
         if(!hasAny) continue;
         _datasets2026.push({ label: crLabel, data:_months.map(m=>(moCounts[m]||0)) });
       }
+      // Donut: total por segmento (soma de todos os meses, excluindo série "Total")
+      const _donutSegments = _datasets2026.filter(ds => ds.label !== 'Total');
+      const _donutLabels = _donutSegments.map(ds => ds.label);
+      const _donutData   = _donutSegments.map(ds => ds.data.reduce((s,v) => s+v, 0));
       push('visao-geral','chart_dist_2026','Distribuídos em 2026 por Mês','','',
-        _xlChartRadar(_labels, _datasets2026), 'Ações Distribuídas em 2026 por Mês');
+        _xlChartDoughnut(_donutLabels, _donutData), 'Ações Distribuídas em 2026 por Mês');
     }
   }
 
