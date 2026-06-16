@@ -10742,11 +10742,23 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
 
   }
 
-  // Tabela de valores elevados — Casos Estratégicos (única localização)
+  // Tabela de valores elevados — Casos Estratégicos, separada por causa raiz
   if (valoresElevadosData.length) {
-    push('destaques', 'table_valores_elevados', 'Casos com Valores Elevados', _xlFmtBr(valoresElevadosData.length), 'casos',
-      { type: 'table_valores_elevados', rows: valoresElevadosData.slice().sort((a,b)=>b.valor-a.valor) },
-      'Casos com Valores Elevados');
+    // Agrupa por causa raiz
+    const _veGrouped = {};
+    valoresElevadosData.forEach(v => {
+      const crTab = _XL_CR_TABS.find(t => t.cr === _xlCanonCR(v.causa_raiz));
+      const crLabel = crTab ? crTab.label : (v.causa_raiz || 'Outros');
+      _veGrouped[crLabel] = _veGrouped[crLabel] || [];
+      _veGrouped[crLabel].push(v);
+    });
+    let _veSo = 800;
+    for (const [crLabel, crRows] of Object.entries(_veGrouped)) {
+      const crKey = crLabel.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      push('destaques', `table_ve_${crKey}`, `Valores Elevados — ${crLabel}`, _xlFmtBr(crRows.length), 'casos',
+        { type: 'table_valores_elevados', rows: crRows.slice().sort((a,b) => b.valor - a.valor) },
+        `Casos com Valores Elevados — ${crLabel}`);
+    }
   }
 
   // Tabela de acordos — visão geral (exclusivamente aba ACORDOS)
