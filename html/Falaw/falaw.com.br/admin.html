@@ -9771,6 +9771,7 @@ function _xlChartLine(labels, datasets) {
   };
 }
 
+/** Radar — formato circular com múltiplas séries */
 /** Polar area — ideal for state/UF distribution */
 function _xlChartPolarArea(labels, data) {
   return {
@@ -9849,19 +9850,19 @@ function _xlChartBubble(names, favArr, desfArr) {
   };
 }
 
-/** Radar — decisões por tipo (TST / Acórdão / Sentença) com FAV vs DESF */
+/** Radar — formato circular com múltiplas séries */
 function _xlChartRadar(labels, datasets) {
-  const colors = [['#0F9E76','#0F9E7640'],['#7B1A2E','#7B1A2E40'],['#0D2B5E','#0D2B5E40'],['#B7791F','#B7791F40']];
+  const colors = ['#0D2B5E','#7B1A2E','#0F9E76','#B7791F','#1A4080','#5B7FA6'];
   return {
     type:'radar',
     data:{ labels, datasets: datasets.map((ds,i)=>({
       label: ds.label,
       data: ds.data,
-      borderColor: colors[i%colors.length][0],
-      backgroundColor: colors[i%colors.length][1],
+      borderColor: colors[i%colors.length],
+      backgroundColor: colors[i%colors.length]+'40',
       borderWidth:2,
       pointRadius:5,
-      pointBackgroundColor: colors[i%colors.length][0],
+      pointBackgroundColor: colors[i%colors.length],
       pointHoverRadius:7
     }))},
     options:{ responsive:true, maintainAspectRatio:false,
@@ -9870,7 +9871,7 @@ function _xlChartRadar(labels, datasets) {
       scales:{ r:{
         beginAtZero:true,
         grid:{ color:'rgba(0,0,0,0.08)' },
-        ticks:{ display:false },
+        ticks:{ precision:0, font:{ family:'IBM Plex Mono', size:9 }, backdropColor:'transparent' },
         pointLabels:{ font:{ family:'IBM Plex Mono', size:11 }, color:'rgba(26,10,13,0.75)' }
       }}
     }
@@ -10139,7 +10140,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
         _datasets2026.push({ label: crLabel, data:_months.map(m=>(moCounts[m]||0)) });
       }
       push('visao-geral','chart_dist_2026','Distribuídos em 2026 por Mês','','',
-        _xlChartLine(_labels, _datasets2026), 'Ações Distribuídas em 2026 por Mês');
+        _xlChartRadar(_labels, _datasets2026), 'Ações Distribuídas em 2026 por Mês');
     }
   }
 
