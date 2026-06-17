@@ -728,6 +728,7 @@
           <span class="highlights-section-count" id="highlights-count"></span>
         </div>
         <div class="highlights-grid" id="highlights-grid"></div>
+        <div id="valores-elevados-section"></div>
         <div class="analysis-block">
           <div class="analysis-block-header"><span class="analysis-label">Comentários do período</span></div>
           <div class="analysis-content" id="content-destaques"><div class="analysis-empty">Nenhum comentário para este período.</div></div>
@@ -1049,7 +1050,8 @@ async function renderCharts(tabKey, kpis) {
     let cfg; try { cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; } catch(e) { cfg = {}; }
     const isTable    = cfg.type === 'table_cr' || tableKeys.has(k.kpi_key);
     const isTableDec = cfg.type === 'table_decisions' || tableDecKeys.has(k.kpi_key);
-    const isTableVE  = cfg.type === 'table_valores_elevados';
+    const isTableVE  = cfg.type === 'table_valores_elevados' && tabKey !== 'destaques';
+    if (cfg.type === 'table_valores_elevados' && tabKey !== 'destaques') return '';
     const isTableSusp = cfg.type === 'table_suspensos';
     const isTableAcordos = cfg.type === 'table_acordos';
     const isTableFund = cfg.type === 'table_fund_cr';
@@ -1792,6 +1794,107 @@ function renderContent(tabKey, contentArr) {
   el.innerHTML = row.content_html;
 }
 
+function renderValoresElevados(kpis) {
+  const el = document.getElementById('valores-elevados-section');
+  if (!el) return;
+  const CR_LABEL = { 'nuvem':'Nuvem', 'op-logistico':'Op. Logístico', 'ex-foodlover':'Ex-Foodlover', 'terceirizacao':'Terceirização', 'marketplace':'Marketplace' };
+  const veKpis = kpis.filter(k => {
+    if (k.tab_key === 'visao-geral' || k.tab_key === 'destaques') return false;
+    try { const c = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; return c && c.type === 'table_valores_elevados'; } catch(e) { return false; }
+  }).sort((a, b) => {
+    const order = ['nuvem','op-logistico','ex-foodlover','terceirizacao','marketplace'];
+    return order.indexOf(a.tab_key) - order.indexOf(b.tab_key);
+  });
+  if (!veKpis.length) { el.innerHTML = ''; return; }
+  const fmtBRL = v => Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL', minimumFractionDigits:2 });
+
+  // tipo_valor badge: verde = provisionado, azul = valor da causa
+  const tipoValorBadge = tv => {
+    if (!tv) return '';
+    const isProvis = /provis/i.test(tv);
+    const bg = isProvis ? '#E8F5E9' : '#E3F0FB';
+    const color = isProvis ? '#2E7D32' : '#1565C0';
+    return `<span style="display:inline-block;background:${bg};color:${color};border-radius:3px;padding:1px 7px;font-size:9px;font-weight:700;letter-spacing:.2px;margin-top:3px">${escHtml(tv)}</span>`;
+  };
+
+  let html = `<div style="margin:32px 0 0;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <span style="font-family:'Sora',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7B1A2E">Casos com Valores Elevados</span>
+      <span style="flex:1;height:1px;background:#e0c8cc"></span>
+    </div>
+    <style>
+      .ve-d-tbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:11px}
+      .ve-d-tbl th{padding:9px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#fff;background:#7B1A2E;white-space:nowrap}
+      .ve-d-tbl td{padding:9px 12px;border-bottom:1px solid #F5E5E8;vertical-align:top;line-height:1.5}
+      .ve-d-tbl tr:nth-child(even) td{background:#FDF5F6}
+      .ve-d-tbl tr.ve-alerta-row>td{background:#FFF8E1!important;border-left:3px solid #FF6F00}
+      .ve-d-tbl tr:hover td{background:#FCE4EC!important;cursor:pointer}
+      .ve-d-expand{display:none}
+      .ve-d-expand.open{display:table-row}
+      .ve-d-expand td{padding:12px 16px;font-size:11px;line-height:1.9;border-bottom:2px solid #F5E5E8;color:#444;background:#FFFDF8!important}
+      .ve-alerta-icon{display:inline-flex;align-items:center;gap:4px;background:#FF6F00;color:#fff;border-radius:3px;padding:1px 7px;font-size:9px;font-weight:700;letter-spacing:.3px;white-space:nowrap}
+    </style>`;
+
+  veKpis.forEach((k, gi) => {
+    const cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data;
+    const rows = (cfg.rows || []);
+    if (!rows.length) return;
+    const crLabel = CR_LABEL[k.tab_key] || k.tab_key;
+    const totalValor = rows.reduce((s, r) => s + (r.valor || 0), 0);
+    const alertaCount = rows.filter(r => r.alerta && r.alerta.trim()).length;
+    const uid = 've_dest_' + gi;
+    html += `<div style="margin-bottom:32px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-family:'Sora',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#0D2B5E;background:#e8eef8;padding:5px 14px;border-radius:4px">${escHtml(crLabel)}</span>
+        <span style="font-size:11px;color:#555">${rows.length} caso${rows.length!==1?'s':''}</span>
+        <span style="background:#FFF3E0;color:#E65100;padding:2px 10px;border-radius:4px;font-size:10px;font-weight:700">Total: ${fmtBRL(totalValor)}</span>
+        ${alertaCount ? `<span style="background:#FF6F00;color:#fff;padding:2px 10px;border-radius:4px;font-size:10px;font-weight:700">⚠ ${alertaCount} alerta${alertaCount!==1?'s':''}</span>` : ''}
+      </div>
+      <div style="overflow-x:auto">
+      <table class="ve-d-tbl" id="${uid}">
+        <thead><tr>
+          <th>Valor</th>
+          <th>Processo</th>
+          <th>Partes</th>
+          <th>Tribunal</th>
+          <th>Fase</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map((r, ri) => {
+            const expandId = uid + '_exp_' + ri;
+            const hasAlerta = r.alerta && r.alerta.trim();
+            const hasMais = r.resumo || hasAlerta;
+            const expandTrigger = hasMais ? `onclick="document.getElementById('${expandId}').classList.toggle('open')"` : '';
+            const expandHint = hasMais ? `<span style="font-size:9px;color:#aaa;margin-left:6px">▾</span>` : '';
+
+            // Linha de detalhe expandida
+            let expandContent = '';
+            if (hasAlerta) expandContent += `<div style="margin-bottom:${r.resumo?'10px':'0'}"><span style="background:#FF6F00;color:#fff;border-radius:3px;padding:1px 8px;font-size:9px;font-weight:700;margin-right:8px">⚠ ATENÇÃO</span><span style="color:#BF360C;font-weight:600">${escHtml(r.alerta)}</span></div>`;
+            if (r.resumo) expandContent += `<div><strong style="color:#7B1A2E">Resumo da última decisão:</strong><br>${escHtml(r.resumo)}</div>`;
+
+            return `<tr class="${hasAlerta ? 've-alerta-row' : ''}" ${expandTrigger} style="${hasMais?'cursor:pointer':''}">
+              <td style="white-space:nowrap">
+                <div style="font-weight:700;color:#7B1A2E">${fmtBRL(r.valor)}</div>
+                ${tipoValorBadge(r.tipo_valor)}
+              </td>
+              <td style="font-size:10px;color:#555;white-space:nowrap">
+                ${hasAlerta ? '<span class="ve-alerta-icon">⚠</span> ' : ''}${escHtml(r.processo)}${expandHint}
+              </td>
+              <td style="font-weight:600">${escHtml(r.partes)}</td>
+              <td><span style="background:#FCEAEA;color:#7B1A2E;border-radius:3px;padding:1px 6px;font-weight:700;font-size:10px">${escHtml(r.tribunal)}</span></td>
+              <td style="font-size:10px;color:#555">${escHtml(r.fase)}</td>
+            </tr>
+            ${expandContent ? `<tr class="ve-d-expand" id="${expandId}"><td colspan="5">${expandContent}</td></tr>` : ''}`;
+          }).join('')}
+        </tbody>
+      </table></div>
+      ${rows.some(r => r.resumo || (r.alerta && r.alerta.trim())) ? '<div style="font-size:10px;color:#999;margin-top:8px">▸ Clique em qualquer linha destacada para ver detalhes.</div>' : ''}
+    </div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
 function renderHighlights(highlights) {
   const el = document.getElementById('highlights-grid');
   const countEl = document.getElementById('highlights-count');
@@ -1895,6 +1998,7 @@ function renderAllTabs() {
     renderContent(tab, allContent);
   });
   renderHighlights(allHighlights);
+  renderValoresElevados(allKpis);
   renderContent('destaques', allContent);
 }
 
@@ -1923,7 +2027,11 @@ document.getElementById('tabBar').addEventListener('click', e => {
     renderComparativo();
     return;
   }
-  if (tabKey !== 'destaques') {
+  if (tabKey === 'destaques') {
+    renderHighlights(allHighlights);
+    renderValoresElevados(allKpis);
+    renderContent('destaques', allContent);
+  } else {
     renderKpis(tabKey, allKpis);
     renderContent(tabKey, allContent);
     // Render now and retry after layout settles to avoid blank canvases.
