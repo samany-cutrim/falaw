@@ -7455,7 +7455,7 @@ function _xlParseEncerrados(rawRows) {
 }
 
 function _xlParseValoresElevados(rawRows) {
-  // Colunas: Valor Provisionado(0), Processo(1), Partes(2), Vara/Tribunal(3), Fase Atual(4), Causa Raiz(5), Resumo da Última Decisão(6), Alerta(7), Tipo de Valor(8)
+  // Colunas: Valor Provisionado(0), Processo(1), Partes(2), Vara/Tribunal(3), Fase Atual(4), Causa Raiz(5), Alerta(6), Resumo da Última Decisão(7), Tipo de Valor(8), Estratégia(9)
   return rawRows.map(r => {
     if (!r || !r[1]) return null;
     return {
@@ -7465,9 +7465,10 @@ function _xlParseValoresElevados(rawRows) {
       tribunal:   String(r[3] || '').trim(),
       fase:       String(r[4] || '').trim(),
       causa_raiz: String(r[5] || '').trim(),
-      resumo:     String(r[6] || '').trim(),
-      alerta:     String(r[7] || '').trim(),
+      alerta:     String(r[6] || '').trim(),
+      resumo:     String(r[7] || '').trim(),
       tipo_valor: String(r[8] || '').trim(),
+      estrategia: String(r[9] || '').trim(),
     };
   }).filter(Boolean).filter(r => r.processo);
 }
