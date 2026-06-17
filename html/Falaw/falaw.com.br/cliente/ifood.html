@@ -1905,7 +1905,7 @@ function renderHighlights(highlights) {
   if (!el) return;
   if (!highlights.length) {
     if (countEl) countEl.textContent = '';
-    el.innerHTML = '<div class="no-data"><span class="no-data-icon">✦</span>Nenhum destaque para este período.</div>';
+    el.innerHTML = '';
     return;
   }
   if (countEl) countEl.textContent = highlights.length + (highlights.length === 1 ? ' destaque' : ' destaques');
