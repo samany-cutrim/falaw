@@ -1050,8 +1050,8 @@ async function renderCharts(tabKey, kpis) {
     let cfg; try { cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; } catch(e) { cfg = {}; }
     const isTable    = cfg.type === 'table_cr' || tableKeys.has(k.kpi_key);
     const isTableDec = cfg.type === 'table_decisions' || tableDecKeys.has(k.kpi_key);
-    const isTableVE  = cfg.type === 'table_valores_elevados' && tabKey !== 'destaques';
-    if (cfg.type === 'table_valores_elevados' && tabKey !== 'destaques') return '';
+    const isTableVE  = cfg.type === 'table_valores_elevados';
+    if (isTableVE) return ''; // sempre renderizado em Casos Estratégicos via renderValoresElevados
     const isTableSusp = cfg.type === 'table_suspensos';
     const isTableAcordos = cfg.type === 'table_acordos';
     const isTableFund = cfg.type === 'table_fund_cr';
@@ -1797,13 +1797,19 @@ function renderContent(tabKey, contentArr) {
 function renderValoresElevados(kpis) {
   const el = document.getElementById('valores-elevados-section');
   if (!el) return;
-  const CR_LABEL = { 'nuvem':'Nuvem', 'op-logistico':'Op. Logístico', 'ex-foodlover':'Ex-Foodlover', 'terceirizacao':'Terceirização', 'marketplace':'Marketplace' };
+  // Dados salvos pelo admin: tab_key='destaques', kpi_key='table_ve_*', label='Valores Elevados — Nuvem'
+  const CR_ORDER = ['nuvem','op. logístico','ex-foodlover','terceirização','marketplace','restaurantes'];
   const veKpis = kpis.filter(k => {
-    if (k.tab_key === 'visao-geral' || k.tab_key === 'destaques') return false;
+    if (k.tab_key !== 'destaques') return false;
+    if (!k.kpi_key || !k.kpi_key.startsWith('table_ve_')) return false;
     try { const c = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data; return c && c.type === 'table_valores_elevados'; } catch(e) { return false; }
   }).sort((a, b) => {
-    const order = ['nuvem','op-logistico','ex-foodlover','terceirizacao','marketplace'];
-    return order.indexOf(a.tab_key) - order.indexOf(b.tab_key);
+    // Extrai o nome da causa raiz do label ("Valores Elevados — Nuvem" → "nuvem")
+    const crA = (a.label || '').replace(/.*—\s*/,'').trim().toLowerCase();
+    const crB = (b.label || '').replace(/.*—\s*/,'').trim().toLowerCase();
+    const ia = CR_ORDER.findIndex(c => crA.includes(c));
+    const ib = CR_ORDER.findIndex(c => crB.includes(c));
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
   });
   if (!veKpis.length) { el.innerHTML = ''; return; }
   const fmtBRL = v => Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL', minimumFractionDigits:2 });
@@ -1839,7 +1845,8 @@ function renderValoresElevados(kpis) {
     const cfg = typeof k.chart_data === 'string' ? JSON.parse(k.chart_data) : k.chart_data;
     const rows = (cfg.rows || []);
     if (!rows.length) return;
-    const crLabel = CR_LABEL[k.tab_key] || k.tab_key;
+    // Extrai o nome da CR do label: "Valores Elevados — Nuvem" → "Nuvem"
+    const crLabel = (k.label || '').replace(/^.*?—\s*/, '').trim() || k.kpi_key;
     const totalValor = rows.reduce((s, r) => s + (r.valor || 0), 0);
     const alertaCount = rows.filter(r => r.alerta && r.alerta.trim()).length;
     const uid = 've_dest_' + gi;
