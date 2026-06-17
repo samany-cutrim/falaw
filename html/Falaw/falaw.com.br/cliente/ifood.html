@@ -722,7 +722,7 @@
           <div class="page-title">Casos em monitoramento estratégico — <span id="destaquesMonth">—</span></div>
           <div class="page-subtitle">Processos de alto impacto e monitoramento estratégico do período.</div>
         </div>
-        <div class="highlights-section-header">
+        <div class="highlights-section-header" id="highlights-section-header">
           <span class="highlights-section-label">Casos Estratégicos</span>
           <span class="highlights-section-rule"></span>
           <span class="highlights-section-count" id="highlights-count"></span>
@@ -1906,8 +1906,12 @@ function renderHighlights(highlights) {
   if (!highlights.length) {
     if (countEl) countEl.textContent = '';
     el.innerHTML = '';
+    const hdr = document.getElementById('highlights-section-header');
+    if (hdr) hdr.style.display = 'none';
     return;
   }
+  const hdr = document.getElementById('highlights-section-header');
+  if (hdr) hdr.style.display = '';
   if (countEl) countEl.textContent = highlights.length + (highlights.length === 1 ? ' destaque' : ' destaques');
   const total = highlights.length;
   el.innerHTML = highlights.map((h, i) => {
