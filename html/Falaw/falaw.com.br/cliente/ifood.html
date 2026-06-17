@@ -1858,14 +1858,14 @@ function renderValoresElevados(kpis) {
           <th>Partes</th>
           <th>Tribunal</th>
           <th>Fase</th>
-          <th>Valor Provisionado</th>
+          <th>Valor Provisionado / Valor da Causa</th>
         </tr></thead>
         <tbody>
           ${rows.map((r, ri) => {
             const expandId = uid + '_exp_' + ri;
             const hasAlerta = !!(r.alerta && r.alerta.trim());
             const hasResumo = !!(r.resumo && r.resumo.trim());
-            // Estratégia per-row só aparece no expand quando estratégias são diferentes
+            // Estratégia per-row: só mostra no expand quando cada caso tem a sua (diferentes entre si)
             const rowEstrategia = (!sharedStrategy && r.estrategia && r.estrategia.trim()) ? r.estrategia.trim() : '';
             const hasExpand = hasAlerta || hasResumo || !!rowEstrategia;
             const clickAttr = hasExpand ? `onclick="document.getElementById('${expandId}').classList.toggle('open')"` : '';
