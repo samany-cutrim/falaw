@@ -2333,7 +2333,7 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
             <label>GitHub Personal Access Token</label>
             <input type="password" id="cfg-github-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
           </div>
-          <p class="cfg-hint">Crie um token em <strong>github.com → Settings → Developer settings → Personal access tokens → Fine-grained</strong> com permissão de escrita no repositório <strong>falaw</strong>.</p>
+          <p class="cfg-hint">Crie um token em <strong>github.com → Settings → Developer settings → Personal access tokens</strong> com permissão de escrita no repositório <strong>falaw</strong>. O token também habilita o uso dos <strong>GitHub Models</strong> (gpt-4o-mini gratuito) como IA de fallback.</p>
           <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar token</button>
         </div>
 
@@ -4804,10 +4804,20 @@ async function testAPIs() {
       lines.push('✅ Gemini: ' + txt.slice(0, 80));
     } catch(e) { lines.push('❌ Gemini: ' + e.message); }
   } else {
-    lines.push('⚠️ Gemini: chave não configurada (opcional, usado como fallback)');
+    lines.push('⚠️ Gemini: chave não configurada (opcional)');
   }
 
-  if (!openaiKey && !geminiKey) lines.push('⚠️ Configure ao menos uma chave de IA em Configurações.');
+  const ghTok = ghToken();
+  if (ghTok) {
+    try {
+      const txt = await callGitHubModels([{ role: 'user', content: 'Responda apenas: ok' }], 0.1);
+      lines.push('✅ GitHub Models (gpt-4o-mini): ' + txt.slice(0, 80));
+    } catch(e) { lines.push('❌ GitHub Models: ' + e.message); }
+  } else {
+    lines.push('⚠️ GitHub Models: token não configurado (opcional)');
+  }
+
+  if (!openaiKey && !geminiKey && !ghTok) lines.push('⚠️ Configure ao menos uma chave de IA em Configurações.');
   box.innerHTML = lines.join('<br>');
 }
 
@@ -5427,13 +5437,36 @@ async function callOpenAI(messages, temperature) {
 async function callAI(messages, temperature) {
   const providers = [];
   if (localStorage.getItem('fa_openai_key'))  providers.push(() => callOpenAI(messages, temperature));
+  if (ghToken())                              providers.push(() => callGitHubModels(messages, temperature));
   if (localStorage.getItem('fa_gemini_key'))  providers.push(() => callGemini(messages, temperature));
-  if (!providers.length) throw new Error('Nenhuma chave de IA configurada — vá em Configurações e adicione a chave OpenAI ou Gemini.');
+  if (!providers.length) throw new Error('Nenhuma chave de IA configurada — vá em Configurações e adicione a chave OpenAI, Gemini ou o token GitHub.');
   let lastErr;
   for (const fn of providers) {
     try { return await fn(); } catch(e) { lastErr = e; }
   }
   throw lastErr;
+}
+
+async function callGitHubModels(messages, temperature) {
+  const token = ghToken();
+  if (!token) throw new Error('Token GitHub não configurado.');
+  const res = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages,
+      temperature: temperature ?? 0.7,
+      max_tokens: 8192
+    })
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    const msg = e.error?.message || '';
+    throw new Error('GitHub Models HTTP ' + res.status + (msg ? ': ' + msg : ''));
+  }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || '';
 }
 
 async function callGemini(messages, temperature) {
