@@ -7174,21 +7174,31 @@ function cliDashId() {
 async function cliDashApi(path, opts = {}) {
   const base = backendApiBase();
   if (!base) return { data: null, error: { message: 'Configure a URL da Cockroach API em Configurações.' } };
-  try {
-    // Accept body as object or pre-serialised string
-    const rawBody = opts.body;
-    const bodyStr = rawBody == null ? undefined
-      : typeof rawBody === 'string' ? rawBody
-      : JSON.stringify(rawBody);
-    const res = await fetch(base + path, {
-      method: opts.method || 'GET',
-      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-      body: bodyStr
-    });
-    let data; try { data = await res.json(); } catch { data = null; }
-    if (!res.ok) return { data: null, error: { message: data?.error || 'HTTP ' + res.status } };
-    return { data, error: null };
-  } catch (e) { return { data: null, error: { message: e.message || String(e) } }; }
+  // Accept body as object or pre-serialised string
+  const rawBody = opts.body;
+  const bodyStr = rawBody == null ? undefined
+    : typeof rawBody === 'string' ? rawBody
+    : JSON.stringify(rawBody);
+  const retries = opts.retries ?? 3;
+  const retryDelayMs = opts.retryDelayMs ?? 8000;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(base + path, {
+        method: opts.method || 'GET',
+        headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+        body: bodyStr
+      });
+      let data; try { data = await res.json(); } catch { data = null; }
+      if (!res.ok) return { data: null, error: { message: data?.error || 'HTTP ' + res.status } };
+      return { data, error: null };
+    } catch (e) {
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, retryDelayMs));
+      } else {
+        return { data: null, error: { message: e.message || String(e) } };
+      }
+    }
+  }
 }
 
 // Auto-salvar KPIs extraídos do Excel no Dashboard do cliente
@@ -7336,7 +7346,7 @@ async function cliDashSelectClient(clientId) {
   panel.style.display = 'block';
   if (btn) btn.style.display = 'inline-flex';
   if (upBtn) upBtn.style.display = 'inline-flex';
-  const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods`);
+  const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods`, { retries: 3, retryDelayMs: 8000 });
   _cliDashPeriods = error ? [] : (data || []);
   cliDashRenderPeriods();
   cliDashPopulateSelects();
@@ -8555,12 +8565,15 @@ async function cliDashSavePeriod() {
   const label = document.getElementById('cdp-label').value.trim();
   const my    = document.getElementById('cdp-monthyear').value.trim();
   if (!label || !my) { showToast('Preencha rótulo e mês/ano.', 'error'); return; }
+  showToast('Salvando… (aguarde, servidor pode estar acordando)');
   const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/periods`, {
-    method: 'POST', body: { id: cliDashId(), label, month_year: my }
+    method: 'POST', body: { id: cliDashId(), label, month_year: my },
+    retries: 3, retryDelayMs: 8000
   });
-  if (error) { showToast('Erro: ' + error.message, 'error'); return; }
+  if (error) { showToast('Erro: ' + error.message); return; }
   cliDashClosePeriodModal();
   await cliDashSelectClient(_cliDashClientId);
+  showToast('Período criado com sucesso!');
 }
 
 async function cliDashActivatePeriod(id) {
