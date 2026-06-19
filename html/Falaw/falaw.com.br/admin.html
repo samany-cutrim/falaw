@@ -7172,32 +7172,183 @@ function cliDashId() {
 }
 
 async function cliDashApi(path, opts = {}) {
-  const base = backendApiBase();
-  if (!base) return { data: null, error: { message: 'Configure a URL da Cockroach API em Configurações.' } };
-  // Accept body as object or pre-serialised string
+  const sb = getSB();
+  if (!sb) return { data: null, error: { message: 'Configure o Supabase nas Configurações.' } };
+
+  const method = (opts.method || 'GET').toUpperCase();
   const rawBody = opts.body;
-  const bodyStr = rawBody == null ? undefined
-    : typeof rawBody === 'string' ? rawBody
-    : JSON.stringify(rawBody);
-  const retries = opts.retries ?? 3;
-  const retryDelayMs = opts.retryDelayMs ?? 8000;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(base + path, {
-        method: opts.method || 'GET',
-        headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-        body: bodyStr
-      });
-      let data; try { data = await res.json(); } catch { data = null; }
-      if (!res.ok) return { data: null, error: { message: data?.error || 'HTTP ' + res.status } };
-      return { data, error: null };
-    } catch (e) {
-      if (attempt < retries) {
-        await new Promise(r => setTimeout(r, retryDelayMs));
-      } else {
-        return { data: null, error: { message: e.message || String(e) } };
+  const body = rawBody == null ? {} : typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody;
+
+  // Parse: /api/client-dash/:clientId[/subpath][?querystring]
+  const pm = path.match(/^\/api\/client-dash\/([^\/\?]+)(\/[^?]*)?(\?.*)?$/);
+  if (!pm) return { data: null, error: { message: 'Rota inválida: ' + path } };
+
+  const clientId = decodeURIComponent(pm[1]);
+  const sub = pm[2] || '';
+  const qs  = new URLSearchParams((pm[3] || '').replace(/^\?/, ''));
+
+  try {
+    // ── PERIODS ──────────────────────────────────────────────────
+    if (sub === '/periods') {
+      if (method === 'GET') {
+        const { data, error } = await sb.from('ClientDashPeriod').select('*').eq('client_id', clientId).order('created_at', { ascending: false });
+        if (error) return { data: null, error };
+        return { data, error: null };
+      }
+      if (method === 'POST') {
+        const { data: saved, error } = await sb.from('ClientDashPeriod')
+          .upsert({ id: body.id, client_id: clientId, label: body.label, month_year: body.month_year, is_active: !!body.is_active }, { onConflict: 'id' })
+          .select().single();
+        if (error) return { data: null, error };
+        return { data: saved, error: null };
       }
     }
+
+    // /periods/:id/activate
+    const actM = sub.match(/^\/periods\/([^\/]+)\/activate$/);
+    if (actM && method === 'POST') {
+      const pid = decodeURIComponent(actM[1]);
+      await sb.from('ClientDashPeriod').update({ is_active: false }).eq('client_id', clientId);
+      const { error } = await sb.from('ClientDashPeriod').update({ is_active: true }).eq('id', pid);
+      if (error) return { data: null, error };
+      return { data: { ok: true }, error: null };
+    }
+
+    // /periods/:id DELETE
+    const perIdM = sub.match(/^\/periods\/([^\/]+)$/);
+    if (perIdM && method === 'DELETE') {
+      const pid = decodeURIComponent(perIdM[1]);
+      await sb.from('ClientDashKpi').delete().eq('client_id', clientId).eq('period_id', pid);
+      await sb.from('ClientDashContent').delete().eq('client_id', clientId).eq('period_id', pid);
+      await sb.from('ClientDashHighlight').delete().eq('client_id', clientId).eq('period_id', pid);
+      const { error } = await sb.from('ClientDashPeriod').delete().eq('id', pid);
+      if (error) return { data: null, error };
+      return { data: { ok: true }, error: null };
+    }
+
+    // ── KPIs ─────────────────────────────────────────────────────
+    if (sub === '/kpis') {
+      if (method === 'GET') {
+        const periodId = qs.get('periodId'), tabKey = qs.get('tabKey');
+        let q = sb.from('ClientDashKpi').select('*').eq('client_id', clientId);
+        if (periodId) q = q.eq('period_id', periodId);
+        if (tabKey)   q = q.eq('tab_key', tabKey);
+        q = q.order('sort_order', { ascending: true });
+        const { data, error } = await q;
+        if (error) return { data: null, error };
+        return { data, error: null };
+      }
+      if (method === 'POST') {
+        const { error } = await sb.from('ClientDashKpi').upsert({ ...body, client_id: clientId }, { onConflict: 'id' });
+        if (error) return { data: null, error };
+        return { data: { ok: true }, error: null };
+      }
+    }
+
+    // /kpis/bulk POST
+    if (sub === '/kpis/bulk' && method === 'POST') {
+      const rows = (Array.isArray(body) ? body : body.kpis || []).map(r => ({ ...r, client_id: clientId }));
+      const { error } = await sb.from('ClientDashKpi').upsert(rows, { onConflict: 'id' });
+      if (error) return { data: null, error };
+      return { data: { ok: true }, error: null };
+    }
+
+    // /kpis/by-period/:pid DELETE
+    const kpiByPerM = sub.match(/^\/kpis\/by-period\/([^\/]+)$/);
+    if (kpiByPerM && method === 'DELETE') {
+      const pid = decodeURIComponent(kpiByPerM[1]);
+      const { error } = await sb.from('ClientDashKpi').delete().eq('client_id', clientId).eq('period_id', pid);
+      if (error) return { data: null, error };
+      return { data: { ok: true }, error: null };
+    }
+
+    // /kpis/:id PUT / DELETE
+    const kpiIdM = sub.match(/^\/kpis\/([^\/]+)$/);
+    if (kpiIdM) {
+      const kid = decodeURIComponent(kpiIdM[1]);
+      if (method === 'PUT') {
+        const { error } = await sb.from('ClientDashKpi').update(body).eq('id', kid);
+        if (error) return { data: null, error };
+        return { data: { ok: true }, error: null };
+      }
+      if (method === 'DELETE') {
+        const { error } = await sb.from('ClientDashKpi').delete().eq('id', kid);
+        if (error) return { data: null, error };
+        return { data: { ok: true }, error: null };
+      }
+    }
+
+    // ── CONTENT ──────────────────────────────────────────────────
+    if (sub === '/content') {
+      if (method === 'GET') {
+        const periodId = qs.get('periodId'), tabKey = qs.get('tabKey');
+        let q = sb.from('ClientDashContent').select('*').eq('client_id', clientId);
+        if (periodId) q = q.eq('period_id', periodId);
+        if (tabKey)   q = q.eq('tab_key', tabKey);
+        const { data, error } = await q;
+        if (error) return { data: null, error };
+        return { data, error: null };
+      }
+      if (method === 'POST') {
+        const { error } = await sb.from('ClientDashContent')
+          .upsert({ ...body, client_id: clientId }, { onConflict: 'client_id,period_id,tab_key' });
+        if (error) return { data: null, error };
+        return { data: { ok: true }, error: null };
+      }
+    }
+
+    // ── HIGHLIGHTS ───────────────────────────────────────────────
+    if (sub === '/highlights') {
+      if (method === 'GET') {
+        const periodId = qs.get('periodId');
+        let q = sb.from('ClientDashHighlight').select('*').eq('client_id', clientId);
+        if (periodId) q = q.eq('period_id', periodId);
+        q = q.order('sort_order', { ascending: true });
+        const { data, error } = await q;
+        if (error) return { data: null, error };
+        return { data, error: null };
+      }
+      if (method === 'POST') {
+        const { error } = await sb.from('ClientDashHighlight')
+          .upsert({ ...body, client_id: clientId }, { onConflict: 'id' });
+        if (error) return { data: null, error };
+        return { data: { ok: true }, error: null };
+      }
+    }
+
+    // /highlights/by-period/:pid DELETE
+    const hlByPerM = sub.match(/^\/highlights\/by-period\/([^\/]+)$/);
+    if (hlByPerM && method === 'DELETE') {
+      const pid = decodeURIComponent(hlByPerM[1]);
+      const { error } = await sb.from('ClientDashHighlight').delete().eq('client_id', clientId).eq('period_id', pid);
+      if (error) return { data: null, error };
+      return { data: { ok: true }, error: null };
+    }
+
+    // /highlights/replace POST
+    if (sub === '/highlights/replace' && method === 'POST') {
+      const periodId = body.periodId || body.period_id;
+      if (periodId) await sb.from('ClientDashHighlight').delete().eq('client_id', clientId).eq('period_id', periodId);
+      const rows = (body.rows || body.highlights || []).map(r => ({ ...r, client_id: clientId }));
+      if (rows.length) {
+        const { error } = await sb.from('ClientDashHighlight').upsert(rows, { onConflict: 'id' });
+        if (error) return { data: null, error };
+      }
+      return { data: { ok: true }, error: null };
+    }
+
+    // /highlights/:id DELETE
+    const hlIdM = sub.match(/^\/highlights\/([^\/]+)$/);
+    if (hlIdM && method === 'DELETE') {
+      const hid = decodeURIComponent(hlIdM[1]);
+      const { error } = await sb.from('ClientDashHighlight').delete().eq('id', hid);
+      if (error) return { data: null, error };
+      return { data: { ok: true }, error: null };
+    }
+
+    return { data: null, error: { message: 'Rota não implementada: ' + path } };
+  } catch (e) {
+    return { data: null, error: { message: e.message || String(e) } };
   }
 }
 
@@ -7346,7 +7497,7 @@ async function cliDashSelectClient(clientId) {
   panel.style.display = 'block';
   if (btn) btn.style.display = 'inline-flex';
   if (upBtn) upBtn.style.display = 'inline-flex';
-  const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods`, { retries: 3, retryDelayMs: 8000 });
+  const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods`);
   _cliDashPeriods = error ? [] : (data || []);
   cliDashRenderPeriods();
   cliDashPopulateSelects();
@@ -8565,17 +8716,14 @@ async function cliDashSavePeriod() {
   const label = document.getElementById('cdp-label').value.trim();
   const my    = document.getElementById('cdp-monthyear').value.trim();
   if (!label || !my) { showToast('Preencha rótulo e mês/ano.', 'error'); return; }
-  const base = backendApiBase();
-  if (!base) { showToast('Configure a URL da Cockroach API em Configurações.'); return; }
-  showToast('Salvando… aguarde');
+  showToast('Salvando…');
   const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/periods`, {
-    method: 'POST', body: { id: cliDashId(), label, month_year: my },
-    retries: 3, retryDelayMs: 8000
+    method: 'POST', body: { id: cliDashId(), label, month_year: my }
   });
-  if (error) { showToast('Erro (' + base.replace(/https?:\/\//, '') + '): ' + error.message); return; }
+  if (error) { showToast('Erro: ' + error.message); return; }
   cliDashClosePeriodModal();
   await cliDashSelectClient(_cliDashClientId);
-  showToast('Período criado com sucesso!');
+  showToast('Período criado!');
 }
 
 async function cliDashActivatePeriod(id) {

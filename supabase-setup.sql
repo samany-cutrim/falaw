@@ -255,3 +255,65 @@ ALTER TABLE "IfoodHighlight" ADD COLUMN IF NOT EXISTS highlight_type TEXT NOT NU
 ALTER TABLE "IfoodHighlight" ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "anon full access" ON "IfoodHighlight";
 CREATE POLICY "anon full access" ON "IfoodHighlight" FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- ── Dashboard de Clientes (genérico) ─────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS "ClientDashPeriod" (
+  id          TEXT PRIMARY KEY,
+  client_id   TEXT NOT NULL,
+  label       TEXT NOT NULL,
+  month_year  TEXT NOT NULL,
+  is_active   BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE "ClientDashPeriod" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon full access" ON "ClientDashPeriod";
+CREATE POLICY "anon full access" ON "ClientDashPeriod" FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS "ClientDashKpi" (
+  id          TEXT PRIMARY KEY,
+  client_id   TEXT NOT NULL,
+  period_id   TEXT NOT NULL,
+  tab_key     TEXT NOT NULL,
+  kpi_key     TEXT NOT NULL,
+  label       TEXT,
+  value       TEXT,
+  unit        TEXT,
+  trend_pct   NUMERIC,
+  sort_order  INTEGER NOT NULL DEFAULT 0,
+  chart_title TEXT,
+  chart_data  JSONB,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE "ClientDashKpi" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon full access" ON "ClientDashKpi";
+CREATE POLICY "anon full access" ON "ClientDashKpi" FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS "ClientDashContent" (
+  id          TEXT PRIMARY KEY,
+  client_id   TEXT NOT NULL,
+  period_id   TEXT NOT NULL,
+  tab_key     TEXT NOT NULL,
+  content_html TEXT,
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (client_id, period_id, tab_key)
+);
+ALTER TABLE "ClientDashContent" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon full access" ON "ClientDashContent";
+CREATE POLICY "anon full access" ON "ClientDashContent" FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS "ClientDashHighlight" (
+  id              TEXT PRIMARY KEY,
+  client_id       TEXT NOT NULL,
+  period_id       TEXT NOT NULL,
+  icon            TEXT,
+  title           TEXT,
+  body            TEXT,
+  description     TEXT,
+  highlight_type  TEXT NOT NULL DEFAULT 'card',
+  sort_order      INTEGER NOT NULL DEFAULT 0,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE "ClientDashHighlight" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon full access" ON "ClientDashHighlight";
+CREATE POLICY "anon full access" ON "ClientDashHighlight" FOR ALL TO anon USING (true) WITH CHECK (true);

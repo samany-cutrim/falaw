@@ -1267,17 +1267,52 @@ let _dashPeriodId  = null;
 // Chart instances per tab, keyed by tab key
 const _chartInstances = {};
 
-async function _cliDashGet(path, { retries = 0, retryDelayMs = 0 } = {}) {
-  const base = apiBase();
-  if (!base) return null;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(base + path);
-      if (res.ok) return await res.json();
-    } catch { /* servidor possivelmente dormindo */ }
-    if (attempt < retries) await new Promise(r => setTimeout(r, retryDelayMs));
-  }
-  return null;
+async function _cliDashGet(path) {
+  const sbUrl = (window.SB_URL || '').trim();
+  const sbKey = (window.SB_KEY || '').trim();
+  if (!sbUrl || !sbKey || typeof supabase === 'undefined') return null;
+  const sb = supabase.createClient(sbUrl, sbKey);
+
+  // Parse: /api/client-dash/:clientId[/subpath][?querystring]
+  const pm = path.match(/^\/api\/client-dash\/([^\/\?]+)(\/[^?]*)?(\?.*)?$/);
+  if (!pm) return null;
+
+  const clientId = decodeURIComponent(pm[1]);
+  const sub = pm[2] || '';
+  const qs  = new URLSearchParams((pm[3] || '').replace(/^\?/, ''));
+
+  try {
+    if (sub === '/periods') {
+      const { data } = await sb.from('ClientDashPeriod').select('*').eq('client_id', clientId).order('created_at', { ascending: false });
+      return data || [];
+    }
+    if (sub === '/kpis') {
+      const periodId = qs.get('periodId'), tabKey = qs.get('tabKey');
+      let q = sb.from('ClientDashKpi').select('*').eq('client_id', clientId);
+      if (periodId) q = q.eq('period_id', periodId);
+      if (tabKey)   q = q.eq('tab_key', tabKey);
+      q = q.order('sort_order', { ascending: true });
+      const { data } = await q;
+      return data || [];
+    }
+    if (sub === '/content') {
+      const periodId = qs.get('periodId'), tabKey = qs.get('tabKey');
+      let q = sb.from('ClientDashContent').select('*').eq('client_id', clientId);
+      if (periodId) q = q.eq('period_id', periodId);
+      if (tabKey)   q = q.eq('tab_key', tabKey);
+      const { data } = await q;
+      return data || [];
+    }
+    if (sub === '/highlights') {
+      const periodId = qs.get('periodId');
+      let q = sb.from('ClientDashHighlight').select('*').eq('client_id', clientId);
+      if (periodId) q = q.eq('period_id', periodId);
+      q = q.order('sort_order', { ascending: true });
+      const { data } = await q;
+      return data || [];
+    }
+    return null;
+  } catch { return null; }
 }
 
 /* ─── Activate tab bar in topbar when dashboard loads ─ */
