@@ -8565,12 +8565,14 @@ async function cliDashSavePeriod() {
   const label = document.getElementById('cdp-label').value.trim();
   const my    = document.getElementById('cdp-monthyear').value.trim();
   if (!label || !my) { showToast('Preencha rótulo e mês/ano.', 'error'); return; }
-  showToast('Salvando… (aguarde, servidor pode estar acordando)');
+  const base = backendApiBase();
+  if (!base) { showToast('Configure a URL da Cockroach API em Configurações.'); return; }
+  showToast('Salvando… aguarde');
   const { error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(_cliDashClientId)}/periods`, {
     method: 'POST', body: { id: cliDashId(), label, month_year: my },
     retries: 3, retryDelayMs: 8000
   });
-  if (error) { showToast('Erro: ' + error.message); return; }
+  if (error) { showToast('Erro (' + base.replace(/https?:\/\//, '') + '): ' + error.message); return; }
   cliDashClosePeriodModal();
   await cliDashSelectClient(_cliDashClientId);
   showToast('Período criado com sucesso!');
