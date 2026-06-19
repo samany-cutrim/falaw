@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin — Falaw Advogados</title>
   <meta name="robots" content="noindex, nofollow" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https: https://api.github.com https://raw.githubusercontent.com https://*.n8n.cloud https://*.n8n.io https://*.supabase.co https://script.google.com; worker-src blob: https://cdnjs.cloudflare.com; img-src 'self' data: https:; frame-ancestors 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https: https://api.github.com https://raw.githubusercontent.com https://*.supabase.co https://script.google.com; worker-src blob: https://cdnjs.cloudflare.com; img-src 'self' data: https:; frame-ancestors 'none';" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1305,7 +1305,7 @@
             <div id="cli-xl-sheets" style="font-size:12px;color:var(--c-muted);font-family:var(--f-mono)"></div>
           </div>
           <div id="cli-xl-status" style="display:none;font-family:var(--f-mono);font-size:11px;color:var(--c-muted);margin-bottom:12px;"></div>
-          <button type="button" class="btn btn-primary" onclick="cliDashSaveExcel()">Salvar dados no Cockroach</button>
+          <button type="button" class="btn btn-primary" onclick="cliDashSaveExcel()">Salvar dados no Supabase</button>
         </div>
 
 
@@ -2217,7 +2217,7 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
           <h3 style="margin:0;font-family:var(--f-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E">💡 Sugestões de Temas</h3>
           <span id="cal-sug-badge" style="display:none;background:#C62828;color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700"></span>
           <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
-            <span id="cal-sug-lastfetch" style="font-size:10px;color:var(--c-muted)">Geradas diariamente pelo N8N às 08h</span>
+            <span id="cal-sug-lastfetch" style="font-size:10px;color:var(--c-muted)">Geradas diariamente pela IA</span>
             <button class="btn btn-primary" id="cal-sug-btn" onclick="buscarTemasCalendario(true)" style="font-size:11px;padding:5px 14px">🔄 Atualizar sugestões</button>
           </div>
         </div>
@@ -2339,8 +2339,8 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
 
         <!-- Supabase -->
         <div class="cfg-card">
-          <h3 class="cfg-card-title">Autenticação — Supabase + Arquivos no Cockroach</h3>
-          <p class="cfg-card-desc">Use o Supabase para autenticação/acessos (admin e clientes), newsletter, contatos e cadastro de currículos. Use a API Cockroach para relatórios de clientes, dashboard iFood (períodos/KPIs/conteúdo/destaques) e arquivos enviados. <strong>Requer executar o script SQL</strong> em <code>supabase-setup.sql</code> no SQL Editor do Supabase.</p>
+          <h3 class="cfg-card-title">Autenticação — Supabase</h3>
+          <p class="cfg-card-desc">Use o Supabase para autenticação/acessos (admin e clientes), newsletter, contatos, currículos, relatórios e todos os dados dos dashboards. <strong>Requer executar o script SQL</strong> em <code>supabase-setup.sql</code> no SQL Editor do Supabase.</p>
           <div class="form-field">
             <label>E-mail Admin (Supabase Auth)</label>
             <input type="email" id="cfg-admin-email" placeholder="admin@falaw.com.br" autocomplete="off" maxlength="180" />
@@ -2354,11 +2354,6 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
             <input type="password" id="cfg-supabase-key" placeholder="eyJ…" autocomplete="off" maxlength="500" />
           </div>
           <p class="cfg-hint">Crie um projeto em <strong>supabase.com</strong>, vá em <strong>Settings → API</strong> e copie a <em>Project URL</em> e a <em>anon public</em> key. Com GitHub Token configurado, as páginas públicas são atualizadas automaticamente.</p>
-          <div class="form-field">
-            <label>API URL (Cockroach/Prisma)</label>
-            <input type="text" id="cfg-backend-api-url" placeholder="https://seu-backend.com" autocomplete="off" maxlength="220" />
-          </div>
-          <p class="cfg-hint">A API Cockroach recebe arquivos e também os dados dos dashboards/relatórios (incluindo iFood). Exemplo local: <strong>http://localhost:8787</strong>.</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar</button>
             <button type="button" class="btn btn-ghost" onclick="testSupabase()">Testar conexão</button>
@@ -2374,11 +2369,7 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
           <div class="form-field">
             <label>Chave API — OpenAI (ChatGPT)</label>
             <input type="password" id="cfg-openai-key" placeholder="sk-proj-…" autocomplete="off" />
-            <p class="cfg-hint" style="margin-top:6px;">Obtenha em <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>. Usada para gerar artigos e imagens de capa diretamente pelo site.</p>
-          </div>
-          <div class="form-field">
-            <label>n8n Webhook URL <span style="font-weight:400;font-size:11px;color:var(--text-muted)">(fallback quando OpenAI não configurada)</span></label>
-            <input type="text" id="cfg-n8n-url" placeholder="https://seu-usuario.app.n8n.cloud/webhook/falaw-ia" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">Obtenha em <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>. Usada para gerar artigos, informativos e imagens de capa diretamente pelo site.</p>
           </div>
           <div class="form-field">
             <label>Google Apps Script — URL de envio de e-mail</label>
@@ -2682,7 +2673,6 @@ const GITHUB_PATH_NEWSLETTER = 'html/Falaw/falaw.com.br/newsletter-data.js';
 const GITHUB_PATH_CONTATO    = 'html/Falaw/falaw.com.br/contato-data.js';
 const GITHUB_PATH_CURRICULOS = 'html/Falaw/falaw.com.br/curriculos-data.js';
 const AUTH_EMAIL_KEY = 'fa_admin_auth_email';
-const BACKEND_API_URL_KEY = 'fa_backend_api_url';
 const SB_ADMIN_SETTINGS_TABLE = 'admin_settings';
 const SB_ADMIN_PASSWORD_ID = 'admin_password';
 const KEYS = { adminPwdHash: 'fa_admin_pwd_h', githubToken: 'fa_github_token', members: 'fa_team_members', config: 'fa_site_config', newsletter: 'fa_newsletter_emails', contato: 'fa_contact_submissions', curriculos: 'fa_curriculos' };
@@ -2709,10 +2699,6 @@ function getSB() {
   return _sbClient;
 }
 function sbReset() { _sbClient = null; }
-
-function backendApiBase() {
-  return (localStorage.getItem(BACKEND_API_URL_KEY) || '').replace(/\/$/, '');
-}
 
 // apiUploadFile — mantido como no-op (uploads vão direto ao Supabase Storage)
 async function apiUploadFile() { return null; }
@@ -3677,22 +3663,9 @@ async function buscarTemasCalendario(forcar = false) {
   btn.textContent = '⏳ Carregando…';
   statusEl.style.display = 'block';
 
-  // Se forçado, limpa cache e tenta disparar o N8N para gerar novas sugestões
+  // Se forçado, limpa apenas o cache local
   if (forcar) {
     localStorage.removeItem(CAL_SUG_TS_KEY);
-    const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/webhook\/falaw-ia.*$/, '').replace(/\/$/, '');
-    if (n8nBase) {
-      try {
-        statusEl.textContent = '🔍 Disparando busca no N8N…';
-        await fetch(n8nBase + '/webhook/falaw-monitor-manual', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ origem: 'admin', ts: Date.now() })
-        });
-        statusEl.textContent = '⏳ N8N iniciado, aguardando resultados…';
-        await new Promise(r => setTimeout(r, 25000));
-      } catch(e) { /* N8N inacessível, continua com leitura direta */ }
-    }
   }
 
   statusEl.textContent = 'Buscando sugestões do Supabase…';
@@ -3741,7 +3714,7 @@ function _renderSugestoes() {
   const sugs = _calSugLoadLocal().filter(s => s.status === 'pendente');
 
   if (!sugs.length) {
-    container.innerHTML = `<div style="font-size:11px;color:var(--c-muted);padding:4px 0">Nenhuma sugestão pendente. O N8N gera automaticamente às 08h todos os dias. Clique em "Atualizar sugestões" para verificar.</div>`;
+    container.innerHTML = `<div style="font-size:11px;color:var(--c-muted);padding:4px 0">Nenhuma sugestão pendente. Clique em "Atualizar sugestões" para verificar.</div>`;
     return;
   }
 
@@ -4795,13 +4768,11 @@ function loadConfig() {
   document.getElementById('cfg-instagram').value    = cfg.instagram || '';
   document.getElementById('cfg-linkedin').value     = cfg.linkedin  || '';
   document.getElementById('cfg-github-token').value = ghToken();
-  document.getElementById('cfg-n8n-url').value = localStorage.getItem('fa_n8n_url') || window.SB_N8N_URL || '';
   document.getElementById('cfg-gas-url').value = localStorage.getItem('fa_gas_url') || window.SB_GAS_URL || '';
   document.getElementById('cfg-openai-key').value = localStorage.getItem('fa_openai_key') || '';
   document.getElementById('cfg-supabase-url').value = sbUrl();
   document.getElementById('cfg-supabase-key').value = sbKey();
   document.getElementById('cfg-admin-email').value = localStorage.getItem(AUTH_EMAIL_KEY) || window.SB_ADMIN_EMAIL || '';
-  document.getElementById('cfg-backend-api-url').value = localStorage.getItem(BACKEND_API_URL_KEY) || window.BACKEND_API_URL || '';
 }
 
 async function testAPIs() {
@@ -4820,22 +4791,7 @@ async function testAPIs() {
     } catch(e) { lines.push('❌ OpenAI: ' + e.message); }
   }
 
-  const n8nUrl = localStorage.getItem('fa_n8n_url') || '';
-  if (n8nUrl) {
-    try {
-      const r = await fetch(n8nUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [{ role: 'user', content: 'Responda apenas: ok' }], temperature: 0.1 })
-      });
-      const txt = await r.text();
-      lines.push((r.ok ? '✅' : '❌') + ' n8n HTTP ' + r.status + ' — ' + txt.slice(0, 120));
-    } catch(e) { lines.push('❌ n8n erro: ' + e.message); }
-  } else {
-    lines.push('⚠️ n8n: URL não configurada (opcional)');
-  }
-
-  if (!openaiKey && !n8nUrl) lines.push('⚠️ Configure a chave OpenAI ou a URL do n8n.');
+  if (!openaiKey) lines.push('⚠️ Configure a chave OpenAI em Configurações.');
   box.innerHTML = lines.join('<br>');
 }
 
@@ -4851,8 +4807,6 @@ function saveConfig() {
   const token = document.getElementById('cfg-github-token').value.trim();
   if (token) localStorage.setItem(KEYS.githubToken, token);
   else localStorage.removeItem(KEYS.githubToken);
-  const n8nUrl = document.getElementById('cfg-n8n-url').value.trim();
-  if (n8nUrl) localStorage.setItem('fa_n8n_url', n8nUrl); else localStorage.removeItem('fa_n8n_url');
   const gasUrl = document.getElementById('cfg-gas-url').value.trim();
   if (gasUrl) localStorage.setItem('fa_gas_url', gasUrl); else localStorage.removeItem('fa_gas_url');
   const openaiKey = document.getElementById('cfg-openai-key').value.trim();
@@ -4860,18 +4814,16 @@ function saveConfig() {
   const sbUrlVal = document.getElementById('cfg-supabase-url').value.trim();
   const sbKeyVal = document.getElementById('cfg-supabase-key').value.trim();
   const authEmail = document.getElementById('cfg-admin-email').value.trim();
-  const backendApi = document.getElementById('cfg-backend-api-url').value.trim().replace(/\/$/, '');
   if (sbUrlVal) localStorage.setItem('fa_supabase_url', sbUrlVal); else localStorage.removeItem('fa_supabase_url');
   if (sbKeyVal) localStorage.setItem('fa_supabase_key', sbKeyVal); else localStorage.removeItem('fa_supabase_key');
   if (authEmail) localStorage.setItem(AUTH_EMAIL_KEY, authEmail); else localStorage.removeItem(AUTH_EMAIL_KEY);
-  if (backendApi) localStorage.setItem(BACKEND_API_URL_KEY, backendApi); else localStorage.removeItem(BACKEND_API_URL_KEY);
   sbReset(); // reseta o cliente para usar novas credenciais
   document.getElementById('blog-no-token').hidden = !!token;
   // Se Supabase + GitHub configurados, atualiza sb-config.js no repositório
   if (sbUrlVal && sbKeyVal && token) {
     const escCfg = (v) => String(v || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const gasUrl2 = localStorage.getItem('fa_gas_url') || '';
-    const sbCfg = `/* sb-config.js — gerado pelo admin Falaw. */\nwindow.SB_URL='${escCfg(sbUrlVal)}';\nwindow.SB_KEY='${escCfg(sbKeyVal)}';\nwindow.BACKEND_API_URL='${escCfg(backendApi)}';\nwindow.SB_N8N_URL='${escCfg(n8nUrl)}';\nwindow.SB_GAS_URL='${escCfg(gasUrl2)}';\nwindow.SB_ADMIN_EMAIL='${escCfg(authEmail)}';\n`;
+    const sbCfg = `/* sb-config.js — gerado pelo admin Falaw. */\nwindow.SB_URL='${escCfg(sbUrlVal)}';\nwindow.SB_KEY='${escCfg(sbKeyVal)}';\nwindow.SB_GAS_URL='${escCfg(gasUrl2)}';\nwindow.SB_ADMIN_EMAIL='${escCfg(authEmail)}';\n`;
     _ghPush('html/Falaw/falaw.com.br/sb-config.js', sbCfg, null, 'Admin: update Supabase config')
       .then(sha => { if (sha) showToast('✓ Configurações salvas e sb-config.js publicado.'); else showToast('Configurações salvas.'); });
   } else {
@@ -4881,7 +4833,7 @@ function saveConfig() {
 
 function exportConfigBookmarklet() {
   const keys = [
-    'fa_supabase_url','fa_supabase_key','fa_backend_api_url','fa_n8n_url','fa_gas_url',
+    'fa_supabase_url','fa_supabase_key','fa_gas_url',
     'fa_admin_auth_email','fa_github_token','fa_openai_key'
   ];
   const data = {};
@@ -5455,40 +5407,8 @@ async function callOpenAI(messages, temperature) {
 }
 
 async function callAI(messages, temperature) {
-  const providers = [];
-  if (localStorage.getItem('fa_openai_key')) providers.push(() => callOpenAI(messages, temperature));
-  providers.push(() => callN8N(messages, temperature));
-  let lastErr;
-  for (const fn of providers) {
-    try { return await fn(); } catch(e) { lastErr = e; }
-  }
-  throw lastErr;
-}
-
-async function callN8N(messages, temperature, extraBody) {
-  const url = localStorage.getItem('fa_n8n_url') || '';
-  if (!url) throw new Error('n8n Webhook URL não configurada — vá em Configurações e cole a URL do webhook.');
-  const payload = Object.assign({ model: 'gpt-4o', messages, temperature: temperature || 0.7 }, extraBody || {});
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  const rawText = await res.text().catch(() => '');
-  if (!res.ok) {
-    throw new Error('n8n HTTP ' + res.status + (rawText ? ': ' + rawText.slice(0, 120) : ''));
-  }
-  if (!rawText || !rawText.trim()) {
-    throw new Error('n8n retornou resposta vazia — verifique se o token GitHub está configurado no nó "Configurar Chaves" do workflow e se o workflow está ativo.');
-  }
-  let data;
-  try { data = JSON.parse(rawText); }
-  catch(e) {
-    if (rawText.length > 10) return rawText.trim();
-    throw new Error('n8n resposta inválida: ' + rawText.slice(0, 120));
-  }
-  const item = Array.isArray(data) ? data[0] : data;
-  return item?.text || item?.output || item?.json?.text || item?.message || JSON.stringify(item);
+  if (!localStorage.getItem('fa_openai_key')) throw new Error('Chave OpenAI não configurada — vá em Configurações e adicione sua chave OpenAI.');
+  return callOpenAI(messages, temperature);
 }
 
 function parseJSON(text) {
