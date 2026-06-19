@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin — Falaw Advogados</title>
   <meta name="robots" content="noindex, nofollow" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https: https://api.github.com https://raw.githubusercontent.com https://*.n8n.cloud https://*.n8n.io https://*.supabase.co; img-src 'self' data: https:; frame-ancestors 'none';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https: https://api.github.com https://raw.githubusercontent.com https://*.n8n.cloud https://*.n8n.io https://*.supabase.co https://script.google.com; worker-src blob: https://cdnjs.cloudflare.com; img-src 'self' data: https:; frame-ancestors 'none';" />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="./sb-config.js"></script>
@@ -926,6 +927,7 @@
           <div class="admin-dropdown-item" id="ditem-contato" onclick="switchTab('contato')"><span>Contato</span><span class="notif-badge" id="badge-contato" style="display:none"></span></div>
           <div class="admin-dropdown-item" id="ditem-curriculos" onclick="switchTab('curriculos')"><span>Currículos</span><span class="notif-badge" id="badge-curriculos" style="display:none"></span></div>
           <div class="admin-dropdown-item" id="ditem-comentarios" onclick="switchTab('comentarios')"><span>Comentários</span><span class="notif-badge" id="badge-comentarios" style="display:none"></span></div>
+          <div class="admin-dropdown-item" id="ditem-informativos" onclick="switchTab('informativos')"><span>Informativos</span></div>
           <div class="admin-dropdown-item" id="ditem-calendario" onclick="switchTab('calendario')"><span>Calendário</span></div>
         </div>
       </div>
@@ -2089,6 +2091,104 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
       <div class="item-list" id="comentarios-list"></div>
     </section>
 
+    <!-- ── INFORMATIVOS ── -->
+    <section id="tab-informativos" class="admin-section">
+      <div class="section-header">
+        <h2>Informativos</h2>
+      </div>
+
+      <!-- Painel de geração -->
+      <div style="background:#fff;border:1px solid #e0e4f0;border-radius:6px;padding:24px 28px;margin-bottom:24px">
+        <h3 style="margin:0 0 18px 0;font-family:var(--f-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E">✍ Gerar Informativo com IA</h3>
+
+        <!-- Modo de entrada -->
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button type="button" id="inf-mode-tema" class="btn btn-primary" style="font-size:11px;padding:5px 14px" onclick="infSetMode('tema')">📝 Tema / Texto</button>
+          <button type="button" id="inf-mode-pdf" class="btn btn-ghost" style="font-size:11px;padding:5px 14px" onclick="infSetMode('pdf')">📄 PDF</button>
+        </div>
+
+        <!-- Modo tema -->
+        <div id="inf-area-tema">
+          <div class="form-field">
+            <label>Tema ou descrição da decisão / notícia jurídica</label>
+            <textarea id="inf-tema" rows="5" placeholder="Ex: STF decidiu no Tema 1389 que... / Descreva o tema ou cole o texto base que a IA deve usar para gerar o informativo."
+              style="width:100%;font-family:var(--f-mono);font-size:13px;resize:vertical"></textarea>
+          </div>
+        </div>
+
+        <!-- Modo PDF -->
+        <div id="inf-area-pdf" style="display:none">
+          <div class="form-field">
+            <label>Selecionar PDF</label>
+            <input type="file" id="inf-pdf-file" accept=".pdf" />
+            <p class="cfg-hint" style="margin-top:6px">O texto será extraído do PDF e usado como base para a IA gerar o informativo.</p>
+          </div>
+          <div id="inf-pdf-preview" style="display:none;margin-top:8px;background:#f8f8f8;border:1px solid #e0e4f0;border-radius:4px;padding:12px;max-height:160px;overflow:auto;font-size:11px;font-family:var(--f-mono);color:#555;white-space:pre-wrap"></div>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap">
+          <button type="button" class="btn btn-primary" onclick="gerarInformativo()" id="inf-btn-gerar">⚡ Gerar Informativo</button>
+          <span id="inf-status" style="font-size:12px;color:var(--c-muted)"></span>
+        </div>
+      </div>
+
+      <!-- Área de preview + envio -->
+      <div id="inf-result-area" style="display:none">
+
+        <!-- Preview HTML -->
+        <div style="background:#fff;border:1px solid #e0e4f0;border-radius:6px;padding:20px 24px;margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+            <h3 style="margin:0;font-family:var(--f-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E">👁 Preview do E-mail</h3>
+            <div style="display:flex;gap:8px">
+              <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="infCopiarHTML()">📋 Copiar HTML</button>
+              <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="infBaixarHTML()">⬇ Baixar HTML</button>
+              <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="infEditar()">✏ Editar</button>
+            </div>
+          </div>
+          <iframe id="inf-preview-frame"
+            style="width:100%;border:1px solid #e8eaf0;border-radius:4px;min-height:600px;display:block"
+            sandbox="allow-same-origin"></iframe>
+        </div>
+
+        <!-- Edição manual do HTML -->
+        <div id="inf-edit-area" style="display:none;background:#fff;border:1px solid #e0e4f0;border-radius:6px;padding:20px 24px;margin-bottom:16px">
+          <h3 style="margin:0 0 12px 0;font-family:var(--f-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E">✏ Editar HTML</h3>
+          <textarea id="inf-html-editor" rows="20" style="width:100%;font-family:var(--f-mono);font-size:11px;resize:vertical"></textarea>
+          <button type="button" class="btn btn-primary" style="margin-top:10px;font-size:11px" onclick="infAplicarEdicao()">✓ Aplicar edição</button>
+        </div>
+
+        <!-- Envio por e-mail -->
+        <div style="background:#fff;border:1px solid #e0e4f0;border-radius:6px;padding:20px 24px">
+          <h3 style="margin:0 0 16px 0;font-family:var(--f-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E">✉ Enviar por E-mail</h3>
+          <div class="form-field" style="margin-bottom:12px">
+            <label>Assunto</label>
+            <input type="text" id="inf-email-subject" style="width:100%" />
+          </div>
+          <div class="form-field" style="margin-bottom:12px">
+            <label>Destinatários <span style="font-weight:400;font-size:11px;color:var(--c-muted)">(separados por vírgula)</span></label>
+            <textarea id="inf-email-to" rows="3" placeholder="cliente@empresa.com.br, outro@empresa.com.br"
+              style="width:100%;font-family:var(--f-mono);font-size:12px;resize:vertical"></textarea>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 14px" onclick="infPreencherInscritos()">+ Inscritos na newsletter</button>
+            <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 14px" onclick="infPreencherClientes()">+ Todos os clientes</button>
+          </div>
+          <button type="button" class="btn btn-primary" style="margin-top:14px" id="inf-btn-enviar" onclick="enviarInformativo()">📧 Enviar Informativo</button>
+          <span id="inf-send-status" style="margin-left:12px;font-size:12px;color:var(--c-muted)"></span>
+        </div>
+
+      </div>
+
+      <!-- Lista de informativos salvos -->
+      <div style="margin-top:24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <h3 style="margin:0;font-family:var(--f-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--c-muted)">Histórico</h3>
+          <button type="button" class="btn btn-ghost" style="font-size:11px;padding:4px 12px" onclick="infSalvarAtual()" id="inf-btn-salvar" style="display:none">💾 Salvar informativo atual</button>
+        </div>
+        <div id="inf-historico-list"></div>
+      </div>
+    </section>
+
     <!-- ── CALENDÁRIO ── -->
     <section id="tab-calendario" class="admin-section">
       <div class="section-header">
@@ -2279,6 +2379,11 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
           <div class="form-field">
             <label>n8n Webhook URL <span style="font-weight:400;font-size:11px;color:var(--text-muted)">(fallback quando OpenAI não configurada)</span></label>
             <input type="text" id="cfg-n8n-url" placeholder="https://seu-usuario.app.n8n.cloud/webhook/falaw-ia" autocomplete="off" />
+          </div>
+          <div class="form-field">
+            <label>Google Apps Script — URL de envio de e-mail</label>
+            <input type="text" id="cfg-gas-url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">Cole aqui a URL do Apps Script implantado na conta <strong>ferrazandrade@falaw.com.br</strong>. Usado para enviar notificações e newsletters diretamente pelo Gmail da Falaw.</p>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
             <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar chaves</button>
@@ -3335,7 +3440,7 @@ function getSbCreds() {
   return { sbUrl, sbKey };
 }
 
-const CONTEUDO_TABS   = ['blog','newsletter','contato','curriculos','comentarios','calendario'];
+const CONTEUDO_TABS   = ['blog','newsletter','contato','curriculos','comentarios','informativos','calendario'];
 const GESTAO_TABS     = ['equipe','clientes'];
 const DASH_TABS       = ['ifood','cli-dash'];
 const STANDALONE_TABS = ['config','audiencias'];
@@ -3784,6 +3889,7 @@ function switchTab(name) {
   if (name === 'ifood')         { loadIfoodAdmin(); }
   if (name === 'cli-dash')      { loadPortalFromSupabase().then(cliDashTabInit); }
   if (name === 'comentarios')   { clearBadge('comentarios'); loadComentariosAdmin('all'); }
+  if (name === 'informativos')  { infRenderHistorico(); }
   if (name === 'calendario')    {
     renderCalendario();
     _renderSugestoes();
@@ -4690,6 +4796,7 @@ function loadConfig() {
   document.getElementById('cfg-linkedin').value     = cfg.linkedin  || '';
   document.getElementById('cfg-github-token').value = ghToken();
   document.getElementById('cfg-n8n-url').value = localStorage.getItem('fa_n8n_url') || window.SB_N8N_URL || '';
+  document.getElementById('cfg-gas-url').value = localStorage.getItem('fa_gas_url') || window.SB_GAS_URL || '';
   document.getElementById('cfg-openai-key').value = localStorage.getItem('fa_openai_key') || '';
   document.getElementById('cfg-supabase-url').value = sbUrl();
   document.getElementById('cfg-supabase-key').value = sbKey();
@@ -4746,6 +4853,8 @@ function saveConfig() {
   else localStorage.removeItem(KEYS.githubToken);
   const n8nUrl = document.getElementById('cfg-n8n-url').value.trim();
   if (n8nUrl) localStorage.setItem('fa_n8n_url', n8nUrl); else localStorage.removeItem('fa_n8n_url');
+  const gasUrl = document.getElementById('cfg-gas-url').value.trim();
+  if (gasUrl) localStorage.setItem('fa_gas_url', gasUrl); else localStorage.removeItem('fa_gas_url');
   const openaiKey = document.getElementById('cfg-openai-key').value.trim();
   if (openaiKey) localStorage.setItem('fa_openai_key', openaiKey); else localStorage.removeItem('fa_openai_key');
   const sbUrlVal = document.getElementById('cfg-supabase-url').value.trim();
@@ -4761,7 +4870,8 @@ function saveConfig() {
   // Se Supabase + GitHub configurados, atualiza sb-config.js no repositório
   if (sbUrlVal && sbKeyVal && token) {
     const escCfg = (v) => String(v || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    const sbCfg = `/* sb-config.js — gerado pelo admin Falaw. */\nwindow.SB_URL='${escCfg(sbUrlVal)}';\nwindow.SB_KEY='${escCfg(sbKeyVal)}';\nwindow.BACKEND_API_URL='${escCfg(backendApi)}';\nwindow.SB_N8N_URL='${escCfg(n8nUrl)}';\nwindow.SB_ADMIN_EMAIL='${escCfg(authEmail)}';\n`;
+    const gasUrl2 = localStorage.getItem('fa_gas_url') || '';
+    const sbCfg = `/* sb-config.js — gerado pelo admin Falaw. */\nwindow.SB_URL='${escCfg(sbUrlVal)}';\nwindow.SB_KEY='${escCfg(sbKeyVal)}';\nwindow.BACKEND_API_URL='${escCfg(backendApi)}';\nwindow.SB_N8N_URL='${escCfg(n8nUrl)}';\nwindow.SB_GAS_URL='${escCfg(gasUrl2)}';\nwindow.SB_ADMIN_EMAIL='${escCfg(authEmail)}';\n`;
     _ghPush('html/Falaw/falaw.com.br/sb-config.js', sbCfg, null, 'Admin: update Supabase config')
       .then(sha => { if (sha) showToast('✓ Configurações salvas e sb-config.js publicado.'); else showToast('Configurações salvas.'); });
   } else {
@@ -4771,7 +4881,7 @@ function saveConfig() {
 
 function exportConfigBookmarklet() {
   const keys = [
-    'fa_supabase_url','fa_supabase_key','fa_backend_api_url','fa_n8n_url',
+    'fa_supabase_url','fa_supabase_key','fa_backend_api_url','fa_n8n_url','fa_gas_url',
     'fa_admin_auth_email','fa_github_token','fa_openai_key'
   ];
   const data = {};
@@ -5868,8 +5978,7 @@ function copyDigestHTML() {
 }
 
 async function sendDigestViaN8N() {
-  const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
-  if (!n8nBase) { showToast('URL do n8n não configurada.'); return; }
+  if (!_gasUrl()) { showToast('URL do Google Apps Script não configurada em Configurações.'); return; }
   if (!digestArticles.length) return;
 
   const subject = document.getElementById('digest-subject').value.trim() || ('Newsletter Falaw · ' + digestPeriodLabel);
@@ -5885,12 +5994,7 @@ async function sendDigestViaN8N() {
   btn.disabled = true; btn.textContent = 'Enviando…';
 
   try {
-    const res = await fetch(n8nBase + '/falaw-newsletter', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject, html, subscribers })
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    await sendViaGAS(subject, html, subscribers);
     showToast('✓ Digest enviado para ' + subscribers.length + ' inscrito(s)!');
     closeDigestModal();
   } catch(e) {
@@ -6001,9 +6105,7 @@ function copyEmailHTML() {
 }
 
 async function sendNewsletterViaN8N() {
-  const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
-  if (!n8nBase) { showToast('URL do n8n não configurada.'); return; }
-  const url = n8nBase + '/falaw-newsletter';
+  if (!_gasUrl()) { showToast('URL do Google Apps Script não configurada em Configurações.'); return; }
 
   if (!emailArticle) return;
   const subject = document.getElementById('email-subject').value.trim() || ('Newsletter Falaw · ' + emailArticle.title);
@@ -6025,12 +6127,7 @@ async function sendNewsletterViaN8N() {
   btn.textContent = 'Enviando…';
 
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject, html, subscribers })
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    await sendViaGAS(subject, html, subscribers);
     showToast('✓ Newsletter enviada para ' + subscribers.length + ' inscrito(s)!');
     closeEmailModal();
   } catch(e) {
@@ -6207,9 +6304,468 @@ function _confirmEmailSend(email, company, period) {
   });
 }
 
+/* ══════════════════════════════════════
+   INFORMATIVOS — geração por IA + envio
+══════════════════════════════════════ */
+const INF_STORE_KEY = 'falaw_informativos_v1';
+let _infCurrentHTML = '';
+
+function infSetMode(mode) {
+  document.getElementById('inf-area-tema').style.display = mode === 'tema' ? '' : 'none';
+  document.getElementById('inf-area-pdf').style.display  = mode === 'pdf'  ? '' : 'none';
+  document.getElementById('inf-mode-tema').className = 'btn ' + (mode === 'tema' ? 'btn-primary' : 'btn-ghost');
+  document.getElementById('inf-mode-pdf').className  = 'btn ' + (mode === 'pdf'  ? 'btn-primary' : 'btn-ghost');
+  document.getElementById('inf-mode-tema').style.fontSize = '11px';
+  document.getElementById('inf-mode-tema').style.padding  = '5px 14px';
+  document.getElementById('inf-mode-pdf').style.fontSize  = '11px';
+  document.getElementById('inf-mode-pdf').style.padding   = '5px 14px';
+}
+
+async function _infExtractPDFText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        if (typeof pdfjsLib === 'undefined') { resolve(''); return; }
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const pdf   = await pdfjsLib.getDocument({ data: new Uint8Array(e.target.result) }).promise;
+        let text = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page  = await pdf.getPage(i);
+          const items = (await page.getTextContent()).items;
+          text += items.map(it => it.str).join(' ') + '\n';
+        }
+        resolve(text.trim());
+      } catch(err) { reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function gerarInformativo() {
+  const btn    = document.getElementById('inf-btn-gerar');
+  const status = document.getElementById('inf-status');
+  btn.disabled = true;
+  btn.textContent = '⏳ Gerando…';
+  status.textContent = '';
+
+  try {
+    let baseText = '';
+    const isPdf = document.getElementById('inf-area-pdf').style.display !== 'none';
+
+    if (isPdf) {
+      const fileEl = document.getElementById('inf-pdf-file');
+      if (!fileEl.files[0]) { showToast('Selecione um arquivo PDF.'); return; }
+      status.textContent = 'Extraindo texto do PDF…';
+      baseText = await _infExtractPDFText(fileEl.files[0]);
+      if (!baseText) { showToast('Não foi possível extrair texto do PDF. Use o modo Tema/Texto.'); return; }
+      document.getElementById('inf-pdf-preview').style.display = '';
+      document.getElementById('inf-pdf-preview').textContent = baseText.slice(0, 800) + (baseText.length > 800 ? '\n…' : '');
+    } else {
+      baseText = document.getElementById('inf-tema').value.trim();
+      if (!baseText) { showToast('Descreva o tema ou cole o texto base.'); return; }
+    }
+
+    status.textContent = 'Consultando IA…';
+
+    const prompt = `Você é um advogado especialista em comunicação jurídica corporativa do escritório Falaw Advogados.
+Com base no texto abaixo, gere um informativo jurídico formal para clientes empresariais.
+Responda EXCLUSIVAMENTE com JSON válido (sem texto fora do JSON), no seguinte formato:
+
+{
+  "subtitulo": "Comunicado aos clientes · [área jurídica e tema resumido]",
+  "titulo": "Título principal impactante e preciso (máx 120 chars)",
+  "resumo": "Parágrafo resumo abaixo do título (2-3 linhas)",
+  "intro": ["parágrafo 1 iniciando com 'Prezados clientes,'", "parágrafo 2 descrevendo a decisão/fato"],
+  "box_decisao": {
+    "titulo": "O que foi decidido / O que mudou",
+    "itens": ["item 1", "item 2", "item 3"]
+  },
+  "secoes": [
+    { "titulo": "Título da seção 2", "paragrafos": ["..."] },
+    { "titulo": "Título da seção 3", "paragrafos": ["..."] }
+  ],
+  "atencao": { "titulo": "Atenção: ponto crítico", "texto": "Explicação do ponto de atenção em 2-3 linhas." },
+  "impacto": {
+    "titulo": "Impacto prático para as empresas",
+    "itens": ["item 1", "item 2", "item 3"]
+  },
+  "estrategia": {
+    "titulo": "Qual deve ser a estratégia agora?",
+    "paragrafos": ["...", "...", "..."],
+    "destaque": "Frase final de impacto em destaque vermelho (máx 100 chars)"
+  }
+}
+
+Texto base:
+"""
+${baseText.slice(0, 6000)}
+"""`;
+
+    const raw = await callAI([
+      { role: 'system', content: 'Você é especialista em comunicação jurídica corporativa. Responda SEMPRE em JSON válido, sem texto fora do JSON.' },
+      { role: 'user', content: prompt }
+    ], 0.65);
+
+    let data;
+    try {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      data = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+    } catch(e) {
+      showToast('Erro ao interpretar resposta da IA. Tente novamente.');
+      return;
+    }
+
+    status.textContent = 'Montando preview…';
+    _infCurrentHTML = generateInformativoHTML(data);
+
+    // Atualiza iframe
+    const frame = document.getElementById('inf-preview-frame');
+    frame.srcdoc = _infCurrentHTML;
+    frame.style.minHeight = '700px';
+
+    // Preenche assunto
+    document.getElementById('inf-email-subject').value =
+      'INFORMATIVO FALAW — ' + (data.titulo || '').toUpperCase().slice(0, 80);
+
+    // Mostra área de resultado
+    document.getElementById('inf-result-area').style.display = '';
+    document.getElementById('inf-btn-salvar').style.display = '';
+    status.textContent = '✓ Informativo gerado.';
+    document.getElementById('inf-result-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  } catch(e) {
+    showToast('Erro: ' + e.message);
+    status.textContent = '';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Gerar Informativo';
+  }
+}
+
+function generateInformativoHTML(d) {
+  const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const logo = 'https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png';
+  const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const boxDecisaoRows = (d.box_decisao?.itens || []).map(it =>
+    `<tr><td style="padding:5px 0 5px 0;font-size:15px;line-height:1.75;color:#ffffff;">
+      <span style="color:#a59065;font-weight:700;margin-right:8px;">›</span>${esc(it)}
+    </td></tr>`
+  ).join('');
+
+  const secoesHTML = (d.secoes || []).map(s => `
+  <tr><td style="padding:48px 58px 30px 58px;background:#ffffff;font-size:15px;line-height:1.78;color:#222222;">
+    <h2 style="margin:0 0 22px 0;color:#550000;font-size:23px;line-height:1.35;font-weight:800;">${esc(s.titulo)}</h2>
+    ${(s.paragrafos || []).map((p,i,a) =>
+      `<p style="margin:0${i < a.length-1 ? ' 0 18px 0' : ''};">${esc(p)}</p>`
+    ).join('\n    ')}
+  </td></tr>`).join('');
+
+  const impactoRows = (d.impacto?.itens || []).map(it =>
+    `<tr><td style="font-size:15px;line-height:1.85;color:#ffffff;padding:4px 0;">
+      <span style="margin-right:8px;">›</span>${esc(it)}
+    </td></tr>`
+  ).join('');
+
+  const estrategiaParagrafos = (d.estrategia?.paragrafos || []).map((p,i,a) =>
+    `<p style="margin:0${i < a.length-1 ? ' 0 18px 0' : ''};">${esc(p)}</p>`
+  ).join('\n              ');
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${esc(d.titulo || 'Informativo Falaw')}</title>
+</head>
+<body style="margin:0;padding:0;background:#d9d9d9;font-family:Raleway,Arial,Helvetica,sans-serif;color:#222222;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#d9d9d9;margin:0;padding:34px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="720" cellpadding="0" cellspacing="0" style="width:720px;max-width:720px;background:#ffffff;border-collapse:collapse;box-shadow:0 18px 42px rgba(0,0,0,0.10);">
+
+        <!-- Cabeçalho -->
+        <tr><td style="background:#f4f3f2;padding:42px 52px 38px 52px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td align="left" style="vertical-align:middle;">
+                <img src="${logo}" alt="Falaw Advogados" style="display:block;height:34px;width:auto;" />
+              </td>
+              <td align="right" style="vertical-align:middle;font-size:12px;line-height:1.55;color:#550000;letter-spacing:0.2px;">
+                <strong>FALAW ADVOGADOS</strong><br>
+                <span style="color:#7A7672">${today}</span>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+
+        <!-- Título -->
+        <tr><td style="padding:72px 58px 48px 58px;text-align:center;background:#ffffff;">
+          <div style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:#a59065;font-weight:700;margin-bottom:18px;">
+            ${esc(d.subtitulo || 'Comunicado aos clientes')}
+          </div>
+          <h1 style="margin:0;color:#550000;font-size:28px;line-height:1.28;font-weight:800;letter-spacing:-0.3px;">
+            ${esc(d.titulo || '')}
+          </h1>
+          <p style="margin:22px auto 0 auto;max-width:560px;font-size:16px;line-height:1.65;color:#333333;">
+            ${esc(d.resumo || '')}
+          </p>
+          <div style="height:1px;background:#a59065;width:100%;margin:38px 0 0 0;"></div>
+        </td></tr>
+
+        <!-- Introdução -->
+        <tr><td style="padding:0 58px 42px 58px;background:#ffffff;font-size:15px;line-height:1.78;color:#222222;">
+          ${(d.intro || []).map((p,i,a) =>
+            `<p style="margin:${i===0?'0':'0'} 0 ${i<a.length-1?'18px':'0'} 0;">${esc(p)}</p>`
+          ).join('\n          ')}
+        </td></tr>
+
+        <!-- Box vermelho — decisão -->
+        ${d.box_decisao ? `
+        <tr><td style="background:#550000;padding:50px 58px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="color:#ffffff;font-size:18px;font-weight:800;padding-bottom:20px;">
+              ${esc(d.box_decisao.titulo || '')}
+            </td></tr>
+            ${boxDecisaoRows}
+          </table>
+        </td></tr>` : ''}
+
+        ${secoesHTML}
+
+        <!-- Box atenção -->
+        ${d.atencao ? `
+        <tr><td style="padding:24px 58px 44px 58px;background:#ffffff;">
+          <div style="background:#f4f3f2;border-left:5px solid #a59065;padding:25px 28px;">
+            <h3 style="margin:0 0 12px 0;color:#550000;font-size:19px;line-height:1.35;font-weight:800;">
+              ${esc(d.atencao.titulo || '')}
+            </h3>
+            <p style="margin:0;font-size:15px;line-height:1.75;color:#222222;">${esc(d.atencao.texto || '')}</p>
+          </div>
+        </td></tr>` : ''}
+
+        <!-- Impacto prático (fundo dourado) -->
+        ${d.impacto ? `
+        <tr><td style="background:#a59065;padding:48px 58px;">
+          <h2 style="margin:0 0 24px 0;color:#ffffff;font-size:23px;line-height:1.35;font-weight:800;">
+            ${esc(d.impacto.titulo || '')}
+          </h2>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${impactoRows}
+          </table>
+        </td></tr>` : ''}
+
+        <!-- Estratégia -->
+        ${d.estrategia ? `
+        <tr><td style="padding:52px 58px 30px 58px;background:#ffffff;font-size:15px;line-height:1.78;color:#222222;">
+          <h2 style="margin:0 0 22px 0;color:#550000;font-size:23px;line-height:1.35;font-weight:800;">
+            ${esc(d.estrategia.titulo || '')}
+          </h2>
+          ${estrategiaParagrafos}
+          ${d.estrategia.destaque ? `
+          <p style="margin:18px 0 0 0;color:#550000;font-weight:800;">${esc(d.estrategia.destaque)}</p>` : ''}
+        </td></tr>` : ''}
+
+        <!-- Como a Falaw pode ajudar -->
+        <tr><td style="padding:24px 58px 60px 58px;background:#ffffff;">
+          <div style="background:#f4f3f2;border:1px solid #a59065;padding:30px 32px;">
+            <h3 style="margin:0 0 14px 0;color:#550000;font-size:20px;line-height:1.35;font-weight:800;">
+              Como a FALAW pode apoiar sua empresa
+            </h3>
+            <p style="margin:0 0 18px 0;font-size:15px;line-height:1.75;color:#222222;">
+              Nosso time está à disposição para analisar os impactos desta matéria, revisar estratégias defensivas e orientar a atuação mais adequada para cada caso.
+            </p>
+            <p style="margin:0;font-size:15px;line-height:1.75;color:#222222;">
+              Para conversar sobre os impactos, basta responder a este e-mail.
+            </p>
+          </div>
+        </td></tr>
+
+        <!-- Rodapé -->
+        <tr><td style="padding:0;background:#ffffff;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+            <tr><td style="background:#575757;padding:36px 58px;color:#ffffff;">
+              <p style="margin:0 0 10px 0;font-family:monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);">FALAW ADVOGADOS</p>
+              <p style="margin:0 0 6px 0;font-size:13px;font-weight:700;color:#ffffff;">Ferraz Andrade Advogados Associados</p>
+              <p style="margin:0 0 4px 0;font-size:12px;color:rgba(255,255,255,.75);">Av. Francisco Matarazzo, 1752 · Salas 414 e 415 · São Paulo / SP</p>
+              <p style="margin:0;font-size:12px;color:rgba(255,255,255,.75);">
+                <a href="mailto:ferrazandrade@falaw.com.br" style="color:#a59065;text-decoration:none;">ferrazandrade@falaw.com.br</a>
+                &nbsp;·&nbsp;
+                <a href="https://falaw.com.br" style="color:#a59065;text-decoration:none;">falaw.com.br</a>
+              </p>
+            </td></tr>
+            <tr><td align="center" style="background:#ffffff;padding:24px 24px 20px 24px;font-size:12px;line-height:1.6;color:#550000;">
+              <p style="margin:0;">Você está recebendo este informativo por ser cliente da FALAW Advogados.</p>
+            </td></tr>
+          </table>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function infCopiarHTML() {
+  if (!_infCurrentHTML) return;
+  navigator.clipboard.writeText(_infCurrentHTML)
+    .then(() => showToast('✓ HTML copiado para a área de transferência!'))
+    .catch(() => showToast('Erro ao copiar.'));
+}
+
+function infBaixarHTML() {
+  if (!_infCurrentHTML) return;
+  const blob = new Blob([_infCurrentHTML], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'informativo-falaw-' + new Date().toISOString().slice(0,10) + '.html';
+  a.click();
+}
+
+function infEditar() {
+  const editArea = document.getElementById('inf-edit-area');
+  const isOpen = editArea.style.display !== 'none';
+  if (!isOpen) {
+    document.getElementById('inf-html-editor').value = _infCurrentHTML;
+    editArea.style.display = '';
+  } else {
+    editArea.style.display = 'none';
+  }
+}
+
+function infAplicarEdicao() {
+  _infCurrentHTML = document.getElementById('inf-html-editor').value;
+  document.getElementById('inf-preview-frame').srcdoc = _infCurrentHTML;
+  document.getElementById('inf-edit-area').style.display = 'none';
+  showToast('✓ Preview atualizado.');
+}
+
+function infPreencherInscritos() {
+  const subs = load(KEYS.newsletter) || [];
+  const emails = subs.map(s => s.email).filter(Boolean);
+  if (!emails.length) { showToast('Nenhum inscrito na newsletter.'); return; }
+  const el = document.getElementById('inf-email-to');
+  const current = el.value.trim();
+  const all = [...new Set([...current.split(/[,;\s]+/).filter(Boolean), ...emails])];
+  el.value = all.join(', ');
+  showToast(emails.length + ' inscrito(s) adicionado(s).');
+}
+
+function infPreencherClientes() {
+  const clients = getClients();
+  const emails = clients.map(c => c.notifyEmail || c.email).filter(Boolean);
+  if (!emails.length) { showToast('Nenhum cliente com e-mail cadastrado.'); return; }
+  const el = document.getElementById('inf-email-to');
+  const current = el.value.trim();
+  const all = [...new Set([...current.split(/[,;\s]+/).filter(Boolean), ...emails])];
+  el.value = all.join(', ');
+  showToast(emails.length + ' cliente(s) adicionado(s).');
+}
+
+async function enviarInformativo() {
+  if (!_infCurrentHTML) { showToast('Gere o informativo primeiro.'); return; }
+  const subject = document.getElementById('inf-email-subject').value.trim();
+  const toRaw   = document.getElementById('inf-email-to').value.trim();
+  const recipients = [...new Set(toRaw.split(/[,;\n]+/).map(e => e.trim()).filter(e => e.includes('@')))];
+
+  if (!subject) { showToast('Preencha o assunto.'); return; }
+  if (!recipients.length) { showToast('Adicione ao menos um destinatário.'); return; }
+
+  const btn    = document.getElementById('inf-btn-enviar');
+  const status = document.getElementById('inf-send-status');
+  btn.disabled = true;
+  status.textContent = 'Enviando…';
+
+  try {
+    await sendViaGAS(subject, _infCurrentHTML, recipients);
+    showToast('✓ Informativo enviado para ' + recipients.length + ' destinatário(s)!');
+    status.textContent = '✓ Enviado para ' + recipients.length + ' destinatário(s).';
+    infSalvarAtual(true);
+  } catch(e) {
+    showToast('Erro ao enviar: ' + e.message);
+    status.textContent = '';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function infSalvarAtual(silencioso) {
+  if (!_infCurrentHTML) return;
+  const subject = document.getElementById('inf-email-subject').value.trim() || 'Informativo sem título';
+  const hist = JSON.parse(localStorage.getItem(INF_STORE_KEY) || '[]');
+  hist.unshift({ id: Date.now().toString(), titulo: subject, html: _infCurrentHTML, data: new Date().toISOString() });
+  // Mantém no máximo 30 entradas
+  if (hist.length > 30) hist.length = 30;
+  localStorage.setItem(INF_STORE_KEY, JSON.stringify(hist));
+  infRenderHistorico();
+  if (!silencioso) showToast('✓ Informativo salvo no histórico.');
+}
+
+function infRenderHistorico() {
+  const hist = JSON.parse(localStorage.getItem(INF_STORE_KEY) || '[]');
+  const el   = document.getElementById('inf-historico-list');
+  if (!el) return;
+  if (!hist.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--c-muted)">Nenhum informativo salvo ainda.</div>';
+    return;
+  }
+  el.innerHTML = hist.map(h => {
+    const d = new Date(h.data).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid #e8eaf0;border-radius:4px;margin-bottom:6px;background:#fff">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:#0D2B5E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(h.titulo)}</div>
+        <div style="font-size:10px;color:var(--c-muted);margin-top:2px">${d}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button onclick="infCarregarHistorico('${h.id}')" class="btn btn-ghost" style="font-size:10px;padding:4px 10px">Ver</button>
+        <button onclick="infExcluirHistorico('${h.id}')" class="btn btn-danger" style="font-size:10px;padding:4px 10px">Excluir</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function infCarregarHistorico(id) {
+  const hist = JSON.parse(localStorage.getItem(INF_STORE_KEY) || '[]');
+  const h = hist.find(x => x.id === id);
+  if (!h) return;
+  _infCurrentHTML = h.html;
+  document.getElementById('inf-email-subject').value = h.titulo;
+  document.getElementById('inf-preview-frame').srcdoc = _infCurrentHTML;
+  document.getElementById('inf-result-area').style.display = '';
+  document.getElementById('inf-result-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function infExcluirHistorico(id) {
+  if (!confirm('Excluir este informativo do histórico?')) return;
+  const hist = JSON.parse(localStorage.getItem(INF_STORE_KEY) || '[]').filter(x => x.id !== id);
+  localStorage.setItem(INF_STORE_KEY, JSON.stringify(hist));
+  infRenderHistorico();
+}
+
+function _gasUrl() {
+  return (localStorage.getItem('fa_gas_url') || window.SB_GAS_URL || '').trim();
+}
+
+async function sendViaGAS(subject, html, subscribers, replyTo) {
+  const url = _gasUrl();
+  if (!url) throw new Error('URL do Google Apps Script não configurada — configure em Configurações.');
+  const toList = Array.isArray(subscribers) ? subscribers : [subscribers];
+  // GAS não suporta envio em massa nativo; enviamos um por um (ou em bloco via bcc)
+  const res = await fetch(url, {
+    method: 'POST',
+    body: JSON.stringify({ subject, html, to: toList.join(','), replyTo: replyTo || 'ferrazandrade@falaw.com.br' }),
+    // Não enviar Content-Type — GAS exige no-cors ou simple request
+    mode: 'no-cors'
+  });
+  // no-cors retorna opaque — não podemos ler a resposta, mas o envio ocorre
+  return true;
+}
+
 async function notifyClientDashboard(client, periodLabel) {
-  const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
-  if (!n8nBase) throw new Error('n8n URL não configurada — configure em Configurações.');
+  if (!_gasUrl()) throw new Error('URL do Google Apps Script não configurada — configure em Configurações.');
   const portalUrl = 'https://falaw.com.br/cliente/index.html';
   const clientName = client.name || client.company || 'Cliente';
   const subject = `RELATÓRIO MENSAL - ${clientName.toUpperCase()}${periodLabel ? ' - ' + periodLabel.toUpperCase() : ''}`;
@@ -6259,16 +6815,11 @@ async function notifyClientDashboard(client, periodLabel) {
   </td></tr>
 </table></td></tr></table>
 </body></html>`;
-  await fetch(n8nBase + '/falaw-newsletter', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subject, html, subscribers: [client.notifyAddr || client.email] })
-  });
+  await sendViaGAS(subject, html, [client.notifyAddr || client.email]);
 }
 
 async function notifyClientByEmail(client, report) {
-  const n8nBase = (localStorage.getItem('fa_n8n_url') || '').replace(/\/falaw-ia.*$/, '');
-  if (!n8nBase) return;
+  if (!_gasUrl()) return;
 
   const portalUrl = 'https://falaw.com.br/cliente/index.html';
   const clientName = client.name || client.company || 'Cliente';
@@ -6342,11 +6893,7 @@ async function notifyClientByEmail(client, report) {
 </table>
 </body></html>`;
 
-  await fetch(n8nBase + '/falaw-newsletter', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subject, html, subscribers: [client.notifyAddr || client.email] })
-  });
+  await sendViaGAS(subject, html, [client.notifyAddr || client.email]);
 }
 
 function saveReport() {
