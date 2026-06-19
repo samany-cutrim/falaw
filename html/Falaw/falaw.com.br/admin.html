@@ -2372,6 +2372,11 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
             <p class="cfg-hint" style="margin-top:6px;">Obtenha em <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>. Usada para gerar artigos, informativos e imagens de capa diretamente pelo site.</p>
           </div>
           <div class="form-field">
+            <label>Chave API — Google Gemini <span style="font-weight:400;font-size:11px;color:var(--c-muted)">(fallback gratuito)</span></label>
+            <input type="password" id="cfg-gemini-key" placeholder="AIzaSy…" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">Obtenha gratuitamente em <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com/app/apikey</a>. Usado automaticamente quando a cota do OpenAI é atingida.</p>
+          </div>
+          <div class="form-field">
             <label>Google Apps Script — URL de envio de e-mail</label>
             <input type="text" id="cfg-gas-url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" />
             <p class="cfg-hint" style="margin-top:6px;">Cole aqui a URL do Apps Script implantado na conta <strong>ferrazandrade@falaw.com.br</strong>. Usado para enviar notificações e newsletters diretamente pelo Gmail da Falaw.</p>
@@ -4770,6 +4775,7 @@ function loadConfig() {
   document.getElementById('cfg-github-token').value = ghToken();
   document.getElementById('cfg-gas-url').value = localStorage.getItem('fa_gas_url') || window.SB_GAS_URL || '';
   document.getElementById('cfg-openai-key').value = localStorage.getItem('fa_openai_key') || '';
+  document.getElementById('cfg-gemini-key').value = localStorage.getItem('fa_gemini_key') || '';
   document.getElementById('cfg-supabase-url').value = sbUrl();
   document.getElementById('cfg-supabase-key').value = sbKey();
   document.getElementById('cfg-admin-email').value = localStorage.getItem(AUTH_EMAIL_KEY) || window.SB_ADMIN_EMAIL || '';
@@ -4791,7 +4797,17 @@ async function testAPIs() {
     } catch(e) { lines.push('❌ OpenAI: ' + e.message); }
   }
 
-  if (!openaiKey) lines.push('⚠️ Configure a chave OpenAI em Configurações.');
+  const geminiKey = localStorage.getItem('fa_gemini_key') || '';
+  if (geminiKey) {
+    try {
+      const txt = await callGemini([{ role: 'user', content: 'Responda apenas: ok' }], 0.1);
+      lines.push('✅ Gemini: ' + txt.slice(0, 80));
+    } catch(e) { lines.push('❌ Gemini: ' + e.message); }
+  } else {
+    lines.push('⚠️ Gemini: chave não configurada (opcional, usado como fallback)');
+  }
+
+  if (!openaiKey && !geminiKey) lines.push('⚠️ Configure ao menos uma chave de IA em Configurações.');
   box.innerHTML = lines.join('<br>');
 }
 
@@ -4809,6 +4825,8 @@ function saveConfig() {
   else localStorage.removeItem(KEYS.githubToken);
   const gasUrl = document.getElementById('cfg-gas-url').value.trim();
   if (gasUrl) localStorage.setItem('fa_gas_url', gasUrl); else localStorage.removeItem('fa_gas_url');
+  const geminiKey = document.getElementById('cfg-gemini-key').value.trim();
+  if (geminiKey) localStorage.setItem('fa_gemini_key', geminiKey); else localStorage.removeItem('fa_gemini_key');
   const openaiKey = document.getElementById('cfg-openai-key').value.trim();
   if (openaiKey) localStorage.setItem('fa_openai_key', openaiKey); else localStorage.removeItem('fa_openai_key');
   const sbUrlVal = document.getElementById('cfg-supabase-url').value.trim();
@@ -4833,7 +4851,7 @@ function saveConfig() {
 
 function exportConfigBookmarklet() {
   const keys = [
-    'fa_supabase_url','fa_supabase_key','fa_gas_url',
+    'fa_supabase_url','fa_supabase_key','fa_gas_url','fa_openai_key','fa_gemini_key',
     'fa_admin_auth_email','fa_github_token','fa_openai_key'
   ];
   const data = {};
@@ -5407,8 +5425,46 @@ async function callOpenAI(messages, temperature) {
 }
 
 async function callAI(messages, temperature) {
-  if (!localStorage.getItem('fa_openai_key')) throw new Error('Chave OpenAI não configurada — vá em Configurações e adicione sua chave OpenAI.');
-  return callOpenAI(messages, temperature);
+  const providers = [];
+  if (localStorage.getItem('fa_openai_key'))  providers.push(() => callOpenAI(messages, temperature));
+  if (localStorage.getItem('fa_gemini_key'))  providers.push(() => callGemini(messages, temperature));
+  if (!providers.length) throw new Error('Nenhuma chave de IA configurada — vá em Configurações e adicione a chave OpenAI ou Gemini.');
+  let lastErr;
+  for (const fn of providers) {
+    try { return await fn(); } catch(e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+
+async function callGemini(messages, temperature) {
+  const key = localStorage.getItem('fa_gemini_key') || '';
+  if (!key) throw new Error('Chave Gemini não configurada.');
+  // Converte mensagens OpenAI para formato Gemini
+  const contents = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
+  // Injeta system prompt como primeiro turno de usuário se existir
+  const sysMsg = messages.find(m => m.role === 'system');
+  if (sysMsg) contents.unshift({ role: 'user', parts: [{ text: sysMsg.content }] });
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(key)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        generationConfig: { temperature: temperature ?? 0.7, maxOutputTokens: 8192 }
+      })
+    }
+  );
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    const msg = e.error?.message || '';
+    if (res.status === 400) throw new Error('Chave Gemini inválida ou requisição incorreta: ' + msg);
+    throw new Error('Gemini HTTP ' + res.status + (msg ? ': ' + msg : ''));
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
 function parseJSON(text) {
