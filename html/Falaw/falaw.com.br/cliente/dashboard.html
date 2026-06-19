@@ -1945,13 +1945,14 @@ async function init() {
   const session = JSON.parse(raw);
 
   async function loadReportsFromApi(clientId) {
-    const base = apiBase();
-    if (!base || !clientId) return [];
+    const sbUrl = (window.SB_URL || '').trim();
+    const sbKey = (window.SB_KEY || '').trim();
+    if (!sbUrl || !sbKey || !clientId || typeof supabase === 'undefined') return [];
     try {
-      const res = await fetch(base + '/api/reports/' + encodeURIComponent(clientId));
-      if (!res.ok) return [];
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { data, error } = await sb.from('ClientReport').select('*').eq('clientId', clientId).order('uploadedAt', { ascending: false });
+      if (error || !data) return [];
+      return data;
     } catch {
       return [];
     }

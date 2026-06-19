@@ -256,6 +256,24 @@ ALTER TABLE "IfoodHighlight" ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "anon full access" ON "IfoodHighlight";
 CREATE POLICY "anon full access" ON "IfoodHighlight" FOR ALL TO anon USING (true) WITH CHECK (true);
 
+-- ── Relatórios de Clientes ─────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS "ClientReport" (
+  id           TEXT PRIMARY KEY,
+  "clientId"   TEXT NOT NULL,
+  title        TEXT,
+  period       TEXT,
+  description  TEXT,
+  "fileName"   TEXT,
+  "fileUrl"    TEXT,
+  "fileSize"   BIGINT,
+  "uploadedAt" TIMESTAMPTZ DEFAULT NOW(),
+  stats        JSONB
+);
+ALTER TABLE "ClientReport" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon full access" ON "ClientReport";
+CREATE POLICY "anon full access" ON "ClientReport" FOR ALL TO anon USING (true) WITH CHECK (true);
+
 -- ── Dashboard de Clientes (genérico) ─────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS "ClientDashPeriod" (

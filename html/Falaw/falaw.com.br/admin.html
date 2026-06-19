@@ -7247,7 +7247,7 @@ async function cliDashApi(path, opts = {}) {
 
     // /kpis/bulk POST
     if (sub === '/kpis/bulk' && method === 'POST') {
-      const rows = (Array.isArray(body) ? body : body.kpis || []).map(r => ({ ...r, client_id: clientId }));
+      const rows = (Array.isArray(body) ? body : body.rows || body.kpis || []).map(r => ({ ...r, client_id: clientId }));
       const { error } = await sb.from('ClientDashKpi').upsert(rows, { onConflict: 'id' });
       if (error) return { data: null, error };
       return { data: { ok: true }, error: null };
