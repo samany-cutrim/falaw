@@ -3982,8 +3982,8 @@ async function aprovarSugestao(id) {
   document.getElementById('cal-f-status').value  = 'planejado';
   document.getElementById('cal-f-data').value    = new Date().toISOString().slice(0,10);
   document.getElementById('cal-f-autor').value   = '';
-  document.getElementById('cal-f-obs').value     = s.angle || '';
-  document.getElementById('cal-f-link').value    = s.link  || '';
+  document.getElementById('cal-f-obs').value     = [s.angle, s.fonte ? `Fonte: ${s.fonte}` : '', s.dataNoticia ? `Data: ${s.dataNoticia}` : ''].filter(Boolean).join(' | ');
+  document.getElementById('cal-f-link').value    = s.link  || s.sourceUrl || '';
   document.getElementById('cal-modal-titulo').textContent = 'Aprovar Sugestão';
   document.getElementById('cal-modal-del').style.display = 'none';
   document.getElementById('cal-modal').style.display = 'flex';
