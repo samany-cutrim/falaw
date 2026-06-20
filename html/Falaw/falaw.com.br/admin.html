@@ -2363,11 +2363,12 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
       <!-- Sugestões de temas IA -->
       <div style="margin-bottom:24px;background:#FAFBFF;border:1px solid #e0e4f0;border-radius:6px;padding:16px 20px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-          <h3 style="margin:0;font-family:var(--f-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E">💡 Sugestões de Temas</h3>
-          <span id="cal-sug-badge" style="display:none;background:#C62828;color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700"></span>
-          <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
-            <span id="cal-sug-lastfetch" style="font-size:10px;color:var(--c-muted)">Geradas diariamente pela IA</span>
-            <button class="btn btn-primary" id="cal-sug-btn" onclick="buscarTemasCalendario(true)" style="font-size:11px;padding:5px 14px">🔄 Atualizar sugestões</button>
+          <h3 style="margin:0;font-family:var(--f-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#550000">💡 Sugestões de Temas — IA</h3>
+          <span id="cal-sug-badge" style="display:none;background:#550000;color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700"></span>
+          <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <span id="cal-sug-lastfetch" style="font-size:10px;color:var(--c-muted)">Geradas pela IA sob demanda</span>
+            <button class="btn btn-secondary" id="cal-sug-btn" onclick="buscarTemasCalendario(true)" style="font-size:11px;padding:5px 14px">🔄 Sugestões de temas</button>
+            <button class="btn btn-primary" id="cal-gen-mes-btn" onclick="gerarMesCompleto()" style="font-size:11px;padding:5px 14px;background:#550000;border-color:#550000">✨ Gerar mês completo</button>
           </div>
         </div>
         <div id="cal-sug-status" style="font-size:11px;color:#C62828;display:none;padding:4px 0"></div>
@@ -2524,6 +2525,11 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
             <label>Chave API — Google Gemini <span style="font-weight:400;font-size:11px;color:var(--c-muted)">(fallback gratuito)</span></label>
             <input type="password" id="cfg-gemini-key" placeholder="AIzaSy…" autocomplete="off" />
             <p class="cfg-hint" style="margin-top:6px;">Obtenha gratuitamente em <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com/app/apikey</a>. Usado automaticamente quando a cota do OpenAI é atingida.</p>
+          </div>
+          <div class="form-field">
+            <label>Chave API — Pexels <span style="font-weight:400;font-size:11px;color:var(--c-muted)">(fotos nos slides — gratuito)</span></label>
+            <input type="password" id="cfg-pexels-key" placeholder="Seu API Key do Pexels" autocomplete="off" />
+            <p class="cfg-hint" style="margin-top:6px;">Gratuito em <a href="https://www.pexels.com/api/" target="_blank" rel="noopener">pexels.com/api</a>. Usado para buscar fotos corporativas nos slides. Se a chave OpenAI for paga, o DALL-E é usado no lugar.</p>
           </div>
           <div class="form-field">
             <label>Google Apps Script — URL de envio de e-mail</label>
@@ -3790,7 +3796,7 @@ function deletarPublicacao() {
   renderCalendario();
 }
 
-// ─── Sugestões de temas — lê do Supabase (preenchido pelo N8N diariamente) ───
+// ─── Sugestões de temas — geradas pela IA (OpenAI/GitHub Models) ───
 const CAL_SUG_KEY      = 'falaw_cal_sugestoes_v1';
 const CAL_SUG_TS_KEY   = 'falaw_cal_sugestoes_ts';
 const CAL_SUG_MIN_INTERVAL = 10 * 60 * 1000; // 10 min entre refreshes
@@ -3806,46 +3812,30 @@ async function buscarTemasCalendario(forcar = false) {
     return;
   }
 
-  const sb = getSB();
-  if (!sb) {
-    statusEl.style.display = 'block';
-    statusEl.innerHTML = '⚠ Supabase não configurado. <a href="#" onclick="switchTab(\'configuracoes\');return false" style="color:#C62828;font-weight:700">Abrir Configurações →</a>';
-    return;
-  }
-
   btn.disabled = true;
-  btn.textContent = '⏳ Carregando…';
+  btn.textContent = '⏳ Buscando…';
   statusEl.style.display = 'block';
+  statusEl.textContent = 'Buscando notícias jurídicas recentes…';
 
-  // Se forçado, limpa apenas o cache local
-  if (forcar) {
-    localStorage.removeItem(CAL_SUG_TS_KEY);
-  }
+  const hoje = new Date().toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'});
+  const mesNome = MESES_PT[_calMes];
+  const anoAtual = _calAno;
 
-  statusEl.textContent = 'Buscando sugestões do Supabase…';
+  const prompt = `Hoje é ${hoje}. Você é especialista em marketing jurídico para Falaw Advogados (Fortaleza, CE — direito trabalhista, previdenciário, cível empresarial). Busque na web as principais notícias e atualizações jurídicas publicadas nos últimos 3 dias sobre: direito do trabalho, TST, MTE, eSocial, FGTS Digital, INSS, NR-1, iFood/plataformas, Reforma Trabalhista, STF, legislação trabalhista brasileira. Com base nos resultados reais encontrados, sugira 8 temas de conteúdo relevantes e atuais para ${mesNome} ${anoAtual}, adequados para escritório de advocacia trabalhista. Retorne APENAS JSON válido:
+{"sugestoes":[{"tema":"Título curto e atrativo do conteúdo","angle":"Ângulo/abordagem baseado na notícia real em 1 frase","tipo":"informativo|newsletter|redes_sociais","prioridade":1|2|3,"fonte":"Nome da fonte real encontrada","dataNoticia":"dd/mm/aaaa"}]}
+Prioridade 1=urgente/temporal, 2=relevante, 3=evergreen.`;
 
   try {
-    const hoje = new Date();
-    const sete = new Date(hoje); sete.setDate(sete.getDate() - 7);
-    const dataMin = sete.toISOString().slice(0, 10);
-
-    const { data, error } = await sb
-      .from('CalSugestao')
-      .select('*')
-      .eq('status', 'pendente')
-      .gte('dataSugestao', dataMin)
-      .order('prioridade', { ascending: true })
-      .order('dataSugestao', { ascending: false })
-      .limit(20);
-
-    if (error) {
-      if (error.message && error.message.includes('does not exist')) {
-        throw new Error('Tabela CalSugestao não existe no Supabase. Execute o SQL de criação em supabase-setup.sql ou no SQL Editor do Supabase.');
-      }
-      throw new Error(error.message);
+    let raw;
+    if (localStorage.getItem('fa_openai_key')) {
+      raw = await callOpenAIWithSearch(prompt);
+    } else {
+      raw = await callAI([{ role: 'user', content: prompt }]);
     }
-
-    localStorage.setItem(CAL_SUG_KEY, JSON.stringify(data || []));
+    const data = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    if (!Array.isArray(data.sugestoes)) throw new Error('Formato inválido');
+    const sugs = data.sugestoes.map((s, i) => ({ ...s, id: 'ai_' + Date.now() + '_' + i, status: 'pendente', dataSugestao: new Date().toISOString().slice(0,10) }));
+    localStorage.setItem(CAL_SUG_KEY, JSON.stringify(sugs));
     localStorage.setItem(CAL_SUG_TS_KEY, String(Date.now()));
     statusEl.style.display = 'none';
     _renderSugestoes();
@@ -3855,7 +3845,85 @@ async function buscarTemasCalendario(forcar = false) {
   }
 
   btn.disabled = false;
-  btn.textContent = '🔄 Atualizar sugestões';
+  btn.textContent = '🔄 Sugestões de temas';
+}
+
+// ─── Gerar mês completo — busca notícias reais e preenche o calendário ───
+async function gerarMesCompleto() {
+  const btn = document.getElementById('cal-gen-mes-btn');
+  const statusEl = document.getElementById('cal-sug-status');
+
+  const mesNome = MESES_PT[_calMes];
+  const totalDias = new Date(_calAno, _calMes + 1, 0).getDate();
+  const diasUteis = [];
+  for (let d = 1; d <= totalDias; d++) {
+    const dow = new Date(_calAno, _calMes, d).getDay();
+    if (dow >= 1 && dow <= 5) diasUteis.push(d);
+  }
+  const diasSelecionados = diasUteis.filter(d => {
+    const dow = new Date(_calAno, _calMes, d).getDay();
+    return dow === 1 || dow === 3 || dow === 5;
+  });
+
+  const existentes = _calLoad().filter(it => {
+    const [y, m] = it.data.split('-').map(Number);
+    return y === _calAno && m === _calMes + 1;
+  });
+  if (existentes.length > 0 && !confirm(`Já existem ${existentes.length} publicação(ões) em ${mesNome} ${_calAno}. Adicionar novas sem apagar as existentes?`)) return;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Gerando…';
+  statusEl.style.display = 'block';
+  statusEl.textContent = `Buscando notícias jurídicas recentes para ${mesNome} ${_calAno}…`;
+
+  const hoje = new Date().toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'});
+  const diasStr = diasSelecionados.map(d => {
+    const dow = new Date(_calAno, _calMes, d).getDay();
+    const tipos = { 1:'redes_sociais', 3:'informativo', 5:'newsletter' };
+    return `${String(d).padStart(2,'0')}/${String(_calMes+1).padStart(2,'0')} (${['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][dow]}) → ${tipos[dow]}`;
+  }).join('\n');
+
+  const prompt = `Hoje é ${hoje}. Você é especialista em marketing jurídico para Falaw Advogados (Fortaleza, CE — direito trabalhista, previdenciário, cível empresarial). Busque na web as principais notícias e atualizações jurídicas recentes sobre: direito do trabalho, TST, MTE, eSocial, FGTS Digital, INSS, NR-1, iFood/plataformas, Reforma Trabalhista, STF, CLT, legislação trabalhista. Com base nos resultados REAIS encontrados, crie um planejamento de conteúdo para ${mesNome} ${_calAno} para as datas abaixo. Cada conteúdo deve ser baseado em uma notícia ou tema real e atual, relevante para empresas empregadoras e RH. Retorne APENAS JSON válido:
+{"publicacoes":[{"data":"${_calAno}-MM-DD","titulo":"Título do conteúdo baseado na notícia real","tipo":"redes_sociais|informativo|newsletter","obs":"Briefing em 1 frase explicando o tema e por que é relevante agora","fonte":"Nome da fonte real"}]}
+
+Datas e tipos definidos:
+${diasStr}
+
+Redes sociais = carrossel Instagram/LinkedIn. Informativo = e-mail educativo. Newsletter = curadoria jurídica semanal.`;
+
+  try {
+    let raw;
+    if (localStorage.getItem('fa_openai_key')) {
+      raw = await callOpenAIWithSearch(prompt);
+    } else {
+      raw = await callAI([{ role: 'user', content: prompt }]);
+    }
+    const data = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    if (!Array.isArray(data.publicacoes)) throw new Error('Formato inválido');
+
+    const items = _calLoad();
+    data.publicacoes.forEach(p => {
+      items.push({
+        id: Date.now().toString() + Math.random().toString(36).slice(2,6),
+        titulo: p.titulo || '',
+        tipo: p.tipo || 'informativo',
+        status: 'planejado',
+        data: p.data,
+        autor: '',
+        obs: (p.obs || '') + (p.fonte ? ` | Fonte: ${p.fonte}` : ''),
+        link: ''
+      });
+    });
+    _calSave(items);
+    renderCalendario();
+    statusEl.style.display = 'none';
+    alert(`✅ ${data.publicacoes.length} publicações geradas para ${mesNome} ${_calAno}!`);
+  } catch(e) {
+    statusEl.textContent = 'Erro: ' + e.message;
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✨ Gerar mês completo';
 }
 
 function _calSugLoadLocal() {
@@ -3899,13 +3967,9 @@ function _renderSugestoes() {
 }
 
 async function aprovarSugestao(id) {
-  const sb = getSB();
   const cache = _calSugLoadLocal();
   const s = cache.find(x => x.id === id);
   if (!s) return;
-
-  // Atualiza no Supabase
-  if (sb) await sb.from('CalSugestao').update({ status: 'aprovado' }).eq('id', id);
 
   // Atualiza cache local
   const idx = cache.findIndex(x => x.id === id);
@@ -3930,9 +3994,6 @@ async function aprovarSugestao(id) {
 }
 
 async function descartarSugestao(id) {
-  const sb = getSB();
-  if (sb) await sb.from('CalSugestao').update({ status: 'descartado' }).eq('id', id);
-
   const cache = _calSugLoadLocal();
   const idx = cache.findIndex(x => x.id === id);
   if (idx !== -1) { cache[idx].status = 'descartado'; localStorage.setItem(CAL_SUG_KEY, JSON.stringify(cache)); }
@@ -4924,7 +4985,9 @@ function loadConfig() {
   document.getElementById('cfg-github-token').value = ghToken();
   document.getElementById('cfg-gas-url').value = localStorage.getItem('fa_gas_url') || window.SB_GAS_URL || '';
   document.getElementById('cfg-openai-key').value = localStorage.getItem('fa_openai_key') || '';
+  document.getElementById('cfg-pexels-key').value = localStorage.getItem('fa_pexels_key') || '';
   document.getElementById('cfg-gemini-key').value = localStorage.getItem('fa_gemini_key') || '';
+
   document.getElementById('cfg-supabase-url').value = sbUrl();
   document.getElementById('cfg-supabase-key').value = sbKey();
   document.getElementById('cfg-admin-email').value = localStorage.getItem(AUTH_EMAIL_KEY) || window.SB_ADMIN_EMAIL || '';
@@ -4988,6 +5051,9 @@ function saveConfig() {
   if (geminiKey) localStorage.setItem('fa_gemini_key', geminiKey); else localStorage.removeItem('fa_gemini_key');
   const openaiKey = document.getElementById('cfg-openai-key').value.trim();
   if (openaiKey) localStorage.setItem('fa_openai_key', openaiKey); else localStorage.removeItem('fa_openai_key');
+  const pexelsKey = document.getElementById('cfg-pexels-key').value.trim();
+  if (pexelsKey) localStorage.setItem('fa_pexels_key', pexelsKey); else localStorage.removeItem('fa_pexels_key');
+
   const sbUrlVal = document.getElementById('cfg-supabase-url').value.trim();
   const sbKeyVal = document.getElementById('cfg-supabase-key').value.trim();
   const authEmail = document.getElementById('cfg-admin-email').value.trim();
@@ -5634,11 +5700,13 @@ async function rsGenerate() {
   const isLI = _rsPlatform === 'linkedin';
   const liTextMode = isLI && _rsLIMode === 'text';
 
-  const systemPrompt = `Você é especialista em marketing jurídico premium para o escritório Falaw Advogados (Fortaleza, CE). Especialidades: trabalhista, previdenciário, cível. Responda apenas JSON.`;
+  const systemPrompt = `Você é especialista em marketing jurídico premium para o escritório Falaw Advogados (Fortaleza, CE). Especialidades: trabalhista, previdenciário, cível. Responda apenas JSON válido.`;
+
+  const imageInstruction = `Para slides que se beneficiam de foto de fundo (capa, destaques), inclua "imageKeyword" com 1-3 palavras em inglês sobre o contexto visual (ex: "corporate meeting", "office workers", "business contract", "HR team", "compliance documents"). Evite "judge hammer", "balance justice". Para slides só de texto, omita imageKeyword ou deixe vazio.`;
 
   const carouselPrompt = isLI
-    ? `Crie um carrossel LinkedIn premium para Falaw Advogados sobre:\n${content}\n\nRetorne JSON com:\n{"slides":[{"tipo":"capa","titulo":"...","subtitulo":"..."},{"tipo":"conteudo","titulo":"...","subtitulo":"...","items":["...","...","..."]},...],"legenda":"..."}\n\n4-5 slides. Linguagem profissional. Slides: capa → contexto → impactos → orientações → CTA.`
-    : `Crie um carrossel Instagram premium para Falaw Advogados sobre:\n${content}\n\nIdentidade visual: bordô #550000, bege #a59065, branco-gelo #f4f3f2. Logo Falaw em todos os slides.\nRetorne JSON:\n{"slides":[{"tipo":"capa","titulo":"...","subtitulo":"...","bg":"#550000","textColor":"#f4f3f2"},{"tipo":"conteudo","titulo":"...","subtitulo":"...","items":["...","...","..."],"bg":"#f4f3f2","textColor":"#550000"},...],"legenda":"..."}\n\n6-7 slides 1:1. Estrutura: capa → o que aconteceu → o que muda → impactos → pontos de atenção → próximos passos → CTA. Alterne fundos. Sem imagem de balança da justiça. Sem numeração nos slides.`;
+    ? `Crie um carrossel LinkedIn premium para Falaw Advogados sobre:\n${content}\n\n${imageInstruction}\n\nRetorne JSON:\n{"slides":[{"tipo":"capa","titulo":"...","subtitulo":"...","imageKeyword":"corporate office"},{"tipo":"conteudo","titulo":"...","subtitulo":"...","items":["...","...","..."]},...],"legenda":"..."}\n\n4-5 slides. Linguagem profissional. Slides: capa → contexto → impactos → orientações → CTA.`
+    : `Crie um carrossel Instagram premium para Falaw Advogados sobre:\n${content}\n\n${imageInstruction}\n\nIdentidade visual: bordô #550000, bege #a59065, branco-gelo #f4f3f2. Logo Falaw em todos os slides.\nRetorne JSON:\n{"slides":[{"tipo":"capa","titulo":"...","subtitulo":"...","bg":"#550000","textColor":"#f4f3f2","imageKeyword":"business meeting"},{"tipo":"conteudo","titulo":"...","subtitulo":"...","items":["...","...","..."],"bg":"#f4f3f2","textColor":"#550000"},...],"legenda":"..."}\n\n6-7 slides 1:1. Estrutura: capa → o que aconteceu → o que muda → impactos → pontos de atenção → próximos passos → CTA. Alterne fundos. Sem numeração. Logo em todos.`;
 
   const liTextPrompt = `Escreva um post LinkedIn completo para Falaw Advogados sobre:\n${content}\n\nRetorne JSON: {"post":"...","legenda":"..."}\nPost: 150-250 palavras, linguagem profissional, emojis moderados, hashtags ao final.`;
 
@@ -5655,6 +5723,15 @@ async function rsGenerate() {
     } else {
       _rsSlides = data.slides || [];
       _rsLegenda = data.legenda || '';
+
+      // Gera imagens para slides: DALL-E (pago) ou Pexels (grátis)
+      const openaiKey = localStorage.getItem('fa_openai_key') || '';
+      const pexelsKey = localStorage.getItem('fa_pexels_key') || '';
+      if (openaiKey || pexelsKey) {
+        status.textContent = 'Buscando imagens…';
+        await rsFetchSlideImages(_rsSlides);
+      }
+
       rsRenderSlides(_rsSlides, _rsLegenda);
       document.getElementById('rs-result').style.display = '';
     }
@@ -5662,6 +5739,59 @@ async function rsGenerate() {
     status.textContent = 'Erro: ' + e.message;
   }
   btn.disabled = false; btn.textContent = 'Gerar carrossel →';
+  document.getElementById('rs-status').textContent = '';
+}
+
+async function rsFetchSlideImages(slides) {
+  const openaiKey = localStorage.getItem('fa_openai_key') || '';
+  const pexelsKey = localStorage.getItem('fa_pexels_key') || '';
+  const useDalle = !!openaiKey; // DALL-E se tiver chave OpenAI paga; caso contrário Pexels
+  const seen = {};
+  for (const s of slides) {
+    if (!s.imageKeyword) continue;
+    const kw = s.imageKeyword.trim();
+    if (!kw) continue;
+    if (seen[kw]) { s.imageUrl = seen[kw]; continue; }
+    try {
+      if (useDalle) {
+        const dallePrompt = `Professional corporate photography for a Brazilian law firm. ${kw}. Modern office, business attire, warm dark red and beige tones. No justice scales, no gavel. Editorial quality, cinematic lighting. Square format.`;
+        const b64 = await callDALLE3_square(dallePrompt);
+        if (b64) { s.imageUrl = 'data:image/png;base64,' + b64; seen[kw] = s.imageUrl; }
+      } else if (pexelsKey) {
+        const imgUrl = await rsFetchPexels(kw, pexelsKey);
+        if (imgUrl) { s.imageUrl = imgUrl; seen[kw] = imgUrl; }
+      }
+    } catch(e) { /* silencioso — slide fica com fundo sólido */ }
+  }
+}
+
+async function rsFetchPexels(keyword, apiKey) {
+  const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(keyword + ' corporate office')}&per_page=5&orientation=square`, {
+    headers: { Authorization: apiKey }
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const photos = data.photos || [];
+  if (!photos.length) return null;
+  // Pega foto aleatória entre os 5 primeiros resultados
+  const pick = photos[Math.floor(Math.random() * photos.length)];
+  return pick?.src?.large || pick?.src?.medium || null;
+}
+
+async function callDALLE3_square(prompt) {
+  const apiKey = localStorage.getItem('fa_openai_key') || '';
+  if (!apiKey) return null;
+  const res = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+    body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size: '1024x1024', quality: 'standard', response_format: 'b64_json' })
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error?.message || 'DALL-E HTTP ' + res.status);
+  }
+  const data = await res.json();
+  return data.data?.[0]?.b64_json || null;
 }
 
 const LOGO_RS = '../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png';
@@ -5673,41 +5803,39 @@ function rsRenderSlides(slides, legenda) {
   slides.forEach((s, i) => {
     const isCapa = s.tipo === 'capa';
     const isCTA = s.tipo === 'cta';
+    const hasImage = !!s.imageUrl;
     const bg = s.bg || (isCapa ? '#550000' : (i % 2 === 0 ? '#f4f3f2' : '#550000'));
-    const tc = s.textColor || (bg === '#550000' ? '#f4f3f2' : '#550000');
-    const accentCol = bg === '#550000' ? '#a59065' : '#550000';
-    const logoSrc = (bg === '#550000') ? LOGO_RS_WHITE : LOGO_RS;
+    // Quando tem foto: texto sempre claro; overlay bordô ou bege
+    const tc = hasImage ? '#f4f3f2' : (s.textColor || (bg === '#550000' ? '#f4f3f2' : '#550000'));
+    const accentCol = hasImage ? '#a59065' : (bg === '#550000' ? '#a59065' : '#550000');
+    const logoSrc = (bg === '#550000' || hasImage) ? LOGO_RS_WHITE : LOGO_RS;
+    const dividerColor = (bg === '#550000' || hasImage) ? 'rgba(165,144,101,.4)' : 'rgba(85,0,0,.15)';
+    // Overlay para fotos: bordô escuro nas capas, bege nas demais
+    const overlayColor = isCapa ? 'rgba(60,0,0,.62)' : 'rgba(85,0,0,.52)';
+    const bgStyle = hasImage
+      ? `background:linear-gradient(${overlayColor},${overlayColor}),url('${s.imageUrl}') center/cover no-repeat;`
+      : `background:${bg};`;
     const itemsHtml = (s.items || []).map(it =>
-      `<div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:5px;font-size:11px;line-height:1.45;color:${tc};">
-        <span style="color:${accentCol};font-weight:700;margin-top:1px;">▸</span>
+      `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:7px;font-size:12px;line-height:1.5;color:${tc};">
+        <span style="color:${accentCol};font-weight:700;flex-shrink:0;margin-top:1px;">▸</span>
         <span>${it}</span>
       </div>`
     ).join('');
-    const bgStyle = s.imageUrl
-      ? `background:linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.45)),url('${s.imageUrl}') center/cover no-repeat;`
-      : `background:${bg};`;
-    wrap.innerHTML += `<div class="social-slide" style="${bgStyle}position:relative;width:320px;min-height:320px;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:22px;box-sizing:border-box;flex-shrink:0;border:1px solid rgba(0,0,0,.1);">
-      <!-- Borda lateral bordô -->
-      <div style="position:absolute;top:0;left:0;bottom:0;width:4px;background:#a59065;"></div>
-      <!-- Logo -->
-      <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-        <img src="${logoSrc}" alt="Falaw" style="height:22px;width:auto;opacity:.9;" onerror="this.style.display='none'">
-      </div>
-      <!-- Conteúdo -->
-      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
-        ${isCapa ? `<div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:${accentCol};font-family:var(--f-mono);margin-bottom:8px;">Falaw Advogados</div>` : ''}
-        <div style="font-size:${isCapa?'17px':'15px'};font-weight:800;color:${tc};line-height:1.25;font-family:'Raleway','Sora',sans-serif;margin-bottom:6px;">${s.titulo||''}</div>
-        ${s.subtitulo ? `<div style="font-size:12px;color:${accentCol};font-weight:600;margin-bottom:10px;">${s.subtitulo}</div>` : ''}
+    wrap.innerHTML += `<div class="social-slide" style="${bgStyle}position:relative;width:320px;min-height:320px;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;padding:26px 24px 20px;box-sizing:border-box;flex-shrink:0;border:1px solid rgba(0,0,0,.08);">
+      <!-- Conteúdo principal -->
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding-bottom:16px;">
+        ${isCapa ? `<div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:${accentCol};font-family:var(--f-mono);margin-bottom:12px;">Falaw Advogados</div>` : ''}
+        <div style="font-size:${isCapa?'20px':'16px'};font-weight:800;color:${tc};line-height:1.2;font-family:'Raleway','Sora',sans-serif;margin-bottom:${s.subtitulo?'8px':'12px'};">${s.titulo||''}</div>
+        ${s.subtitulo ? `<div style="font-size:13px;color:${accentCol};font-weight:600;margin-bottom:14px;line-height:1.35;">${s.subtitulo}</div>` : ''}
         ${itemsHtml}
-        ${isCTA && s.cta ? `<div style="margin-top:12px;display:inline-block;background:${accentCol};color:${bg};padding:8px 16px;border-radius:4px;font-size:11px;font-weight:700;font-family:var(--f-mono);">${s.cta}</div>` : ''}
+        ${isCTA && s.cta ? `<div style="margin-top:14px;display:inline-block;background:${accentCol};color:${bg==='#550000'?'#550000':'#f4f3f2'};padding:10px 18px;border-radius:4px;font-size:11px;font-weight:700;font-family:var(--f-mono);letter-spacing:.06em;">${s.cta}</div>` : ''}
       </div>
-      <!-- Rodapé -->
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid rgba(${bg==='#550000'?'247,245,242':'85,0,0'},.2);">
-        <span style="font-size:9px;color:${accentCol};font-family:var(--f-mono);letter-spacing:.08em;">falaw.com.br</span>
-        <span style="font-size:9px;color:${tc};opacity:.5;font-family:var(--f-mono);">${i+1}/${slides.length}</span>
+      <!-- Separador + Logo centralizado (como nos PDFs) -->
+      <div style="border-top:1px solid ${dividerColor};padding-top:12px;display:flex;justify-content:center;">
+        <img src="${logoSrc}" alt="Falaw" style="height:28px;width:auto;" onerror="this.style.display='none'">
       </div>
       <!-- Botão editar -->
-      <button type="button" class="slide-edit-btn" onclick="rsEditSlide(${i})" title="Editar slide" style="position:absolute;top:8px;left:10px;background:rgba(0,0,0,.35);border:none;border-radius:3px;color:#fff;font-size:10px;padding:3px 7px;cursor:pointer;font-family:var(--f-mono);">✎</button>
+      <button type="button" class="slide-edit-btn" onclick="rsEditSlide(${i})" title="Editar slide" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.35);border:none;border-radius:3px;color:#fff;font-size:10px;padding:3px 7px;cursor:pointer;font-family:var(--f-mono);">✎</button>
     </div>`;
   });
   document.getElementById('rs-caption').textContent = legenda;
@@ -5942,6 +6070,30 @@ async function callAI(messages, temperature) {
     try { return await fn(); } catch(e) { lastErr = e; }
   }
   throw lastErr;
+}
+
+// Chama OpenAI Responses API com web_search_preview — retorna texto com fontes reais
+async function callOpenAIWithSearch(prompt) {
+  const apiKey = localStorage.getItem('fa_openai_key') || '';
+  if (!apiKey) throw new Error('Chave OpenAI não configurada.');
+  const res = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      tools: [{ type: 'web_search_preview' }],
+      input: prompt,
+      max_output_tokens: 8000
+    })
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error?.message || 'OpenAI Responses HTTP ' + res.status);
+  }
+  const data = await res.json();
+  // Extrai texto dos blocos de saída
+  const parts = (data.output || []).filter(b => b.type === 'message');
+  return parts.flatMap(b => (b.content || []).filter(c => c.type === 'output_text').map(c => c.text)).join('');
 }
 
 async function callGitHubModels(messages, temperature) {
