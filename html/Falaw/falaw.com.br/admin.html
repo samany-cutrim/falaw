@@ -3828,7 +3828,7 @@ Prioridade 1=urgente/temporal, 2=relevante, 3=evergreen.`;
   try {
     let raw;
     if (localStorage.getItem('fa_openai_key')) {
-      raw = await callOpenAIWithSearch(prompt);
+      try { raw = await callOpenAIWithSearch(prompt); } catch(e) { raw = await callAI([{ role: 'user', content: prompt }]); }
     } else {
       raw = await callAI([{ role: 'user', content: prompt }]);
     }
@@ -3894,7 +3894,7 @@ Redes sociais = carrossel Instagram/LinkedIn. Informativo = e-mail educativo. Ne
   try {
     let raw;
     if (localStorage.getItem('fa_openai_key')) {
-      raw = await callOpenAIWithSearch(prompt);
+      try { raw = await callOpenAIWithSearch(prompt); } catch(e) { raw = await callAI([{ role: 'user', content: prompt }]); }
     } else {
       raw = await callAI([{ role: 'user', content: prompt }]);
     }
