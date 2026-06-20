@@ -929,6 +929,7 @@
           <div class="admin-dropdown-item" id="ditem-comentarios" onclick="switchTab('comentarios')"><span>Comentários</span><span class="notif-badge" id="badge-comentarios" style="display:none"></span></div>
           <div class="admin-dropdown-item" id="ditem-informativos" onclick="switchTab('informativos')"><span>Informativos</span></div>
           <div class="admin-dropdown-item" id="ditem-calendario" onclick="switchTab('calendario')"><span>Calendário</span></div>
+          <div class="admin-dropdown-item" id="ditem-redes-sociais" onclick="switchTab('redes-sociais')"><span>Redes Sociais</span></div>
         </div>
       </div>
       <!-- Grupo Gestão -->
@@ -989,8 +990,8 @@
         </div>
       </div>
 
-      <!-- ── PAINEL REDES SOCIAIS ── -->
-      <div class="social-panel" id="social-panel">
+      <!-- social-panel movido para tab-redes-sociais -->
+      <div class="social-panel" id="social-panel" style="display:none">
         <div class="ai-panel-header">
           <span class="ai-panel-title">Assistente IA — Redes Sociais</span>
           <div style="display:flex;align-items:center;gap:12px;">
@@ -1089,6 +1090,154 @@
       <div class="item-list" id="blog-list"></div>
       <div id="blog-empty" hidden>
         <div class="empty-state"><p>Nenhum artigo ainda.</p><p>Clique em "+ Novo artigo" para começar.</p></div>
+      </div>
+    </section>
+
+    <!-- ── REDES SOCIAIS ── -->
+    <section id="tab-redes-sociais" class="admin-section">
+      <div class="section-header">
+        <h2>Redes Sociais — Gerador de Posts</h2>
+        <span style="background:rgba(165,144,101,.15);border:1px solid rgba(165,144,101,.4);color:#a59065;font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;padding:5px 10px;border-radius:3px;">GitHub Models · gpt-4o</span>
+      </div>
+
+      <!-- Identidade visual banner -->
+      <div style="background:#f9f8f6;border:1px solid #e8e3d8;border-radius:6px;padding:16px 20px;margin-bottom:20px;display:flex;gap:16px;align-items:center;">
+        <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png" alt="Falaw" style="width:52px;height:auto;flex-shrink:0;">
+        <div>
+          <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#550000;">Gerador de Carrossel Institucional · Falaw Advogados</p>
+          <p style="margin:0;font-size:12px;color:#666;line-height:1.6;">Carrosséis premium com identidade visual do escritório — bordô, bege e branco. Logo incluído automaticamente em todos os slides.</p>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <span style="background:#550000;color:#fff;font-size:10px;padding:2px 8px;border-radius:3px;">#550000</span>
+            <span style="background:#a59065;color:#fff;font-size:10px;padding:2px 8px;border-radius:3px;">#a59065</span>
+            <span style="background:#f4f3f2;color:#550000;font-size:10px;padding:2px 8px;border-radius:3px;border:1px solid #ddd;">#f4f3f2</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plataforma -->
+      <div class="social-tabs-nav" style="margin-bottom:20px;">
+        <button type="button" class="social-tab-btn active" id="rs-btn-ig" onclick="rsSwitchPlatform('instagram')">📷 Instagram</button>
+        <button type="button" class="social-tab-btn" id="rs-btn-li" onclick="rsSwitchPlatform('linkedin')">💼 LinkedIn</button>
+      </div>
+
+      <!-- Painel de entrada -->
+      <div class="ai-panel" id="rs-input-panel" style="margin-bottom:0">
+        <div class="ai-panel-header">
+          <span class="ai-panel-title">1 · Forneça o conteúdo</span>
+          <span style="background:rgba(247,245,242,.08);border:1px solid rgba(247,245,242,.15);color:rgba(247,245,242,.6);font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;padding:4px 8px;border-radius:3px;" id="rs-platform-badge">Instagram</span>
+        </div>
+        <div style="padding:18px 20px;">
+
+          <!-- Modo de entrada -->
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+            <button type="button" id="rs-mode-tema" class="li-mode-btn active" onclick="rsSwitchMode('tema')">🔍 Tema / palavra-chave</button>
+            <button type="button" id="rs-mode-texto" class="li-mode-btn" onclick="rsSwitchMode('texto')">✏️ Colar texto</button>
+            <button type="button" id="rs-mode-pdf" class="li-mode-btn" onclick="rsSwitchMode('pdf')">📄 Upload PDF</button>
+          </div>
+
+          <!-- Modo tema -->
+          <div id="rs-area-tema">
+            <div class="ai-input-row">
+              <input type="text" class="ai-text-input" id="rs-topic"
+                placeholder="Ex: nova lei trabalhista, escala 6x1, NR-1, compliance de RH…"
+                onkeydown="if(event.key==='Enter')rsFetchSuggestions()" />
+              <button type="button" class="btn-ai" id="rs-suggest-btn" onclick="rsFetchSuggestions()">Sugerir temas</button>
+            </div>
+            <div class="ai-suggestions" id="rs-suggestions" style="margin-top:12px;"></div>
+          </div>
+
+          <!-- Modo texto -->
+          <div id="rs-area-texto" style="display:none;">
+            <textarea id="rs-custom-text" class="social-custom-textarea open"
+              style="min-height:130px;"
+              placeholder="Cole aqui o texto, tópicos ou notícia que deseja transformar em carrossel…"></textarea>
+          </div>
+
+          <!-- Modo PDF -->
+          <div id="rs-area-pdf" style="display:none;">
+            <div style="border:2px dashed rgba(165,144,101,.5);border-radius:6px;padding:28px;text-align:center;background:rgba(165,144,101,.06);cursor:pointer;" onclick="document.getElementById('rs-pdf-file').click()" id="rs-pdf-dropzone">
+              <div style="font-size:32px;margin-bottom:8px;">📄</div>
+              <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#a59065;">Clique para enviar um PDF</p>
+              <p style="margin:0;font-size:11px;color:rgba(247,245,242,.45);">O texto será extraído automaticamente</p>
+            </div>
+            <input type="file" id="rs-pdf-file" accept="application/pdf" style="display:none" onchange="rsLoadPDF(this)">
+            <div id="rs-pdf-preview" style="margin-top:12px;display:none;">
+              <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(165,144,101,.08);border:1px solid rgba(165,144,101,.3);border-radius:4px;">
+                <span style="font-size:20px;">📄</span>
+                <span id="rs-pdf-name" style="font-size:12px;color:#a59065;flex:1;font-weight:600;"></span>
+                <button type="button" onclick="rsClearPDF()" style="background:none;border:none;color:rgba(247,245,242,.4);cursor:pointer;font-size:16px;">✕</button>
+              </div>
+              <p style="margin:8px 0 4px;font-size:11px;color:rgba(247,245,242,.5);font-family:var(--f-mono);">TEXTO EXTRAÍDO (editável)</p>
+              <textarea id="rs-pdf-text" class="social-custom-textarea open" style="min-height:100px;font-size:11px;" placeholder="Texto extraído do PDF aparecerá aqui. Você pode editar antes de gerar."></textarea>
+            </div>
+          </div>
+
+          <!-- LinkedIn: carrossel x texto -->
+          <div id="rs-li-mode-row" style="display:none;margin-top:16px;">
+            <button type="button" class="li-mode-btn active" id="rs-li-carousel" onclick="rsSetLIMode('carousel')">Carrossel (slides)</button>
+            <button type="button" class="li-mode-btn" id="rs-li-text" onclick="rsSetLIMode('text')">Só texto</button>
+          </div>
+
+          <!-- Botão gerar -->
+          <div style="margin-top:20px;display:flex;align-items:center;gap:14px;">
+            <button type="button" class="btn-ai" id="rs-generate-btn" onclick="rsGenerate()">Gerar carrossel →</button>
+            <span class="ai-status-msg" id="rs-status"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- LinkedIn post só texto -->
+      <div class="li-text-result" id="rs-li-text-result" style="display:none;margin-top:20px;">
+        <div class="social-caption-label" style="margin-bottom:8px;">Post LinkedIn</div>
+        <div class="social-caption-box" id="rs-li-text-box" style="min-height:120px;white-space:pre-wrap;"></div>
+        <div class="social-action-row" style="margin-top:10px;">
+          <button type="button" class="btn-ai-ghost" onclick="rsCopyLIText()">Copiar post</button>
+          <span class="ai-status-msg" id="rs-li-copy-status"></span>
+        </div>
+      </div>
+
+      <!-- Resultado slides -->
+      <div id="rs-result" style="display:none;margin-top:20px;">
+        <div class="social-slides-wrap" id="rs-slides"></div>
+        <div class="social-copy-area">
+          <div class="social-caption-label">Legenda / Caption</div>
+          <div class="social-caption-box" id="rs-caption"></div>
+          <div class="social-action-row">
+            <button type="button" class="btn-ai-ghost" onclick="rsCopyCaption()">Copiar legenda</button>
+            <button type="button" class="btn-ai-ghost" onclick="rsCopySlides()">Copiar slides (texto)</button>
+            <button type="button" class="btn-ppt" onclick="rsExportPNGs()">⬇ Baixar slides PNG</button>
+            <span class="ai-status-msg" id="rs-copy-status"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide edit modal -->
+      <div id="rs-slide-edit-modal" onclick="if(event.target===this)rsCloseSlideEdit()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;">
+        <div style="background:#1c1a17;border:1px solid rgba(165,144,101,.3);border-radius:8px;padding:22px;width:340px;max-height:90vh;overflow-y:auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <span style="font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:rgba(247,245,242,.7);">Editar slide</span>
+            <button type="button" class="ai-toggle-btn" onclick="rsCloseSlideEdit()">✕</button>
+          </div>
+          <label style="font-size:11px;color:rgba(247,245,242,.5);letter-spacing:.05em;">TÍTULO</label>
+          <input type="text" id="rs-edit-title" style="width:100%;background:rgba(247,245,242,.07);border:1px solid rgba(247,245,242,.15);color:#f4f3f2;border-radius:4px;padding:7px 10px;font-family:'Raleway','Sora',sans-serif;font-size:13px;margin:5px 0 12px;box-sizing:border-box;" />
+          <label style="font-size:11px;color:rgba(247,245,242,.5);letter-spacing:.05em;">SUBTÍTULO</label>
+          <input type="text" id="rs-edit-subtitle" style="width:100%;background:rgba(247,245,242,.07);border:1px solid rgba(247,245,242,.15);color:#f4f3f2;border-radius:4px;padding:7px 10px;font-family:'Raleway','Sora',sans-serif;font-size:12px;margin:5px 0 12px;box-sizing:border-box;" />
+          <label style="font-size:11px;color:rgba(247,245,242,.5);letter-spacing:.05em;">TÓPICOS (um por linha)</label>
+          <textarea id="rs-edit-items" rows="5" style="width:100%;background:rgba(247,245,242,.07);border:1px solid rgba(247,245,242,.15);color:#f4f3f2;border-radius:4px;padding:7px 10px;font-family:'Raleway','Sora',sans-serif;font-size:12px;margin:5px 0 14px;box-sizing:border-box;resize:vertical;"></textarea>
+          <label style="font-size:11px;color:rgba(247,245,242,.5);letter-spacing:.05em;">FOTO DE FUNDO (opcional)</label>
+          <input type="file" id="rs-edit-image-file" accept="image/*" style="display:none" onchange="rsLoadSlideImageFile(this)">
+          <div style="display:flex;gap:8px;align-items:center;margin:5px 0 10px;">
+            <button type="button" onclick="document.getElementById('rs-edit-image-file').click()" style="background:rgba(165,144,101,.12);border:1px solid rgba(165,144,101,.4);color:#a59065;border-radius:3px;padding:7px 14px;font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap;">Escolher foto</button>
+            <span id="rs-edit-image-name" style="font-size:10px;color:rgba(247,245,242,.4);font-family:var(--f-mono);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">nenhuma</span>
+            <button type="button" id="rs-edit-image-clear" onclick="rsClearSlideImage()" style="display:none;background:rgba(247,245,242,.08);border:1px solid rgba(247,245,242,.15);color:rgba(247,245,242,.5);border-radius:3px;padding:5px 9px;font-size:11px;cursor:pointer;line-height:1;">✕</button>
+          </div>
+          <img id="rs-edit-image-preview" src="" alt="" style="display:none;width:100%;height:90px;object-fit:cover;border-radius:4px;margin-bottom:10px;border:1px solid rgba(247,245,242,.12);">
+          <input type="hidden" id="rs-edit-index" />
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button type="button" class="btn-ai-ghost" onclick="rsCloseSlideEdit()">Cancelar</button>
+            <button type="button" class="btn-ai" onclick="rsSaveSlideEdit()">Salvar</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -3431,7 +3580,7 @@ function getSbCreds() {
   return { sbUrl, sbKey };
 }
 
-const CONTEUDO_TABS   = ['blog','newsletter','contato','curriculos','comentarios','informativos','calendario'];
+const CONTEUDO_TABS   = ['blog','newsletter','contato','curriculos','comentarios','informativos','calendario','redes-sociais'];
 const GESTAO_TABS     = ['equipe','clientes'];
 const DASH_TABS       = ['ifood','cli-dash'];
 const STANDALONE_TABS = ['config','audiencias'];
@@ -5335,6 +5484,354 @@ function saveSlideEdit() {
 function closeSlideEdit() {
   document.getElementById('slide-edit-modal').classList.remove('open');
 }
+
+/* ══════════════════════════════════════════
+   REDES SOCIAIS — Tab independente (rs-*)
+   ══════════════════════════════════════════ */
+let _rsPlatform = 'instagram';      // 'instagram' | 'linkedin'
+let _rsMode = 'tema';               // 'tema' | 'texto' | 'pdf'
+let _rsLIMode = 'carousel';         // 'carousel' | 'text'
+let _rsSlides = [];
+let _rsLegenda = '';
+let _rsSelected = null;
+let _rsPdfText = '';
+let _rsSlideEditImageData = null;
+
+function rsSwitchPlatform(p) {
+  _rsPlatform = p;
+  document.getElementById('rs-btn-ig').classList.toggle('active', p === 'instagram');
+  document.getElementById('rs-btn-li').classList.toggle('active', p === 'linkedin');
+  document.getElementById('rs-platform-badge').textContent = p === 'instagram' ? 'Instagram' : 'LinkedIn';
+  document.getElementById('rs-li-mode-row').style.display = p === 'linkedin' ? '' : 'none';
+}
+
+function rsSwitchMode(m) {
+  _rsMode = m;
+  ['tema','texto','pdf'].forEach(x => {
+    document.getElementById('rs-area-' + x).style.display = x === m ? '' : 'none';
+    document.getElementById('rs-mode-' + x).classList.toggle('active', x === m);
+  });
+}
+
+function rsSetLIMode(m) {
+  _rsLIMode = m;
+  document.getElementById('rs-li-carousel').classList.toggle('active', m === 'carousel');
+  document.getElementById('rs-li-text').classList.toggle('active', m === 'text');
+}
+
+async function rsFetchSuggestions() {
+  const topic = document.getElementById('rs-topic').value.trim();
+  if (!topic) return;
+  const btn = document.getElementById('rs-suggest-btn');
+  const box = document.getElementById('rs-suggestions');
+  btn.disabled = true; btn.textContent = 'Buscando…';
+  box.innerHTML = '';
+  try {
+    const resp = await callAI([
+      { role: 'system', content: 'Você é especialista em marketing jurídico para o escritório Falaw Advogados (trabalhista, previdenciário, cível). Responda apenas JSON.' },
+      { role: 'user', content: `Sugira 5 temas de carrossel para redes sociais sobre "${topic}". Retorne JSON: {"sugestoes":[{"titulo":"...","subtitulo":"...","hashtags":"..."}]}` }
+    ]);
+    const data = JSON.parse(resp.replace(/```json|```/g,'').trim());
+    const sugs = data.sugestoes || data.suggestions || [];
+    box.innerHTML = sugs.map((s,i) => `<div class="ai-card" onclick="rsSelectSuggestion(${i})" data-rs-idx="${i}">
+      <div class="ai-card-title">${s.titulo}</div>
+      <div class="ai-card-sub">${s.subtitulo||''}</div>
+      <div class="ai-card-tags">${s.hashtags||''}</div>
+    </div>`).join('');
+    box.dataset.sugs = JSON.stringify(sugs);
+  } catch(e) {
+    box.innerHTML = `<p style="color:#c0392b;font-size:12px;">Erro: ${e.message}</p>`;
+  }
+  btn.disabled = false; btn.textContent = 'Sugerir temas';
+}
+
+function rsSelectSuggestion(idx) {
+  const sugs = JSON.parse(document.getElementById('rs-suggestions').dataset.sugs || '[]');
+  _rsSelected = sugs[idx] || null;
+  document.querySelectorAll('[data-rs-idx]').forEach(el => el.classList.toggle('selected', +el.dataset.rsIdx === idx));
+}
+
+async function rsLoadPDF(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('rs-pdf-name').textContent = file.name;
+  document.getElementById('rs-pdf-preview').style.display = '';
+  const status = document.getElementById('rs-status');
+  status.textContent = 'Extraindo texto do PDF…';
+  try {
+    // Tenta PDF.js se disponível, senão usa FileReader como texto
+    if (window.pdfjsLib) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        fullText += content.items.map(it => it.str).join(' ') + '\n';
+      }
+      _rsPdfText = fullText.trim();
+    } else {
+      // Fallback: lê como ArrayBuffer e decodifica texto bruto
+      const ab = await file.arrayBuffer();
+      const bytes = new Uint8Array(ab);
+      let txt = '';
+      for (let i = 0; i < bytes.length; i++) {
+        const c = bytes[i];
+        if (c >= 32 && c < 127) txt += String.fromCharCode(c);
+        else if (c === 10 || c === 13) txt += '\n';
+      }
+      // Extrai strings legíveis entre parênteses (formato PDF básico)
+      const matches = txt.match(/\(([^)]{4,})\)/g) || [];
+      _rsPdfText = matches.map(m => m.slice(1,-1)).join(' ').replace(/\s+/g,' ').trim();
+      if (!_rsPdfText) _rsPdfText = txt.replace(/\s{3,}/g,'\n').trim().substring(0, 5000);
+    }
+    document.getElementById('rs-pdf-text').value = _rsPdfText.substring(0, 3000);
+    status.textContent = '';
+  } catch(e) {
+    status.textContent = 'Erro ao ler PDF: ' + e.message;
+    _rsPdfText = '';
+  }
+}
+
+function rsClearPDF() {
+  _rsPdfText = '';
+  document.getElementById('rs-pdf-file').value = '';
+  document.getElementById('rs-pdf-preview').style.display = 'none';
+  document.getElementById('rs-pdf-text').value = '';
+  document.getElementById('rs-pdf-name').textContent = '';
+}
+
+function rsGetInputContent() {
+  if (_rsMode === 'tema') {
+    if (_rsSelected) return `Tema: ${_rsSelected.titulo}. ${_rsSelected.subtitulo || ''}`;
+    const t = document.getElementById('rs-topic').value.trim();
+    if (!t) throw new Error('Digite um tema ou selecione uma sugestão.');
+    return `Tema: ${t}`;
+  }
+  if (_rsMode === 'texto') {
+    const t = document.getElementById('rs-custom-text').value.trim();
+    if (!t) throw new Error('Cole algum texto antes de gerar.');
+    return t;
+  }
+  if (_rsMode === 'pdf') {
+    const t = document.getElementById('rs-pdf-text').value.trim();
+    if (!t) throw new Error('Carregue um PDF ou aguarde a extração.');
+    return t;
+  }
+  return '';
+}
+
+async function rsGenerate() {
+  const btn = document.getElementById('rs-generate-btn');
+  const status = document.getElementById('rs-status');
+  let content;
+  try { content = rsGetInputContent(); } catch(e) { status.textContent = e.message; return; }
+
+  btn.disabled = true; btn.textContent = 'Gerando…'; status.textContent = '';
+  document.getElementById('rs-result').style.display = 'none';
+  document.getElementById('rs-li-text-result').style.display = 'none';
+
+  const isLI = _rsPlatform === 'linkedin';
+  const liTextMode = isLI && _rsLIMode === 'text';
+
+  const systemPrompt = `Você é especialista em marketing jurídico premium para o escritório Falaw Advogados (Fortaleza, CE). Especialidades: trabalhista, previdenciário, cível. Responda apenas JSON.`;
+
+  const carouselPrompt = isLI
+    ? `Crie um carrossel LinkedIn premium para Falaw Advogados sobre:\n${content}\n\nRetorne JSON com:\n{"slides":[{"tipo":"capa","titulo":"...","subtitulo":"..."},{"tipo":"conteudo","titulo":"...","subtitulo":"...","items":["...","...","..."]},...],"legenda":"..."}\n\n4-5 slides. Linguagem profissional. Slides: capa → contexto → impactos → orientações → CTA.`
+    : `Crie um carrossel Instagram premium para Falaw Advogados sobre:\n${content}\n\nIdentidade visual: bordô #550000, bege #a59065, branco-gelo #f4f3f2. Logo Falaw em todos os slides.\nRetorne JSON:\n{"slides":[{"tipo":"capa","titulo":"...","subtitulo":"...","bg":"#550000","textColor":"#f4f3f2"},{"tipo":"conteudo","titulo":"...","subtitulo":"...","items":["...","...","..."],"bg":"#f4f3f2","textColor":"#550000"},...],"legenda":"..."}\n\n6-7 slides 1:1. Estrutura: capa → o que aconteceu → o que muda → impactos → pontos de atenção → próximos passos → CTA. Alterne fundos. Sem imagem de balança da justiça. Sem numeração nos slides.`;
+
+  const liTextPrompt = `Escreva um post LinkedIn completo para Falaw Advogados sobre:\n${content}\n\nRetorne JSON: {"post":"...","legenda":"..."}\nPost: 150-250 palavras, linguagem profissional, emojis moderados, hashtags ao final.`;
+
+  try {
+    const raw = await callAI([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: liTextMode ? liTextPrompt : carouselPrompt }
+    ]);
+    const data = JSON.parse(raw.replace(/```json|```/g,'').trim());
+
+    if (liTextMode) {
+      document.getElementById('rs-li-text-box').textContent = data.post || '';
+      document.getElementById('rs-li-text-result').style.display = '';
+    } else {
+      _rsSlides = data.slides || [];
+      _rsLegenda = data.legenda || '';
+      rsRenderSlides(_rsSlides, _rsLegenda);
+      document.getElementById('rs-result').style.display = '';
+    }
+  } catch(e) {
+    status.textContent = 'Erro: ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = 'Gerar carrossel →';
+}
+
+const LOGO_RS = '../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png';
+const LOGO_RS_WHITE = '../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-branco.png';
+
+function rsRenderSlides(slides, legenda) {
+  const wrap = document.getElementById('rs-slides');
+  wrap.innerHTML = '';
+  slides.forEach((s, i) => {
+    const isCapa = s.tipo === 'capa';
+    const isCTA = s.tipo === 'cta';
+    const bg = s.bg || (isCapa ? '#550000' : (i % 2 === 0 ? '#f4f3f2' : '#550000'));
+    const tc = s.textColor || (bg === '#550000' ? '#f4f3f2' : '#550000');
+    const accentCol = bg === '#550000' ? '#a59065' : '#550000';
+    const logoSrc = (bg === '#550000') ? LOGO_RS_WHITE : LOGO_RS;
+    const itemsHtml = (s.items || []).map(it =>
+      `<div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:5px;font-size:11px;line-height:1.45;color:${tc};">
+        <span style="color:${accentCol};font-weight:700;margin-top:1px;">▸</span>
+        <span>${it}</span>
+      </div>`
+    ).join('');
+    const bgStyle = s.imageUrl
+      ? `background:linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.45)),url('${s.imageUrl}') center/cover no-repeat;`
+      : `background:${bg};`;
+    wrap.innerHTML += `<div class="social-slide" style="${bgStyle}position:relative;width:320px;min-height:320px;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:22px;box-sizing:border-box;flex-shrink:0;border:1px solid rgba(0,0,0,.1);">
+      <!-- Borda lateral bordô -->
+      <div style="position:absolute;top:0;left:0;bottom:0;width:4px;background:#a59065;"></div>
+      <!-- Logo -->
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+        <img src="${logoSrc}" alt="Falaw" style="height:22px;width:auto;opacity:.9;" onerror="this.style.display='none'">
+      </div>
+      <!-- Conteúdo -->
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
+        ${isCapa ? `<div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:${accentCol};font-family:var(--f-mono);margin-bottom:8px;">Falaw Advogados</div>` : ''}
+        <div style="font-size:${isCapa?'17px':'15px'};font-weight:800;color:${tc};line-height:1.25;font-family:'Raleway','Sora',sans-serif;margin-bottom:6px;">${s.titulo||''}</div>
+        ${s.subtitulo ? `<div style="font-size:12px;color:${accentCol};font-weight:600;margin-bottom:10px;">${s.subtitulo}</div>` : ''}
+        ${itemsHtml}
+        ${isCTA && s.cta ? `<div style="margin-top:12px;display:inline-block;background:${accentCol};color:${bg};padding:8px 16px;border-radius:4px;font-size:11px;font-weight:700;font-family:var(--f-mono);">${s.cta}</div>` : ''}
+      </div>
+      <!-- Rodapé -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid rgba(${bg==='#550000'?'247,245,242':'85,0,0'},.2);">
+        <span style="font-size:9px;color:${accentCol};font-family:var(--f-mono);letter-spacing:.08em;">falaw.com.br</span>
+        <span style="font-size:9px;color:${tc};opacity:.5;font-family:var(--f-mono);">${i+1}/${slides.length}</span>
+      </div>
+      <!-- Botão editar -->
+      <button type="button" class="slide-edit-btn" onclick="rsEditSlide(${i})" title="Editar slide" style="position:absolute;top:8px;left:10px;background:rgba(0,0,0,.35);border:none;border-radius:3px;color:#fff;font-size:10px;padding:3px 7px;cursor:pointer;font-family:var(--f-mono);">✎</button>
+    </div>`;
+  });
+  document.getElementById('rs-caption').textContent = legenda;
+}
+
+function rsEditSlide(idx) {
+  const s = _rsSlides[idx];
+  if (!s) return;
+  document.getElementById('rs-edit-index').value = idx;
+  document.getElementById('rs-edit-title').value = s.titulo || '';
+  document.getElementById('rs-edit-subtitle').value = s.subtitulo || s.cta || '';
+  document.getElementById('rs-edit-items').value = (s.items || []).join('\n');
+  _rsSlideEditImageData = s.imageUrl || null;
+  const hasImg = !!s.imageUrl;
+  document.getElementById('rs-edit-image-name').textContent = hasImg ? 'foto carregada' : 'nenhuma';
+  document.getElementById('rs-edit-image-clear').style.display = hasImg ? '' : 'none';
+  const prev = document.getElementById('rs-edit-image-preview');
+  if (hasImg) { prev.src = s.imageUrl; prev.style.display = ''; } else { prev.style.display = 'none'; prev.src = ''; }
+  document.getElementById('rs-edit-image-file').value = '';
+  const modal = document.getElementById('rs-slide-edit-modal');
+  modal.style.display = 'flex';
+}
+
+function rsCloseSlideEdit() {
+  document.getElementById('rs-slide-edit-modal').style.display = 'none';
+}
+
+function rsSaveSlideEdit() {
+  const idx = parseInt(document.getElementById('rs-edit-index').value, 10);
+  if (isNaN(idx) || !_rsSlides[idx]) return;
+  const s = _rsSlides[idx];
+  s.titulo = document.getElementById('rs-edit-title').value.trim();
+  const subVal = document.getElementById('rs-edit-subtitle').value.trim();
+  if (s.tipo === 'cta') { s.cta = subVal; } else { s.subtitulo = subVal; }
+  const lines = document.getElementById('rs-edit-items').value.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length) s.items = lines;
+  s.imageUrl = _rsSlideEditImageData || undefined;
+  rsCloseSlideEdit();
+  rsRenderSlides(_rsSlides, _rsLegenda);
+}
+
+function rsLoadSlideImageFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _rsSlideEditImageData = e.target.result;
+    document.getElementById('rs-edit-image-name').textContent = file.name;
+    document.getElementById('rs-edit-image-clear').style.display = '';
+    const prev = document.getElementById('rs-edit-image-preview');
+    prev.src = e.target.result; prev.style.display = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function rsClearSlideImage() {
+  _rsSlideEditImageData = null;
+  document.getElementById('rs-edit-image-name').textContent = 'nenhuma';
+  document.getElementById('rs-edit-image-clear').style.display = 'none';
+  const prev = document.getElementById('rs-edit-image-preview');
+  prev.style.display = 'none'; prev.src = '';
+  document.getElementById('rs-edit-image-file').value = '';
+}
+
+function rsCopyCaption() {
+  navigator.clipboard.writeText(document.getElementById('rs-caption').textContent || '').then(() => {
+    const s = document.getElementById('rs-copy-status');
+    s.textContent = '✓ Legenda copiada!'; setTimeout(() => s.textContent = '', 2000);
+  });
+}
+
+function rsCopySlides() {
+  let text = '';
+  _rsSlides.forEach((s, i) => {
+    text += `--- Slide ${i+1} ---\n`;
+    if (s.titulo) text += s.titulo + '\n';
+    if (s.subtitulo) text += s.subtitulo + '\n';
+    (s.items || []).forEach(it => { text += '• ' + it + '\n'; });
+    if (s.cta) text += '→ ' + s.cta + '\n';
+    text += '\n';
+  });
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    const s = document.getElementById('rs-copy-status');
+    s.textContent = '✓ Texto copiado!'; setTimeout(() => s.textContent = '', 2000);
+  });
+}
+
+function rsCopyLIText() {
+  navigator.clipboard.writeText(document.getElementById('rs-li-text-box').textContent || '').then(() => {
+    const s = document.getElementById('rs-li-copy-status');
+    s.textContent = '✓ Copiado!'; setTimeout(() => s.textContent = '', 2000);
+  });
+}
+
+async function rsExportPNGs() {
+  const slideEls = document.querySelectorAll('#rs-slides .social-slide');
+  if (!slideEls.length) return;
+  const btn = document.querySelector('[onclick="rsExportPNGs()"]');
+  const status = document.getElementById('rs-copy-status');
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando PNGs…'; }
+  status.textContent = 'Processando slides…';
+  const titulo = _rsSelected
+    ? (_rsSelected.titulo||'falaw').replace(/[^a-zA-Z0-9\u00C0-\u00FF\s]/g,'').trim().substring(0,30).replace(/\s+/g,'-').toLowerCase()
+    : 'falaw';
+  try {
+    for (let i = 0; i < slideEls.length; i++) {
+      status.textContent = `Exportando slide ${i+1}/${slideEls.length}…`;
+      const el = slideEls[i];
+      const editBtn = el.querySelector('.slide-edit-btn');
+      if (editBtn) editBtn.style.display = 'none';
+      const canvas = await html2canvas(el, { scale: 3, useCORS: true, backgroundColor: null, logging: false });
+      if (editBtn) editBtn.style.display = '';
+      const link = document.createElement('a');
+      link.download = `falaw-${titulo}-slide-${i+1}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      await new Promise(r => setTimeout(r, 300));
+    }
+    status.textContent = `✓ ${slideEls.length} slides baixados!`;
+    setTimeout(() => { status.textContent = ''; }, 3000);
+  } catch(e) { status.textContent = 'Erro: ' + e.message; }
+  if (btn) { btn.disabled = false; btn.textContent = '⬇ Baixar slides PNG'; }
+}
+/* ── fim Redes Sociais ── */
 
 async function exportSlidePNGs() {
   const slideEls = document.querySelectorAll('#social-slides .social-slide');
