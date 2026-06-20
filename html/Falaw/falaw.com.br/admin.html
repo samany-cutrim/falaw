@@ -3822,8 +3822,8 @@ async function buscarTemasCalendario(forcar = false) {
   const anoAtual = _calAno;
 
   const prompt = `Hoje é ${hoje}. Você é especialista em marketing jurídico para Falaw Advogados (Fortaleza, CE — direito trabalhista, previdenciário, cível empresarial). Busque na web as principais notícias e atualizações jurídicas publicadas nos últimos 3 dias sobre: direito do trabalho, TST, MTE, eSocial, FGTS Digital, INSS, NR-1, iFood/plataformas, Reforma Trabalhista, STF, legislação trabalhista brasileira. Com base nos resultados reais encontrados, sugira 8 temas de conteúdo relevantes e atuais para ${mesNome} ${anoAtual}, adequados para escritório de advocacia trabalhista. Retorne APENAS JSON válido:
-{"sugestoes":[{"tema":"Título curto e atrativo do conteúdo","angle":"Ângulo/abordagem baseado na notícia real em 1 frase","tipo":"informativo|newsletter|redes_sociais","prioridade":1|2|3,"fonte":"Nome da fonte real encontrada","dataNoticia":"dd/mm/aaaa"}]}
-Prioridade 1=urgente/temporal, 2=relevante, 3=evergreen.`;
+{"sugestoes":[{"tema":"Título curto e atrativo do conteúdo","angle":"Ângulo/abordagem baseado na notícia real em 1 frase","tipo":"informativo|newsletter|redes_sociais","prioridade":1|2|3,"fonte":"Nome da fonte real encontrada","sourceUrl":"https://url-real-da-noticia.gov.br/...","dataNoticia":"dd/mm/aaaa"}]}
+Prioridade 1=urgente/temporal, 2=relevante, 3=evergreen. Não invente URLs — use apenas URLs reais retornadas pela busca web.`;
 
   try {
     let raw;
@@ -3983,7 +3983,7 @@ async function aprovarSugestao(id) {
   document.getElementById('cal-f-data').value    = new Date().toISOString().slice(0,10);
   document.getElementById('cal-f-autor').value   = '';
   document.getElementById('cal-f-obs').value     = [s.angle, s.fonte ? `Fonte: ${s.fonte}` : '', s.dataNoticia ? `Data: ${s.dataNoticia}` : ''].filter(Boolean).join(' | ');
-  document.getElementById('cal-f-link').value    = s.link  || s.sourceUrl || '';
+  document.getElementById('cal-f-link').value    = s.sourceUrl || s.link || '';
   document.getElementById('cal-modal-titulo').textContent = 'Aprovar Sugestão';
   document.getElementById('cal-modal-del').style.display = 'none';
   document.getElementById('cal-modal').style.display = 'flex';
