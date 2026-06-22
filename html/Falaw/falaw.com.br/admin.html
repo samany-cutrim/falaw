@@ -3799,18 +3799,10 @@ function deletarPublicacao() {
 // ─── Sugestões de temas — geradas pela IA (OpenAI/GitHub Models) ───
 const CAL_SUG_KEY      = 'falaw_cal_sugestoes_v1';
 const CAL_SUG_TS_KEY   = 'falaw_cal_sugestoes_ts';
-const CAL_SUG_MIN_INTERVAL = 10 * 60 * 1000; // 10 min entre refreshes
 
-async function buscarTemasCalendario(forcar = false) {
+async function buscarTemasCalendario(forcar = true) {
   const btn      = document.getElementById('cal-sug-btn');
   const statusEl = document.getElementById('cal-sug-status');
-  const agora    = Date.now();
-  const ultimo   = Number(localStorage.getItem(CAL_SUG_TS_KEY) || 0);
-
-  if (!forcar && agora - ultimo < CAL_SUG_MIN_INTERVAL) {
-    _renderSugestoes();
-    return;
-  }
 
   btn.disabled = true;
   btn.textContent = '⏳ Buscando…';
@@ -3832,7 +3824,11 @@ Prioridade 1=urgente/temporal, 2=relevante, 3=evergreen. Não invente URLs — u
     } else {
       raw = await callAI([{ role: 'user', content: prompt }]);
     }
-    const data = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    const cleaned = raw.replace(/```json|```/g,'').trim();
+    if (!cleaned.startsWith('{') && !cleaned.startsWith('[')) {
+      throw new Error('A IA não retornou JSON. Tente novamente em alguns instantes.');
+    }
+    const data = JSON.parse(cleaned);
     if (!Array.isArray(data.sugestoes)) throw new Error('Formato inválido');
     const sugs = data.sugestoes.map((s, i) => ({ ...s, id: 'ai_' + Date.now() + '_' + i, status: 'pendente', dataSugestao: new Date().toISOString().slice(0,10) }));
     localStorage.setItem(CAL_SUG_KEY, JSON.stringify(sugs));
@@ -4082,9 +4078,6 @@ function switchTab(name) {
     renderCalendario();
     _renderSugestoes();
     _atualizarBadgeSugestoes();
-    // Auto-busca se passou mais de 6h desde o último fetch
-    const ts = Number(localStorage.getItem(CAL_SUG_TS_KEY) || 0);
-    if (Date.now() - ts > CAL_SUG_MIN_INTERVAL) buscarTemasCalendario();
   }
   if (name === 'audiencias')    { loadAudiencias(); }
 }
