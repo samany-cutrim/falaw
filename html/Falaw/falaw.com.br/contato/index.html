@@ -55,11 +55,59 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="../sb-config.js" onerror="void 0"></script>
   <script>
+  /* ── Anti-spam helpers ── */
+  function _isSpamEmail(email) {
+    if (!email || email.length > 254) return true;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return true;
+    var local = email.split('@')[0];
+    var domain = email.split('@')[1].toLowerCase();
+    if (local.length > 14) {
+      var vowels = (local.match(/[aeiou]/gi) || []).length;
+      if (vowels < 2) return true;
+    }
+    if (/[^aeiou\d._+-]{5,}/i.test(local)) return true;
+    var spamDomains = ['mailinator','guerrillamail','tempmail','throwam','yopmail','sharklasers','guerrillamailblock','grr.la','spam4.me','trashmail','dispostable','fakeinbox','mailnull','spamgourmet','maildrop','harakirimail','wegwerfmail','filzmail','jetable','armyspy','cuvox','dayrep','einrot','fleckens','gustr','rhyta','spamcon','superrito','teleworm','trbvn','uvkrtij','tlpro','0815','10minutemail','20minutemail','33mail'];
+    if (spamDomains.some(function(d) { return domain.includes(d); })) return true;
+    var domainLocal = domain.split('.')[0];
+    if (domainLocal.length > 12) {
+      var dv = (domainLocal.match(/[aeiou]/gi) || []).length;
+      if (dv < 2) return true;
+    }
+    return false;
+  }
+  function _isSpamName(name) {
+    if (!name) return false;
+    if (name.length > 12 && !name.includes(' ')) {
+      var v = (name.match(/[aeiouáéíóúâêîôûãõ]/gi) || []).length;
+      if (v / name.length < 0.15) return true;
+    }
+    if (/[^aeiouáéíóúâêîôûãõ\s\d\-'.]{5,}/i.test(name)) return true;
+    return false;
+  }
   document.addEventListener('DOMContentLoaded', function() {
     var form = document.querySelector('.contato-form form');
     if (!form) return;
+    // Honeypot field — bots preenchem, humanos não
+    var hp = document.createElement('input');
+    hp.type = 'text'; hp.name = 'website'; hp.id = 'hp-website';
+    hp.setAttribute('autocomplete','off'); hp.setAttribute('tabindex','-1');
+    hp.style.cssText = 'position:absolute;left:-9999px;opacity:0;height:0;width:0;';
+    hp.setAttribute('aria-hidden','true');
+    form.appendChild(hp);
     form.addEventListener('submit', function(e) {
       e.preventDefault();
+      // Honeypot check
+      if (hp.value) return;
+      var emailInput = form.querySelector('#email').value.trim();
+      var nomeInput  = form.querySelector('#nome').value.trim();
+      var msgInput   = form.querySelector('#mensagem').value.trim();
+      // Spam checks
+      if (_isSpamEmail(emailInput) || _isSpamName(nomeInput) || _isSpamName(msgInput.split(' ')[0])) {
+        var btn = form.querySelector('button[type="submit"]');
+        var orig = btn ? btn.innerHTML : '';
+        if (btn) { btn.innerHTML = 'Dados inválidos ✗'; setTimeout(function(){ btn.innerHTML = orig; }, 3000); }
+        return;
+      }
       var submission = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
         nome:     form.querySelector('#nome').value.trim(),

@@ -77,6 +77,42 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="sb-config.js" onerror="void 0"></script>
   <script>
+  /* ── Anti-spam helpers ── */
+  function _isSpamEmail(email) {
+    if (!email || email.length > 254) return true;
+    // Must match basic email pattern
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return true;
+    var local = email.split('@')[0];
+    var domain = email.split('@')[1].toLowerCase();
+    // Reject local part that looks like a random string (>14 chars, no vowels or all consonants)
+    if (local.length > 14) {
+      var vowels = (local.match(/[aeiou]/gi) || []).length;
+      if (vowels < 2) return true;
+    }
+    // Reject local part with excessive consecutive consonants (bot pattern)
+    if (/[^aeiou\d._+-]{5,}/i.test(local)) return true;
+    // Reject known disposable/spam domains
+    var spamDomains = ['mailinator','guerrillamail','tempmail','throwam','yopmail','sharklasers','guerrillamailblock','grr.la','spam4.me','trashmail','dispostable','fakeinbox','mailnull','spamgourmet','maildrop','harakirimail','wegwerfmail','filzmail','jetable','armyspy','cuvox','dayrep','einrot','fleckens','gustr','rhyta','spamcon','superrito','teleworm','trbvn','uvkrtij','tlpro','0815','10minutemail','20minutemail','33mail'];
+    if (spamDomains.some(function(d) { return domain.includes(d); })) return true;
+    // Reject domains with random-looking substrings in the domain itself
+    var domainLocal = domain.split('.')[0];
+    if (domainLocal.length > 12) {
+      var dv = (domainLocal.match(/[aeiou]/gi) || []).length;
+      if (dv < 2) return true;
+    }
+    return false;
+  }
+  function _isSpamName(name) {
+    if (!name) return false;
+    // Reject names that look like random strings (no spaces, >12 chars, low vowel ratio)
+    if (name.length > 12 && !name.includes(' ')) {
+      var v = (name.match(/[aeiouáéíóúâêîôûãõ]/gi) || []).length;
+      if (v / name.length < 0.15) return true;
+    }
+    // Reject names with >4 consecutive consonants
+    if (/[^aeiouáéíóúâêîôûãõ\s\d\-'.]{5,}/i.test(name)) return true;
+    return false;
+  }
   document.addEventListener('DOMContentLoaded', function() {
     var form = document.querySelector('.newsletter-form');
     if (!form) return;
@@ -84,6 +120,14 @@
       e.preventDefault();
       var emailVal = document.getElementById('newsletter-email').value.trim();
       if (!emailVal) return;
+      // Anti-spam check
+      if (_isSpamEmail(emailVal)) {
+        var btn2 = form.querySelector('button[type="submit"]');
+        var orig2 = btn2.innerHTML;
+        btn2.innerHTML = 'E-mail inválido ✗';
+        setTimeout(function() { btn2.innerHTML = orig2; }, 3000);
+        return;
+      }
       var list = JSON.parse(localStorage.getItem('fa_newsletter_emails') || '[]');
       if (list.some(function(x) { return x.email === emailVal; })) {
         var btn = form.querySelector('button[type="submit"]');
