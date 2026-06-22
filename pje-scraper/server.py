@@ -1,8 +1,8 @@
 # ─────────────────────────────────────────────────────────────────────────────
-#  Falaw — Servidor local PJe  (porta 7777)
+#  Falaw — Servidor local (porta 7777)
 #
 #  Inicie com:  INICIAR_SERVIDOR.bat
-#  O admin em admin.html chama /sync  →  roda scraper.py como subprocesso
+#  O admin em admin.html chama /sync  →  roda projuris_sync.py como subprocesso
 #  e transmite os logs em tempo real via SSE (/stream).
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -33,15 +33,15 @@ PORT         = int(os.getenv("PORT", "7777"))
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 
-_SCRIPT = Path(__file__).parent / "scraper.py"
+_SCRIPT = Path(__file__).parent / "projuris_sync.py"
 
 # ── Estado global ─────────────────────────────────────────────────────────────
 _lock = Lock()
 _job: dict = {
     "running":   False,
     "message":   "Aguardando início",
-    "progress":  0,      # número de sistemas processados (para a barra)
-    "total":     49,     # 24 TRTs × 2 graus + TST
+    "progress":  0,
+    "total":     1,      # sincronização única via API Projuris
     "log":       [],
     "erro":      None,
     "state":     "idle",   # idle | running | done
@@ -57,18 +57,17 @@ def _log(msg: str) -> None:
 
 # ── Job principal ─────────────────────────────────────────────────────────────
 
-def _run_job(modo_oculto: bool) -> None:
+def _run_job() -> None:
     _job.update({
         "running":  True,
         "progress": 0,
         "log":      [],
         "erro":     None,
         "state":    "running",
-        "message":  "Iniciando Chrome…",
+        "message":  "Iniciando sincronização Projuris…",
     })
 
     env = os.environ.copy()
-    env["MODO_OCULTO"] = "true" if modo_oculto else "false"
 
     try:
         proc = subprocess.Popen(
@@ -97,18 +96,15 @@ def _run_job(modo_oculto: bool) -> None:
                         _job["message"] = clean
                     break
 
-            # Contar sistemas processados para a barra de progresso
-            if re.search(r'\[TRT-\d+/[12]G\]|\[TST\]', line):
-                _job["progress"] = min(_job["progress"] + 1, _job["total"])
-
         proc.wait()
         _job["progress"] = _job["total"]
 
+        _job["progress"] = 1
         if proc.returncode == 0:
-            _job["message"] = "Coleta concluída"
+            _job["message"] = "Sincronização Projuris concluída"
         else:
-            _job["erro"]    = "Scraper encerrou com código de erro"
-            _job["message"] = "Erro na coleta — veja o log abaixo"
+            _job["erro"]    = "Sincronização encerrou com código de erro"
+            _job["message"] = "Erro na sincronização — veja o log abaixo"
 
     except Exception as exc:
         _log(f"ERRO: {exc}")
@@ -151,15 +147,12 @@ def status():
 
 @app.post("/sync")
 def sync():
-    body        = request.get_json(silent=True) or {}
-    modo_oculto = bool(body.get("modo_oculto", False))
-
     with _lock:
         if _job["running"]:
-            return jsonify({"ok": False, "message": "Coleta já em andamento"}), 409
-        Thread(target=_run_job, args=(modo_oculto,), daemon=True).start()
+            return jsonify({"ok": False, "message": "Sincronização já em andamento"}), 409
+        Thread(target=_run_job, daemon=True).start()
 
-    return jsonify({"ok": True, "message": "Coleta iniciada"})
+    return jsonify({"ok": True, "message": "Sincronização Projuris iniciada"})
 
 
 @app.get("/stream")

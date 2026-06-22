@@ -187,13 +187,42 @@ CREATE TABLE IF NOT EXISTS pauta_audiencias (
   comentarios           TEXT NOT NULL DEFAULT '',
   orientacao            TEXT NOT NULL DEFAULT '',
   status                TEXT NOT NULL DEFAULT 'agendada' CHECK (status IN ('agendada','realizada','adiada','cancelada')),
-  origem                TEXT NOT NULL DEFAULT 'manual' CHECK (origem IN ('manual','excel','pje')),
+  origem                TEXT NOT NULL DEFAULT 'manual' CHECK (origem IN ('manual','excel','pje','projuris')),
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE pauta_audiencias ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "anon full access" ON pauta_audiencias;
 CREATE POLICY "anon full access" ON pauta_audiencias FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- ── Controle de sincronização (Projuris Sync) ─────────────────────────────────
+CREATE TABLE IF NOT EXISTS sync_log (
+  id         BIGSERIAL PRIMARY KEY,
+  source     TEXT NOT NULL,          -- 'projuris'
+  synced_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  count      INT NOT NULL DEFAULT 0
+);
+ALTER TABLE sync_log ENABLE ROW LEVEL SECURITY;
+-- Apenas a service_role (Edge Function) pode inserir/ler
+DROP POLICY IF EXISTS "service full access" ON sync_log;
+CREATE POLICY "service full access" ON sync_log FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ── Agendamento automático via pg_cron (a cada 15 min, dias úteis 06h–22h BRT) ──
+-- Execute no SQL Editor do Supabase após habilitar a extensão pg_cron:
+--   Database → Extensions → pg_cron → Enable
+--
+-- SELECT cron.schedule(
+--   'projuris-sync-15min',
+--   '*/15 9-1 * * 1-5',
+--   $$
+--     SELECT net.http_post(
+--       url    := 'https://yleofidqkimeanpuothv.supabase.co/functions/v1/projuris-sync',
+--       headers := '{"Content-Type":"application/json"}'::jsonb,
+--       body   := '{}'::jsonb
+--     );
+--   $$
+-- );
+-- Para remover: SELECT cron.unschedule('projuris-sync-15min');
 
 
 -- ── iFood Dashboard ──────────────────────────────────────────────────────────

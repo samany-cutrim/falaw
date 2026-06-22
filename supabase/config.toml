@@ -1,0 +1,8 @@
+[api]
+enabled = true
+
+# ── Edge Functions ────────────────────────────────────────────────────────────
+
+[functions.projuris-sync]
+# O agendamento automático é feito via pg_cron no Supabase — veja supabase-setup.sql
+verify_jwt = false
