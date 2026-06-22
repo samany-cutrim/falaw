@@ -4380,6 +4380,49 @@ async function loadArticlesFromGitHub() {
     document.getElementById('blog-no-token').hidden = !!ghToken();
   }
 
+  // Injeta artigo STF Tema 1.389 se ainda não existir
+  (function _injetarBlogSTF1389() {
+    const ID = 'stf_are_1532603_2026_blog';
+    if (ALL_ARTICLES.find(a => a.id === ID)) return;
+    ALL_ARTICLES.unshift({
+      id:        ID,
+      title:     'STF Determina Suspensão Imediata de Processos Trabalhistas Após Acórdão dos TRTs — Entenda o Impacto do Tema 1.389',
+      category:  'Trabalhista',
+      excerpt:   'Em 19/06/2026, o Min. Gilmar Mendes determinou que processos do Tema 1.389 sejam sobrestados imediatamente após acórdão do TRT, sem prazo para Recurso de Revista ao TST. Entenda o impacto prático para empregados e empregadores.',
+      date:      '2026-06-22',
+      readTime:  '5 min',
+      url:       'blog/stf-tema-1389-suspensao-imediata-trt.html',
+      published: true,
+      photo:     '',
+      content:   `<h2>O que aconteceu?</h2>
+<p>Em 19 de junho de 2026, o Ministro Gilmar Mendes proferiu decisão determinando que os processos abrangidos pelo <strong>Tema 1.389 da Repercussão Geral</strong> devem ser <strong>sobrestados imediatamente após o acórdão dos TRTs</strong>, sem abertura de prazo para interposição de Recurso de Revista ao TST.</p>
+
+<h2>O que é o Tema 1.389?</h2>
+<p>Trata da constitucionalidade da negociação coletiva sobre benefícios trabalhistas — especificamente se acordos coletivos podem suprimir ou modificar seguros de vida e acidentes pessoais contratados pelo empregador (caso <em>Prudential do Brasil Seguros S.A.</em>).</p>
+
+<h2>O que muda na prática?</h2>
+<ul>
+  <li>O TRT julga e profere acórdão normalmente;</li>
+  <li><strong>Após o acórdão, o processo é sobrestado imediatamente</strong> — sem Recurso de Revista;</li>
+  <li>O feito fica retido na origem até o STF fixar a tese;</li>
+  <li>Fixada a tese, os TRTs aplicam diretamente.</li>
+</ul>
+
+<h2>Fundamentos jurídicos</h2>
+<p>A decisão baseia-se nos princípios da <strong>eficiência</strong> (art. 37, CF) e da <strong>duração razoável do processo</strong> (art. 5º, LXXVIII, CF), evitando o trânsito desnecessário entre TRTs e TST enquanto a tese pende no STF.</p>
+
+<h2>O que você deve fazer?</h2>
+<ul>
+  <li>Verifique se seu processo está abrangido pelo Tema 1.389;</li>
+  <li>Não interponha Recurso de Revista após o acórdão do TRT — o sobrestamento é automático;</li>
+  <li>Acompanhe o julgamento no STF;</li>
+  <li>Busque orientação jurídica especializada antes de qualquer prazo.</li>
+</ul>
+
+<p><em>Fonte: ARE 1.532.603/PR — Min. Gilmar Mendes — STF — 19/06/2026</em></p>`
+    });
+  })();
+
   localStorage.setItem('fa_blog_articles_cache', JSON.stringify(ALL_ARTICLES));
 }
 
