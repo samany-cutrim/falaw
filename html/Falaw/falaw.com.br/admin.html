@@ -2250,29 +2250,18 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
       <div style="background:#fff;border:1px solid #e0e4f0;border-radius:6px;padding:24px 28px;margin-bottom:24px">
         <h3 style="margin:0 0 18px 0;font-family:var(--f-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E">✍ Gerar Informativo com IA</h3>
 
-        <!-- Modo de entrada -->
-        <div style="display:flex;gap:8px;margin-bottom:16px">
-          <button type="button" id="inf-mode-tema" class="btn btn-primary" style="font-size:11px;padding:5px 14px" onclick="infSetMode('tema')">📝 Tema / Texto</button>
-          <button type="button" id="inf-mode-pdf" class="btn btn-ghost" style="font-size:11px;padding:5px 14px" onclick="infSetMode('pdf')">📄 PDF</button>
+        <!-- Texto base -->
+        <div id="inf-area-tema" class="form-field">
+          <label>Tema ou descrição da decisão / notícia jurídica <span style="font-weight:400;color:var(--c-muted)">(opcional se anexar PDF)</span></label>
+          <textarea id="inf-tema" rows="5" placeholder="Ex: STF decidiu no Tema 1389 que... / Descreva o tema ou cole o texto base que a IA deve usar para gerar o informativo."
+            style="width:100%;font-family:var(--f-mono);font-size:13px;resize:vertical"></textarea>
         </div>
 
-        <!-- Modo tema -->
-        <div id="inf-area-tema">
-          <div class="form-field">
-            <label>Tema ou descrição da decisão / notícia jurídica</label>
-            <textarea id="inf-tema" rows="5" placeholder="Ex: STF decidiu no Tema 1389 que... / Descreva o tema ou cole o texto base que a IA deve usar para gerar o informativo."
-              style="width:100%;font-family:var(--f-mono);font-size:13px;resize:vertical"></textarea>
-          </div>
-        </div>
-
-        <!-- Modo PDF -->
-        <div id="inf-area-pdf" style="display:none">
-          <div class="form-field">
-            <label>Selecionar PDF</label>
-            <input type="file" id="inf-pdf-file" accept=".pdf" />
-            <p class="cfg-hint" style="margin-top:6px">O texto será extraído do PDF e usado como base para a IA gerar o informativo.</p>
-          </div>
-          <div id="inf-pdf-preview" style="display:none;margin-top:8px;background:#f8f8f8;border:1px solid #e0e4f0;border-radius:4px;padding:12px;max-height:160px;overflow:auto;font-size:11px;font-family:var(--f-mono);color:#555;white-space:pre-wrap"></div>
+        <!-- Anexo PDF -->
+        <div id="inf-area-pdf" class="form-field" style="margin-top:12px">
+          <label>Anexar PDF <span style="font-weight:400;color:var(--c-muted)">(opcional — o texto será extraído e combinado com o campo acima)</span></label>
+          <input type="file" id="inf-pdf-file" accept=".pdf" />
+          <div id="inf-pdf-preview" style="display:none;margin-top:8px;background:#f8f8f8;border:1px solid #e0e4f0;border-radius:4px;padding:12px;max-height:140px;overflow:auto;font-size:11px;font-family:var(--f-mono);color:#555;white-space:pre-wrap"></div>
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap">
@@ -6961,16 +6950,7 @@ function _confirmEmailSend(email, company, period) {
 const INF_STORE_KEY = 'falaw_informativos_v1';
 let _infCurrentHTML = '';
 
-function infSetMode(mode) {
-  document.getElementById('inf-area-tema').style.display = mode === 'tema' ? '' : 'none';
-  document.getElementById('inf-area-pdf').style.display  = mode === 'pdf'  ? '' : 'none';
-  document.getElementById('inf-mode-tema').className = 'btn ' + (mode === 'tema' ? 'btn-primary' : 'btn-ghost');
-  document.getElementById('inf-mode-pdf').className  = 'btn ' + (mode === 'pdf'  ? 'btn-primary' : 'btn-ghost');
-  document.getElementById('inf-mode-tema').style.fontSize = '11px';
-  document.getElementById('inf-mode-tema').style.padding  = '5px 14px';
-  document.getElementById('inf-mode-pdf').style.fontSize  = '11px';
-  document.getElementById('inf-mode-pdf').style.padding   = '5px 14px';
-}
+function infSetMode(mode) { /* modo unificado — função mantida por compatibilidade */ }
 
 async function _infExtractPDFText(file) {
   return new Promise((resolve, reject) => {
@@ -7004,20 +6984,26 @@ async function gerarInformativo() {
 
   try {
     let baseText = '';
-    const isPdf = document.getElementById('inf-area-pdf').style.display !== 'none';
+    const temaText = document.getElementById('inf-tema').value.trim();
+    const fileEl   = document.getElementById('inf-pdf-file');
 
-    if (isPdf) {
-      const fileEl = document.getElementById('inf-pdf-file');
-      if (!fileEl.files[0]) { showToast('Selecione um arquivo PDF.'); return; }
+    if (fileEl.files[0]) {
       status.textContent = 'Extraindo texto do PDF…';
-      baseText = await _infExtractPDFText(fileEl.files[0]);
-      if (!baseText) { showToast('Não foi possível extrair texto do PDF. Use o modo Tema/Texto.'); return; }
-      document.getElementById('inf-pdf-preview').style.display = '';
-      document.getElementById('inf-pdf-preview').textContent = baseText.slice(0, 800) + (baseText.length > 800 ? '\n…' : '');
+      const pdfText = await _infExtractPDFText(fileEl.files[0]);
+      if (pdfText) {
+        document.getElementById('inf-pdf-preview').style.display = '';
+        document.getElementById('inf-pdf-preview').textContent = pdfText.slice(0, 800) + (pdfText.length > 800 ? '\n…' : '');
+        baseText = temaText ? temaText + '\n\n--- Conteúdo extraído do PDF ---\n' + pdfText : pdfText;
+      } else {
+        showToast('Não foi possível extrair texto do PDF.');
+        if (!temaText) return;
+        baseText = temaText;
+      }
     } else {
-      baseText = document.getElementById('inf-tema').value.trim();
-      if (!baseText) { showToast('Descreva o tema ou cole o texto base.'); return; }
+      baseText = temaText;
     }
+
+    if (!baseText) { showToast('Informe um tema ou anexe um PDF.'); return; }
 
     status.textContent = 'Consultando IA…';
 
