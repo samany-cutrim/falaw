@@ -14,9 +14,13 @@ import re
 import subprocess
 import sys
 import time
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 from threading import Thread, Lock
+
+import urllib.request
+import urllib.parse
 
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, request
@@ -198,6 +202,70 @@ def import_excel():
         return jsonify({"ok": True, "message": f"{len(rows)} audiências importadas", "count": len(rows)})
     except Exception as exc:
         return jsonify({"ok": False, "message": str(exc)}), 500
+
+
+# ── Busca de notícias jurídicas trabalhistas ──────────────────────────────────
+
+_QUERIES = [
+    "direito trabalhista Brasil",
+    "TST decisão trabalhista",
+    "INSS benefício previdenciário",
+    "reforma trabalhista",
+    "FGTS eSocial",
+    "NR-1 segurança trabalho",
+    "CLT jurisprudência",
+    "iFood aplicativo trabalhador",
+]
+
+_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    "Accept-Language": "pt-BR,pt;q=0.9",
+}
+
+def _fetch_google_news_rss(query: str) -> list[dict]:
+    """Busca notícias pelo Google News RSS (sem API key)."""
+    q = urllib.parse.quote(query)
+    url = f"https://news.google.com/rss/search?q={q}&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+    try:
+        req = urllib.request.Request(url, headers=_HEADERS)
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            xml = resp.read()
+        root = ET.fromstring(xml)
+        items = []
+        for item in root.findall(".//item")[:4]:
+            title   = (item.findtext("title")   or "").strip()
+            link    = (item.findtext("link")     or "").strip()
+            pubdate = (item.findtext("pubDate")  or "").strip()
+            source_el = item.find("{http://purl.org/rss/1.0/modules/content/}encoded")
+            source  = ""
+            # Tenta extrair nome da fonte do título (formato: "Título - Fonte")
+            if " - " in title:
+                parts  = title.rsplit(" - ", 1)
+                title  = parts[0].strip()
+                source = parts[1].strip()
+            if title and link:
+                items.append({"titulo": title, "url": link, "fonte": source, "data": pubdate[:16]})
+        return items
+    except Exception:
+        return []
+
+
+@app.get("/noticias-juridicas")
+def noticias_juridicas():
+    """Retorna notícias jurídicas trabalhistas recentes do Google News RSS."""
+    resultados: list[dict] = []
+    vistas: set = set()
+
+    for query in _QUERIES:
+        for item in _fetch_google_news_rss(query):
+            key = item["url"]
+            if key not in vistas:
+                vistas.add(key)
+                resultados.append(item)
+        if len(resultados) >= 24:
+            break
+
+    return jsonify({"ok": True, "noticias": resultados[:24]})
 
 
 if __name__ == "__main__":

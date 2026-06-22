@@ -3802,23 +3802,48 @@ async function buscarTemasCalendario(forcar = true) {
   const mesNome = MESES_PT[_calMes];
   const anoAtual = _calAno;
 
-  const prompt = `Hoje é ${hoje}. Você é especialista em marketing jurídico para Falaw Advogados (Fortaleza, CE — direito trabalhista, previdenciário, cível empresarial). Busque na web as principais notícias e atualizações jurídicas publicadas nos últimos 3 dias sobre: direito do trabalho, TST, MTE, eSocial, FGTS Digital, INSS, NR-1, iFood/plataformas, Reforma Trabalhista, STF, legislação trabalhista brasileira. Com base nos resultados reais encontrados, sugira 8 temas de conteúdo relevantes e atuais para ${mesNome} ${anoAtual}, adequados para escritório de advocacia trabalhista. Retorne APENAS JSON válido:
-{"sugestoes":[{"tema":"Título curto e atrativo do conteúdo","angle":"Ângulo/abordagem baseado na notícia real em 1 frase","tipo":"informativo|newsletter|redes_sociais","prioridade":1|2|3,"fonte":"Nome da fonte real encontrada","sourceUrl":"https://url-real-da-noticia.gov.br/...","dataNoticia":"dd/mm/aaaa"}]}
-Prioridade 1=urgente/temporal, 2=relevante, 3=evergreen. Não invente URLs — use apenas URLs reais retornadas pela busca web.`;
+  const systemMsg = { role: 'system', content: 'Você é um especialista em marketing jurídico trabalhista brasileiro. Responda SEMPRE e SOMENTE com JSON válido, sem texto adicional, sem markdown, sem explicações.' };
+
+  // Tenta buscar notícias reais do servidor Python local
+  let contextNoticias = '';
+  try {
+    statusEl.textContent = 'Buscando notícias jurídicas recentes…';
+    const resp = await fetch('http://localhost:7777/noticias-juridicas', { signal: AbortSignal.timeout(10000) });
+    if (resp.ok) {
+      const nd = await resp.json();
+      if (nd.ok && nd.noticias?.length) {
+        contextNoticias = '\n\nNotícias reais coletadas agora:\n' +
+          nd.noticias.slice(0, 16).map((n, i) => `${i+1}. ${n.titulo}${n.fonte ? ' ('+n.fonte+')' : ''}${n.url ? ' — '+n.url : ''}`).join('\n');
+      }
+    }
+  } catch(_) { /* servidor local offline — segue sem notícias */ }
+
+  const promptCompleto = `Hoje é ${hoje}. Sugira 8 temas de conteúdo jurídico trabalhista para ${mesNome} ${anoAtual} para o escritório Falaw Advogados (Fortaleza, CE). Priorize temas baseados nas notícias abaixo quando relevantes. Considere também: TST, INSS, FGTS, eSocial, NR-1, reforma trabalhista, direitos do trabalhador, iFood/plataformas.${contextNoticias}
+
+Retorne SOMENTE este JSON (sem mais nada):
+{"sugestoes":[{"tema":"Título curto","angle":"Abordagem em 1 frase","tipo":"informativo","prioridade":1,"fonte":"","sourceUrl":"","dataNoticia":""}]}
+Use prioridade 1=urgente, 2=relevante, 3=evergreen. Gere exatamente 8 sugestões.`;
+
+  const _parseRaw = (raw) => {
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    const jsonStart = cleaned.indexOf('{');
+    const jsonEnd   = cleaned.lastIndexOf('}');
+    if (jsonStart === -1 || jsonEnd === -1) throw new Error('A IA não retornou JSON. Verifique se a chave de IA está configurada corretamente.');
+    return JSON.parse(cleaned.slice(jsonStart, jsonEnd + 1));
+  };
 
   try {
     let raw;
+    // Tenta com busca web (OpenAI Responses API) se disponível
     if (localStorage.getItem('fa_openai_key')) {
-      try { raw = await callOpenAIWithSearch(prompt); } catch(e) { raw = await callAI([{ role: 'user', content: prompt }]); }
-    } else {
-      raw = await callAI([{ role: 'user', content: prompt }]);
+      try { raw = await callOpenAIWithSearch(promptCompleto); } catch(e) { raw = null; }
     }
-    const cleaned = raw.replace(/```json|```/g,'').trim();
-    if (!cleaned.startsWith('{') && !cleaned.startsWith('[')) {
-      throw new Error('A IA não retornou JSON. Tente novamente em alguns instantes.');
+    // Fallback: chat normal com system prompt forçando JSON
+    if (!raw) {
+      raw = await callAI([systemMsg, { role: 'user', content: promptCompleto }]);
     }
-    const data = JSON.parse(cleaned);
-    if (!Array.isArray(data.sugestoes)) throw new Error('Formato inválido');
+    const data = _parseRaw(raw);
+    if (!Array.isArray(data.sugestoes)) throw new Error('Formato inválido — tente novamente.');
     const sugs = data.sugestoes.map((s, i) => ({ ...s, id: 'ai_' + Date.now() + '_' + i, status: 'pendente', dataSugestao: new Date().toISOString().slice(0,10) }));
     localStorage.setItem(CAL_SUG_KEY, JSON.stringify(sugs));
     localStorage.setItem(CAL_SUG_TS_KEY, String(Date.now()));
