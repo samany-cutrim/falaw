@@ -219,10 +219,16 @@
               photo:     a.photo     || ''
             };
           });
-          // Merge: inclui artigos do arquivo estático que ainda não estejam no Supabase
-          var sbIds = new Set(sbArticles.map(function(a) { return a.id; }));
-          var staticOnly = ALL.filter(function(a) { return !sbIds.has(a.id); });
-          ALL = staticOnly.concat(sbArticles);
+          // Merge: artigos do Supabase com ordem do arquivo estático como referência
+          var sbMap = {};
+          sbArticles.forEach(function(a) { sbMap[a.id] = a; });
+          // Manter a ordem do arquivo estático para artigos existentes em ambos
+          var merged = ALL.map(function(a) { return sbMap[a.id] || a; });
+          // Adicionar artigos que só existem no Supabase (novos)
+          sbArticles.forEach(function(a) {
+            if (!merged.some(function(m) { return m.id === a.id; })) merged.unshift(a);
+          });
+          ALL = merged;
           category = 'Todos';
           query = '';
           renderFilters();
@@ -314,7 +320,11 @@
       var mon = MONTHS_PT[m[1].normalize('NFD').replace(/[\u0300-\u036f]/g,'')] || 0;
       return parseInt(m[2], 10) * 100 + mon;
     }
-    filtered.sort(function (a, b) { return dateScore(b.date) - dateScore(a.date); });
+    filtered.sort(function (a, b) {
+      var ds = dateScore(b.date) - dateScore(a.date);
+      if (ds !== 0) return ds;
+      return ALL.indexOf(a) - ALL.indexOf(b); // mesmo mês/ano: preserva ordem do array
+    });
 
     if (query || category !== 'Todos') {
       countEl.textContent = window.FalawI18n ? window.FalawI18n.t('blog.results', filtered.length, true) : filtered.length + (filtered.length === 1 ? ' artigo encontrado' : ' artigos encontrados');
