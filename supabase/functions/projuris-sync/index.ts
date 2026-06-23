@@ -160,22 +160,29 @@ async function upsertSupabase(sb: ReturnType<typeof createClient>, records: Reco
   return saved;
 }
 
-Deno.serve(async (_req: Request) => {
+const CORS = {
+  "Access-Control-Allow-Origin":  "*",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type",
+};
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   try {
     console.log("=== Projuris ADV Sync " + new Date().toISOString() + " ===");
-    if (!PROJURIS_CLIENT_ID || !PROJURIS_SECRET) return Response.json({ ok:false, error:"PROJURIS_CLIENT_ID/SECRET nao configurados" }, { status:500 });
+    if (!PROJURIS_CLIENT_ID || !PROJURIS_SECRET) return Response.json({ ok:false, error:"PROJURIS_CLIENT_ID/SECRET nao configurados" }, { status:500, headers:CORS });
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const raw = await fetchAudiencias();
     console.log("Total: " + raw.length);
-    if (!raw.length) { await recordSync(sb,0); return Response.json({ ok:true, message:"Nenhuma audiencia encontrada", saved:0 }); }
+    if (!raw.length) { await recordSync(sb,0); return Response.json({ ok:true, message:"Nenhuma audiencia encontrada", saved:0 }, { headers:CORS }); }
     const records = (raw as Record<string,unknown>[]).map(normalizar);
     const saved   = await upsertSupabase(sb, records);
     await recordSync(sb, saved);
     console.log("Salvas: " + saved);
-    return Response.json({ ok:true, message:`${saved} audiencias sincronizadas`, saved });
+    return Response.json({ ok:true, message:`${saved} audiencias sincronizadas`, saved }, { headers:CORS });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Erro:", msg);
-    return Response.json({ ok:false, error:msg }, { status:500 });
+    return Response.json({ ok:false, error:msg }, { status:500, headers:CORS });
   }
 });
