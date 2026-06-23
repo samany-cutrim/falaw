@@ -1586,8 +1586,8 @@
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <!-- Botão principal: usa extensão se disponível, senão mostra instrução -->
-          <button type="button" id="btn-sync-pje" class="btn btn-primary" onclick="pjeSyncIniciar()">
-            Sincronizar PJe
+          <button type="button" id="btn-sync-pauta" class="btn btn-primary" onclick="pautaSyncIniciar()" title="Busca audiências do Projuris ADV e salva no Supabase">
+            Sincronizar Projuris ADV
           </button>
           <label title="Chrome roda invisível em segundo plano" style="display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--c-muted);cursor:pointer;padding:4px 10px;border:1px solid var(--c-divider);border-radius:2px;user-select:none">
             <input type="checkbox" id="pje-modo-oculto" style="width:12px;height:12px;cursor:pointer;accent-color:#0D2B5E">
@@ -12966,7 +12966,7 @@ function pjeSyncIniciar() {
       if (wrap) wrap.style.display = 'none';
       return;
     }
-    _pjeConectarSSE();
+    _pjeConectarSSE(btn);
   })
   .catch(() => {
     if (wrap)    wrap.style.display    = 'none';
@@ -12976,11 +12976,43 @@ function pjeSyncIniciar() {
   });
 }
 
-function _pjeConectarSSE() {
+function pautaSyncIniciar() {
+  const wrap  = document.getElementById('pje-progress-wrap');
+  const label = document.getElementById('pje-progress-label');
+  const bar   = document.getElementById('pje-progress-bar');
+  const btn   = document.getElementById('btn-sync-pauta');
+  const missing = document.getElementById('pje-ext-missing');
+
+  if (missing) missing.style.display = 'none';
+  if (wrap)    wrap.style.display    = 'block';
+  if (label)   label.textContent     = 'Conectando ao servidor…';
+  if (bar)     bar.style.width       = '2%';
+  if (btn)     btn.disabled          = true;
+
+  fetch(`${_PJE_SERVER}/sync-pauta`, { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) {
+        showToast(data.message || 'Erro ao iniciar sincronização da pauta');
+        if (btn)  btn.disabled         = false;
+        if (wrap) wrap.style.display   = 'none';
+        return;
+      }
+      _pjeConectarSSE(btn);
+    })
+    .catch(() => {
+      if (wrap)    wrap.style.display    = 'none';
+      if (missing) missing.style.display = 'block';
+      if (wrap)    wrap.style.display    = 'block';
+      if (btn)     btn.disabled          = false;
+    });
+}
+
+function _pjeConectarSSE(btnRef) {
   if (_sseSource) { _sseSource.close(); _sseSource = null; }
   _sseSource = new EventSource(`${_PJE_SERVER}/stream`);
   _sseSource.onmessage = (e) => {
-    try { _pjeHandleSSE(JSON.parse(e.data)); } catch (_) {}
+    try { _pjeHandleSSE(JSON.parse(e.data), btnRef); } catch (_) {}
   };
   _sseSource.onerror = () => {
     _sseSource.close();
@@ -12988,12 +13020,12 @@ function _pjeConectarSSE() {
   };
 }
 
-function _pjeHandleSSE(data) {
+function _pjeHandleSSE(data, activeBtnRef) {
   const wrap      = document.getElementById('pje-progress-wrap');
   const label     = document.getElementById('pje-progress-label');
   const sub       = document.getElementById('pje-progress-sub');
   const bar       = document.getElementById('pje-progress-bar');
-  const btn       = document.getElementById('btn-sync-pje');
+  const btn       = activeBtnRef || document.getElementById('btn-sync-pje');
   const semSessaoWrap = document.getElementById('pje-sem-sessao');
 
   if (data.message && label) label.textContent = data.message;
@@ -13001,8 +13033,8 @@ function _pjeHandleSSE(data) {
   const pct = data.total ? Math.round((data.progress / data.total) * 100) : 0;
   if (bar) bar.style.width = Math.max(pct, data.running ? 5 : 100) + '%';
   if (sub) sub.textContent = data.running
-    ? `${data.progress} de ${data.total} TRTs processados`
-    : (data.erro ? 'Erro — veja o log' : 'Coleta concluída');
+    ? `${data.progress} de ${data.total} tarefas processadas`
+    : (data.erro ? 'Erro — veja o log' : 'Sincronização concluída');
 
   if (!data.running) {
     if (_sseSource) { _sseSource.close(); _sseSource = null; }

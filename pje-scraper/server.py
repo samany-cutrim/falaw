@@ -33,7 +33,8 @@ PORT         = int(os.getenv("PORT", "7777"))
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 
-_SCRIPT = Path(__file__).parent / "projuris_sync.py"
+_SCRIPT       = Path(__file__).parent / "projuris_sync.py"
+_SCRIPT_PAUTA = Path(__file__).parent / "pauta_audiencia.py"
 
 # ── Estado global ─────────────────────────────────────────────────────────────
 _lock = Lock()
@@ -153,6 +154,57 @@ def sync():
         Thread(target=_run_job, daemon=True).start()
 
     return jsonify({"ok": True, "message": "Sincronização Projuris iniciada"})
+
+
+@app.post("/sync-pauta")
+def sync_pauta():
+    """Executa pauta_audiencia.py (Projuris ADV → Supabase) em background."""
+    with _lock:
+        if _job["running"]:
+            return jsonify({"ok": False, "message": "Sincronização já em andamento"}), 409
+
+        def _run_pauta():
+            _job.update({
+                "running": True, "progress": 0, "log": [],
+                "erro": None, "state": "running",
+                "message": "Sincronizando Pauta de Audiências (Projuris ADV)…",
+            })
+            try:
+                proc = subprocess.Popen(
+                    [sys.executable, str(_SCRIPT_PAUTA)],
+                    env=os.environ.copy(),
+                    cwd=str(_SCRIPT_PAUTA.parent),
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    text=True, encoding="utf-8", errors="replace", bufsize=1,
+                )
+                for raw in proc.stdout:
+                    line = raw.rstrip()
+                    if line:
+                        _log(line)
+                        for marker in ("[INFO]", "[WARNING]", "[ERROR]"):
+                            if marker in line:
+                                clean = line.split(marker, 1)[-1].strip()
+                                if clean and not re.match(r'^[=─\-]+$', clean):
+                                    _job["message"] = clean
+                                break
+                proc.wait()
+                _job["progress"] = 1
+                if proc.returncode == 0:
+                    _job["message"] = "Pauta de audiências sincronizada"
+                else:
+                    _job["erro"]    = "Erro ao sincronizar pauta"
+                    _job["message"] = "Erro — veja o log abaixo"
+            except Exception as exc:
+                _log(f"ERRO: {exc}")
+                _job["erro"] = str(exc)
+                _job["message"] = f"Erro: {exc}"
+            finally:
+                _job["running"] = False
+                _job["state"]   = "idle"
+
+        Thread(target=_run_pauta, daemon=True).start()
+
+    return jsonify({"ok": True, "message": "Pauta de audiências: sincronização iniciada"})
 
 
 @app.get("/stream")
