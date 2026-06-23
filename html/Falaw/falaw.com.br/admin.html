@@ -12710,17 +12710,17 @@ async function loadAudiencias() {
   const listEl = document.getElementById('audiencias-list');
   if (!listEl) return;
   listEl.innerHTML = '<p style="color:var(--c-muted);font-size:13px;padding:20px 0">Carregando…</p>';
-  const { sbUrl, sbKey } = getSbCreds();
+  const sb = getSB();
   let items = [];
-  if (sbUrl && sbKey) {
+  if (sb) {
     try {
-      const sb = supabase.createClient(sbUrl, sbKey);
       const today = new Date().toISOString().slice(0,10);
       let q = sb.from('pauta_audiencias').select('*')
         .gte('data_audiencia', today)
         .order('data_audiencia', { ascending: true })
         .order('horario',       { ascending: true });
       const { data, error } = await q;
+      if (error) console.warn('audiencias load error:', error.message);
       if (!error && data) items = data;
     } catch(e) { console.warn('audiencias load:', e.message); }
   }
