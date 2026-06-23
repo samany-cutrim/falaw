@@ -8949,7 +8949,7 @@ async function cliDashPreviewExcel(input) {
 }
 
 async function cliDashSaveExcel() {
-  if (!backendApiBase()) { showToast('Configure a Cockroach API em Configurações.'); return; }
+  if (!getSB()) { showToast('Configure o Supabase nas Configurações.'); return; }
   if (!_cliExcelData) { showToast('Selecione um arquivo primeiro.'); return; }
   if (!_cliDashClientId) { showToast('Selecione um cliente primeiro.'); return; }
   const periodId = document.getElementById('cli-xl-period').value;
