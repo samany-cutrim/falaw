@@ -13083,7 +13083,7 @@ function projurisSalvarCreds() {
   }, 600);
 }
 
-
+function _pjeConectarSSE(btnRef) {
   if (_sseSource) { _sseSource.close(); _sseSource = null; }
   _sseSource = new EventSource(`${_PJE_SERVER}/stream`);
   _sseSource.onmessage = (e) => {
