@@ -1589,6 +1589,7 @@
           <button type="button" id="btn-sync-pauta" class="btn btn-primary" onclick="pautaSyncIniciar()" title="Busca audiências do Projuris ADV e salva no Supabase">
             Sincronizar Projuris ADV
           </button>
+          <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="document.getElementById('projuris-cred-wrap').style.display=(document.getElementById('projuris-cred-wrap').style.display==='none'?'flex':'none')" title="Configure seu login do Projuris ADV">🔒 Login Projuris</button>
           <label title="Chrome roda invisível em segundo plano" style="display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--c-muted);cursor:pointer;padding:4px 10px;border:1px solid var(--c-divider);border-radius:2px;user-select:none">
             <input type="checkbox" id="pje-modo-oculto" style="width:12px;height:12px;cursor:pointer;accent-color:#0D2B5E">
             Oculto
@@ -1598,6 +1599,14 @@
             <input type="file" id="aud-xl-input" accept=".xlsx,.xls" style="display:none" onchange="audImportExcel(this)" />
           </label>
           <button type="button" class="btn btn-ghost" onclick="openAudienciaModal()">+ Manual</button>
+        </div>
+        <div id="projuris-cred-wrap" style="display:none;align-items:center;gap:6px;width:100%;margin-top:6px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--c-muted);white-space:nowrap;font-weight:600">Projuris ADV:</span>
+          <input id="projuris-email-input" type="email" placeholder="Email do Projuris (ex: samany@falaw.com.br)" value="samany@falaw.com.br" style="flex:1;min-width:200px;font-size:12px;padding:5px 8px;border:1px solid var(--c-divider);border-radius:3px;background:var(--c-surface);color:var(--c-text)" />
+          <input id="projuris-senha-input" type="password" placeholder="Senha do Projuris" style="width:160px;font-size:12px;padding:5px 8px;border:1px solid var(--c-divider);border-radius:3px;background:var(--c-surface);color:var(--c-text)" />
+          <button class="btn btn-primary" style="font-size:12px" onclick="projurisSalvarCreds()">Salvar e Sincronizar</button>
+          <span id="projuris-cred-status" style="font-size:11px;color:var(--c-muted)"></span>
+        </div>
         </div>
       </div>
 
@@ -13001,8 +13010,27 @@ function pautaSyncIniciar() {
   // Chama a Edge Function do Supabase (sem servidor local)
   const edgeFnUrl = `${sbUrl.replace(/\/$/, '')}/functions/v1/projuris-sync`;
 
-  if (label) label.textContent = 'Sincronizando audiências…';
-  if (bar)   bar.style.width   = '30%';
+  // Carrega credenciais salvas do localStorage
+  const savedUser = localStorage.getItem('projuris_usuario') || '';
+  const savedPass = localStorage.getItem('projuris_senha')   || '';
+  const emailInput = document.getElementById('projuris-email-input');
+  const senhaInput = document.getElementById('projuris-senha-input');
+  if (emailInput && savedUser && !emailInput.value) emailInput.value = savedUser;
+  if (senhaInput && savedPass && !senhaInput.value) senhaInput.value = savedPass;
+  const projurisUser = (emailInput && emailInput.value.trim()) || savedUser;
+  const projurisPass = (senhaInput && senhaInput.value.trim()) || savedPass;
+
+  if (!projurisUser || !projurisPass) {
+    if (wrap)  wrap.style.display = 'none';
+    if (btn)   btn.disabled       = false;
+    document.getElementById('projuris-cred-wrap').style.display = 'flex';
+    document.getElementById('projuris-cred-status').textContent = '⚠️ Informe o email e senha do Projuris ADV';
+    showToast('Configure seu login do Projuris ADV antes de sincronizar.');
+    return;
+  }
+
+  if (label) label.textContent = 'Autenticando no Projuris ADV…';
+  if (bar)   bar.style.width   = '20%';
 
   fetch(edgeFnUrl, {
     method: 'POST',
@@ -13010,6 +13038,7 @@ function pautaSyncIniciar() {
       'Authorization': `Bearer ${sbKey}`,
       'Content-Type':  'application/json',
     },
+    body: JSON.stringify({ projuris_usuario: projurisUser, projuris_senha: projurisPass }),
   })
   .then(async r => {
     const data = await r.json().catch(() => ({}));
@@ -13038,7 +13067,23 @@ function pautaSyncIniciar() {
   });
 }
 
-function _pjeConectarSSE(btnRef) {
+function projurisSalvarCreds() {
+  const emailInput = document.getElementById('projuris-email-input');
+  const senhaInput = document.getElementById('projuris-senha-input');
+  const status     = document.getElementById('projuris-cred-status');
+  const u = emailInput && emailInput.value.trim();
+  const p = senhaInput && senhaInput.value.trim();
+  if (!u || !p) { if (status) status.textContent = '⚠️ Preencha email e senha'; return; }
+  localStorage.setItem('projuris_usuario', u);
+  localStorage.setItem('projuris_senha',   p);
+  if (status) status.textContent = '✅ Salvo!';
+  setTimeout(() => {
+    document.getElementById('projuris-cred-wrap').style.display = 'none';
+    pautaSyncIniciar();
+  }, 600);
+}
+
+
   if (_sseSource) { _sseSource.close(); _sseSource = null; }
   _sseSource = new EventSource(`${_PJE_SERVER}/stream`);
   _sseSource.onmessage = (e) => {
