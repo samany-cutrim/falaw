@@ -12710,10 +12710,14 @@ async function loadAudiencias() {
   const listEl = document.getElementById('audiencias-list');
   if (!listEl) return;
   listEl.innerHTML = '<p style="color:var(--c-muted);font-size:13px;padding:20px 0">Carregando…</p>';
-  const sb = getSB();
+  // Usa sempre window.SB_URL/SB_KEY (service_role, definido no sb-config.js)
+  // para garantir leitura mesmo sem configuração manual no localStorage
+  const _sbUrl = window.SB_URL || sbUrl();
+  const _sbKey = window.SB_KEY || sbKey();
   let items = [];
-  if (sb) {
+  if (_sbUrl && _sbKey) {
     try {
+      const sb = supabase.createClient(_sbUrl, _sbKey);
       const today = new Date().toISOString().slice(0,10);
       let q = sb.from('pauta_audiencias').select('*')
         .gte('data_audiencia', today)
