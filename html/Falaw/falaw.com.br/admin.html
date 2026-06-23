@@ -12716,9 +12716,8 @@ async function loadAudiencias() {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
       const today = new Date().toISOString().slice(0,10);
-      const startOfMonth = today.slice(0,7) + '-01'; // busca desde o início do mês para stats corretos
       let q = sb.from('pauta_audiencias').select('*')
-        .gte('data_audiencia', startOfMonth)
+        .gte('data_audiencia', today)
         .order('data_audiencia', { ascending: true })
         .order('horario',       { ascending: true });
       const { data, error } = await q;
@@ -12739,7 +12738,7 @@ async function loadAudiencias() {
   const fBusca = (document.getElementById('aud-filter-busca')?.value    || '').toLowerCase().trim();
 
   const filtered = items.filter(a => {
-    // sem filtro de mês ativo: esconde itens passados da lista (mas mantém nos stats)
+    // sem filtro de mês: mostra apenas hoje e datas futuras
     if (!fMes && a.data_audiencia < today) return false;
     if (fTipo && a.tipo_audiencia !== fTipo) return false;
     if (fMod  && a.modalidade    !== fMod)  return false;
