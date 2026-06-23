@@ -33,9 +33,11 @@ load_dotenv(_HERE / ".env")
 
 # ── Configuração ──────────────────────────────────────────────────────────────
 
-PROJURIS_BASE  = os.getenv("PROJURIS_BASE_URL", "https://service.projurisadv.com.br").rstrip("/")
-# Token capturado do browser: DevTools → Network → qualquer request → header Authorization: Bearer ...
-PROJURIS_TOKEN = os.getenv("PROJURIS_BEARER_TOKEN", "")
+PROJURIS_BASE      = os.getenv("PROJURIS_BASE_URL", "https://service.projurisadv.com.br").rstrip("/")
+PROJURIS_CLIENT_ID = os.getenv("PROJURIS_CLIENT_ID", "")
+PROJURIS_SECRET    = os.getenv("PROJURIS_CLIENT_SECRET", "")
+# Fallback: token estático capturado do browser (opcional)
+PROJURIS_TOKEN     = os.getenv("PROJURIS_BEARER_TOKEN", "")
 
 DIAS_PAUTA = int(os.getenv("DIAS_PAUTA", "365"))
 
@@ -56,17 +58,70 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
-# ── Autenticação ──────────────────────────────────────────────────────────────
+# ── Autenticação OAuth2 (client_credentials) ──────────────────────────────────
+
+_token_cache: dict = {"token": "", "expires_at": 0.0}
+
+# Endpoints candidatos do Projuris ADV (tenta em ordem)
+_AUTH_ENDPOINTS = [
+    "https://identity.projurisadv.com.br/connect/token",
+    f"{PROJURIS_BASE}/adv-service/oauth/token",
+    f"{PROJURIS_BASE}/adv-service/auth/token",
+]
+
+
+def _obter_token() -> str:
+    """Obtém (ou reutiliza do cache) o access_token via OAuth2 client_credentials."""
+    now = datetime.utcnow().timestamp()
+
+    # Cache ainda válido
+    if _token_cache["token"] and now < _token_cache["expires_at"] - 60:
+        return _token_cache["token"]
+
+    # Token estático como fallback
+    if PROJURIS_TOKEN:
+        log.info("Usando PROJURIS_BEARER_TOKEN estático do .env")
+        return PROJURIS_TOKEN
+
+    if not PROJURIS_CLIENT_ID or not PROJURIS_SECRET:
+        raise RuntimeError(
+            "Configure PROJURIS_CLIENT_ID e PROJURIS_CLIENT_SECRET no .env"
+        )
+
+    last_err = None
+    for url in _AUTH_ENDPOINTS:
+        try:
+            resp = requests.post(
+                url,
+                data={
+                    "grant_type":    "client_credentials",
+                    "client_id":     PROJURIS_CLIENT_ID,
+                    "client_secret": PROJURIS_SECRET,
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=15,
+            )
+            if resp.status_code == 200:
+                body = resp.json()
+                token = body.get("access_token") or body.get("token", "")
+                if token:
+                    expires_in = int(body.get("expires_in", 3600))
+                    _token_cache["token"]      = token
+                    _token_cache["expires_at"] = now + expires_in
+                    log.info(f"Token Projuris obtido via {url} (expira em {expires_in}s)")
+                    return token
+        except requests.RequestException as exc:
+            last_err = exc
+            continue
+
+    raise RuntimeError(
+        f"Falha ao autenticar no Projuris ADV. Último erro: {last_err}"
+    )
+
 
 def _headers() -> dict:
-    if not PROJURIS_TOKEN:
-        raise RuntimeError(
-            "Configure PROJURIS_BEARER_TOKEN no .env.\n"
-            "Como obter: abra o Projuris no browser → F12 → Network → "
-            "qualquer request → copie o header  Authorization: Bearer <token>"
-        )
     return {
-        "Authorization": f"Bearer {PROJURIS_TOKEN}",
+        "Authorization": f"Bearer {_obter_token()}",
         "Content-Type":  "application/json",
         "Accept":        "application/json",
     }
