@@ -7277,11 +7277,14 @@ function generateInformativoHTML(d, heroBase64, photoBase64) {
         ${heroBase64
           ? `<tr><td style="padding:0;line-height:0;"><img src="${heroBase64}" alt="${esc(d.titulo || 'Falaw Advogados')}" style="display:block;width:100%;max-width:680px;height:auto;" /></td></tr>`
           : `<tr>
-          <td style="background: linear-gradient(135deg, #ffffff 0%, #550000 100%); padding:52px 48px 56px 48px; text-align:center;">
-            <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png" alt="Falaw Advogados" style="display:block; height:52px; width:auto; margin:0 auto 28px auto;" />
-            <p style="margin:0 0 14px 0; color:#a59065; font-size:11px; font-weight:bold; letter-spacing:1.6px; text-transform:uppercase;">${esc(d.subtitulo || 'Comunicado aos clientes')}</p>
-            <h1 style="margin:0; color:#1a1a1a; font-size:32px; line-height:1.25; font-weight:800;">${esc(d.titulo || '')}</h1>
-            <p style="margin:18px auto 0; max-width:520px; color:rgba(0,0,0,0.6); font-size:15px; line-height:1.7;">${esc(d.previsual || '')}</p>
+          <td style="background:#ffffff; padding:0; border-bottom:4px solid #a59065;">
+            <div style="background:linear-gradient(135deg,#550000 0%,#7a1a1a 100%);height:6px;"></div>
+            <div style="padding:44px 48px 48px 48px;text-align:center;">
+              <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png" alt="Falaw Advogados" style="display:block;height:52px;width:auto;margin:0 auto 24px auto;" />
+              <p style="margin:0 0 16px 0;color:#550000;font-size:11px;font-weight:bold;letter-spacing:1.8px;text-transform:uppercase;">${esc(d.subtitulo || 'Boletim Jurídico')}</p>
+              <h1 style="margin:0;color:#1a1a1a;font-size:30px;line-height:1.3;font-weight:800;">${esc(d.titulo || '')}</h1>
+              <p style="margin:18px auto 0;max-width:520px;color:#555555;font-size:15px;line-height:1.7;">${esc(d.previsual || '')}</p>
+            </div>
           </td>
         </tr>`
         }
@@ -7406,10 +7409,11 @@ function generateInformativoHTML(d, heroBase64, photoBase64) {
 </html>`;
 }
 
-/* ── Busca foto ilustrativa via Unsplash e retorna base64 ── */
+/* ── Busca foto ilustrativa via Picsum e retorna base64 ── */
 async function _infFetchImageBase64(keyword) {
-  const kw = encodeURIComponent((keyword || 'corporate law').replace(/["']/g, ''));
-  const url = `https://source.unsplash.com/680x380/?${kw},professional`;
+  // Usa o keyword como seed para imagem consistente (Picsum Photos)
+  const seed = encodeURIComponent((keyword || 'law').replace(/\s+/g,'-').toLowerCase().slice(0,30));
+  const url = `https://picsum.photos/seed/${seed}/680/380`;
   const resp = await fetch(url);
   if (!resp.ok) throw new Error('Foto não encontrada');
   const blob = await resp.blob();
@@ -7425,38 +7429,32 @@ async function _infFetchImageBase64(keyword) {
 async function _infBuildHeroBase64(d) {
   const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-  // Pré-carrega logo como base64 para evitar problemas de CORS no html2canvas
-  async function _logoToBase64(url) {
-    const resp = await fetch(url);
-    const blob = await resp.blob();
-    return new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result);
-      r.onerror = rej;
-      r.readAsDataURL(blob);
-    });
-  }
-  const logoUrl = 'https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png';
-  const logoSrc = await _logoToBase64(logoUrl).catch(() => logoUrl);
+  // Pré-carrega logo como base64 para evitar CORS no html2canvas
+  let logoSrc = null;
+  try {
+    const resp = await fetch('https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png');
+    if (resp.ok) {
+      const blob = await resp.blob();
+      logoSrc = await new Promise((res, rej) => {
+        const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob);
+      });
+    }
+  } catch(e) { /* sem logo é ok */ }
 
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;';
 
   const heroDiv = document.createElement('div');
-  heroDiv.style.cssText = [
-    'width:680px',
-    'background:linear-gradient(135deg,#ffffff 0%,#550000 100%)',
-    'padding:52px 48px 60px 48px',
-    'text-align:center',
-    'font-family:Arial,Helvetica,sans-serif',
-    'box-sizing:border-box',
-  ].join(';');
+  heroDiv.style.cssText = 'width:680px;background:#ffffff;font-family:Arial,Helvetica,sans-serif;box-sizing:border-box;border-bottom:4px solid #a59065;';
 
   heroDiv.innerHTML = [
-    `<img src="${logoSrc}" style="height:52px;width:auto;margin:0 auto 28px;display:block;"/>`,
-    `<p style="margin:0 0 14px;color:#a59065;font-size:11px;font-weight:bold;letter-spacing:1.6px;text-transform:uppercase;">${esc(d.subtitulo || '')}</p>`,
-    `<h1 style="margin:0;color:#1a1a1a;font-size:32px;line-height:1.25;font-weight:800;">${esc(d.titulo || '')}</h1>`,
-    `<p style="margin:20px auto 0;max-width:480px;color:rgba(0,0,0,0.6);font-size:15px;line-height:1.7;">${esc(d.previsual || '')}</p>`,
+    `<div style="background:linear-gradient(135deg,#550000 0%,#7a1a1a 100%);height:6px;"></div>`,
+    `<div style="padding:44px 48px 48px 48px;text-align:center;">`,
+    logoSrc ? `<img src="${logoSrc}" style="height:52px;width:auto;margin:0 auto 24px;display:block;"/>` : `<p style="margin:0 0 24px;color:#550000;font-size:22px;font-weight:900;letter-spacing:3px;">FALAW</p>`,
+    `<p style="margin:0 0 16px;color:#550000;font-size:11px;font-weight:bold;letter-spacing:1.8px;text-transform:uppercase;">${esc(d.subtitulo || 'Boletim Jurídico')}</p>`,
+    `<h1 style="margin:0;color:#1a1a1a;font-size:30px;line-height:1.3;font-weight:800;">${esc(d.titulo || '')}</h1>`,
+    `<p style="margin:18px auto 0;max-width:520px;color:#555555;font-size:15px;line-height:1.7;">${esc(d.previsual || '')}</p>`,
+    `</div>`,
   ].join('');
 
   el.appendChild(heroDiv);
