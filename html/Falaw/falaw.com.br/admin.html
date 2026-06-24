@@ -7130,43 +7130,45 @@ async function gerarInformativo() {
 
     status.textContent = 'Consultando IA…';
 
-    const prompt = `Você é um advogado especialista em comunicação jurídica corporativa do escritório Falaw Advogados.
-Com base no texto abaixo, gere um informativo jurídico formal para clientes empresariais.
+    const prompt = `Você é um advogado especialista do escritório Falaw Advogados redigindo um INFORMATIVO JURÍDICO — boletim de atualização legislativa e jurisprudencial enviado periodicamente a clientes empresariais. O tom deve ser editorial e analítico (como um briefing de consultoria jurídica), NÃO publicitário. Use linguagem técnica acessível, direta e objetiva. Apresente os fatos, explique os impactos reais e oriente o cliente sobre o que fazer — sem exageros ou linguagem de vendas.
+
+Com base no texto abaixo, gere o conteúdo do informativo.
 Responda EXCLUSIVAMENTE com JSON válido (sem texto fora do JSON), no seguinte formato:
 
 {
-  "subtitulo": "Comunicado aos clientes · [área jurídica resumida]",
-  "titulo": "Título principal impactante e preciso (máx 120 chars)",
-  "previsual": "Frase curta de pré-visualização (1 linha, para email clients)",
-  "intro": "Parágrafo de introdução (2-3 linhas, contextualizando a decisão/notícia para clientes empresariais)",
-  "sig_titulo": "O que isso significa para sua empresa?",
-  "sig_texto": "Explicação prática e direta do impacto (2-3 linhas)",
+  "subtitulo": "Boletim Jurídico · [área jurídica resumida]",
+  "titulo": "Título preciso que descreve a atualização (máx 120 chars)",
+  "previsual": "Frase curta de pré-visualização resumindo o que mudou (1 linha)",
+  "intro": "Parágrafo introdutório contextualizando a decisão/norma/evento: o que aconteceu, quando, qual órgão/instância e por quê é relevante para empresas (3-4 linhas, tom jornalístico-jurídico)",
+  "sig_titulo": "O que muda na prática?",
+  "sig_texto": "Explicação direta dos efeitos práticos imediatos para empresas (2-3 linhas, sem jargão excessivo)",
   "cards": [
-    { "titulo": "PONTO-CHAVE 1 (maiúsculas, máx 6 palavras)", "texto": "Explicação objetiva em 1-2 linhas" },
-    { "titulo": "PONTO-CHAVE 2", "texto": "Explicação" },
-    { "titulo": "PONTO-CHAVE 3", "texto": "Explicação" },
-    { "titulo": "PONTO-CHAVE 4", "texto": "Explicação" }
+    { "titulo": "PONTO DE ATENÇÃO 1 (maiúsculas, máx 6 palavras)", "texto": "Descrição factual e objetiva em 1-2 linhas" },
+    { "titulo": "PONTO DE ATENÇÃO 2", "texto": "Descrição" },
+    { "titulo": "PONTO DE ATENÇÃO 3", "texto": "Descrição" },
+    { "titulo": "PONTO DE ATENÇÃO 4", "texto": "Descrição" }
   ],
-  "setores_titulo": "Setores diretamente impactados",
-  "setores_intro": "Breve frase introdutória dos setores afetados",
+  "setores_titulo": "Segmentos e atividades afetados",
+  "setores_intro": "Breve frase indicando quais perfis de empresa devem prestar maior atenção",
   "setores": [
-    { "nome": "Nome do setor", "detalhe": "Impacto ou atividade específica" },
-    { "nome": "Nome do setor", "detalhe": "Impacto" },
-    { "nome": "Nome do setor", "detalhe": "Impacto" },
-    { "nome": "Nome do setor", "detalhe": "Impacto" },
-    { "nome": "Nome do setor", "detalhe": "Impacto" },
-    { "nome": "Nome do setor", "detalhe": "Impacto" }
+    { "nome": "Nome do setor/atividade", "detalhe": "Razão específica do impacto neste setor" },
+    { "nome": "Nome do setor", "detalhe": "Razão do impacto" },
+    { "nome": "Nome do setor", "detalhe": "Razão do impacto" },
+    { "nome": "Nome do setor", "detalhe": "Razão do impacto" },
+    { "nome": "Nome do setor", "detalhe": "Razão do impacto" },
+    { "nome": "Nome do setor", "detalhe": "Razão do impacto" }
   ],
-  "apoio_titulo": "Como a FALAW pode apoiar sua empresa",
+  "apoio_titulo": "Como a Falaw pode orientar sua empresa",
   "apoio": [
-    { "num": "01", "titulo": "Título do serviço/ação", "texto": "Descrição em 1-2 linhas do que a Falaw fará" },
-    { "num": "02", "titulo": "Título", "texto": "Descrição" },
-    { "num": "03", "titulo": "Título", "texto": "Descrição" },
-    { "num": "04", "titulo": "Título", "texto": "Descrição" }
+    { "num": "01", "titulo": "Análise de impacto", "texto": "O que a Falaw avalia ou verifica para o cliente neste contexto (1-2 linhas, foco em orientação, não em venda)" },
+    { "num": "02", "titulo": "Título da orientação", "texto": "Descrição" },
+    { "num": "03", "titulo": "Título da orientação", "texto": "Descrição" },
+    { "num": "04", "titulo": "Título da orientação", "texto": "Descrição" }
   ],
-  "cta_titulo": "Frase de chamada para ação (impactante, máx 15 palavras)",
-  "cta_texto": "Texto de apoio para o CTA (2-3 linhas orientando o cliente a agir)",
-  "cta_botao": "Texto do botão (ex: Falar com especialista)"
+  "cta_titulo": "Ficou com dúvidas sobre como isso afeta sua empresa?",
+  "cta_texto": "Nossa equipe está disponível para esclarecer os impactos específicos para o seu negócio e orientar as medidas adequadas.",
+  "cta_botao": "Falar com um especialista",
+  "imageKeyword": "palavra-chave em inglês para buscar uma foto relevante ao tema (ex: 'logistics truck', 'labor law', 'corporate meeting', 'warehouse workers', 'delivery platform')"
 }
 
 Texto base:
@@ -7175,9 +7177,9 @@ ${baseText.slice(0, 6000)}
 """`;
 
     const raw = await callAI([
-      { role: 'system', content: 'Você é especialista em comunicação jurídica corporativa. Responda SEMPRE em JSON válido, sem texto fora do JSON.' },
+      { role: 'system', content: 'Você é advogado especialista em comunicação jurídica corporativa. Redija como um boletim informativo técnico-analítico, não como peça de marketing. Responda SEMPRE em JSON válido, sem texto fora do JSON.' },
       { role: 'user', content: prompt }
-    ], 0.65);
+    ], 0.55);
 
     let data;
     try {
@@ -7192,8 +7194,14 @@ ${baseText.slice(0, 6000)}
     let heroBase64 = null;
     try { heroBase64 = await _infBuildHeroBase64(data); } catch(e) { console.warn('Hero image:', e.message); }
 
+    status.textContent = 'Buscando foto ilustrativa…';
+    let photoBase64 = null;
+    if (data.imageKeyword) {
+      try { photoBase64 = await _infFetchImageBase64(data.imageKeyword); } catch(e) { console.warn('Photo fetch:', e.message); }
+    }
+
     status.textContent = 'Montando preview…';
-    _infCurrentHTML = generateInformativoHTML(data, heroBase64);
+    _infCurrentHTML = generateInformativoHTML(data, heroBase64, photoBase64);
     _infCurrentData = data;
 
     // Atualiza iframe
@@ -7220,7 +7228,7 @@ ${baseText.slice(0, 6000)}
   }
 }
 
-function generateInformativoHTML(d, heroBase64) {
+function generateInformativoHTML(d, heroBase64, photoBase64) {
   const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const logoBranco = 'https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png';
 
@@ -7269,11 +7277,11 @@ function generateInformativoHTML(d, heroBase64) {
         ${heroBase64
           ? `<tr><td style="padding:0;line-height:0;"><img src="${heroBase64}" alt="${esc(d.titulo || 'Falaw Advogados')}" style="display:block;width:100%;max-width:680px;height:auto;" /></td></tr>`
           : `<tr>
-          <td style="background: linear-gradient(135deg, #060E1A 0%, #550000 100%); padding:52px 48px 56px 48px; text-align:center;">
-            <img src="${logoBranco}" alt="Falaw Advogados" style="display:block; height:44px; width:auto; margin:0 auto 28px auto;" />
+          <td style="background: linear-gradient(135deg, #ffffff 0%, #550000 100%); padding:52px 48px 56px 48px; text-align:center;">
+            <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png" alt="Falaw Advogados" style="display:block; height:52px; width:auto; margin:0 auto 28px auto;" />
             <p style="margin:0 0 14px 0; color:#a59065; font-size:11px; font-weight:bold; letter-spacing:1.6px; text-transform:uppercase;">${esc(d.subtitulo || 'Comunicado aos clientes')}</p>
-            <h1 style="margin:0; color:#ffffff; font-size:32px; line-height:1.25; font-weight:800;">${esc(d.titulo || '')}</h1>
-            <p style="margin:18px auto 0; max-width:520px; color:rgba(255,255,255,0.7); font-size:15px; line-height:1.7;">${esc(d.previsual || '')}</p>
+            <h1 style="margin:0; color:#1a1a1a; font-size:32px; line-height:1.25; font-weight:800;">${esc(d.titulo || '')}</h1>
+            <p style="margin:18px auto 0; max-width:520px; color:rgba(0,0,0,0.6); font-size:15px; line-height:1.7;">${esc(d.previsual || '')}</p>
           </td>
         </tr>`
         }
@@ -7284,6 +7292,9 @@ function generateInformativoHTML(d, heroBase64) {
             <p style="margin:0; color:#ffffff; font-size:16px; line-height:1.75;">${esc(d.intro || '')}</p>
           </td>
         </tr>
+
+        ${photoBase64 ? `<!-- Foto ilustrativa -->
+        <tr><td style="padding:0;line-height:0;"><img src="${photoBase64}" alt="" style="display:block;width:100%;max-width:680px;height:auto;" /></td></tr>` : ''}
 
         <!-- O que isso significa -->
         <tr>
@@ -7365,11 +7376,10 @@ function generateInformativoHTML(d, heroBase64) {
           <td style="background-color:#550000; padding:34px 48px 38px 48px;">
             <table width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td width="34%" valign="top" style="padding-right:20px;">
+                <td width="34%" valign="middle" style="padding-right:20px;">
                   <img src="${logoBranco}" alt="Falaw Advogados" style="display:block; height:50px; width:auto;" />
                 </td>
                 <td width="66%" valign="top" style="border-left:1px solid rgba(165,144,101,0.45); padding-left:24px;">
-                  <p style="margin:0 0 12px 0; color:#a59065; font-size:14px; font-weight:bold; letter-spacing:1.4px; text-transform:uppercase;">FALAW Advogados</p>
                   <p style="margin:0; color:#ffffff; font-size:14px; line-height:1.75;">Av. Francisco Matarazzo, 1752 · Salas 414 e 415<br>Água Branca · São Paulo / SP · CEP 05001-200</p>
                   <p style="margin:16px 0 0 0; color:#f4f3f2; font-size:14px; line-height:1.8;">
                     <strong>Telefone:</strong> +55 11 2936-0076<br>
@@ -7396,48 +7406,69 @@ function generateInformativoHTML(d, heroBase64) {
 </html>`;
 }
 
+/* ── Busca foto ilustrativa via Unsplash e retorna base64 ── */
+async function _infFetchImageBase64(keyword) {
+  const kw = encodeURIComponent((keyword || 'corporate law').replace(/["']/g, ''));
+  const url = `https://source.unsplash.com/680x380/?${kw},professional`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error('Foto não encontrada');
+  const blob = await resp.blob();
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = () => res(reader.result);
+    reader.onerror = rej;
+    reader.readAsDataURL(blob);
+  });
+}
+
 /* ── Gera imagem da capa (hero) e retorna base64 para embutir no e-mail ── */
 async function _infBuildHeroBase64(d) {
   const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // Pré-carrega logo como base64 para evitar problemas de CORS no html2canvas
+  async function _logoToBase64(url) {
+    const resp = await fetch(url);
+    const blob = await resp.blob();
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = rej;
+      r.readAsDataURL(blob);
+    });
+  }
+  const logoUrl = 'https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png';
+  const logoSrc = await _logoToBase64(logoUrl).catch(() => logoUrl);
+
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;';
 
   const heroDiv = document.createElement('div');
   heroDiv.style.cssText = [
     'width:680px',
-    'background:linear-gradient(135deg,#060E1A 0%,#550000 100%)',
+    'background:linear-gradient(135deg,#ffffff 0%,#550000 100%)',
     'padding:52px 48px 60px 48px',
     'text-align:center',
     'font-family:Arial,Helvetica,sans-serif',
     'box-sizing:border-box',
   ].join(';');
 
-  const logo = 'https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png';
   heroDiv.innerHTML = [
-    `<img src="${logo}" crossorigin="anonymous" style="height:44px;width:auto;margin:0 auto 28px;display:block;"/>`,
+    `<img src="${logoSrc}" style="height:52px;width:auto;margin:0 auto 28px;display:block;"/>`,
     `<p style="margin:0 0 14px;color:#a59065;font-size:11px;font-weight:bold;letter-spacing:1.6px;text-transform:uppercase;">${esc(d.subtitulo || '')}</p>`,
-    `<h1 style="margin:0;color:#ffffff;font-size:32px;line-height:1.25;font-weight:800;">${esc(d.titulo || '')}</h1>`,
-    `<p style="margin:20px auto 0;max-width:480px;color:rgba(255,255,255,.7);font-size:15px;line-height:1.7;">${esc(d.previsual || '')}</p>`,
+    `<h1 style="margin:0;color:#1a1a1a;font-size:32px;line-height:1.25;font-weight:800;">${esc(d.titulo || '')}</h1>`,
+    `<p style="margin:20px auto 0;max-width:480px;color:rgba(0,0,0,0.6);font-size:15px;line-height:1.7;">${esc(d.previsual || '')}</p>`,
   ].join('');
 
   el.appendChild(heroDiv);
   document.body.appendChild(el);
-
-  // Aguarda carregamento da imagem do logo
-  const img = heroDiv.querySelector('img');
-  await new Promise(resolve => {
-    if (!img || img.complete) return resolve();
-    img.onload = resolve;
-    img.onerror = resolve;
-    setTimeout(resolve, 3000);
-  });
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
   try {
     const canvas = await html2canvas(heroDiv, {
       scale: 2,
-      useCORS: true,
-      backgroundColor: '#060E1A',
+      useCORS: false,
+      allowTaint: false,
+      backgroundColor: '#ffffff',
       logging: false,
       width: 680,
       windowWidth: 680,
