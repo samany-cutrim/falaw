@@ -2288,9 +2288,7 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
               <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="infCopiarHTML()">📋 Copiar HTML</button>
               <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="infBaixarHTML()">⬇ Baixar HTML</button>
               <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="infEditar()">✏ Editar</button>
-              <button type="button" class="btn btn-primary" style="font-size:11px;padding:5px 14px" id="inf-btn-img" onclick="infGerarImagens()">📸 Gerar Imagens</button>
             </div>
-            <span id="inf-img-status" style="font-size:11px;color:var(--c-muted);margin-top:6px;display:block"></span>
           </div>
           <iframe id="inf-preview-frame"
             style="width:100%;border:1px solid #e8eaf0;border-radius:4px;min-height:600px;display:block"
@@ -7190,8 +7188,12 @@ ${baseText.slice(0, 6000)}
       return;
     }
 
+    status.textContent = 'Gerando imagem da capa…';
+    let heroBase64 = null;
+    try { heroBase64 = await _infBuildHeroBase64(data); } catch(e) { console.warn('Hero image:', e.message); }
+
     status.textContent = 'Montando preview…';
-    _infCurrentHTML = generateInformativoHTML(data);
+    _infCurrentHTML = generateInformativoHTML(data, heroBase64);
     _infCurrentData = data;
 
     // Atualiza iframe
@@ -7218,7 +7220,7 @@ ${baseText.slice(0, 6000)}
   }
 }
 
-function generateInformativoHTML(d) {
+function generateInformativoHTML(d, heroBase64) {
   const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const logoBranco = 'https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png';
 
@@ -7264,14 +7266,17 @@ function generateInformativoHTML(d) {
       <table width="680" cellpadding="0" cellspacing="0" border="0" style="width:680px; max-width:680px; background-color:#ffffff; border-radius:18px; overflow:hidden; box-shadow:0 18px 50px rgba(0,0,0,0.14);">
 
         <!-- Cabeçalho / Hero -->
-        <tr>
+        ${heroBase64
+          ? `<tr><td style="padding:0;line-height:0;"><img src="${heroBase64}" alt="${esc(d.titulo || 'Falaw Advogados')}" style="display:block;width:100%;max-width:680px;height:auto;" /></td></tr>`
+          : `<tr>
           <td style="background: linear-gradient(135deg, #060E1A 0%, #550000 100%); padding:52px 48px 56px 48px; text-align:center;">
             <img src="${logoBranco}" alt="Falaw Advogados" style="display:block; height:44px; width:auto; margin:0 auto 28px auto;" />
             <p style="margin:0 0 14px 0; color:#a59065; font-size:11px; font-weight:bold; letter-spacing:1.6px; text-transform:uppercase;">${esc(d.subtitulo || 'Comunicado aos clientes')}</p>
             <h1 style="margin:0; color:#ffffff; font-size:32px; line-height:1.25; font-weight:800;">${esc(d.titulo || '')}</h1>
             <p style="margin:18px auto 0; max-width:520px; color:rgba(255,255,255,0.7); font-size:15px; line-height:1.7;">${esc(d.previsual || '')}</p>
           </td>
-        </tr>
+        </tr>`
+        }
 
         <!-- Intro -->
         <tr>
@@ -7391,84 +7396,56 @@ function generateInformativoHTML(d) {
 </html>`;
 }
 
-/* ── Geração de imagens PNG do informativo ── */
-async function infGerarImagens() {
-  if (!_infCurrentHTML) { showToast('Gere o informativo primeiro.'); return; }
-  const btn = document.getElementById('inf-btn-img');
-  const status = document.getElementById('inf-img-status');
-  btn.disabled = true;
-  btn.textContent = '⏳ Gerando…';
-  status.textContent = '';
+/* ── Gera imagem da capa (hero) e retorna base64 para embutir no e-mail ── */
+async function _infBuildHeroBase64(d) {
+  const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;';
 
-  // Seções a exportar como imagens: cada bloco principal do template
-  const blocos = [
-    { id: 'inf-img-hero',    label: 'capa' },
-    { id: 'inf-img-cards',   label: 'cards' },
-    { id: 'inf-img-setores', label: 'setores' },
-    { id: 'inf-img-apoio',   label: 'apoio' },
-    { id: 'inf-img-cta',     label: 'cta' },
-  ];
+  const heroDiv = document.createElement('div');
+  heroDiv.style.cssText = [
+    'width:680px',
+    'background:linear-gradient(135deg,#060E1A 0%,#550000 100%)',
+    'padding:52px 48px 60px 48px',
+    'text-align:center',
+    'font-family:Arial,Helvetica,sans-serif',
+    'box-sizing:border-box',
+  ].join(';');
 
-  // Cria um container temporário fora de tela para renderizar os blocos
-  const wrap = document.createElement('div');
-  wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:680px;font-family:Arial,Helvetica,sans-serif;';
-  document.body.appendChild(wrap);
+  const logo = 'https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png';
+  heroDiv.innerHTML = [
+    `<img src="${logo}" crossorigin="anonymous" style="height:44px;width:auto;margin:0 auto 28px;display:block;"/>`,
+    `<p style="margin:0 0 14px;color:#a59065;font-size:11px;font-weight:bold;letter-spacing:1.6px;text-transform:uppercase;">${esc(d.subtitulo || '')}</p>`,
+    `<h1 style="margin:0;color:#ffffff;font-size:32px;line-height:1.25;font-weight:800;">${esc(d.titulo || '')}</h1>`,
+    `<p style="margin:20px auto 0;max-width:480px;color:rgba(255,255,255,.7);font-size:15px;line-height:1.7;">${esc(d.previsual || '')}</p>`,
+  ].join('');
 
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(_infCurrentHTML, 'text/html');
+  el.appendChild(heroDiv);
+  document.body.appendChild(el);
 
-  // Monta os blocos renderizáveis a partir do HTML gerado
-  const innerTable = doc.querySelector('table table');
-  if (!innerTable) {
-    showToast('Não foi possível processar o informativo.');
-    btn.disabled = false; btn.textContent = '📸 Gerar Imagens'; return;
-  }
-  const rows = Array.from(innerTable.querySelectorAll('tr'));
-
-  // Agrupa as linhas da tabela em blocos temáticos por posição
-  // 0=hero, 1=intro, 2=sig, 3=cards, 4=setores, 5=apoio, 6=cta, 7=footer, 8=tagline
-  const grupos = [
-    { label: 'capa',    indices: [0, 1, 2],    bg: '#060E1A' },
-    { label: 'cards',   indices: [3],          bg: '#ffffff' },
-    { label: 'setores', indices: [4],          bg: '#f4f3f2' },
-    { label: 'apoio',   indices: [5],          bg: '#ffffff' },
-    { label: 'cta',     indices: [6, 7, 8],    bg: '#ffffff' },
-  ];
-
-  const titulo = (_infCurrentData && _infCurrentData.titulo)
-    ? _infCurrentData.titulo.replace(/[^a-zA-Z0-9\u00C0-\u00FF\s]/g,'').trim().substring(0,30).replace(/\s+/g,'-').toLowerCase()
-    : 'informativo';
+  // Aguarda carregamento da imagem do logo
+  const img = heroDiv.querySelector('img');
+  await new Promise(resolve => {
+    if (!img || img.complete) return resolve();
+    img.onload = resolve;
+    img.onerror = resolve;
+    setTimeout(resolve, 3000);
+  });
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
   try {
-    for (const grupo of grupos) {
-      status.textContent = `Gerando imagem: ${grupo.label}…`;
-      const tbl = document.createElement('table');
-      tbl.setAttribute('width','680');
-      tbl.style.cssText = `width:680px;max-width:680px;background:${grupo.bg};border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;`;
-      grupo.indices.forEach(idx => {
-        if (rows[idx]) tbl.appendChild(rows[idx].cloneNode(true));
-      });
-      wrap.innerHTML = '';
-      wrap.appendChild(tbl);
-      // Aguarda render
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-      const canvas = await html2canvas(tbl, { scale: 2, useCORS: true, backgroundColor: grupo.bg, logging: false });
-      const link = document.createElement('a');
-      link.download = `falaw-${titulo}-${grupo.label}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      await new Promise(r => setTimeout(r, 400));
-    }
-    status.textContent = `✓ ${grupos.length} imagens baixadas!`;
-    setTimeout(() => { status.textContent = ''; }, 4000);
-  } catch(e) {
-    status.textContent = 'Erro: ' + e.message;
-    showToast('Erro ao gerar imagem: ' + e.message);
+    const canvas = await html2canvas(heroDiv, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#060E1A',
+      logging: false,
+      width: 680,
+      windowWidth: 680,
+    });
+    return canvas.toDataURL('image/png');
+  } finally {
+    document.body.removeChild(el);
   }
-
-  document.body.removeChild(wrap);
-  btn.disabled = false;
-  btn.textContent = '📸 Gerar Imagens';
 }
 
 function infCopiarHTML() {
