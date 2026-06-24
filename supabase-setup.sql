@@ -364,3 +364,31 @@ CREATE TABLE IF NOT EXISTS "ClientDashHighlight" (
 ALTER TABLE "ClientDashHighlight" ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "anon full access" ON "ClientDashHighlight";
 CREATE POLICY "anon full access" ON "ClientDashHighlight" FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- Pesquisas de Qualidade de Audiências
+CREATE TABLE IF NOT EXISTS pesquisas (
+  id                        TEXT PRIMARY KEY,
+  tipo                      TEXT NOT NULL CHECK (tipo IN ('advogado','preposto')),
+  data_audiencia            DATE,
+  vara_comarca              TEXT,
+  num_processo              TEXT,
+  empresa                   TEXT,
+  tipo_audiencia            TEXT CHECK (tipo_audiencia IN ('virtual','presencial')),
+  orientacoes_antecedencia  TEXT,
+  orientacoes_claras        TEXT,
+  info_claras_depoimento    TEXT,
+  contato_previo            TEXT,
+  intercorrencia            TEXT,
+  intercorrencia_descricao  TEXT,
+  falha_tecnica             TEXT,
+  preposto_preparado        TEXT,
+  respondente_preparado     TEXT,
+  escala_avaliacao          INTEGER CHECK (escala_avaliacao BETWEEN 1 AND 5),
+  observacoes               TEXT,
+  submitted_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE pesquisas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon insert pesquisas" ON pesquisas;
+CREATE POLICY "anon insert pesquisas" ON pesquisas FOR INSERT TO anon WITH CHECK (true);
+DROP POLICY IF EXISTS "auth read pesquisas" ON pesquisas;
+CREATE POLICY "auth read pesquisas"   ON pesquisas FOR SELECT TO authenticated USING (true);
