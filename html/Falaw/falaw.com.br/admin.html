@@ -2284,11 +2284,13 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
         <div style="background:#fff;border:1px solid #e0e4f0;border-radius:6px;padding:20px 24px;margin-bottom:16px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
             <h3 style="margin:0;font-family:var(--f-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E">👁 Preview do E-mail</h3>
-            <div style="display:flex;gap:8px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="infCopiarHTML()">📋 Copiar HTML</button>
               <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="infBaixarHTML()">⬇ Baixar HTML</button>
               <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="infEditar()">✏ Editar</button>
+              <button type="button" class="btn btn-primary" style="font-size:11px;padding:5px 14px" id="inf-btn-img" onclick="infGerarImagens()">📸 Gerar Imagens</button>
             </div>
+            <span id="inf-img-status" style="font-size:11px;color:var(--c-muted);margin-top:6px;display:block"></span>
           </div>
           <iframe id="inf-preview-frame"
             style="width:100%;border:1px solid #e8eaf0;border-radius:4px;min-height:600px;display:block"
@@ -7071,6 +7073,7 @@ function _confirmEmailSend(email, company, period) {
 ══════════════════════════════════════ */
 const INF_STORE_KEY = 'falaw_informativos_v1';
 let _infCurrentHTML = '';
+let _infCurrentData = null;
 
 function infSetMode(mode) { /* modo unificado — função mantida por compatibilidade */ }
 
@@ -7134,28 +7137,38 @@ Com base no texto abaixo, gere um informativo jurídico formal para clientes emp
 Responda EXCLUSIVAMENTE com JSON válido (sem texto fora do JSON), no seguinte formato:
 
 {
-  "subtitulo": "Comunicado aos clientes · [área jurídica e tema resumido]",
+  "subtitulo": "Comunicado aos clientes · [área jurídica resumida]",
   "titulo": "Título principal impactante e preciso (máx 120 chars)",
-  "resumo": "Parágrafo resumo abaixo do título (2-3 linhas)",
-  "intro": ["parágrafo 1 iniciando com 'Prezados clientes,'", "parágrafo 2 descrevendo a decisão/fato"],
-  "box_decisao": {
-    "titulo": "O que foi decidido / O que mudou",
-    "itens": ["item 1", "item 2", "item 3"]
-  },
-  "secoes": [
-    { "titulo": "Título da seção 2", "paragrafos": ["..."] },
-    { "titulo": "Título da seção 3", "paragrafos": ["..."] }
+  "previsual": "Frase curta de pré-visualização (1 linha, para email clients)",
+  "intro": "Parágrafo de introdução (2-3 linhas, contextualizando a decisão/notícia para clientes empresariais)",
+  "sig_titulo": "O que isso significa para sua empresa?",
+  "sig_texto": "Explicação prática e direta do impacto (2-3 linhas)",
+  "cards": [
+    { "titulo": "PONTO-CHAVE 1 (maiúsculas, máx 6 palavras)", "texto": "Explicação objetiva em 1-2 linhas" },
+    { "titulo": "PONTO-CHAVE 2", "texto": "Explicação" },
+    { "titulo": "PONTO-CHAVE 3", "texto": "Explicação" },
+    { "titulo": "PONTO-CHAVE 4", "texto": "Explicação" }
   ],
-  "atencao": { "titulo": "Atenção: ponto crítico", "texto": "Explicação do ponto de atenção em 2-3 linhas." },
-  "impacto": {
-    "titulo": "Impacto prático para as empresas",
-    "itens": ["item 1", "item 2", "item 3"]
-  },
-  "estrategia": {
-    "titulo": "Qual deve ser a estratégia agora?",
-    "paragrafos": ["...", "...", "..."],
-    "destaque": "Frase final de impacto em destaque vermelho (máx 100 chars)"
-  }
+  "setores_titulo": "Setores diretamente impactados",
+  "setores_intro": "Breve frase introdutória dos setores afetados",
+  "setores": [
+    { "nome": "Nome do setor", "detalhe": "Impacto ou atividade específica" },
+    { "nome": "Nome do setor", "detalhe": "Impacto" },
+    { "nome": "Nome do setor", "detalhe": "Impacto" },
+    { "nome": "Nome do setor", "detalhe": "Impacto" },
+    { "nome": "Nome do setor", "detalhe": "Impacto" },
+    { "nome": "Nome do setor", "detalhe": "Impacto" }
+  ],
+  "apoio_titulo": "Como a FALAW pode apoiar sua empresa",
+  "apoio": [
+    { "num": "01", "titulo": "Título do serviço/ação", "texto": "Descrição em 1-2 linhas do que a Falaw fará" },
+    { "num": "02", "titulo": "Título", "texto": "Descrição" },
+    { "num": "03", "titulo": "Título", "texto": "Descrição" },
+    { "num": "04", "titulo": "Título", "texto": "Descrição" }
+  ],
+  "cta_titulo": "Frase de chamada para ação (impactante, máx 15 palavras)",
+  "cta_texto": "Texto de apoio para o CTA (2-3 linhas orientando o cliente a agir)",
+  "cta_botao": "Texto do botão (ex: Falar com especialista)"
 }
 
 Texto base:
@@ -7179,6 +7192,7 @@ ${baseText.slice(0, 6000)}
 
     status.textContent = 'Montando preview…';
     _infCurrentHTML = generateInformativoHTML(data);
+    _infCurrentData = data;
 
     // Atualiza iframe
     const frame = document.getElementById('inf-preview-frame');
@@ -7206,174 +7220,255 @@ ${baseText.slice(0, 6000)}
 
 function generateInformativoHTML(d) {
   const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const logo = 'https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png';
-  const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const logoBranco = 'https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png';
 
-  const boxDecisaoRows = (d.box_decisao?.itens || []).map(it =>
-    `<tr><td style="padding:5px 0 5px 0;font-size:15px;line-height:1.75;color:#ffffff;">
-      <span style="color:#a59065;font-weight:700;margin-right:8px;">›</span>${esc(it)}
-    </td></tr>`
-  ).join('');
+  const cards = (d.cards || []).slice(0,4);
+  while (cards.length < 4) cards.push({ titulo: '', texto: '' });
+  const cardCell = c => `
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f3f2;border-radius:16px;">
+              <tr><td style="padding:24px;">
+                <p style="margin:0 0 12px 0;color:#550000;font-size:15px;line-height:1.4;font-weight:bold;text-transform:uppercase;">${esc(c.titulo)}</p>
+                <p style="margin:0;color:#333333;font-size:15px;line-height:1.65;">${esc(c.texto)}</p>
+              </td></tr>
+            </table>`;
 
-  const secoesHTML = (d.secoes || []).map(s => `
-  <tr><td style="padding:48px 58px 30px 58px;background:#ffffff;font-size:15px;line-height:1.78;color:#222222;">
-    <h2 style="margin:0 0 22px 0;color:#550000;font-size:23px;line-height:1.35;font-weight:800;">${esc(s.titulo)}</h2>
-    ${(s.paragrafos || []).map((p,i,a) =>
-      `<p style="margin:0${i < a.length-1 ? ' 0 18px 0' : ''};">${esc(p)}</p>`
-    ).join('\n    ')}
-  </td></tr>`).join('');
+  const setores = (d.setores || []).slice(0,6);
+  while (setores.length < 6) setores.push({ nome: '', detalhe: '' });
+  const setorCell = s => `
+              <td width="33.33%" valign="top" style="padding:8px;">
+                <p style="margin:0;color:#550000;font-size:15px;font-weight:bold;">${esc(s.nome)}</p>
+                <p style="margin:6px 0 0 0;color:#333333;font-size:14px;line-height:1.55;">${esc(s.detalhe)}</p>
+              </td>`;
 
-  const impactoRows = (d.impacto?.itens || []).map(it =>
-    `<tr><td style="font-size:15px;line-height:1.85;color:#ffffff;padding:4px 0;">
-      <span style="margin-right:8px;">›</span>${esc(it)}
-    </td></tr>`
-  ).join('');
-
-  const estrategiaParagrafos = (d.estrategia?.paragrafos || []).map((p,i,a) =>
-    `<p style="margin:0${i < a.length-1 ? ' 0 18px 0' : ''};">${esc(p)}</p>`
-  ).join('\n              ');
+  const apoio = (d.apoio || []).slice(0,4);
+  while (apoio.length < 4) apoio.push({ num: '', titulo: '', texto: '' });
+  const apoioCell = (a, pad) => `
+                <td width="50%" valign="top" style="${pad}">
+                  <p style="margin:0 0 8px 0;color:#a59065;font-size:24px;font-weight:bold;">${esc(a.num)}</p>
+                  <p style="margin:0 0 8px 0;color:#ffffff;font-size:16px;font-weight:bold;">${esc(a.titulo)}</p>
+                  <p style="margin:0;color:#f4f3f2;font-size:14px;line-height:1.6;">${esc(a.texto)}</p>
+                </td>`;
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(d.titulo || 'Informativo Falaw')}</title>
 </head>
-<body style="margin:0;padding:0;background:#d9d9d9;font-family:Raleway,Arial,Helvetica,sans-serif;color:#222222;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#d9d9d9;margin:0;padding:34px 0;">
+<body style="margin:0; padding:0; background-color:#f4f3f2; font-family:Arial, Helvetica, sans-serif; color:#2b2b2b;">
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent;">${esc(d.previsual || '')}</div>
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f3f2; padding:28px 0;">
     <tr><td align="center">
-      <table role="presentation" width="720" cellpadding="0" cellspacing="0" style="width:720px;max-width:720px;background:#ffffff;border-collapse:collapse;box-shadow:0 18px 42px rgba(0,0,0,0.10);">
+      <table width="680" cellpadding="0" cellspacing="0" border="0" style="width:680px; max-width:680px; background-color:#ffffff; border-radius:18px; overflow:hidden; box-shadow:0 18px 50px rgba(0,0,0,0.14);">
 
-        <!-- Cabeçalho -->
-        <tr><td style="background:#f4f3f2;padding:42px 52px 38px 52px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td align="left" style="vertical-align:middle;">
-                <img src="${logo}" alt="Falaw Advogados" style="display:block;height:50px;width:auto;" />
-              </td>
-              <td align="right" style="vertical-align:middle;font-size:12px;line-height:1.55;color:#550000;letter-spacing:0.2px;">
-                <span style="color:#7A7672">${today}</span>
-              </td>
-            </tr>
-          </table>
-        </td></tr>
+        <!-- Cabeçalho / Hero -->
+        <tr>
+          <td style="background: linear-gradient(135deg, #060E1A 0%, #550000 100%); padding:52px 48px 56px 48px; text-align:center;">
+            <img src="${logoBranco}" alt="Falaw Advogados" style="display:block; height:44px; width:auto; margin:0 auto 28px auto;" />
+            <p style="margin:0 0 14px 0; color:#a59065; font-size:11px; font-weight:bold; letter-spacing:1.6px; text-transform:uppercase;">${esc(d.subtitulo || 'Comunicado aos clientes')}</p>
+            <h1 style="margin:0; color:#ffffff; font-size:32px; line-height:1.25; font-weight:800;">${esc(d.titulo || '')}</h1>
+            <p style="margin:18px auto 0; max-width:520px; color:rgba(255,255,255,0.7); font-size:15px; line-height:1.7;">${esc(d.previsual || '')}</p>
+          </td>
+        </tr>
 
-        <!-- Título -->
-        <tr><td style="padding:72px 58px 48px 58px;text-align:center;background:#ffffff;">
-          <div style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:#a59065;font-weight:700;margin-bottom:18px;">
-            ${esc(d.subtitulo || 'Comunicado aos clientes')}
-          </div>
-          <h1 style="margin:0;color:#550000;font-size:28px;line-height:1.28;font-weight:800;letter-spacing:-0.3px;">
-            ${esc(d.titulo || '')}
-          </h1>
-          <p style="margin:22px auto 0 auto;max-width:560px;font-size:16px;line-height:1.65;color:#333333;">
-            ${esc(d.resumo || '')}
-          </p>
-          <div style="height:1px;background:#a59065;width:100%;margin:38px 0 0 0;"></div>
-        </td></tr>
+        <!-- Intro -->
+        <tr>
+          <td style="background-color:#550000; padding:34px 48px 36px 48px;">
+            <p style="margin:0; color:#ffffff; font-size:16px; line-height:1.75;">${esc(d.intro || '')}</p>
+          </td>
+        </tr>
 
-        <!-- Introdução -->
-        <tr><td style="padding:0 58px 42px 58px;background:#ffffff;font-size:15px;line-height:1.78;color:#222222;">
-          ${(d.intro || []).map((p,i,a) =>
-            `<p style="margin:${i===0?'0':'0'} 0 ${i<a.length-1?'18px':'0'} 0;">${esc(p)}</p>`
-          ).join('\n          ')}
-        </td></tr>
+        <!-- O que isso significa -->
+        <tr>
+          <td style="background-color:#ffffff; padding:40px 48px 28px 48px;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="6" style="background-color:#a59065; border-radius:20px;"></td>
+                <td style="padding-left:22px;">
+                  <h2 style="margin:0 0 12px 0; color:#550000; font-size:25px; line-height:1.35;">${esc(d.sig_titulo || 'O que isso significa para sua empresa?')}</h2>
+                  <p style="margin:0; color:#333333; font-size:16px; line-height:1.75;">${esc(d.sig_texto || '')}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
 
-        <!-- Box vermelho — decisão -->
-        ${d.box_decisao ? `
-        <tr><td style="background:#550000;padding:50px 58px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            <tr><td style="color:#ffffff;font-size:18px;font-weight:800;padding-bottom:20px;">
-              ${esc(d.box_decisao.titulo || '')}
-            </td></tr>
-            ${boxDecisaoRows}
-          </table>
-        </td></tr>` : ''}
+        <!-- Cards 2x2 -->
+        <tr>
+          <td style="background-color:#ffffff; padding:12px 38px 36px 38px;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="50%" valign="top" style="padding:10px;">${cardCell(cards[0])}</td>
+                <td width="50%" valign="top" style="padding:10px;">${cardCell(cards[1])}</td>
+              </tr>
+              <tr>
+                <td width="50%" valign="top" style="padding:10px;">${cardCell(cards[2])}</td>
+                <td width="50%" valign="top" style="padding:10px;">${cardCell(cards[3])}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
 
-        ${secoesHTML}
+        <!-- Setores impactados -->
+        <tr>
+          <td style="background-color:#f4f3f2; padding:40px 48px;">
+            <h2 style="margin:0 0 12px 0; color:#550000; font-size:26px; line-height:1.35;">${esc(d.setores_titulo || 'Setores diretamente impactados')}</h2>
+            <p style="margin:0 0 26px 0; color:#333333; font-size:16px; line-height:1.7;">${esc(d.setores_intro || '')}</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>${setorCell(setores[0])}${setorCell(setores[1])}${setorCell(setores[2])}</tr>
+              <tr>${setorCell(setores[3])}${setorCell(setores[4])}${setorCell(setores[5])}</tr>
+            </table>
+          </td>
+        </tr>
 
-        <!-- Box atenção -->
-        ${d.atencao ? `
-        <tr><td style="padding:24px 58px 44px 58px;background:#ffffff;">
-          <div style="background:#f4f3f2;border-left:5px solid #a59065;padding:25px 28px;">
-            <h3 style="margin:0 0 12px 0;color:#550000;font-size:19px;line-height:1.35;font-weight:800;">
-              ${esc(d.atencao.titulo || '')}
-            </h3>
-            <p style="margin:0;font-size:15px;line-height:1.75;color:#222222;">${esc(d.atencao.texto || '')}</p>
-          </div>
-        </td></tr>` : ''}
+        <!-- Como a FALAW pode apoiar -->
+        <tr>
+          <td style="background-color:#ffffff; padding:42px 48px;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#550000; border-radius:20px;">
+              <tr><td style="padding:36px;">
+                <h2 style="margin:0 0 24px 0; color:#ffffff; font-size:26px; line-height:1.35;">${esc(d.apoio_titulo || 'Como a FALAW pode apoiar sua empresa')}</h2>
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    ${apoioCell(apoio[0], 'padding:0 18px 20px 0;')}
+                    ${apoioCell(apoio[1], 'padding:0 0 20px 18px;')}
+                  </tr>
+                  <tr>
+                    ${apoioCell(apoio[2], 'padding:12px 18px 0 0;')}
+                    ${apoioCell(apoio[3], 'padding:12px 0 0 18px;')}
+                  </tr>
+                </table>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
 
-        <!-- Impacto prático (fundo dourado) -->
-        ${d.impacto ? `
-        <tr><td style="background:#a59065;padding:48px 58px;">
-          <h2 style="margin:0 0 24px 0;color:#ffffff;font-size:23px;line-height:1.35;font-weight:800;">
-            ${esc(d.impacto.titulo || '')}
-          </h2>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            ${impactoRows}
-          </table>
-        </td></tr>` : ''}
-
-        <!-- Estratégia -->
-        ${d.estrategia ? `
-        <tr><td style="padding:52px 58px 30px 58px;background:#ffffff;font-size:15px;line-height:1.78;color:#222222;">
-          <h2 style="margin:0 0 22px 0;color:#550000;font-size:23px;line-height:1.35;font-weight:800;">
-            ${esc(d.estrategia.titulo || '')}
-          </h2>
-          ${estrategiaParagrafos}
-          ${d.estrategia.destaque ? `
-          <p style="margin:18px 0 0 0;color:#550000;font-weight:800;">${esc(d.estrategia.destaque)}</p>` : ''}
-        </td></tr>` : ''}
-
-        <!-- Como a Falaw pode ajudar -->
-        <tr><td style="padding:24px 58px 60px 58px;background:#ffffff;">
-          <div style="background:#f4f3f2;border:1px solid #a59065;padding:30px 32px;">
-            <h3 style="margin:0 0 14px 0;color:#550000;font-size:20px;line-height:1.35;font-weight:800;">
-              Como a FALAW pode apoiar sua empresa
-            </h3>
-            <p style="margin:0 0 18px 0;font-size:15px;line-height:1.75;color:#222222;">
-              Nosso time está à disposição para analisar os impactos desta matéria, revisar estratégias defensivas e orientar a atuação mais adequada para cada caso.
-            </p>
-            <p style="margin:0;font-size:15px;line-height:1.75;color:#222222;">
-              Para conversar sobre os impactos, basta responder a este e-mail.
-            </p>
-          </div>
-        </td></tr>
+        <!-- CTA -->
+        <tr>
+          <td style="background-color:#ffffff; padding:6px 48px 44px 48px; text-align:center;">
+            <h2 style="margin:0 0 14px 0; color:#550000; font-size:28px; line-height:1.35;">${esc(d.cta_titulo || '')}</h2>
+            <p style="margin:0 auto 28px auto; max-width:520px; color:#333333; font-size:16px; line-height:1.7;">${esc(d.cta_texto || '')}</p>
+            <a href="mailto:ferrazandrade@falaw.com.br" style="display:inline-block; background-color:#a59065; color:#ffffff; text-decoration:none; padding:15px 34px; border-radius:30px; font-size:14px; letter-spacing:1px; text-transform:uppercase; font-weight:bold;">
+              ${esc(d.cta_botao || 'Falar com especialista')}
+            </a>
+          </td>
+        </tr>
 
         <!-- Rodapé -->
-        <tr><td style="padding:0;background:#ffffff;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-            <tr><td style="background:#575757;padding:36px 58px;color:#ffffff;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-                <tr>
-                  <td style="vertical-align:middle;">
-                    <p style="margin:0 0 6px 0;font-size:14px;font-weight:700;color:#ffffff;">Falaw Advogados</p>
-                    <p style="margin:0 0 10px 0;font-size:12px;color:rgba(255,255,255,.65);">Labor Tech</p>
-                    <p style="margin:0 0 4px 0;font-size:12px;color:rgba(255,255,255,.75);">Av. Francisco Matarazzo, 1752 · Salas 414 e 415 · São Paulo / SP</p>
-                    <p style="margin:0;font-size:12px;color:rgba(255,255,255,.75);">
-                      <a href="mailto:ferrazandrade@falaw.com.br" style="color:#a59065;text-decoration:none;">ferrazandrade@falaw.com.br</a>
-                      &nbsp;·&nbsp;
-                      <a href="https://falaw.com.br" style="color:#a59065;text-decoration:none;">falaw.com.br</a>
-                    </p>
-                  </td>
-                  <td style="vertical-align:middle;text-align:right;width:140px;padding-left:24px;">
-                    <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" alt="Falaw Advogados" width="120" style="display:block;max-width:120px;height:auto;margin-left:auto;" />
-                  </td>
-                </tr>
-              </table>
-            </td></tr>
-            <tr><td align="center" style="background:#ffffff;padding:24px 24px 20px 24px;font-size:12px;line-height:1.6;color:#550000;">
-              <p style="margin:0;">Este informativo é enviado pela Falaw Advogados. Para deixar de receber, responda este e-mail.</p>
-            </td></tr>
-          </table>
-        </td></tr>
+        <tr>
+          <td style="background-color:#550000; padding:34px 48px 38px 48px;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="34%" valign="top" style="padding-right:20px;">
+                  <img src="${logoBranco}" alt="Falaw Advogados" style="display:block; height:50px; width:auto;" />
+                </td>
+                <td width="66%" valign="top" style="border-left:1px solid rgba(165,144,101,0.45); padding-left:24px;">
+                  <p style="margin:0 0 12px 0; color:#a59065; font-size:14px; font-weight:bold; letter-spacing:1.4px; text-transform:uppercase;">FALAW Advogados</p>
+                  <p style="margin:0; color:#ffffff; font-size:14px; line-height:1.75;">Av. Francisco Matarazzo, 1752 · Salas 414 e 415<br>Água Branca · São Paulo / SP · CEP 05001-200</p>
+                  <p style="margin:16px 0 0 0; color:#f4f3f2; font-size:14px; line-height:1.8;">
+                    <strong>Telefone:</strong> +55 11 2936-0076<br>
+                    <strong>WhatsApp:</strong> +55 11 91001-1551<br>
+                    <strong>E-mail:</strong> <a href="mailto:ferrazandrade@falaw.com.br" style="color:#a59065; text-decoration:none;">ferrazandrade@falaw.com.br</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Tagline -->
+        <tr>
+          <td style="background-color:#a59065; padding:16px 42px; text-align:center;">
+            <p style="margin:0; color:#550000; font-size:13px; line-height:1.5; letter-spacing:2px; text-transform:uppercase; font-weight:bold;">Direito empresarial com estratégia e propósito.</p>
+          </td>
+        </tr>
 
       </table>
     </td></tr>
   </table>
 </body>
 </html>`;
+}
+
+/* ── Geração de imagens PNG do informativo ── */
+async function infGerarImagens() {
+  if (!_infCurrentHTML) { showToast('Gere o informativo primeiro.'); return; }
+  const btn = document.getElementById('inf-btn-img');
+  const status = document.getElementById('inf-img-status');
+  btn.disabled = true;
+  btn.textContent = '⏳ Gerando…';
+  status.textContent = '';
+
+  // Seções a exportar como imagens: cada bloco principal do template
+  const blocos = [
+    { id: 'inf-img-hero',    label: 'capa' },
+    { id: 'inf-img-cards',   label: 'cards' },
+    { id: 'inf-img-setores', label: 'setores' },
+    { id: 'inf-img-apoio',   label: 'apoio' },
+    { id: 'inf-img-cta',     label: 'cta' },
+  ];
+
+  // Cria um container temporário fora de tela para renderizar os blocos
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:680px;font-family:Arial,Helvetica,sans-serif;';
+  document.body.appendChild(wrap);
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(_infCurrentHTML, 'text/html');
+
+  // Monta os blocos renderizáveis a partir do HTML gerado
+  const innerTable = doc.querySelector('table table');
+  if (!innerTable) {
+    showToast('Não foi possível processar o informativo.');
+    btn.disabled = false; btn.textContent = '📸 Gerar Imagens'; return;
+  }
+  const rows = Array.from(innerTable.querySelectorAll('tr'));
+
+  // Agrupa as linhas da tabela em blocos temáticos por posição
+  // 0=hero, 1=intro, 2=sig, 3=cards, 4=setores, 5=apoio, 6=cta, 7=footer, 8=tagline
+  const grupos = [
+    { label: 'capa',    indices: [0, 1, 2],    bg: '#060E1A' },
+    { label: 'cards',   indices: [3],          bg: '#ffffff' },
+    { label: 'setores', indices: [4],          bg: '#f4f3f2' },
+    { label: 'apoio',   indices: [5],          bg: '#ffffff' },
+    { label: 'cta',     indices: [6, 7, 8],    bg: '#ffffff' },
+  ];
+
+  const titulo = (_infCurrentData && _infCurrentData.titulo)
+    ? _infCurrentData.titulo.replace(/[^a-zA-Z0-9\u00C0-\u00FF\s]/g,'').trim().substring(0,30).replace(/\s+/g,'-').toLowerCase()
+    : 'informativo';
+
+  try {
+    for (const grupo of grupos) {
+      status.textContent = `Gerando imagem: ${grupo.label}…`;
+      const tbl = document.createElement('table');
+      tbl.setAttribute('width','680');
+      tbl.style.cssText = `width:680px;max-width:680px;background:${grupo.bg};border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;`;
+      grupo.indices.forEach(idx => {
+        if (rows[idx]) tbl.appendChild(rows[idx].cloneNode(true));
+      });
+      wrap.innerHTML = '';
+      wrap.appendChild(tbl);
+      // Aguarda render
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const canvas = await html2canvas(tbl, { scale: 2, useCORS: true, backgroundColor: grupo.bg, logging: false });
+      const link = document.createElement('a');
+      link.download = `falaw-${titulo}-${grupo.label}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      await new Promise(r => setTimeout(r, 400));
+    }
+    status.textContent = `✓ ${grupos.length} imagens baixadas!`;
+    setTimeout(() => { status.textContent = ''; }, 4000);
+  } catch(e) {
+    status.textContent = 'Erro: ' + e.message;
+    showToast('Erro ao gerar imagem: ' + e.message);
+  }
+
+  document.body.removeChild(wrap);
+  btn.disabled = false;
+  btn.textContent = '📸 Gerar Imagens';
 }
 
 function infCopiarHTML() {
