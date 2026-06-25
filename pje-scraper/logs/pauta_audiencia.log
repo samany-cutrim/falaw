@@ -1,0 +1,178 @@
+2026-06-25 15:57:20,978 [INFO] ============================================================
+2026-06-25 15:57:20,978 [INFO] Pauta de Audiencias — 25/06/2026 15:57
+2026-06-25 15:57:20,979 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-06-25 15:57:20,979 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-06-25 15:57:20,979 [INFO] Periodo: 2026-06-25 -> 2026-07-10
+2026-06-25 15:57:20,979 [INFO] ============================================================
+2026-06-25 15:57:20,979 [INFO] Calendario: 2026-06-25 -> 2026-07-10
+2026-06-25 15:57:21,178 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-06-25 15:57:27,278 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-06-25 15:57:27,399 [INFO] Senha preenchida.
+2026-06-25 15:57:27,766 [INFO] Formulário submetido.
+2026-06-25 15:57:29,250 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=82802336-620d-4962-9bf9-9f80c6e9ba9a&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=b21ab3e3-f825-4d8c-9717-5b1324c87dff.82802336-620d-4962-9bf9-9f80c6e9ba9a.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-06-25 15:57:30,985 [INFO] Bearer token capturado das requisições de rede.
+2026-06-25 15:57:40,727 [WARNING] Calendario falhou (405 Client Error: Method Not Allowed for url: https://service.projurisadv.com.br/adv-service/v2/tarefa/calendario/consulta-sem-paginacao?dataInicio=2026-06-25&dataFim=2026-07-10) — usando endpoint paginado...
+2026-06-25 15:57:40,727 [INFO]   Pagina 0
+2026-06-25 15:57:45,383 [INFO] Paginado: 0 tarefas recebidas
+2026-06-25 15:57:46,172 [INFO] Audiencias filtradas: 0 de 0
+2026-06-25 15:57:46,173 [INFO] Nenhuma audiencia encontrada no periodo.
+2026-06-25 15:59:11,885 [INFO] ============================================================
+2026-06-25 15:59:11,887 [INFO] Pauta de Audiencias — 25/06/2026 15:59
+2026-06-25 15:59:11,887 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-06-25 15:59:11,887 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-06-25 15:59:11,887 [INFO] Periodo: 2026-06-01 -> 2026-07-31
+2026-06-25 15:59:11,887 [INFO] ============================================================
+2026-06-25 15:59:11,887 [INFO] Calendario (POST): 2026-06-01 -> 2026-07-31
+2026-06-25 15:59:12,167 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-06-25 15:59:20,787 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-06-25 15:59:20,900 [INFO] Senha preenchida.
+2026-06-25 15:59:21,193 [INFO] Formulário submetido.
+2026-06-25 15:59:22,914 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=f78f00bb-4b31-42cf-9540-ae86be5f56f0&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=340ca16b-db86-4bca-97aa-c836c0852255.f78f00bb-4b31-42cf-9540-ae86be5f56f0.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-06-25 15:59:24,781 [INFO] Bearer token capturado das requisições de rede.
+2026-06-25 15:59:43,377 [INFO]   Retornou 0 itens
+2026-06-25 15:59:43,381 [INFO] Calendario: 0 tarefas recebidas
+2026-06-25 15:59:43,381 [INFO]   Pagina 0 (https://service.projurisadv.com.br/adv-service/v2/tarefa/consulta-com-paginacao)
+2026-06-25 15:59:44,527 [INFO]   Pagina 0 (https://service.projurisadv.com.br/adv-service/tarefa/consulta-com-paginacao)
+2026-06-25 15:59:48,874 [INFO] Paginado: 0 tarefas recebidas
+2026-06-25 15:59:49,823 [INFO] Audiencias filtradas: 0 de 0
+2026-06-25 15:59:49,824 [INFO] Nenhuma audiencia encontrada no periodo.
+2026-06-25 16:02:47,433 [INFO] ============================================================
+2026-06-25 16:02:47,434 [INFO] Pauta de Audiencias — 25/06/2026 16:02
+2026-06-25 16:02:47,434 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-06-25 16:02:47,434 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-06-25 16:02:47,434 [INFO] Periodo: 2026-06-01 -> 2026-07-31
+2026-06-25 16:02:47,434 [INFO] ============================================================
+2026-06-25 16:02:47,434 [INFO] Calendario: 2026-06-01 -> 2026-07-31
+2026-06-25 16:02:47,650 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-06-25 16:02:54,133 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-06-25 16:02:54,245 [INFO] Senha preenchida.
+2026-06-25 16:02:54,531 [INFO] Formulário submetido.
+2026-06-25 16:02:55,757 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=9658ab82-a545-44d0-bbda-33470c92eee0&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=c3772e4b-9c04-4527-80f1-ac06665e97ce.9658ab82-a545-44d0-bbda-33470c92eee0.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-06-25 16:02:56,116 [INFO] Bearer token capturado das requisições de rede.
+2026-06-25 16:03:06,927 [INFO]   Retornou 0 itens
+2026-06-25 16:03:07,358 [INFO] Calendario: 0 tarefas recebidas
+2026-06-25 16:03:07,358 [INFO]   Pagina 0 (https://service.projurisadv.com.br/adv-service/v2/tarefa/consulta-com-paginacao)
+2026-06-25 16:03:08,134 [INFO]   Pagina 0 (https://service.projurisadv.com.br/adv-service/tarefa/consulta-com-paginacao)
+2026-06-25 16:03:11,967 [INFO] Paginado: 0 tarefas recebidas
+2026-06-25 16:03:12,953 [INFO] Audiencias filtradas: 0 de 0
+2026-06-25 16:03:12,953 [INFO] Nenhuma audiencia encontrada no periodo.
+2026-06-25 16:05:54,202 [INFO] ============================================================
+2026-06-25 16:05:54,203 [INFO] Pauta de Audiencias — 25/06/2026 16:05
+2026-06-25 16:05:54,203 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-06-25 16:05:54,203 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-06-25 16:05:54,204 [INFO] Periodo: 2026-06-01 -> 2026-07-31
+2026-06-25 16:05:54,204 [INFO] ============================================================
+2026-06-25 16:05:54,204 [INFO] Calendario: 2026-06-01 -> 2026-07-31
+2026-06-25 16:05:54,410 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-06-25 16:06:00,631 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-06-25 16:06:00,726 [INFO] Senha preenchida.
+2026-06-25 16:06:00,904 [INFO] Formulário submetido.
+2026-06-25 16:06:02,079 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=2312a9e5-514b-4f4e-85a0-bff543b94ee6&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=7d8c54f3-767c-4b9d-a658-2772799254dc.2312a9e5-514b-4f4e-85a0-bff543b94ee6.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-06-25 16:06:03,698 [INFO] Bearer token capturado das requisições de rede.
+2026-06-25 16:06:13,987 [INFO]   Retornou 143 itens
+2026-06-25 16:06:13,990 [INFO] Calendario: 143 tarefas recebidas
+2026-06-25 16:06:14,753 [INFO] Audiencias filtradas: 0 de 143
+2026-06-25 16:06:14,753 [INFO] Nenhuma audiencia encontrada no periodo.
+2026-06-25 16:09:19,578 [INFO] ============================================================
+2026-06-25 16:09:19,578 [INFO] Pauta de Audiencias — 25/06/2026 16:09
+2026-06-25 16:09:19,578 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-06-25 16:09:19,579 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-06-25 16:09:19,579 [INFO] Periodo: 2026-06-01 -> 2026-06-30
+2026-06-25 16:09:19,579 [INFO] ============================================================
+2026-06-25 16:09:19,579 [INFO] Calendario: 2026-06-01 -> 2026-06-30
+2026-06-25 16:09:19,845 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-06-25 16:09:27,429 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-06-25 16:09:27,694 [INFO] Senha preenchida.
+2026-06-25 16:09:28,283 [INFO] Formulário submetido.
+2026-06-25 16:09:30,599 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=12da4403-7cf9-4269-bcef-4774ab0f8505&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=9d43eafe-a0a6-497c-b921-847b4e50816b.12da4403-7cf9-4269-bcef-4774ab0f8505.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-06-25 16:09:32,952 [INFO] Bearer token capturado das requisições de rede.
+2026-06-25 16:09:43,531 [INFO]   Retornou 84 itens
+2026-06-25 16:09:43,531 [INFO] Calendario: 84 tarefas recebidas
+2026-06-25 16:09:46,223 [ERROR] Supabase 400: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'responsavel' column of 'pauta_audiencias' in the schema cache"}
+2026-06-25 16:09:47,545 [ERROR] Supabase 400: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'responsavel' column of 'pauta_audiencias' in the schema cache"}
+2026-06-25 16:09:47,548 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 0
+2026-06-25 16:09:47,548 [INFO] ============================================================
+2026-06-25 16:09:47,549 [INFO] Sincronizacao concluida.
+2026-06-25 16:09:47,549 [INFO] ============================================================
+2026-06-25 16:10:45,680 [INFO] ============================================================
+2026-06-25 16:10:45,681 [INFO] Pauta de Audiencias — 25/06/2026 16:10
+2026-06-25 16:10:45,681 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-06-25 16:10:45,681 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-06-25 16:10:45,681 [INFO] Periodo: 2026-06-01 -> 2026-06-30
+2026-06-25 16:10:45,681 [INFO] ============================================================
+2026-06-25 16:10:45,681 [INFO] Calendario: 2026-06-01 -> 2026-06-30
+2026-06-25 16:10:45,928 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-06-25 16:10:54,273 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-06-25 16:10:54,421 [INFO] Senha preenchida.
+2026-06-25 16:10:54,794 [INFO] Formulário submetido.
+2026-06-25 16:10:56,324 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=7feda9a5-edc3-4170-add9-0af494c7cd13&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=203e5526-a74a-42b2-a552-a34840bab14b.7feda9a5-edc3-4170-add9-0af494c7cd13.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-06-25 16:10:56,761 [INFO] Bearer token capturado das requisições de rede.
+2026-06-25 16:11:08,495 [INFO]   Retornou 84 itens
+2026-06-25 16:11:08,503 [INFO] Calendario: 84 tarefas recebidas
+2026-06-25 16:11:11,406 [ERROR] Supabase 400: {"code":"23514","details":"Failing row contains (adv-b12338f102f8, 2026-06-22, 03:00, INSTRUÇÃO, , , , 0000448-31.2025.5.06.0122, 2ª Vara do Trabalho de Paulista, , GISELLE DE OLIVEIRA SILVA, PRAVALER
+2026-06-25 16:11:12,655 [ERROR] Supabase 400: {"code":"23514","details":"Failing row contains (adv-b4d1a5bdea5b, 2026-06-12, 03:00, INSTRUÇÃO, , , , 0000448-31.2025.5.06.0122, 2ª Vara do Trabalho de Paulista, , GISELLE DE OLIVEIRA SILVA, PRAVALER
+2026-06-25 16:11:12,664 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 0
+2026-06-25 16:11:12,665 [INFO] ============================================================
+2026-06-25 16:11:12,665 [INFO] Sincronizacao concluida.
+2026-06-25 16:11:12,665 [INFO] ============================================================
+2026-06-25 16:11:46,502 [INFO] ============================================================
+2026-06-25 16:11:46,502 [INFO] Pauta de Audiencias — 25/06/2026 16:11
+2026-06-25 16:11:46,502 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-06-25 16:11:46,503 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-06-25 16:11:46,503 [INFO] Periodo: 2026-06-01 -> 2026-06-30
+2026-06-25 16:11:46,503 [INFO] ============================================================
+2026-06-25 16:11:46,503 [INFO] Calendario: 2026-06-01 -> 2026-06-30
+2026-06-25 16:11:46,695 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-06-25 16:11:54,388 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-06-25 16:11:54,583 [INFO] Senha preenchida.
+2026-06-25 16:11:54,926 [INFO] Formulário submetido.
+2026-06-25 16:11:56,346 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=cb1631ad-8601-4a68-89ba-f95ead6b74fe&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=6459a262-c734-4b15-bf24-f4f60ba42d03.cb1631ad-8601-4a68-89ba-f95ead6b74fe.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-06-25 16:11:56,740 [INFO] Bearer token capturado das requisições de rede.
+2026-06-25 16:12:09,736 [INFO]   Retornou 84 itens
+2026-06-25 16:12:09,737 [INFO] Calendario: 84 tarefas recebidas
+2026-06-25 16:12:14,347 [ERROR] Supabase 400: {"code":"23514","details":"Failing row contains (adv-b12338f102f8, 2026-06-22, 03:00, , , , , 0000448-31.2025.5.06.0122, 2ª Vara do Trabalho de Paulista, , GISELLE DE OLIVEIRA SILVA, PRAVALER S/A (CLI
+2026-06-25 16:12:16,170 [ERROR] Supabase 400: {"code":"23514","details":"Failing row contains (adv-b4d1a5bdea5b, 2026-06-12, 03:00, , , , , 0000448-31.2025.5.06.0122, 2ª Vara do Trabalho de Paulista, , GISELLE DE OLIVEIRA SILVA, PRAVALER S/A (CLI
+2026-06-25 16:12:16,173 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 0
+2026-06-25 16:12:16,173 [INFO] ============================================================
+2026-06-25 16:12:16,174 [INFO] Sincronizacao concluida.
+2026-06-25 16:12:16,174 [INFO] ============================================================
+2026-06-25 16:13:46,542 [INFO] ============================================================
+2026-06-25 16:13:46,542 [INFO] Pauta de Audiencias — 25/06/2026 16:13
+2026-06-25 16:13:46,542 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-06-25 16:13:46,542 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-06-25 16:13:46,543 [INFO] Periodo: 2026-06-01 -> 2026-06-30
+2026-06-25 16:13:46,543 [INFO] ============================================================
+2026-06-25 16:13:46,543 [INFO] Calendario: 2026-06-01 -> 2026-06-30
+2026-06-25 16:13:46,920 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-06-25 16:13:56,241 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-06-25 16:13:56,373 [INFO] Senha preenchida.
+2026-06-25 16:13:56,688 [INFO] Formulário submetido.
+2026-06-25 16:13:58,004 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=5f41d03a-b686-4226-a06a-0a9d147b641e&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=3ef8352b-7fac-4ab3-8c19-e60e8eac7514.5f41d03a-b686-4226-a06a-0a9d147b641e.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-06-25 16:13:58,457 [INFO] Bearer token capturado das requisições de rede.
+2026-06-25 16:14:09,761 [INFO]   Retornou 84 itens
+2026-06-25 16:14:09,761 [INFO] Calendario: 84 tarefas recebidas
+2026-06-25 16:14:13,298 [ERROR] Supabase 400: {"code":"23514","details":"Failing row contains (adv-b12338f102f8, 2026-06-22, 03:00, , , , , 0000448-31.2025.5.06.0122, 2ª Vara do Trabalho de Paulista, , GISELLE DE OLIVEIRA SILVA, PRAVALER S/A (CLIENTE), , , , f, , , , , , realizada, projuris, 2026-06-25 19:14:12.982728+00, 2026-06-25 19:14:10.670806+00, null, null, null, null).","hint":null,"message":"new row for relation \"pauta_audiencias\" violates check constraint \"pauta_audiencias_origem_check\""}
+2026-06-25 16:14:14,529 [ERROR] Supabase 400: {"code":"23514","details":"Failing row contains (adv-b4d1a5bdea5b, 2026-06-12, 03:00, , , , , 0000448-31.2025.5.06.0122, 2ª Vara do Trabalho de Paulista, , GISELLE DE OLIVEIRA SILVA, PRAVALER S/A (CLIENTE), , , , f, , , , , , cancelada, projuris, 2026-06-25 19:14:14.529085+00, 2026-06-25 19:14:10.67352+00, null, null, null, null).","hint":null,"message":"new row for relation \"pauta_audiencias\" violates check constraint \"pauta_audiencias_origem_check\""}
+2026-06-25 16:14:14,532 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 0
+2026-06-25 16:14:14,533 [INFO] ============================================================
+2026-06-25 16:14:14,533 [INFO] Sincronizacao concluida.
+2026-06-25 16:14:14,533 [INFO] ============================================================
+2026-06-25 16:14:55,977 [INFO] ============================================================
+2026-06-25 16:14:55,978 [INFO] Pauta de Audiencias — 25/06/2026 16:14
+2026-06-25 16:14:55,979 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-06-25 16:14:55,979 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-06-25 16:14:55,980 [INFO] Periodo: 2026-06-01 -> 2026-06-30
+2026-06-25 16:14:55,980 [INFO] ============================================================
+2026-06-25 16:14:55,980 [INFO] Calendario: 2026-06-01 -> 2026-06-30
+2026-06-25 16:14:56,235 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-06-25 16:15:03,068 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-06-25 16:15:03,171 [INFO] Senha preenchida.
+2026-06-25 16:15:03,370 [INFO] Formulário submetido.
+2026-06-25 16:15:04,826 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=41f434bb-d5f1-44e9-aa34-5b98c1235727&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=434c50a7-3665-480d-9b18-6c5df7dffed1.41f434bb-d5f1-44e9-aa34-5b98c1235727.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-06-25 16:15:05,208 [INFO] Bearer token capturado das requisições de rede.
+2026-06-25 16:15:16,095 [INFO]   Retornou 84 itens
+2026-06-25 16:15:16,098 [INFO] Calendario: 84 tarefas recebidas
+2026-06-25 16:15:19,630 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 84
+2026-06-25 16:15:19,630 [INFO] ============================================================
+2026-06-25 16:15:19,630 [INFO] Sincronizacao concluida.
+2026-06-25 16:15:19,631 [INFO] ============================================================

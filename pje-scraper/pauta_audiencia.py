@@ -33,11 +33,11 @@ load_dotenv(_HERE / ".env")
 
 # ── Configuração ──────────────────────────────────────────────────────────────
 
-PROJURIS_BASE      = os.getenv("PROJURIS_BASE_URL", "https://service.projurisadv.com.br").rstrip("/")
-PROJURIS_CLIENT_ID = os.getenv("PROJURIS_CLIENT_ID", "")
-PROJURIS_SECRET    = os.getenv("PROJURIS_CLIENT_SECRET", "")
-# Fallback: token estático capturado do browser (opcional)
-PROJURIS_TOKEN     = os.getenv("PROJURIS_BEARER_TOKEN", "")
+PROJURIS_BASE = "https://service.projurisadv.com.br"
+
+# Credenciais de login Projuris ADV (agenda controladoria)
+_PROJURIS_USER     = "controladoria@falaw.com.br"
+_PROJURIS_PASSWORD = "Falaw@26"
 
 DIAS_PAUTA = int(os.getenv("DIAS_PAUTA", "365"))
 
@@ -58,65 +58,116 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
-# ── Autenticação OAuth2 (client_credentials) ──────────────────────────────────
+# ── Autenticação Projuris ADV via Playwright (login pelo browser) ─────────────
 
 _token_cache: dict = {"token": "", "expires_at": 0.0}
 
-# Endpoints candidatos do Projuris ADV (tenta em ordem)
-_AUTH_ENDPOINTS = [
-    "https://identity.projurisadv.com.br/connect/token",
-    f"{PROJURIS_BASE}/adv-service/oauth/token",
-    f"{PROJURIS_BASE}/adv-service/auth/token",
-]
+_APP_LOGIN_URL    = "https://app.projurisadv.com.br"
+_APP_CALENDAR_URL = "https://app.projurisadv.com.br/home/calendario"
+_SERVICE_HOST     = "service.projurisadv.com.br"
+
+
+def _obter_token_playwright() -> str:
+    """
+    Abre o Projuris ADV no browser (headless), faz login com as credenciais
+    embutidas e intercepta o Bearer token das requisições à API.
+    Retorna o token capturado.
+    """
+    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+
+    log.info("Iniciando login Projuris ADV via browser (Playwright)…")
+    captured: list[str] = []
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        ctx = browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            )
+        )
+        page = ctx.new_page()
+
+        # Intercepta requisições ao service para capturar o token
+        def on_request(req):
+            if _SERVICE_HOST in req.url:
+                auth = req.headers.get("authorization", "")
+                if auth.lower().startswith("bearer ") and not captured:
+                    token = auth.split(" ", 1)[1].strip()
+                    if len(token) > 20:
+                        captured.append(token)
+                        log.info("Bearer token capturado das requisições de rede.")
+
+        page.on("request", on_request)
+
+        # 1. Acessa a página de login (redireciona para Keycloak)
+        page.goto(_APP_LOGIN_URL, wait_until="networkidle", timeout=30_000)
+
+        # 2. Aguarda redirect para o Keycloak e carrega o formulário
+        try:
+            page.wait_for_url("**/login.projurisadv.com.br/**", timeout=15_000)
+        except PWTimeout:
+            pass
+
+        # 3. Preenche e-mail/usuário
+        page.wait_for_selector("input[name='username']", timeout=15_000)
+        page.fill("input[name='username']", _PROJURIS_USER)
+        log.info(f"Usuário preenchido: {_PROJURIS_USER}")
+
+        # 4. Preenche senha
+        page.fill("input[type='password']", _PROJURIS_PASSWORD)
+        log.info("Senha preenchida.")
+
+        # 5. Submete o formulário
+        page.click("button[type='submit']")
+        log.info("Formulário submetido.")
+
+        # 6. Aguarda redirecionamento de volta para o app
+        try:
+            page.wait_for_url("https://app.projurisadv.com.br/**", timeout=30_000)
+            log.info(f"Login OK — URL: {page.url}")
+        except PWTimeout:
+            log.warning(f"Timeout aguardando redirecionamento pós-login. URL: {page.url}")
+
+        # 7. Navega para o calendário para disparar as chamadas de API e capturar o token
+        if not captured:
+            page.goto(_APP_CALENDAR_URL, wait_until="networkidle", timeout=30_000)
+            page.wait_for_timeout(5_000)
+
+        browser.close()
+
+    if not captured:
+        raise RuntimeError(
+            "Não foi possível capturar o Bearer token. "
+            "Verifique as credenciais ou o fluxo de login do Projuris ADV."
+        )
+
+    return captured[0]
 
 
 def _obter_token() -> str:
-    """Obtém (ou reutiliza do cache) o access_token via OAuth2 client_credentials."""
+    """Obtém (ou reutiliza do cache) o Bearer token via login no browser."""
     now = datetime.utcnow().timestamp()
 
-    # Cache ainda válido
+    # Cache ainda válido (reutiliza por 50 min)
     if _token_cache["token"] and now < _token_cache["expires_at"] - 60:
         return _token_cache["token"]
 
-    # Token estático como fallback
-    if PROJURIS_TOKEN:
-        log.info("Usando PROJURIS_BEARER_TOKEN estático do .env")
-        return PROJURIS_TOKEN
+    token = _obter_token_playwright()
+    # Tokens Projuris expiram em ~1h; cache por 55 min
+    _token_cache["token"]      = token
+    _token_cache["expires_at"] = now + 3300
 
-    if not PROJURIS_CLIENT_ID or not PROJURIS_SECRET:
-        raise RuntimeError(
-            "Configure PROJURIS_CLIENT_ID e PROJURIS_CLIENT_SECRET no .env"
-        )
+    # Fallback de emergência: token estático do .env
+    if not token:
+        static = os.getenv("PROJURIS_BEARER_TOKEN", "")
+        if static:
+            log.warning("Usando PROJURIS_BEARER_TOKEN estático do .env como fallback")
+            return static
+        raise RuntimeError("Falha ao obter token do Projuris ADV.")
 
-    last_err = None
-    for url in _AUTH_ENDPOINTS:
-        try:
-            resp = requests.post(
-                url,
-                data={
-                    "grant_type":    "client_credentials",
-                    "client_id":     PROJURIS_CLIENT_ID,
-                    "client_secret": PROJURIS_SECRET,
-                },
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-                timeout=15,
-            )
-            if resp.status_code == 200:
-                body = resp.json()
-                token = body.get("access_token") or body.get("token", "")
-                if token:
-                    expires_in = int(body.get("expires_in", 3600))
-                    _token_cache["token"]      = token
-                    _token_cache["expires_at"] = now + expires_in
-                    log.info(f"Token Projuris obtido via {url} (expira em {expires_in}s)")
-                    return token
-        except requests.RequestException as exc:
-            last_err = exc
-            continue
-
-    raise RuntimeError(
-        f"Falha ao autenticar no Projuris ADV. Último erro: {last_err}"
-    )
+    return token
 
 
 def _headers() -> dict:
@@ -124,69 +175,112 @@ def _headers() -> dict:
         "Authorization": f"Bearer {_obter_token()}",
         "Content-Type":  "application/json",
         "Accept":        "application/json",
+        "Referer":       "https://app.projurisadv.com.br/",
+        "Origin":        "https://app.projurisadv.com.br",
     }
 
 
 # ── Busca de tarefas ──────────────────────────────────────────────────────────
 
 def _extrair_lista(body) -> list[dict]:
+    """Extrai lista de tarefas de qualquer formato de resposta do Projuris ADV."""
     if isinstance(body, list):
         return body
-    if isinstance(body, dict):
-        return (
-            body.get("content") or body.get("data") or
-            body.get("tarefas") or body.get("items") or []
-        )
-    return []
+    if not isinstance(body, dict):
+        return []
+
+    # Formato v2: grupos por data/tipo — achata todos os grupos
+    grupos = body.get("tarefasAgrupadasDataTipoWs")
+    if grupos and isinstance(grupos, list):
+        items: list[dict] = []
+        for grupo in grupos:
+            if isinstance(grupo, dict):
+                # Cada grupo tem uma lista de tarefas (chave variável)
+                for k in ("tarefas", "listaTarefas", "items", "data"):
+                    v = grupo.get(k)
+                    if isinstance(v, list):
+                        items.extend(v)
+                        break
+                else:
+                    # Tenta qualquer chave com lista
+                    for v in grupo.values():
+                        if isinstance(v, list) and v and isinstance(v[0], dict):
+                            items.extend(v)
+                            break
+        if items:
+            return items
+
+    # Formatos legados
+    return (
+        body.get("content") or body.get("data") or
+        body.get("tarefas") or body.get("items") or
+        body.get("resultado") or []
+    )
 
 
 def buscar_calendario(data_inicio: str, data_fim: str) -> list[dict]:
-    """Endpoint sem paginacao — retorna todas as tarefas do periodo de uma vez."""
+    """POST /v2/tarefa/calendario/consulta-sem-paginacao com payload exato do app."""
     url = f"{PROJURIS_BASE}/adv-service/v2/tarefa/calendario/consulta-sem-paginacao"
     log.info(f"Calendario: {data_inicio} -> {data_fim}")
-    resp = requests.get(
-        url,
-        headers=_headers(),
-        params={"dataInicio": data_inicio, "dataFim": data_fim},
-        timeout=30,
-    )
+    payload = {
+        "dataTarefaInicio": f"{data_inicio}T00:00:00.000Z",
+        "dataTarefaFim":    f"{data_fim}T00:00:00.000Z",
+        "visaoPessoal":     True,
+        "tipoFiltroTarefaConsulta": "TODOS",
+        "usuariosResponsaveis": None,
+    }
+    resp = requests.post(url, headers=_headers(), json=payload, timeout=30)
     resp.raise_for_status()
-    return _extrair_lista(resp.json())
+    result = _extrair_lista(resp.json())
+    log.info(f"  Retornou {len(result)} itens")
+    return result
 
 
 def buscar_paginado(data_inicio: str, data_fim: str) -> list[dict]:
     """Fallback paginado caso o endpoint de calendario nao esteja disponivel."""
-    url      = f"{PROJURIS_BASE}/adv-service/tarefa/consulta-com-paginacao"
     all_rows: list[dict] = []
     pagina   = 0
 
-    while True:
-        log.info(f"  Pagina {pagina}")
-        resp = requests.get(
-            url,
-            headers=_headers(),
-            params={
+    # Tenta endpoints paginados em ordem
+    endpoints = [
+        f"{PROJURIS_BASE}/adv-service/v2/tarefa/consulta-com-paginacao",
+        f"{PROJURIS_BASE}/adv-service/tarefa/consulta-com-paginacao",
+    ]
+
+    for url in endpoints:
+        all_rows = []
+        pagina   = 0
+        while True:
+            log.info(f"  Pagina {pagina} ({url})")
+            params = {
                 "quan-registros":  100,
                 "pagina":          pagina,
                 "ordenacao-tipo":  "ASC",
                 "ordenacao-chave": "ORDENACAO_DATA_PREVISTA",
                 "dataInicio":      data_inicio,
                 "dataFim":         data_fim,
-            },
-            timeout=30,
-        )
-        resp.raise_for_status()
-        body  = resp.json()
-        items = _extrair_lista(body)
-        all_rows.extend(items)
-
-        if not items or len(items) < 100:
-            break
-        if isinstance(body, dict):
-            total = body.get("totalPages") or body.get("total_pages", 1)
-            if pagina + 1 >= total:
+            }
+            try:
+                resp = requests.get(url, headers=_headers(), params=params, timeout=30)
+            except requests.RequestException:
                 break
-        pagina += 1
+            if resp.status_code != 200:
+                log.debug(f"  GET {url} → {resp.status_code}")
+                break
+            body  = resp.json()
+            items = _extrair_lista(body)
+            all_rows.extend(items)
+            if not items or len(items) < 100:
+                break
+            if isinstance(body, dict):
+                total = body.get("totalPages") or body.get("total_pages", 1)
+                if pagina + 1 >= total:
+                    break
+            pagina += 1
+        if all_rows:
+            return all_rows
+
+    return all_rows
 
     return all_rows
 
@@ -211,47 +305,79 @@ def buscar_feriados(data_inicio: str, data_fim: str) -> set[str]:
 
 # ── Filtragem e normalizacao ──────────────────────────────────────────────────
 
+import unicodedata
+
 _TIPOS_AUDIENCIA = {
-    "audiencia", "audiencia", "hearing", "julgamento",
-    "conciliacao", "conciliacao", "instrucao", "instrucao",
-    "sessao", "sessao", "pauta",
+    "audiencia", "hearing", "julgamento", "conciliacao",
+    "instrucao", "sessao", "pauta",
 }
 
 
+def _normaliza(s: str) -> str:
+    """Remove acentos e converte para minúsculas."""
+    n = unicodedata.normalize("NFD", s)
+    return "".join(c for c in n if unicodedata.category(c) != "Mn").lower()
+
+
 def _is_audiencia(item: dict) -> bool:
+    # Projuris v2 usa 'nomeTarefaTipo'
     tipo = (
-        item.get("tipoTarefa") or item.get("tipo_tarefa") or
-        item.get("tipoEvento") or item.get("tipo") or ""
-    ).lower()
-    # normaliza acentos simples para comparacao
-    import unicodedata
-    tipo_norm = unicodedata.normalize("NFD", tipo)
-    tipo_norm = "".join(c for c in tipo_norm if unicodedata.category(c) != "Mn")
-    return any(t in tipo_norm for t in _TIPOS_AUDIENCIA)
+        item.get("nomeTarefaTipo") or item.get("tipoTarefa") or
+        item.get("tipo_tarefa") or item.get("tipoEvento") or
+        item.get("tipo") or ""
+    )
+    return any(t in _normaliza(str(tipo)) for t in _TIPOS_AUDIENCIA)
+
+
+def _ms_to_dt(ms_val) -> datetime | None:
+    """Converte timestamp em milissegundos para datetime."""
+    if ms_val is None:
+        return None
+    try:
+        return datetime.utcfromtimestamp(int(ms_val) / 1000)
+    except (ValueError, TypeError, OSError):
+        return None
 
 
 def _parse_data_hora(item: dict) -> tuple[str, str]:
-    _DATAS = ["dataPrevista", "data_prevista", "dataAudiencia", "data_audiencia",
-              "dataInicio", "data_inicio", "data", "dtEvento", "dtAudiencia"]
-    _HORAS = ["horaPrevista", "hora_prevista", "horaAudiencia", "hora_audiencia",
-              "horaInicio", "hora_inicio", "hora", "horario"]
-
-    data_raw = next((item[k] for k in _DATAS if item.get(k)), "")
-    hora_raw = next((item[k] for k in _HORAS if item.get(k)), "")
-
     data, hora = "", ""
-    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%d/%m/%Y"):
-        try:
-            dt   = datetime.strptime(str(data_raw)[: len(fmt)], fmt)
-            data = dt.strftime("%Y-%m-%d")
-            if not hora_raw:
-                hora = dt.strftime("%H:%M")
-            break
-        except (ValueError, TypeError):
-            continue
 
-    if hora_raw and not hora:
-        hora = str(hora_raw)[:5]
+    # Projuris v2: compromisso agendado tem dataInicioCompromisso / horaInicioCompromisso
+    dt_ms = (item.get("dataInicioCompromisso") or
+             item.get("dataLimite") or
+             item.get("dataConclusaoPrevista"))
+    hora_ms = item.get("horaInicioCompromisso") or item.get("horaLimite")
+
+    if dt_ms:
+        dt = _ms_to_dt(dt_ms)
+        if dt:
+            data = dt.strftime("%Y-%m-%d")
+            hora = dt.strftime("%H:%M")
+
+    # horaInicioCompromisso é também timestamp ms com a hora real
+    if hora_ms:
+        ht = _ms_to_dt(hora_ms)
+        if ht:
+            hora = ht.strftime("%H:%M")
+
+    # Fallback: campos string convencionais
+    if not data:
+        for k in ("dataPrevista", "data_prevista", "dataAudiencia",
+                  "dataInicio", "data_inicio", "data"):
+            raw = item.get(k)
+            if raw:
+                for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M",
+                            "%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%d/%m/%Y"):
+                    try:
+                        dt = datetime.strptime(str(raw)[:len(fmt)], fmt)
+                        data = dt.strftime("%Y-%m-%d")
+                        if not hora:
+                            hora = dt.strftime("%H:%M")
+                        break
+                    except (ValueError, TypeError):
+                        continue
+                if data:
+                    break
 
     return data, hora
 
@@ -261,64 +387,76 @@ def _make_id(processo: str, data: str, hora: str) -> str:
     return "adv-" + hashlib.md5(raw).hexdigest()[:12]
 
 
+def _str_parte(v) -> str:
+    """Extrai nome de uma parte (pode ser string, dict ou list)."""
+    if not v:
+        return ""
+    if isinstance(v, str):
+        return v
+    if isinstance(v, dict):
+        return v.get("nome") or v.get("name") or v.get("valor") or str(v)
+    if isinstance(v, list):
+        return "; ".join(_str_parte(x) for x in v if x)
+    return str(v)
+
+
 def normalizar(item: dict) -> dict:
     data, hora = _parse_data_hora(item)
 
-    processo = (
-        item.get("numeroProcesso") or item.get("numero_processo") or
-        item.get("processo") or item.get("nrProcesso") or ""
-    )
-    reclamante = (
-        item.get("reclamante") or item.get("poloAtivo") or
-        item.get("polo_ativo") or item.get("autor") or ""
-    )
-    reclamada = (
-        item.get("reclamada") or item.get("poloPassivo") or
-        item.get("polo_passivo") or item.get("reu") or ""
-    )
-    tipo = (
-        item.get("tipoAudiencia") or item.get("tipo_audiencia") or
-        item.get("tipoEvento") or item.get("tipo") or "AUDIENCIA"
-    ).upper()[:30]
-    modalidade = (
-        item.get("modalidade") or item.get("tipoSessao") or
-        item.get("tipo_sessao") or ""
-    ).upper()[:20]
-    vara = (
-        item.get("vara") or item.get("orgaoJulgador") or
-        item.get("orgao_julgador") or item.get("tribunal") or ""
-    )
-    link = (
-        item.get("linkVideoconferencia") or item.get("link_video") or
-        item.get("link") or item.get("urlVideoconferencia") or ""
-    )
-    resp_raw = item.get("responsavel") or item.get("advogadoResponsavel") or item.get("advogado") or ""
-    if isinstance(resp_raw, dict):
-        resp_raw = resp_raw.get("nome") or resp_raw.get("name") or ""
+    processo = str(item.get("numeroProcesso") or item.get("numero_processo") or
+                   item.get("processo") or item.get("nrProcesso") or "")
 
-    id_senha_parts = []
-    mid   = item.get("meetingId") or item.get("meeting_id") or item.get("idReuniao") or ""
-    senha = item.get("senha") or item.get("password") or item.get("codigoAcesso") or ""
-    if mid:
-        id_senha_parts.append(f"ID: {mid}")
-    if senha:
-        id_senha_parts.append(f"Senha: {senha}")
+    reclamante = _str_parte(
+        item.get("parteAtiva") or item.get("reclamante") or
+        item.get("poloAtivo") or item.get("autor")
+    )
+    reclamada = _str_parte(
+        item.get("partePassiva") or item.get("reclamada") or
+        item.get("poloPassivo") or item.get("reu")
+    )
+
+    # tipo_audiencia: deixa em branco para evitar conflito com CHECK constraint
+    tipo = ""
+
+    # Vara/local: extrai da descricao (ex: "... 2ª Vara do Trabalho de Paulista)")
+    vara = ""
+    descricao = str(item.get("descricao") or "")
+    if descricao:
+        import re
+        m = re.search(r"[-–]\s*(.+?)\s*[)\]]?\s*$", descricao)
+        if m:
+            vara = m.group(1).strip()
+
+    link = str(item.get("linkVideoconferencia") or item.get("link_video") or
+               item.get("link") or "")
+
+    advogado = _str_parte(
+        item.get("dadosResponsaveis") or item.get("usuarioResponsaveis") or ""
+    )[:80]
+
+    situacao_raw = str(item.get("situacao") or "").lower()
+    if "conclu" in situacao_raw:
+        status = "realizada"
+    elif "cancel" in situacao_raw:
+        status = "cancelada"
+    else:
+        status = "agendada"
 
     return {
         "id":             _make_id(processo, data, hora),
-        "processo":       str(processo),
-        "reclamante":     str(reclamante),
-        "reclamada":      str(reclamada),
+        "processo":       processo,
+        "reclamante":     reclamante,
+        "reclamada":      reclamada,
         "data_audiencia": data,
         "horario":        hora,
         "tipo_audiencia": tipo,
-        "modalidade":     modalidade,
-        "vara":           str(vara),
-        "status":         "agendada",
-        "origem":         "projuris-adv",
-        "link":           str(link),
-        "id_senha":       " | ".join(id_senha_parts),
-        "responsavel":    str(resp_raw),
+        "modalidade":     "",
+        "vara":           vara,
+        "status":         status,
+        "origem":         "pje",
+        "link":           link,
+        "id_senha":       "",
+        "advogado":       advogado,
         "updated_at":     datetime.utcnow().isoformat(),
     }
 
@@ -345,7 +483,7 @@ def sb_upsert(records: list[dict]) -> int:
         if r.status_code in (200, 201):
             sent += len(batch)
         else:
-            log.error(f"Supabase {r.status_code}: {r.text[:200]}")
+            log.error(f"Supabase {r.status_code}: {r.text[:600]}")
     return sent
 
 
