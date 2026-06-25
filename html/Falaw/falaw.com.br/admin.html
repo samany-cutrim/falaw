@@ -13538,19 +13538,12 @@ async function pqCarregar() {
 }
 
 function pqRenderLista(rows, lista, stats) {
-  if (!rows.length) { lista.innerHTML = '<p style="color:var(--c-muted);padding:20px">Nenhuma resposta encontrada.</p>'; return; }
+  if (!rows.length) { lista.innerHTML = '<p style="color:var(--c-muted);padding:20px">Nenhuma resposta encontrada.</p>'; stats.innerHTML = ''; return; }
 
   const adv = rows.filter(r => r.tipo === 'advogado');
   const pre = rows.filter(r => r.tipo === 'preposto');
-  const media = arr => arr.length ? (arr.reduce((s,r) => s + (r.escala_avaliacao||0), 0) / arr.length).toFixed(1) : '—';
+  stats.innerHTML = '';
 
-  stats.innerHTML = `
-    <div class="stat-card"><span class="stat-num">${rows.length}</span><span class="stat-label">Total</span></div>
-    <div class="stat-card"><span class="stat-num">${adv.length}</span><span class="stat-label">Advogados</span></div>
-    <div class="stat-card"><span class="stat-num">${pre.length}</span><span class="stat-label">Prepostos</span></div>
-    <div class="stat-card"><span class="stat-num">${media(rows)}</span><span class="stat-label">Nota média</span></div>`;
-
-  const stars = n => n ? '★'.repeat(n) + '☆'.repeat(5-n) : '—';
   const yn = v => v === 'sim' ? '<span style="color:#16a34a;font-weight:600">✓ Sim</span>' : v === 'nao' ? '<span style="color:#c0392b">✗ Não</span>' : v === 'na' ? '<span style="color:#999">N/A</span>' : '—';
 
   lista.innerHTML = rows.map(r => {
@@ -13562,7 +13555,7 @@ function pqRenderLista(rows, lista, stats) {
       r.intercorrencia==='sim' ? '<span style="background:#fff0f0;color:#c0392b;border:1px solid #fbc8c8;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600">Intercorrência</span>' : '',
       r.falha_tecnica==='sim'  ? '<span style="background:#fff7ed;color:#c2410c;border:1px solid #fde8d0;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600">Falha técnica</span>' : ''
     ].filter(Boolean).join(' ');
-    return `<div class="item-card" onclick="pqAbrirDetalhe('${r.id}')" style="cursor:pointer" onmouseenter="this.style.boxShadow='0 4px 20px rgba(0,0,0,.10)';this.style.transform='translateY(-1px)'" onmouseleave="this.style.boxShadow='';this.style.transform=''">
+    return `<div class="item-card" onclick="pqAbrirDetalhe('${r.id}')" style="cursor:pointer;position:relative" onmouseenter="this.style.boxShadow='0 4px 20px rgba(0,0,0,.10)';this.style.transform='translateY(-1px)'" onmouseleave="this.style.boxShadow='';this.style.transform=''">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
@@ -13575,9 +13568,12 @@ function pqRenderLista(rows, lista, stats) {
           ${badges ? `<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">${badges}</div>` : ''}
           ${r.observacoes ? `<p style="margin:10px 0 0;font-size:13px;color:#777;font-style:italic;border-left:3px solid #e5e5e5;padding-left:10px;line-height:1.5">"${r.observacoes.slice(0,140)}${r.observacoes.length>140?'…':''}"</p>` : ''}
         </div>
-        <div style="flex-shrink:0;width:56px;height:56px;border-radius:12px;background:${scoreBg};border:1.5px solid ${scoreColor}40;display:flex;flex-direction:column;align-items:center;justify-content:center">
-          <span style="font-size:22px;font-weight:900;color:${scoreColor};line-height:1">${sc||'—'}</span>
-          <span style="font-size:9px;color:${scoreColor};opacity:.7;text-transform:uppercase;letter-spacing:.05em">/5</span>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex-shrink:0">
+          <div style="width:56px;height:56px;border-radius:12px;background:${scoreBg};border:1.5px solid ${scoreColor}40;display:flex;flex-direction:column;align-items:center;justify-content:center">
+            <span style="font-size:22px;font-weight:900;color:${scoreColor};line-height:1">${sc||'—'}</span>
+            <span style="font-size:9px;color:${scoreColor};opacity:.7;text-transform:uppercase;letter-spacing:.05em">/5</span>
+          </div>
+          <button onclick="event.stopPropagation();pqExcluir('${r.id}')" title="Excluir resposta" style="width:56px;padding:6px 0;border-radius:8px;border:1.5px solid #f0d0d0;background:#fff5f5;color:#c0392b;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='#ffeaea'" onmouseleave="this.style.background='#fff5f5'">Excluir</button>
         </div>
       </div>
     </div>`;
@@ -13629,6 +13625,22 @@ function pqAbrirDetalhe(id) {
     ${r.observacoes ? `<div style="margin-top:14px;padding:14px;background:#f4f3f2;border-radius:10px;font-size:14px;color:#333;font-style:italic">"${r.observacoes}"</div>` : ''}
     <p style="margin-top:12px;font-size:11px;color:#bbb;text-align:right">Enviado em ${new Date(r.submitted_at).toLocaleString('pt-BR')}</p>`;
   document.getElementById('pqModal').style.display = 'flex';
+}
+
+async function pqExcluir(id) {
+  const r = _pqCache.find(x => x.id === id);
+  if (!r) return;
+  const nome = r.nome || 'esta resposta';
+  if (!confirm(`Excluir a resposta de "${nome}"?\n\nEssa ação não pode ser desfeita.`)) return;
+  const sb = getSB();
+  if (!sb) { showToast('Supabase não configurado.'); return; }
+  const { error } = await sb.from('pesquisas').delete().eq('id', id);
+  if (error) { showToast('Erro ao excluir: ' + error.message); return; }
+  _pqCache = _pqCache.filter(x => x.id !== id);
+  const lista = document.getElementById('pq-lista');
+  const stats = document.getElementById('pq-stats');
+  pqRenderLista(_pqCache, lista, stats);
+  showToast('Resposta excluída.');
 }
 
 function pqExportar() {
