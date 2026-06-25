@@ -3631,6 +3631,7 @@ function getSbCreds() {
 const CONTEUDO_TABS   = ['blog','newsletter','contato','curriculos','comentarios','informativos','calendario','redes-sociais'];
 const GESTAO_TABS     = ['equipe','clientes'];
 const DASH_TABS       = ['ifood','cli-dash'];
+const PESQUISAS_TABS  = ['pesquisas-lista','pesquisas-dash'];
 const STANDALONE_TABS = ['config','audiencias'];
 
 function toggleGroup(group) {
@@ -4161,6 +4162,11 @@ function switchTab(name) {
     const el = document.getElementById('ditem-' + t);
     if (el) el.classList.toggle('active', t === name);
   });
+  // Update dropdown items — Pesquisas
+  PESQUISAS_TABS.forEach(t => {
+    const el = document.getElementById('ditem-' + t);
+    if (el) el.classList.toggle('active', t === name);
+  });
   // Mark groups as active
   const groupC = document.getElementById('group-conteudo');
   groupC.querySelector('.admin-tab').classList.toggle('active', CONTEUDO_TABS.includes(name));
@@ -4171,6 +4177,9 @@ function switchTab(name) {
   const groupD = document.getElementById('group-dashboards');
   groupD.querySelector('.admin-tab').classList.toggle('active', DASH_TABS.includes(name));
   groupD.classList.remove('open');
+  const groupP = document.getElementById('group-pesquisas');
+  groupP.querySelector('.admin-tab').classList.toggle('active', PESQUISAS_TABS.includes(name));
+  groupP.classList.remove('open');
   // Mark standalone tabs as active
   const tabAud = document.getElementById('tab-btn-audiencias');
   if (tabAud) tabAud.classList.toggle('active', name === 'audiencias');
@@ -13510,6 +13519,9 @@ async function pqCarregar() {
   if (!lista) return;
   lista.innerHTML = '<p style="color:var(--c-muted);padding:20px">Carregando…</p>';
 
+  const sb = getSB();
+  if (!sb) { lista.innerHTML = '<p style="color:#c0392b;padding:20px">Supabase não configurado. Verifique as Configurações.</p>'; return; }
+
   try {
     const tipo = document.getElementById('pq-filtro-tipo').value;
     let q = sb.from('pesquisas').select('*').order('submitted_at', { ascending: false });
@@ -13518,7 +13530,6 @@ async function pqCarregar() {
     if (error) throw error;
     _pqCache = data || [];
     pqRenderLista(_pqCache, lista, stats);
-    // badge
     const badge = document.getElementById('badge-pesquisas');
     if (badge && _pqCache.length > 0) { badge.textContent = _pqCache.length; badge.style.display = ''; }
   } catch(e) {
@@ -13620,6 +13631,8 @@ function pqExportar() {
 async function pqDashCarregar() {
   const wrap = document.getElementById('pq-dash-content');
   wrap.innerHTML = '<p style="padding:20px;color:var(--c-muted)">Carregando…</p>';
+  const sb = getSB();
+  if (!sb) { wrap.innerHTML = '<p style="color:#c0392b;padding:20px">Supabase não configurado.</p>'; return; }
   try {
     const { data, error } = await sb.from('pesquisas').select('*').order('submitted_at', { ascending: false }).limit(500);
     if (error) throw error;

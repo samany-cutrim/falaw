@@ -6,543 +6,709 @@
   <meta name="robots" content="noindex, nofollow" />
   <title>Pesquisa de Qualidade — Falaw Advogados</title>
   <link rel="icon" type="image/png" href="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" />
-  <link rel="stylesheet" href="falaw-design.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="sb-config.js" onerror="void 0"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #f4f3f2; font-family: 'Helvetica Neue', Arial, sans-serif; color: #2b2b2b; min-height: 100vh; }
-
-    /* ── Header ── */
-    .pq-header {
-      background: #550000;
-      padding: 22px 24px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
+    html { scroll-behavior: smooth; cursor: none; }
+    body {
+      font-family: 'Inter', sans-serif;
+      font-size: 16px; line-height: 1.65;
+      color: #060E1A; background: #F7F5F2;
+      overflow-x: hidden; min-height: 100vh;
     }
-    .pq-header img { height: 36px; }
-    .pq-header span { color: rgba(255,255,255,0.7); font-size: 14px; letter-spacing: .5px; }
+    a, button { cursor: none; }
 
-    /* ── Container ── */
-    .pq-wrap { max-width: 740px; margin: 0 auto; padding: 48px 20px 80px; }
-
-    .pq-intro { text-align: center; margin-bottom: 40px; }
-    .pq-intro h1 { font-size: 26px; color: #550000; font-weight: 800; margin-bottom: 10px; }
-    .pq-intro p  { color: #555; font-size: 15px; line-height: 1.65; }
-
-    /* ── Seleção de tipo ── */
-    .pq-choice { display: flex; gap: 18px; justify-content: center; margin-bottom: 44px; flex-wrap: wrap; }
-    .pq-choice-btn {
-      flex: 1; min-width: 220px; max-width: 280px;
-      background: #fff;
-      border: 2px solid #ddd;
-      border-radius: 14px;
-      padding: 30px 20px;
-      cursor: pointer;
-      text-align: center;
-      transition: border-color .2s, box-shadow .2s, transform .15s;
+    /* Cursor */
+    #cursor {
+      position: fixed; top: 0; left: 0;
+      width: 12px; height: 12px; background: #550000;
+      border-radius: 50%; pointer-events: none; z-index: 9999;
+      transform: translate(-50%,-50%);
+      transition: width .2s, height .2s; will-change: transform;
     }
-    .pq-choice-btn:hover { border-color: #550000; box-shadow: 0 6px 24px rgba(85,0,0,.12); transform: translateY(-2px); }
-    .pq-choice-btn .ico { font-size: 40px; margin-bottom: 12px; }
-    .pq-choice-btn strong { display: block; font-size: 18px; color: #1a1a1a; margin-bottom: 6px; }
-    .pq-choice-btn span { font-size: 13px; color: #777; line-height: 1.5; }
+    #cursor.exp { width: 36px; height: 36px; }
 
-    /* ── Formulário ── */
-    .pq-form { background: #fff; border-radius: 16px; padding: 36px 32px; box-shadow: 0 4px 24px rgba(0,0,0,.07); display: none; }
+    /* Nav */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; background: #ffffff;
+      border-bottom: 1px solid rgba(6,14,26,.08);
+    }
+    .nav-logo img { height: 34px; width: auto; display: block; }
+    .nav-tag {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #5A6070;
+    }
+    @media(max-width:600px){ .nav{ padding:0 20px; } .nav-tag{ display:none; } }
+
+    /* Wrap */
+    .wrap { max-width: 760px; margin: 0 auto; padding: 100px 24px 80px; }
+
+    /* Intro */
+    .intro { text-align: center; margin-bottom: 48px; }
+    .eyebrow {
+      display: inline-block; font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+      color: #5A6070; margin-bottom: 16px;
+    }
+    .intro h1 {
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(26px,5vw,40px); font-weight: 800;
+      color: #060E1A; line-height: 1.15; margin-bottom: 14px;
+    }
+    .intro h1 em { color: #550000; font-style: normal; }
+    .intro p { color: #5A6070; font-size: 15px; max-width: 480px; margin: 0 auto; }
+
+    /* Choice */
+    .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 48px; }
+    @media(max-width:520px){ .choice-grid{ grid-template-columns:1fr; } }
+    .choice-card {
+      background: #fff; border: 1.5px solid rgba(6,14,26,.10);
+      border-radius: 16px; padding: 36px 28px 30px; text-align: center;
+      transition: border-color .2s, box-shadow .2s, transform .2s;
+    }
+    .choice-card:hover {
+      border-color: #550000; transform: translateY(-3px);
+      box-shadow: 0 8px 32px rgba(85,0,0,.10);
+    }
+    .choice-card .ico { font-size: 44px; margin-bottom: 14px; line-height: 1; }
+    .choice-card strong {
+      display: block; font-family: 'Sora', sans-serif;
+      font-size: 18px; font-weight: 700; color: #060E1A; margin-bottom: 8px;
+    }
+    .choice-card p { font-size: 13px; color: #5A6070; line-height: 1.55; }
+    .choice-arrow {
+      display: inline-block; margin-top: 18px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+      color: #550000; border-bottom: 1px solid #550000; padding-bottom: 2px;
+      transition: letter-spacing .2s;
+    }
+    .choice-card:hover .choice-arrow { letter-spacing: .2em; }
+
+    /* Form */
+    .pq-form { display: none; }
     .pq-form.visible { display: block; }
-    .pq-form h2 { font-size: 20px; color: #550000; margin-bottom: 6px; }
-    .pq-form .form-sub { font-size: 13px; color: #777; margin-bottom: 28px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
 
-    .pq-section { margin-bottom: 28px; }
-    .pq-section-title {
-      font-size: 11px; font-weight: 700; letter-spacing: 1.4px;
-      text-transform: uppercase; color: #a59065;
-      margin-bottom: 16px; padding-bottom: 8px;
-      border-bottom: 1px solid #f0ebe0;
+    .form-card {
+      background: #fff; border-radius: 20px;
+      border: 1.5px solid rgba(6,14,26,.08);
+      box-shadow: 0 4px 32px rgba(6,14,26,.06); overflow: hidden;
     }
-
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
-    @media(max-width:600px) { .form-row, .form-row.cols-3 { grid-template-columns: 1fr; } }
-
-    .field { margin-bottom: 18px; }
-    .field label { display: block; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 6px; }
-    .field label .req { color: #550000; }
-    .field input[type=text],
-    .field input[type=date],
-    .field input[type=email],
-    .field select,
-    .field textarea {
-      width: 100%; padding: 10px 14px;
-      border: 1.5px solid #ddd; border-radius: 8px;
-      font-size: 14px; color: #1a1a1a; background: #fafafa;
-      transition: border-color .2s;
-      font-family: inherit;
+    .form-hero { background: #060E1A; padding: 36px 40px 32px; }
+    .back-btn {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+      color: rgba(247,245,242,.5); background: none; border: none;
+      margin-bottom: 22px; display: flex; align-items: center; gap: 8px;
+      transition: color .2s;
     }
-    .field input:focus, .field select:focus, .field textarea:focus {
+    .back-btn::before { content: '←'; font-size: 13px; }
+    .back-btn:hover { color: rgba(247,245,242,.9); }
+    .form-hero h2 {
+      font-family: 'Sora', sans-serif;
+      font-size: 22px; font-weight: 800; color: #F7F5F2; margin-bottom: 6px;
+    }
+    .form-hero p { font-size: 13px; color: rgba(247,245,242,.5); }
+    .form-body { padding: 40px; }
+    @media(max-width:600px){ .form-hero{ padding:28px 24px; } .form-body{ padding:28px 20px; } }
+
+    /* Sections */
+    .fs { margin-bottom: 36px; }
+    .fs:last-of-type { margin-bottom: 0; }
+    .fs-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px; letter-spacing: .18em; text-transform: uppercase;
+      color: #a59065; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .fs-label::after { content:''; flex:1; height:1px; background:rgba(165,144,101,.3); }
+    .divider { height: 1px; background: rgba(6,14,26,.07); margin: 0 0 36px; }
+
+    /* Grid */
+    .r2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .r3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    @media(max-width:560px){ .r2,.r3{ grid-template-columns:1fr; } }
+
+    /* Fields */
+    .f { margin-bottom: 20px; }
+    .f:last-child { margin-bottom: 0; }
+    .f label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: #060E1A; margin-bottom: 7px;
+    }
+    .f label .req { color: #550000; margin-left: 2px; }
+    .f label .hint { color: #5A6070; font-weight: 400; margin-left: 5px; font-size: 11px; }
+    .f input[type=text], .f input[type=date], .f select, .f textarea {
+      width: 100%; padding: 11px 14px;
+      background: #F7F5F2; border: 1.5px solid rgba(6,14,26,.12);
+      border-radius: 10px; font-size: 14px; color: #060E1A;
+      font-family: 'Inter', sans-serif;
+      transition: border-color .2s, background .2s;
+    }
+    .f input:focus, .f select:focus, .f textarea:focus {
       outline: none; border-color: #550000; background: #fff;
     }
-    .field textarea { resize: vertical; min-height: 90px; }
+    .f textarea { resize: vertical; min-height: 88px; }
+    .f select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235A6070' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px;
+    }
 
-    /* Sim/Não radio */
-    .radio-group { display: flex; gap: 12px; flex-wrap: wrap; }
-    .radio-opt { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-    .radio-opt input { accent-color: #550000; width: 16px; height: 16px; cursor: pointer; }
-    .radio-opt span { font-size: 14px; color: #333; }
+    /* Sim/Não */
+    .yn { display: flex; gap: 10px; }
+    .yn-o { position: relative; flex: 1; }
+    .yn-o input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .yn-o label {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 14px; border-radius: 9px;
+      border: 1.5px solid rgba(6,14,26,.12); background: #F7F5F2;
+      font-size: 14px; font-weight: 500; color: #5A6070;
+      cursor: none; transition: all .15s;
+    }
+    .yn-o input:checked + label { border-color: #550000; background: #550000; color: #fff; }
+    .yn-o label:hover { border-color: #550000; color: #550000; }
+    .yn-o input:checked + label:hover { color: #fff; }
+
+    /* Tipo */
+    .tipo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .tipo-o { position: relative; }
+    .tipo-o input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .tipo-o label {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 16px; border-radius: 10px;
+      border: 1.5px solid rgba(6,14,26,.12); background: #F7F5F2;
+      font-size: 14px; font-weight: 600; color: #5A6070; cursor: none; transition: all .15s;
+    }
+    .tipo-o input:checked + label { border-color: #060E1A; background: #060E1A; color: #F7F5F2; }
+
+    /* Escala */
+    .scale-wrap { display: flex; flex-direction: column; gap: 10px; }
+    .scale-row { display: flex; gap: 8px; }
+    .sc-btn {
+      flex: 1; height: 48px; border-radius: 10px;
+      border: 1.5px solid rgba(6,14,26,.12); background: #F7F5F2;
+      font-family: 'Sora', sans-serif; font-size: 17px; font-weight: 800; color: #5A6070;
+      transition: all .15s;
+    }
+    .sc-btn:hover { border-color: #550000; color: #550000; }
+    .sc-btn.sel { background: #550000; border-color: #550000; color: #fff; }
+    .scale-lbls { display: flex; justify-content: space-between; }
+    .scale-lbls span { font-size: 11px; color: #5A6070; }
+    .sc-err { font-size: 11px; color: #c0392b; margin-top: 4px; display: none; }
+    .sc-err.on { display: block; }
 
     /* Condicional */
-    .cond-field { display: none; margin-top: 14px; }
-    .cond-field.show { display: block; }
-
-    /* Escala 1-5 */
-    .scale-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .scale-btn {
-      width: 42px; height: 42px; border-radius: 50%;
-      border: 2px solid #ddd; background: #fafafa;
-      font-size: 15px; font-weight: 700; cursor: pointer; color: #555;
-      transition: all .15s;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .scale-btn:hover, .scale-btn.selected { background: #550000; border-color: #550000; color: #fff; }
-    .scale-labels { display: flex; justify-content: space-between; font-size: 11px; color: #999; margin-top: 6px; }
-
-    /* Tipo de audiência tabs */
-    .tipo-tabs { display: flex; gap: 10px; margin-bottom: 16px; }
-    .tipo-tab {
-      flex: 1; padding: 9px; border-radius: 8px; border: 2px solid #ddd;
-      background: #fafafa; cursor: pointer; text-align: center; font-size: 14px;
-      font-weight: 600; color: #555; transition: all .15s;
-    }
-    .tipo-tab.active { border-color: #550000; background: #550000; color: #fff; }
+    .cond { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(6,14,26,.07); }
+    .cond.on { display: block; }
 
     /* Submit */
-    .pq-submit {
-      width: 100%; padding: 14px;
-      background: #550000; color: #fff; border: none;
-      border-radius: 10px; font-size: 16px; font-weight: 700;
-      cursor: pointer; transition: background .2s; margin-top: 8px;
+    .btn-sub {
+      width: 100%; padding: 16px; margin-top: 32px;
+      background: #550000; color: #fff; border: none; border-radius: 12px;
+      font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: .02em;
+      transition: background .2s, transform .15s;
     }
-    .pq-submit:hover { background: #7a1a1a; }
-    .pq-submit:disabled { background: #bbb; cursor: not-allowed; }
-
-    .pq-back { background: none; border: none; color: #550000; font-size: 13px; cursor: pointer; text-decoration: underline; margin-bottom: 20px; display: block; }
+    .btn-sub:hover:not(:disabled) { background: #7a1a1a; transform: translateY(-1px); }
+    .btn-sub:disabled { background: #ccc; }
 
     /* Sucesso */
-    .pq-success { text-align: center; padding: 60px 20px; display: none; }
-    .pq-success.visible { display: block; }
-    .pq-success .ico { font-size: 52px; margin-bottom: 16px; }
-    .pq-success h2 { font-size: 22px; color: #550000; margin-bottom: 10px; }
-    .pq-success p { color: #555; font-size: 15px; line-height: 1.65; }
-    .pq-success button { margin-top: 24px; padding: 12px 28px; background: #550000; color: #fff; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
+    .success {
+      display: none; text-align: center;
+      background: #fff; border-radius: 20px; padding: 64px 40px;
+      border: 1.5px solid rgba(6,14,26,.08);
+    }
+    .success.on { display: block; }
+    .success .s-ico { font-size: 56px; margin-bottom: 20px; }
+    .success h2 {
+      font-family: 'Sora', sans-serif;
+      font-size: 26px; font-weight: 800; color: #060E1A; margin-bottom: 12px;
+    }
+    .success p { color: #5A6070; font-size: 15px; max-width: 420px; margin: 0 auto 28px; line-height: 1.7; }
+    .btn-again {
+      display: inline-block; padding: 12px 28px;
+      font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+      letter-spacing: .12em; text-transform: uppercase;
+      border: 1.5px solid #060E1A; border-radius: 8px;
+      color: #060E1A; background: none; transition: all .2s;
+    }
+    .btn-again:hover { background: #060E1A; color: #F7F5F2; }
 
-    .err-msg { color: #c0392b; font-size: 12px; margin-top: 4px; display: none; }
-    .err-msg.show { display: block; }
+    .footer {
+      text-align: center; margin-top: 48px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+      color: rgba(6,14,26,.25);
+    }
   </style>
 </head>
 <body>
+<div id="cursor" aria-hidden="true"></div>
 
-  <header class="pq-header">
-    <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-branco.png" alt="Falaw Advogados" />
-    <span>Pesquisa de Qualidade</span>
-  </header>
+<nav class="nav">
+  <a href="index.html" style="text-decoration:none">
+    <img src="../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png" alt="Falaw Advogados" style="height:34px;width:auto;display:block;" />
+  </a>
+  <span class="nav-tag">Pesquisa de Qualidade</span>
+</nav>
 
-  <div class="pq-wrap">
+<div class="wrap">
 
-    <!-- Intro -->
-    <div class="pq-intro">
-      <h1>Como foi a sua audiência?</h1>
-      <p>Sua avaliação é fundamental para aprimorarmos a qualidade dos nossos serviços.<br>O formulário leva menos de 3 minutos e é totalmente confidencial.</p>
+  <div class="intro" id="pq-intro">
+    <span class="eyebrow">Falaw Advogados · Controle de Qualidade</span>
+    <h1>Como foi a sua <em>audiência?</em></h1>
+    <p>Sua avaliação é fundamental para aprimorarmos a qualidade dos nossos serviços. Leva menos de 3 minutos e é totalmente confidencial.</p>
+  </div>
+
+  <div class="choice-grid" id="pq-choice">
+    <div class="choice-card" onclick="showForm('advogado')" role="button" tabindex="0">
+      <div class="ico">⚖️</div>
+      <strong>Sou Advogado(a)</strong>
+      <p>Advogado(a) correspondente que atuou na audiência pelo escritório</p>
+      <span class="choice-arrow">Responder</span>
     </div>
-
-    <!-- Seleção de perfil -->
-    <div class="pq-choice" id="pq-choice">
-      <div class="pq-choice-btn" onclick="showForm('advogado')">
-        <div class="ico">⚖️</div>
-        <strong>Sou Advogado(a)</strong>
-        <span>Avalie a audiência como membro da equipe Falaw</span>
-      </div>
-      <div class="pq-choice-btn" onclick="showForm('preposto')">
-        <div class="ico">🏢</div>
-        <strong>Sou Preposto</strong>
-        <span>Avalie como representante da empresa cliente</span>
-      </div>
+    <div class="choice-card" onclick="showForm('preposto')" role="button" tabindex="0">
+      <div class="ico">🏢</div>
+      <strong>Sou Preposto</strong>
+      <p>Representante da empresa cliente presente na audiência</p>
+      <span class="choice-arrow">Responder</span>
     </div>
+  </div>
 
-    <!-- ═══════════════════════════════════════
-         FORMULÁRIO — ADVOGADO
-    ═══════════════════════════════════════ -->
-    <form class="pq-form" id="form-advogado" onsubmit="submitForm(event,'advogado')">
-      <button type="button" class="pq-back" onclick="backToChoice()">← Voltar</button>
-      <h2>⚖️ Avaliação do Advogado(a)</h2>
-      <p class="form-sub">Preencha com base na audiência realizada.</p>
+  <!-- ══════════════════════════════
+       FORMULÁRIO — ADVOGADO
+  ══════════════════════════════ -->
+  <form class="pq-form" id="form-advogado" onsubmit="doSubmit(event,'advogado')">
+    <div class="form-card">
+      <div class="form-hero">
+        <button type="button" class="back-btn" onclick="backToChoice()">Voltar</button>
+        <h2>⚖️ Avaliação — Advogado Correspondente</h2>
+        <p>Preencha com base na audiência em que você atuou como correspondente da Falaw.</p>
+      </div>
+      <div class="form-body">
 
-      <!-- Dados da audiência -->
-      <div class="pq-section">
-        <div class="pq-section-title">Dados da Audiência</div>
-        <div class="form-row">
-          <div class="field">
-            <label>Data da Audiência <span class="req">*</span></label>
-            <input type="date" id="adv-data" required />
-          </div>
-          <div class="field">
-            <label>Vara / Comarca <span class="req">*</span></label>
-            <input type="text" id="adv-vara" placeholder="Ex: 3ª Vara do Trabalho de SP" required />
+        <!-- Identificação -->
+        <div class="fs">
+          <div class="fs-label">Sua identificação</div>
+          <div class="r2">
+            <div class="f">
+              <label>Nome completo <span class="req">*</span></label>
+              <input type="text" id="adv-nome" placeholder="Seu nome" required />
+            </div>
+            <div class="f">
+              <label>OAB <span class="hint">opcional</span></label>
+              <input type="text" id="adv-oab" placeholder="Ex: SP 123456" />
+            </div>
           </div>
         </div>
-        <div class="form-row">
-          <div class="field">
-            <label>Nº do Processo <span class="req">*</span></label>
-            <input type="text" id="adv-processo" placeholder="0000000-00.0000.0.00.0000" required />
+        <div class="divider"></div>
+
+        <!-- Dados da audiência -->
+        <div class="fs">
+          <div class="fs-label">Dados da Audiência</div>
+          <div class="r3">
+            <div class="f">
+              <label>Data <span class="req">*</span></label>
+              <input type="date" id="adv-data" required />
+            </div>
+            <div class="f">
+              <label>Vara / Comarca <span class="req">*</span></label>
+              <input type="text" id="adv-vara" placeholder="Ex: 3ª VT SP" required />
+            </div>
+            <div class="f">
+              <label>Nº do Processo <span class="req">*</span></label>
+              <input type="text" id="adv-proc" placeholder="0000000-00.0000.0.00.0000" required />
+            </div>
           </div>
-          <div class="field">
+          <div class="f">
             <label>Empresa representada <span class="req">*</span></label>
-            <input type="text" id="adv-empresa" placeholder="Nome da empresa cliente" required />
+            <input type="text" id="adv-empresa" placeholder="Nome da empresa cliente que você representou" required />
+          </div>
+          <div class="f">
+            <label>Tipo de audiência</label>
+            <div class="tipo">
+              <div class="tipo-o">
+                <input type="radio" name="adv-tipo" id="adv-tv" value="virtual" checked onchange="onTipo('adv','virtual')" />
+                <label for="adv-tv">💻 Virtual</label>
+              </div>
+              <div class="tipo-o">
+                <input type="radio" name="adv-tipo" id="adv-tp" value="presencial" onchange="onTipo('adv','presencial')" />
+                <label for="adv-tp">🏛️ Presencial</label>
+              </div>
+            </div>
+          </div>
+          <div class="f" id="adv-falha-wrap">
+            <label>Houve falha técnica? <span class="hint">conexão, sistema, áudio/vídeo</span></label>
+            <div class="yn">
+              <div class="yn-o"><input type="radio" name="adv-falha" id="adv-fs" value="sim" /><label for="adv-fs">✓ Sim</label></div>
+              <div class="yn-o"><input type="radio" name="adv-falha" id="adv-fn" value="nao" /><label for="adv-fn">✗ Não</label></div>
+            </div>
           </div>
         </div>
+        <div class="divider"></div>
+
+        <!-- Preparação -->
+        <div class="fs">
+          <div class="fs-label">Preparação &amp; Comunicação</div>
+          <div class="f">
+            <label>As orientações foram enviadas com antecedência?</label>
+            <div class="yn">
+              <div class="yn-o"><input type="radio" name="adv-oa" id="adv-oa-s" value="sim" /><label for="adv-oa-s">✓ Sim</label></div>
+              <div class="yn-o"><input type="radio" name="adv-oa" id="adv-oa-n" value="nao" /><label for="adv-oa-n">✗ Não</label></div>
+              <div class="yn-o"><input type="radio" name="adv-oa" id="adv-oa-na" value="na" /><label for="adv-oa-na">— N/A</label></div>
+            </div>
+          </div>
+          <div class="f">
+            <label>As orientações foram claras e suficientes?</label>
+            <div class="yn">
+              <div class="yn-o"><input type="radio" name="adv-oc" id="adv-oc-s" value="sim" /><label for="adv-oc-s">✓ Sim</label></div>
+              <div class="yn-o"><input type="radio" name="adv-oc" id="adv-oc-n" value="nao" /><label for="adv-oc-n">✗ Não</label></div>
+              <div class="yn-o"><input type="radio" name="adv-oc" id="adv-oc-na" value="na" /><label for="adv-oc-na">— N/A</label></div>
+            </div>
+          </div>
+          <div class="f">
+            <label>Houve contato prévio do advogado responsável da Falaw? <span class="hint">tel, e-mail ou mensagem</span></label>
+            <div class="yn">
+              <div class="yn-o"><input type="radio" name="adv-ct" id="adv-ct-s" value="sim" /><label for="adv-ct-s">✓ Sim</label></div>
+              <div class="yn-o"><input type="radio" name="adv-ct" id="adv-ct-n" value="nao" /><label for="adv-ct-n">✗ Não</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+
+        <!-- Condução -->
+        <div class="fs">
+          <div class="fs-label">Condução da Audiência</div>
+          <div class="f">
+            <label>Houve intercorrência durante a audiência?</label>
+            <div class="yn">
+              <div class="yn-o"><input type="radio" name="adv-ic" id="adv-ic-s" value="sim" onchange="onCond('adv-ic-txt','sim')" /><label for="adv-ic-s">✓ Sim</label></div>
+              <div class="yn-o"><input type="radio" name="adv-ic" id="adv-ic-n" value="nao" onchange="onCond('adv-ic-txt','nao')" /><label for="adv-ic-n">✗ Não</label></div>
+            </div>
+            <div class="cond" id="adv-ic-txt">
+              <div class="f" style="margin-bottom:0">
+                <label>Descreva o que aconteceu</label>
+                <textarea id="adv-ic-desc" placeholder="Detalhe a intercorrência…"></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="f">
+            <label>O preposto (quando presente) estava devidamente preparado?</label>
+            <div class="yn">
+              <div class="yn-o"><input type="radio" name="adv-pp" id="adv-pp-s" value="sim" /><label for="adv-pp-s">✓ Sim</label></div>
+              <div class="yn-o"><input type="radio" name="adv-pp" id="adv-pp-n" value="nao" /><label for="adv-pp-n">✗ Não</label></div>
+              <div class="yn-o"><input type="radio" name="adv-pp" id="adv-pp-na" value="na" /><label for="adv-pp-na">— Sem preposto</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+
+        <!-- Avaliação -->
+        <div class="fs">
+          <div class="fs-label">Avaliação Geral</div>
+          <div class="f">
+            <label>Como você avalia a audiência de forma geral? <span class="req">*</span></label>
+            <div class="scale-wrap">
+              <div class="scale-row" id="adv-sc">
+                <button type="button" class="sc-btn" onclick="setScale('adv',1)">1</button>
+                <button type="button" class="sc-btn" onclick="setScale('adv',2)">2</button>
+                <button type="button" class="sc-btn" onclick="setScale('adv',3)">3</button>
+                <button type="button" class="sc-btn" onclick="setScale('adv',4)">4</button>
+                <button type="button" class="sc-btn" onclick="setScale('adv',5)">5</button>
+              </div>
+              <div class="scale-lbls"><span>Muito ruim</span><span>Excelente</span></div>
+            </div>
+            <input type="hidden" id="adv-sc-val" />
+            <span class="sc-err" id="adv-sc-err">Selecione uma nota de 1 a 5.</span>
+          </div>
+          <div class="f">
+            <label>Observações <span class="hint">opcional</span></label>
+            <textarea id="adv-obs" placeholder="Elogios, pontos de atenção, sugestões de melhoria…"></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-sub" id="adv-sub">Enviar avaliação →</button>
       </div>
-
-      <!-- Preparação e comunicação -->
-      <div class="pq-section">
-        <div class="pq-section-title">Preparação &amp; Comunicação</div>
-
-        <div class="field">
-          <label>As orientações foram enviadas com antecedência?</label>
-          <div class="radio-group">
-            <label class="radio-opt"><input type="radio" name="adv-orientacoes-antecedencia" value="sim" /><span>Sim</span></label>
-            <label class="radio-opt"><input type="radio" name="adv-orientacoes-antecedencia" value="nao" /><span>Não</span></label>
-            <label class="radio-opt"><input type="radio" name="adv-orientacoes-antecedencia" value="na" /><span>N/A</span></label>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>As orientações foram claras?</label>
-          <div class="radio-group">
-            <label class="radio-opt"><input type="radio" name="adv-orientacoes-claras" value="sim" /><span>Sim</span></label>
-            <label class="radio-opt"><input type="radio" name="adv-orientacoes-claras" value="nao" /><span>Não</span></label>
-            <label class="radio-opt"><input type="radio" name="adv-orientacoes-claras" value="na" /><span>N/A</span></label>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Houve contato do advogado responsável (tel, e-mail, mensagem) antes da audiência?</label>
-          <div class="radio-group">
-            <label class="radio-opt"><input type="radio" name="adv-contato-prev" value="sim" /><span>Sim</span></label>
-            <label class="radio-opt"><input type="radio" name="adv-contato-prev" value="nao" /><span>Não</span></label>
-          </div>
-        </div>
-      </div>
-
-      <!-- Realização -->
-      <div class="pq-section">
-        <div class="pq-section-title">Realização da Audiência</div>
-
-        <div class="field">
-          <label>Tipo de audiência</label>
-          <div class="tipo-tabs">
-            <div class="tipo-tab active" id="adv-tipo-virtual" onclick="setTipo('adv','virtual')">💻 Virtual</div>
-            <div class="tipo-tab" id="adv-tipo-presencial" onclick="setTipo('adv','presencial')">🏛️ Presencial</div>
-          </div>
-          <input type="hidden" id="adv-tipo" value="virtual" />
-        </div>
-
-        <div class="field" id="adv-falha-wrap">
-          <label>Houve falha técnica (conexão, sistema, áudio/vídeo)?</label>
-          <div class="radio-group">
-            <label class="radio-opt"><input type="radio" name="adv-falha-tecnica" value="sim" /><span>Sim</span></label>
-            <label class="radio-opt"><input type="radio" name="adv-falha-tecnica" value="nao" /><span>Não</span></label>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Houve intercorrência durante a audiência?</label>
-          <div class="radio-group">
-            <label class="radio-opt"><input type="radio" name="adv-intercorrencia" value="sim" onclick="toggleCond('adv-intercorrencia-desc','sim',this)" /><span>Sim</span></label>
-            <label class="radio-opt"><input type="radio" name="adv-intercorrencia" value="nao" onclick="toggleCond('adv-intercorrencia-desc','nao',this)" /><span>Não</span></label>
-          </div>
-          <div class="cond-field" id="adv-intercorrencia-desc">
-            <textarea id="adv-intercorrencia-texto" placeholder="Descreva a intercorrência…"></textarea>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>O preposto (quando presente) estava devidamente preparado?</label>
-          <div class="radio-group">
-            <label class="radio-opt"><input type="radio" name="adv-preposto-prep" value="sim" /><span>Sim</span></label>
-            <label class="radio-opt"><input type="radio" name="adv-preposto-prep" value="nao" /><span>Não</span></label>
-            <label class="radio-opt"><input type="radio" name="adv-preposto-prep" value="na" /><span>Sem preposto</span></label>
-          </div>
-        </div>
-      </div>
-
-      <!-- Avaliação geral -->
-      <div class="pq-section">
-        <div class="pq-section-title">Avaliação Geral</div>
-        <div class="field">
-          <label>Como você avalia a audiência de forma geral? <span class="req">*</span></label>
-          <div class="scale-group" id="adv-escala">
-            <button type="button" class="scale-btn" data-v="1" onclick="setScale('adv',1)">1</button>
-            <button type="button" class="scale-btn" data-v="2" onclick="setScale('adv',2)">2</button>
-            <button type="button" class="scale-btn" data-v="3" onclick="setScale('adv',3)">3</button>
-            <button type="button" class="scale-btn" data-v="4" onclick="setScale('adv',4)">4</button>
-            <button type="button" class="scale-btn" data-v="5" onclick="setScale('adv',5)">5</button>
-          </div>
-          <div class="scale-labels"><span>Muito ruim</span><span>Excelente</span></div>
-          <input type="hidden" id="adv-escala-val" />
-          <span class="err-msg" id="adv-escala-err">Selecione uma nota.</span>
-        </div>
-
-        <div class="field">
-          <label>Observações adicionais</label>
-          <textarea id="adv-obs" placeholder="Algum ponto de atenção, elogio ou sugestão de melhoria…"></textarea>
-        </div>
-      </div>
-
-      <button type="submit" class="pq-submit" id="adv-submit">Enviar avaliação</button>
-    </form>
-
-    <!-- ═══════════════════════════════════════
-         FORMULÁRIO — PREPOSTO
-    ═══════════════════════════════════════ -->
-    <form class="pq-form" id="form-preposto" onsubmit="submitForm(event,'preposto')">
-      <button type="button" class="pq-back" onclick="backToChoice()">← Voltar</button>
-      <h2>🏢 Avaliação do Preposto</h2>
-      <p class="form-sub">Preencha com base na audiência em que você representou a empresa.</p>
-
-      <!-- Dados da audiência -->
-      <div class="pq-section">
-        <div class="pq-section-title">Dados da Audiência</div>
-        <div class="form-row">
-          <div class="field">
-            <label>Data da Audiência <span class="req">*</span></label>
-            <input type="date" id="pre-data" required />
-          </div>
-          <div class="field">
-            <label>Vara / Comarca <span class="req">*</span></label>
-            <input type="text" id="pre-vara" placeholder="Ex: 3ª Vara do Trabalho de SP" required />
-          </div>
-        </div>
-        <div class="field">
-          <label>Nº do Processo <span class="req">*</span></label>
-          <input type="text" id="pre-processo" placeholder="0000000-00.0000.0.00.0000" required />
-        </div>
-      </div>
-
-      <!-- Preparação -->
-      <div class="pq-section">
-        <div class="pq-section-title">Preparação &amp; Comunicação</div>
-
-        <div class="field">
-          <label>As orientações foram enviadas com antecedência?</label>
-          <div class="radio-group">
-            <label class="radio-opt"><input type="radio" name="pre-orientacoes-antecedencia" value="sim" /><span>Sim</span></label>
-            <label class="radio-opt"><input type="radio" name="pre-orientacoes-antecedencia" value="nao" /><span>Não</span></label>
-            <label class="radio-opt"><input type="radio" name="pre-orientacoes-antecedencia" value="na" /><span>N/A</span></label>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>As informações foram claras para o seu depoimento?</label>
-          <div class="radio-group">
-            <label class="radio-opt"><input type="radio" name="pre-info-claras" value="sim" /><span>Sim</span></label>
-            <label class="radio-opt"><input type="radio" name="pre-info-claras" value="nao" /><span>Não</span></label>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Houve contato prévio do advogado para esclarecer dúvidas?</label>
-          <div class="radio-group">
-            <label class="radio-opt"><input type="radio" name="pre-contato-prev" value="sim" /><span>Sim</span></label>
-            <label class="radio-opt"><input type="radio" name="pre-contato-prev" value="nao" /><span>Não</span></label>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Você se sentiu devidamente preparado(a) para prestar depoimento?</label>
-          <div class="radio-group">
-            <label class="radio-opt"><input type="radio" name="pre-preparado" value="sim" /><span>Sim</span></label>
-            <label class="radio-opt"><input type="radio" name="pre-preparado" value="nao" /><span>Não</span></label>
-          </div>
-        </div>
-      </div>
-
-      <!-- Realização -->
-      <div class="pq-section">
-        <div class="pq-section-title">Realização da Audiência</div>
-
-        <div class="field">
-          <label>Tipo de audiência</label>
-          <div class="tipo-tabs">
-            <div class="tipo-tab active" id="pre-tipo-virtual" onclick="setTipo('pre','virtual')">💻 Virtual</div>
-            <div class="tipo-tab" id="pre-tipo-presencial" onclick="setTipo('pre','presencial')">🏛️ Presencial</div>
-          </div>
-          <input type="hidden" id="pre-tipo" value="virtual" />
-        </div>
-
-        <div class="field" id="pre-falha-wrap">
-          <label>Houve falha técnica (conexão, sistema, áudio/vídeo)?</label>
-          <div class="radio-group">
-            <label class="radio-opt"><input type="radio" name="pre-falha-tecnica" value="sim" /><span>Sim</span></label>
-            <label class="radio-opt"><input type="radio" name="pre-falha-tecnica" value="nao" /><span>Não</span></label>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Houve intercorrência durante a audiência?</label>
-          <div class="radio-group">
-            <label class="radio-opt"><input type="radio" name="pre-intercorrencia" value="sim" onclick="toggleCond('pre-intercorrencia-desc','sim',this)" /><span>Sim</span></label>
-            <label class="radio-opt"><input type="radio" name="pre-intercorrencia" value="nao" onclick="toggleCond('pre-intercorrencia-desc','nao',this)" /><span>Não</span></label>
-          </div>
-          <div class="cond-field" id="pre-intercorrencia-desc">
-            <textarea id="pre-intercorrencia-texto" placeholder="Descreva a intercorrência…"></textarea>
-          </div>
-        </div>
-      </div>
-
-      <!-- Avaliação do advogado -->
-      <div class="pq-section">
-        <div class="pq-section-title">Avaliação do Advogado</div>
-        <div class="field">
-          <label>O advogado que representou a empresa conduziu a audiência de forma segura e profissional?</label>
-          <div class="scale-group" id="pre-escala">
-            <button type="button" class="scale-btn" onclick="setScale('pre',1)">1</button>
-            <button type="button" class="scale-btn" onclick="setScale('pre',2)">2</button>
-            <button type="button" class="scale-btn" onclick="setScale('pre',3)">3</button>
-            <button type="button" class="scale-btn" onclick="setScale('pre',4)">4</button>
-            <button type="button" class="scale-btn" onclick="setScale('pre',5)">5</button>
-          </div>
-          <div class="scale-labels"><span>Muito ruim</span><span>Excelente</span></div>
-          <input type="hidden" id="pre-escala-val" />
-          <span class="err-msg" id="pre-escala-err">Selecione uma nota.</span>
-        </div>
-
-        <div class="field">
-          <label>Observações adicionais</label>
-          <textarea id="pre-obs" placeholder="Sugestões, elogios ou pontos de atenção…"></textarea>
-        </div>
-      </div>
-
-      <button type="submit" class="pq-submit" id="pre-submit">Enviar avaliação</button>
-    </form>
-
-    <!-- Sucesso -->
-    <div class="pq-success" id="pq-success">
-      <div class="ico">✅</div>
-      <h2>Obrigado pela sua avaliação!</h2>
-      <p>Seu retorno é muito importante para continuarmos aprimorando o atendimento da Falaw Advogados.<br>As informações foram registradas com segurança.</p>
-      <button onclick="location.reload()">Enviar outra avaliação</button>
     </div>
+  </form>
 
-  </div><!-- /pq-wrap -->
+  <!-- ══════════════════════════════
+       FORMULÁRIO — PREPOSTO
+  ══════════════════════════════ -->
+  <form class="pq-form" id="form-preposto" onsubmit="doSubmit(event,'preposto')">
+    <div class="form-card">
+      <div class="form-hero">
+        <button type="button" class="back-btn" onclick="backToChoice()">Voltar</button>
+        <h2>🏢 Avaliação — Preposto</h2>
+        <p>Preencha com base na audiência em que você representou a empresa cliente.</p>
+      </div>
+      <div class="form-body">
 
-  <script>
-  // ── Supabase ──
-  let sb = null;
-  document.addEventListener('DOMContentLoaded', () => {
-    if (window.supabase && window.SB_URL && window.SB_KEY) {
-      sb = window.supabase.createClient(window.SB_URL, window.SB_KEY);
-    }
-  });
+        <!-- Identificação -->
+        <div class="fs">
+          <div class="fs-label">Sua identificação</div>
+          <div class="r2">
+            <div class="f">
+              <label>Seu nome completo <span class="req">*</span></label>
+              <input type="text" id="pre-nome" placeholder="Nome do preposto" required />
+            </div>
+            <div class="f">
+              <label>Empresa que representou <span class="req">*</span></label>
+              <input type="text" id="pre-empresa" placeholder="Nome da empresa" required />
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
 
-  function uid() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        <!-- Dados -->
+        <div class="fs">
+          <div class="fs-label">Dados da Audiência</div>
+          <div class="r3">
+            <div class="f">
+              <label>Data <span class="req">*</span></label>
+              <input type="date" id="pre-data" required />
+            </div>
+            <div class="f">
+              <label>Vara / Comarca <span class="req">*</span></label>
+              <input type="text" id="pre-vara" placeholder="Ex: 3ª VT SP" required />
+            </div>
+            <div class="f">
+              <label>Nº do Processo <span class="req">*</span></label>
+              <input type="text" id="pre-proc" placeholder="0000000-00.0000.0.00.0000" required />
+            </div>
+          </div>
+          <div class="f">
+            <label>Tipo de audiência</label>
+            <div class="tipo">
+              <div class="tipo-o">
+                <input type="radio" name="pre-tipo" id="pre-tv" value="virtual" checked onchange="onTipo('pre','virtual')" />
+                <label for="pre-tv">💻 Virtual</label>
+              </div>
+              <div class="tipo-o">
+                <input type="radio" name="pre-tipo" id="pre-tp" value="presencial" onchange="onTipo('pre','presencial')" />
+                <label for="pre-tp">🏛️ Presencial</label>
+              </div>
+            </div>
+          </div>
+          <div class="f" id="pre-falha-wrap">
+            <label>Houve falha técnica? <span class="hint">conexão, sistema, áudio/vídeo</span></label>
+            <div class="yn">
+              <div class="yn-o"><input type="radio" name="pre-falha" id="pre-fs" value="sim" /><label for="pre-fs">✓ Sim</label></div>
+              <div class="yn-o"><input type="radio" name="pre-falha" id="pre-fn" value="nao" /><label for="pre-fn">✗ Não</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+
+        <!-- Preparação -->
+        <div class="fs">
+          <div class="fs-label">Preparação &amp; Comunicação</div>
+          <div class="f">
+            <label>As orientações foram enviadas com antecedência?</label>
+            <div class="yn">
+              <div class="yn-o"><input type="radio" name="pre-oa" id="pre-oa-s" value="sim" /><label for="pre-oa-s">✓ Sim</label></div>
+              <div class="yn-o"><input type="radio" name="pre-oa" id="pre-oa-n" value="nao" /><label for="pre-oa-n">✗ Não</label></div>
+              <div class="yn-o"><input type="radio" name="pre-oa" id="pre-oa-na" value="na" /><label for="pre-oa-na">— N/A</label></div>
+            </div>
+          </div>
+          <div class="f">
+            <label>As informações foram claras para o seu depoimento?</label>
+            <div class="yn">
+              <div class="yn-o"><input type="radio" name="pre-ic" id="pre-ic-s" value="sim" /><label for="pre-ic-s">✓ Sim</label></div>
+              <div class="yn-o"><input type="radio" name="pre-ic" id="pre-ic-n" value="nao" /><label for="pre-ic-n">✗ Não</label></div>
+            </div>
+          </div>
+          <div class="f">
+            <label>Houve contato prévio do advogado para esclarecer dúvidas?</label>
+            <div class="yn">
+              <div class="yn-o"><input type="radio" name="pre-ct" id="pre-ct-s" value="sim" /><label for="pre-ct-s">✓ Sim</label></div>
+              <div class="yn-o"><input type="radio" name="pre-ct" id="pre-ct-n" value="nao" /><label for="pre-ct-n">✗ Não</label></div>
+            </div>
+          </div>
+          <div class="f">
+            <label>Você se sentiu devidamente preparado(a) para prestar depoimento?</label>
+            <div class="yn">
+              <div class="yn-o"><input type="radio" name="pre-prep" id="pre-prep-s" value="sim" /><label for="pre-prep-s">✓ Sim</label></div>
+              <div class="yn-o"><input type="radio" name="pre-prep" id="pre-prep-n" value="nao" /><label for="pre-prep-n">✗ Não</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+
+        <!-- Condução -->
+        <div class="fs">
+          <div class="fs-label">Condução da Audiência</div>
+          <div class="f">
+            <label>Houve intercorrência durante a audiência?</label>
+            <div class="yn">
+              <div class="yn-o"><input type="radio" name="pre-interc" id="pre-ic2-s" value="sim" onchange="onCond('pre-ic-txt','sim')" /><label for="pre-ic2-s">✓ Sim</label></div>
+              <div class="yn-o"><input type="radio" name="pre-interc" id="pre-ic2-n" value="nao" onchange="onCond('pre-ic-txt','nao')" /><label for="pre-ic2-n">✗ Não</label></div>
+            </div>
+            <div class="cond" id="pre-ic-txt">
+              <div class="f" style="margin-bottom:0">
+                <label>Descreva o que aconteceu</label>
+                <textarea id="pre-ic-desc" placeholder="Detalhe a intercorrência…"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+
+        <!-- Avaliação -->
+        <div class="fs">
+          <div class="fs-label">Avaliação do Advogado</div>
+          <div class="f">
+            <label>O advogado conduziu a audiência de forma segura e profissional? <span class="req">*</span></label>
+            <div class="scale-wrap">
+              <div class="scale-row" id="pre-sc">
+                <button type="button" class="sc-btn" onclick="setScale('pre',1)">1</button>
+                <button type="button" class="sc-btn" onclick="setScale('pre',2)">2</button>
+                <button type="button" class="sc-btn" onclick="setScale('pre',3)">3</button>
+                <button type="button" class="sc-btn" onclick="setScale('pre',4)">4</button>
+                <button type="button" class="sc-btn" onclick="setScale('pre',5)">5</button>
+              </div>
+              <div class="scale-lbls"><span>Muito ruim</span><span>Excelente</span></div>
+            </div>
+            <input type="hidden" id="pre-sc-val" />
+            <span class="sc-err" id="pre-sc-err">Selecione uma nota de 1 a 5.</span>
+          </div>
+          <div class="f">
+            <label>Observações <span class="hint">opcional</span></label>
+            <textarea id="pre-obs" placeholder="Sugestões, elogios ou pontos de atenção…"></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-sub" id="pre-sub">Enviar avaliação →</button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Sucesso -->
+  <div class="success" id="pq-success">
+    <div class="s-ico">✅</div>
+    <h2>Obrigado pela sua avaliação!</h2>
+    <p>Seu retorno é muito importante para aprimorarmos o atendimento da Falaw Advogados. As informações foram registradas com segurança.</p>
+    <button type="button" class="btn-again" onclick="location.reload()">Enviar outra resposta</button>
+  </div>
+
+  <div class="footer">© 2026 Falaw Advogados · Pesquisa Confidencial</div>
+</div>
+
+<script>
+// Cursor
+const cur = document.getElementById('cursor');
+document.addEventListener('mousemove', e => {
+  cur.style.left = e.clientX + 'px';
+  cur.style.top  = e.clientY + 'px';
+});
+document.querySelectorAll('a,button,[role=button],.choice-card,.yn-o label,.tipo-o label,.sc-btn').forEach(el => {
+  el.addEventListener('mouseenter', () => cur.classList.add('exp'));
+  el.addEventListener('mouseleave', () => cur.classList.remove('exp'));
+});
+
+// Supabase
+let sb = null;
+if (window.supabase && window.SB_URL && window.SB_KEY) {
+  sb = window.supabase.createClient(window.SB_URL, window.SB_KEY);
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+// Navegação
+function showForm(tipo) {
+  document.getElementById('pq-choice').style.display = 'none';
+  document.getElementById('form-' + tipo).classList.add('visible');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function backToChoice() {
+  document.querySelectorAll('.pq-form').forEach(f => f.classList.remove('visible'));
+  document.getElementById('pq-choice').style.display = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+document.querySelectorAll('.choice-card').forEach(c => {
+  c.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') c.click(); });
+});
+
+// Tipo audiência
+function onTipo(p, val) {
+  const w = document.getElementById(p + '-falha-wrap');
+  if (w) w.style.display = val === 'virtual' ? '' : 'none';
+}
+
+// Campo condicional
+function onCond(id, val) {
+  document.getElementById(id).classList.toggle('on', val === 'sim');
+}
+
+// Escala
+function setScale(p, val) {
+  document.querySelectorAll('#' + p + '-sc .sc-btn').forEach((b,i) => b.classList.toggle('sel', i < val));
+  document.getElementById(p + '-sc-val').value = val;
+  document.getElementById(p + '-sc-err').classList.remove('on');
+}
+
+function gr(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? el.value : null;
+}
+
+// Submit
+async function doSubmit(e, tipo) {
+  e.preventDefault();
+  const p = tipo === 'advogado' ? 'adv' : 'pre';
+
+  if (!document.getElementById(p + '-sc-val').value) {
+    document.getElementById(p + '-sc-err').classList.add('on');
+    document.getElementById(p + '-sc-err').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
   }
 
-  // ── Navegação ──
-  function showForm(tipo) {
+  const btn = document.getElementById(p + '-sub');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+
+  const row = {
+    id: uid(), tipo,
+    nome:                     document.getElementById(p + '-nome').value,
+    oab:                      tipo==='advogado' ? (document.getElementById('adv-oab').value||null) : null,
+    cargo:                    null,
+    data_audiencia:           document.getElementById(p + '-data').value,
+    vara_comarca:             document.getElementById(p + '-vara').value,
+    num_processo:             document.getElementById(p + '-proc').value,
+    empresa:                  document.getElementById(p + '-empresa').value,
+    tipo_audiencia:           gr(p + '-tipo') || 'virtual',
+    falha_tecnica:            gr(p + '-falha'),
+    orientacoes_antecedencia: gr(p + '-oa'),
+    orientacoes_claras:       tipo==='advogado' ? gr('adv-oc') : null,
+    info_claras_depoimento:   tipo==='preposto'  ? gr('pre-ic') : null,
+    contato_previo:           gr(p + '-ct'),
+    intercorrencia:           gr(p === 'adv' ? 'adv-ic' : 'pre-interc'),
+    intercorrencia_descricao: document.getElementById(p + '-ic-desc')?.value || null,
+    preposto_preparado:       tipo==='advogado' ? gr('adv-pp')   : null,
+    respondente_preparado:    tipo==='preposto'  ? gr('pre-prep') : null,
+    escala_avaliacao:         parseInt(document.getElementById(p + '-sc-val').value),
+    observacoes:              document.getElementById(p + '-obs').value || null,
+    submitted_at:             new Date().toISOString(),
+  };
+
+  try {
+    if (sb) {
+      const { error } = await sb.from('pesquisas').insert([row]);
+      if (error) throw error;
+    }
+    document.getElementById('form-' + tipo).classList.remove('visible');
     document.getElementById('pq-choice').style.display = 'none';
-    document.getElementById('form-' + tipo).classList.add('visible');
+    document.getElementById('pq-success').classList.add('on');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch(err) {
+    alert('Erro ao enviar. Tente novamente.\n' + (err.message || ''));
+    btn.disabled = false; btn.textContent = 'Enviar avaliação →';
   }
-  function backToChoice() {
-    document.querySelectorAll('.pq-form').forEach(f => f.classList.remove('visible'));
-    document.getElementById('pq-choice').style.display = '';
-  }
-
-  // ── Tipo de audiência ──
-  function setTipo(prefix, tipo) {
-    document.getElementById(prefix + '-tipo').value = tipo;
-    ['virtual','presencial'].forEach(t => {
-      document.getElementById(prefix + '-tipo-' + t).classList.toggle('active', t === tipo);
-    });
-    const falha = document.getElementById(prefix + '-falha-wrap');
-    if (falha) falha.style.display = tipo === 'virtual' ? '' : 'none';
-  }
-
-  // ── Campo condicional (intercorrência) ──
-  function toggleCond(id, val, el) {
-    document.getElementById(id).classList.toggle('show', val === 'sim');
-  }
-
-  // ── Escala 1-5 ──
-  function setScale(prefix, val) {
-    document.querySelectorAll('#' + prefix + '-escala .scale-btn').forEach(b => {
-      b.classList.toggle('selected', parseInt(b.textContent) <= val);
-    });
-    document.getElementById(prefix + '-escala-val').value = val;
-    document.getElementById(prefix + '-escala-err').classList.remove('show');
-  }
-
-  function getRadio(name) {
-    const el = document.querySelector(`input[name="${name}"]:checked`);
-    return el ? el.value : null;
-  }
-
-  // ── Submit ──
-  async function submitForm(e, tipo) {
-    e.preventDefault();
-
-    const escalaId = tipo === 'advogado' ? 'adv-escala-val' : 'pre-escala-val';
-    const escalaErr = tipo === 'advogado' ? 'adv-escala-err' : 'pre-escala-err';
-    const escala = document.getElementById(escalaId).value;
-    if (!escala) {
-      document.getElementById(escalaErr).classList.add('show');
-      return;
-    }
-
-    const p = tipo === 'advogado' ? 'adv' : 'pre';
-    const btn = document.getElementById(p + '-submit');
-    btn.disabled = true;
-    btn.textContent = 'Enviando…';
-
-    const row = {
-      id: uid(),
-      tipo,
-      data_audiencia: document.getElementById(p + '-data').value,
-      vara_comarca:   document.getElementById(p + '-vara').value,
-      num_processo:   document.getElementById(p + '-processo').value,
-      empresa:        tipo === 'advogado' ? document.getElementById('adv-empresa').value : null,
-      tipo_audiencia: document.getElementById(p + '-tipo').value,
-      orientacoes_antecedencia: getRadio(p + '-orientacoes-antecedencia'),
-      orientacoes_claras:       tipo === 'advogado' ? getRadio('adv-orientacoes-claras') : null,
-      info_claras_depoimento:   tipo === 'preposto'  ? getRadio('pre-info-claras')        : null,
-      contato_previo:           getRadio(p + '-contato-prev'),
-      intercorrencia:           getRadio(p + '-intercorrencia'),
-      intercorrencia_descricao: document.getElementById(p + '-intercorrencia-texto')?.value || null,
-      falha_tecnica:            getRadio(p + '-falha-tecnica'),
-      preposto_preparado:       tipo === 'advogado' ? getRadio('adv-preposto-prep')  : null,
-      respondente_preparado:    tipo === 'preposto'  ? getRadio('pre-preparado')      : null,
-      escala_avaliacao:         parseInt(escala),
-      observacoes:              document.getElementById(p + '-obs').value || null,
-      submitted_at:             new Date().toISOString(),
-    };
-
-    try {
-      if (sb) {
-        const { error } = await sb.from('pesquisas').insert([row]);
-        if (error) throw error;
-      } else {
-        console.warn('Supabase não configurado — dados:', row);
-      }
-      document.getElementById('form-' + tipo).classList.remove('visible');
-      document.getElementById('pq-success').classList.add('visible');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch(err) {
-      alert('Erro ao enviar. Tente novamente.\n' + (err.message || ''));
-      btn.disabled = false;
-      btn.textContent = 'Enviar avaliação';
-    }
-  }
-  </script>
+}
+</script>
 </body>
 </html>

@@ -369,6 +369,9 @@ CREATE POLICY "anon full access" ON "ClientDashHighlight" FOR ALL TO anon USING 
 CREATE TABLE IF NOT EXISTS pesquisas (
   id                        TEXT PRIMARY KEY,
   tipo                      TEXT NOT NULL CHECK (tipo IN ('advogado','preposto')),
+  nome                      TEXT,
+  oab                       TEXT,
+  cargo                     TEXT,
   data_audiencia            DATE,
   vara_comarca              TEXT,
   num_processo              TEXT,
@@ -388,6 +391,10 @@ CREATE TABLE IF NOT EXISTS pesquisas (
   submitted_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE pesquisas ENABLE ROW LEVEL SECURITY;
+-- Migrações (caso a tabela já exista sem estes campos):
+ALTER TABLE pesquisas ADD COLUMN IF NOT EXISTS nome  TEXT;
+ALTER TABLE pesquisas ADD COLUMN IF NOT EXISTS oab   TEXT;
+ALTER TABLE pesquisas ADD COLUMN IF NOT EXISTS cargo TEXT;
 DROP POLICY IF EXISTS "anon insert pesquisas" ON pesquisas;
 CREATE POLICY "anon insert pesquisas" ON pesquisas FOR INSERT TO anon WITH CHECK (true);
 DROP POLICY IF EXISTS "auth read pesquisas" ON pesquisas;
