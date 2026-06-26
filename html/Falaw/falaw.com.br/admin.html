@@ -7294,7 +7294,7 @@ function generateInformativoHTML(d, heroBase64, photoBase64) {
   const cardCell = c => `
             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f3f2;border-radius:16px;">
               <tr><td style="padding:24px;">
-                <p style="margin:0 0 12px 0;color:#550000;font-size:15px;line-height:1.4;font-weight:bold;text-transform:uppercase;">${esc(c.titulo)}</p>
+                <p style="margin:0 0 12px 0;color:#3E3E3E;font-size:15px;line-height:1.4;font-weight:bold;text-transform:uppercase;">${esc(c.titulo)}</p>
                 <p style="margin:0;color:#333333;font-size:15px;line-height:1.65;">${esc(c.texto)}</p>
               </td></tr>
             </table>`;
@@ -7303,7 +7303,7 @@ function generateInformativoHTML(d, heroBase64, photoBase64) {
   while (setores.length < 6) setores.push({ nome: '', detalhe: '' });
   const setorCell = s => `
               <td width="33.33%" valign="top" style="padding:8px;">
-                <p style="margin:0;color:#550000;font-size:15px;font-weight:bold;">${esc(s.nome)}</p>
+                <p style="margin:0;color:#3E3E3E;font-size:15px;font-weight:bold;">${esc(s.nome)}</p>
                 <p style="margin:6px 0 0 0;color:#333333;font-size:14px;line-height:1.55;">${esc(s.detalhe)}</p>
               </td>`;
 
@@ -7311,7 +7311,7 @@ function generateInformativoHTML(d, heroBase64, photoBase64) {
   while (apoio.length < 4) apoio.push({ num: '', titulo: '', texto: '' });
   const apoioCell = (a, pad) => `
                 <td width="50%" valign="top" style="${pad}">
-                  <p style="margin:0 0 8px 0;color:#a59065;font-size:24px;font-weight:bold;">${esc(a.num)}</p>
+                  <p style="margin:0 0 8px 0;color:rgba(255,255,255,0.45);font-size:24px;font-weight:bold;">${esc(a.num)}</p>
                   <p style="margin:0 0 8px 0;color:#ffffff;font-size:16px;font-weight:bold;">${esc(a.titulo)}</p>
                   <p style="margin:0;color:#f4f3f2;font-size:14px;line-height:1.6;">${esc(a.texto)}</p>
                 </td>`;
@@ -7362,7 +7362,7 @@ function generateInformativoHTML(d, heroBase64, photoBase64) {
               <tr>
                 <td width="6" style="background-color:#a59065; border-radius:20px;"></td>
                 <td style="padding-left:22px;">
-                  <h2 style="margin:0 0 12px 0; color:#550000; font-size:25px; line-height:1.35;">${esc(d.sig_titulo || 'O que isso significa para sua empresa?')}</h2>
+                  <h2 style="margin:0 0 12px 0; color:#3E3E3E; font-size:25px; line-height:1.35;">${esc(d.sig_titulo || 'O que isso significa para sua empresa?')}</h2>
                   <p style="margin:0; color:#333333; font-size:16px; line-height:1.75;">${esc(d.sig_texto || '')}</p>
                 </td>
               </tr>
@@ -7389,7 +7389,7 @@ function generateInformativoHTML(d, heroBase64, photoBase64) {
         <!-- Setores impactados -->
         <tr>
           <td style="background-color:#f4f3f2; padding:40px 48px;">
-            <h2 style="margin:0 0 12px 0; color:#550000; font-size:26px; line-height:1.35;">${esc(d.setores_titulo || 'Setores diretamente impactados')}</h2>
+            <h2 style="margin:0 0 12px 0; color:#3E3E3E; font-size:26px; line-height:1.35;">${esc(d.setores_titulo || 'Setores diretamente impactados')}</h2>
             <p style="margin:0 0 26px 0; color:#333333; font-size:16px; line-height:1.7;">${esc(d.setores_intro || '')}</p>
             <table width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>${setorCell(setores[0])}${setorCell(setores[1])}${setorCell(setores[2])}</tr>
@@ -7401,7 +7401,7 @@ function generateInformativoHTML(d, heroBase64, photoBase64) {
         <!-- Como a FALAW pode apoiar -->
         <tr>
           <td style="background-color:#ffffff; padding:42px 48px;">
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#550000; border-radius:20px;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#B5A07A; border-radius:20px;">
               <tr><td style="padding:36px;">
                 <h2 style="margin:0 0 24px 0; color:#ffffff; font-size:26px; line-height:1.35;">${esc(d.apoio_titulo || 'Como a FALAW pode apoiar sua empresa')}</h2>
                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -7422,7 +7422,7 @@ function generateInformativoHTML(d, heroBase64, photoBase64) {
         <!-- CTA -->
         <tr>
           <td style="background-color:#ffffff; padding:6px 48px 44px 48px; text-align:center;">
-            <h2 style="margin:0 0 14px 0; color:#550000; font-size:28px; line-height:1.35;">${esc(d.cta_titulo || '')}</h2>
+            <h2 style="margin:0 0 14px 0; color:#3E3E3E; font-size:28px; line-height:1.35;">${esc(d.cta_titulo || '')}</h2>
             <p style="margin:0 auto 28px auto; max-width:520px; color:#333333; font-size:16px; line-height:1.7;">${esc(d.cta_texto || '')}</p>
             <a href="mailto:ferrazandrade@falaw.com.br" style="display:inline-block; background-color:#a59065; color:#ffffff; text-decoration:none; padding:15px 34px; border-radius:30px; font-size:14px; letter-spacing:1px; text-transform:uppercase; font-weight:bold;">
               ${esc(d.cta_botao || 'Falar com especialista')}
@@ -7444,8 +7444,15 @@ function generateInformativoHTML(d, heroBase64, photoBase64) {
 
         <!-- Tagline -->
         <tr>
-          <td style="background-color:#e8e6e2; padding:16px 42px; text-align:center;">
-            <p style="margin:0; color:#555555; font-size:13px; line-height:1.5; letter-spacing:2px; text-transform:uppercase; font-weight:bold;">Direito empresarial com estratégia e propósito.</p>
+          <td style="background-color:#8A8070; padding:16px 42px; text-align:center;">
+            <p style="margin:0; color:#ffffff; font-size:13px; line-height:1.5; letter-spacing:2px; text-transform:uppercase; font-weight:bold;">Direito empresarial com estratégia e propósito.</p>
+          </td>
+        </tr>
+
+        <!-- Descadastro -->
+        <tr>
+          <td style="background-color:#F5F5F5; padding:14px 42px; text-align:center;">
+            <p style="margin:0; color:#8A8A8A; font-size:11px; line-height:1.6;">Este informativo é enviado pela Falaw Advogados. Para deixar de receber, responda este e-mail.</p>
           </td>
         </tr>
 
