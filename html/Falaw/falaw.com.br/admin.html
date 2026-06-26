@@ -7251,14 +7251,8 @@ ${baseText.slice(0, 6000)}
     let heroBase64 = null;
     try { heroBase64 = await _infBuildHeroBase64(data); } catch(e) { console.warn('Hero image:', e.message); }
 
-    status.textContent = 'Buscando foto ilustrativa…';
-    let photoBase64 = null;
-    if (data.imageKeyword) {
-      try { photoBase64 = await _infFetchImageBase64(data.imageKeyword); } catch(e) { console.warn('Photo fetch:', e.message); }
-    }
-
     status.textContent = 'Montando preview…';
-    _infCurrentHTML = generateInformativoHTML(data, heroBase64, photoBase64);
+    _infCurrentHTML = generateInformativoHTML(data, heroBase64);
     _infCurrentData = data;
 
     // Atualiza iframe
@@ -7285,7 +7279,7 @@ ${baseText.slice(0, 6000)}
   }
 }
 
-function generateInformativoHTML(d, heroBase64, photoBase64) {
+function generateInformativoHTML(d, heroBase64) {
   const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const logoBranco = 'https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png';
 
@@ -7351,9 +7345,6 @@ function generateInformativoHTML(d, heroBase64, photoBase64) {
             <p style="margin:0; color:#ffffff; font-size:16px; line-height:1.75;">${esc(d.intro || '')}</p>
           </td>
         </tr>
-
-        ${photoBase64 ? `<!-- Foto ilustrativa -->
-        <tr><td style="padding:0;line-height:0;"><img src="${photoBase64}" alt="" style="display:block;width:100%;max-width:680px;height:auto;" /></td></tr>` : ''}
 
         <!-- O que isso significa -->
         <tr>
@@ -7424,7 +7415,7 @@ function generateInformativoHTML(d, heroBase64, photoBase64) {
           <td style="background-color:#ffffff; padding:6px 48px 44px 48px; text-align:center;">
             <h2 style="margin:0 0 14px 0; color:#3E3E3E; font-size:28px; line-height:1.35;">${esc(d.cta_titulo || '')}</h2>
             <p style="margin:0 auto 28px auto; max-width:520px; color:#333333; font-size:16px; line-height:1.7;">${esc(d.cta_texto || '')}</p>
-            <a href="mailto:ferrazandrade@falaw.com.br" style="display:inline-block; background-color:#a59065; color:#ffffff; text-decoration:none; padding:15px 34px; border-radius:30px; font-size:14px; letter-spacing:1px; text-transform:uppercase; font-weight:bold;">
+            <a href="mailto:ferrazandrade@falaw.com.br" style="display:inline-block; background-color:#550000; color:#ffffff; text-decoration:none; padding:15px 34px; border-radius:30px; font-size:14px; letter-spacing:1px; text-transform:uppercase; font-weight:bold;">
               ${esc(d.cta_botao || 'Falar com especialista')}
             </a>
           </td>
@@ -7432,19 +7423,29 @@ function generateInformativoHTML(d, heroBase64, photoBase64) {
 
         <!-- Rodapé -->
         <tr>
-          <td style="background-color:#f4f3f2; padding:34px 48px 38px 48px; border-top:1px solid #e0ddd8;">
-            <p style="margin:0; color:#333333; font-size:14px; line-height:1.75;">Av. Francisco Matarazzo, 1752 · Salas 414 e 415<br>Água Branca · São Paulo / SP · CEP 05001-200</p>
-            <p style="margin:16px 0 0 0; color:#555555; font-size:14px; line-height:1.8;">
-              <strong>Telefone:</strong> +55 11 2936-0076<br>
-              <strong>WhatsApp:</strong> +55 11 91001-1551<br>
-              <strong>E-mail:</strong> <a href="mailto:ferrazandrade@falaw.com.br" style="color:#0D2B5E; text-decoration:none;">ferrazandrade@falaw.com.br</a>
-            </p>
+          <td style="background-color:#3E3E3E; padding:0;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="38%" valign="middle" style="padding:32px 0 32px 40px; border-right:1px solid rgba(255,255,255,0.15);">
+                  <p style="margin:0; font-family:Arial,sans-serif; font-size:18px; font-weight:900; color:#ffffff; letter-spacing:0.08em; text-transform:uppercase; line-height:1;">FALAW</p>
+                  <p style="margin:3px 0 0 0; font-size:9px; font-weight:300; letter-spacing:0.26em; color:#C0B8B0; text-transform:lowercase;">advogados</p>
+                </td>
+                <td width="62%" valign="middle" style="padding:32px 40px 32px 28px;">
+                  <p style="margin:0 0 12px 0; color:#C0C0C0; font-size:13px; line-height:1.7;">Av. Francisco Matarazzo, 1752 · Salas 414 e 415<br>Água Branca · São Paulo / SP · CEP 05001-200</p>
+                  <p style="margin:0; color:#C0C0C0; font-size:13px; line-height:1.85;">
+                    <strong style="color:#ffffff;">Telefone:</strong> +55 11 2936-0076<br>
+                    <strong style="color:#ffffff;">WhatsApp:</strong> +55 11 91001-1551<br>
+                    <strong style="color:#ffffff;">E-mail:</strong> <a href="mailto:ferrazandrade@falaw.com.br" style="color:#C0B8B0; text-decoration:none;">ferrazandrade@falaw.com.br</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
 
         <!-- Tagline -->
         <tr>
-          <td style="background-color:#8A8070; padding:16px 42px; text-align:center;">
+          <td style="background-color:#a59065; padding:16px 42px; text-align:center;">
             <p style="margin:0; color:#ffffff; font-size:13px; line-height:1.5; letter-spacing:2px; text-transform:uppercase; font-weight:bold;">Direito empresarial com estratégia e propósito.</p>
           </td>
         </tr>
