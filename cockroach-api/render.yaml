@@ -1,4 +1,21 @@
 services:
+  # ── Cron: sincroniza pauta de audiências Projuris ADV → Supabase ──────────
+  - type: cron
+    name: falaw-pauta-sync
+    runtime: docker
+    dockerfilePath: ../pje-scraper/Dockerfile
+    dockerContext: ../pje-scraper
+    region: oregon
+    plan: starter
+    # BRT (UTC-3): 07:30 → 10:30 UTC | 13:30 → 16:30 UTC | 19:30 → 22:30 UTC
+    schedule: "30 10,16,22 * * *"
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+
+  # ── API CockroachDB ───────────────────────────────────────────────────────
   - type: web
     name: falaw-cockroach-api
     runtime: node
