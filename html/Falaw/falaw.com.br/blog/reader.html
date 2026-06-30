@@ -159,11 +159,26 @@
   var id = new URLSearchParams(window.location.search).get('id');
   if (!id) { show404(); return; }
 
+  var _currentArt = null;
+
+  function getLang() {
+    return (window.FalawI18n ? window.FalawI18n.getLanguage() : null) ||
+           localStorage.getItem('fa_site_lang') || 'pt';
+  }
+
+  // Returns the English value if lang=en and it exists, otherwise the Portuguese value.
+  function lv(ptVal, enVal) {
+    return (getLang() === 'en' && enVal) ? enVal : ptVal;
+  }
+
   function renderArticle(art) {
-    document.title = art.title + ' — Falaw Advogados';
+    _currentArt = art;
+    var title = lv(art.title, art.title_en);
+    document.title = title + ' — Falaw Advogados';
+    var content = lv(art.content, art.content_en);
     var d = null;
     try {
-      var parsed = JSON.parse(art.content || '');
+      var parsed = JSON.parse(content || '');
       if (parsed && parsed.sections) d = parsed;
     } catch(e) {}
     if (d) { renderStructured(art, d); } else { renderLegacy(art); }
@@ -195,16 +210,21 @@
 
   /* ── STRUCTURED RENDERER ── */
   function renderStructured(art, d) {
+    var isEn = getLang() === 'en';
+    var artTitle    = lv(art.title,    art.title_en);
+    var artCategory = lv(art.category, art.category_en);
+    var artDate     = lv(art.date,     art.date_en);
+    var artExcerpt  = lv(art.excerpt,  art.excerpt_en);
     var html = '';
 
     // Header
     html += '<header class="article-header">'
-      + '<div class="article-kicker">' + esc(d.kicker || art.category) + '</div>'
-      + '<h1>' + esc(art.title) + '</h1>'
+      + '<div class="article-kicker">' + esc(d.kicker || artCategory) + '</div>'
+      + '<h1>' + esc(artTitle) + '</h1>'
       + '<div class="article-meta">'
-      + '<span>' + esc(d.date || art.date || '') + '</span>'
-      + (art.category ? '<span class="sep">·</span><span>' + esc(art.category) + '</span>' : '')
-      + ((art.readTime || art.readtime || d.readTime) ? '<span class="sep">·</span><span>' + esc(art.readTime || art.readtime || d.readTime) + ' de leitura</span>' : '')
+      + '<span>' + esc(d.date || artDate || '') + '</span>'
+      + (artCategory ? '<span class="sep">·</span><span>' + esc(artCategory) + '</span>' : '')
+      + ((art.readTime || art.readtime || d.readTime) ? '<span class="sep">·</span><span>' + esc(art.readTime || art.readtime || d.readTime) + (isEn ? ' min read' : ' de leitura') + '</span>' : '')
       + '</div>';
     if (d.lede) {
       html += '<p class="article-lede">\u201c' + esc(d.lede) + '\u201d';
@@ -215,12 +235,12 @@
 
     // SVG Cover
     html += '<div class="article-cover">' + buildSVG(d, art)
-      + '<p class="article-cover-caption">' + esc(art.title) + ' \u00b7 Falaw Blog \u00b7 ' + esc(d.date || art.date || '') + '</p>'
+      + '<p class="article-cover-caption">' + esc(artTitle) + ' \u00b7 Falaw Blog \u00b7 ' + esc(d.date || artDate || '') + '</p>'
       + '</div>';
 
     // Stats
     if (d.stats && d.stats.length) {
-      html += '<div class="article-stats" role="region" aria-label="N\u00fameros">';
+      html += '<div class="article-stats" role="region" aria-label="' + (isEn ? 'Numbers' : 'N\u00fameros') + '">';
       d.stats.forEach(function(s) {
         html += '<div class="article-stat-cell">'
           + '<div class="article-stat-num">' + esc(s.num) + '<span>' + esc(s.suffix || '') + '</span></div>'
@@ -280,9 +300,9 @@
 
     // Article end
     html += '<div class="article-end">'
-      + '<p class="article-end-meta">Falaw \u00b7 Blog Jur\u00eddico \u00b7 ' + esc(d.date || art.date || '') + '</p>'
-      + '<p class="article-cta__text">' + esc(d.cta || 'Tem d\u00favidas jur\u00eddicas sobre este tema?') + '</p>'
-      + '<a href="../contato/index.html" class="btn-primary" id="article-cta-btn">Fale conosco</a>';
+      + '<p class="article-end-meta">Falaw \u00b7 ' + (isEn ? 'Legal Blog' : 'Blog Jur\u00eddico') + ' \u00b7 ' + esc(d.date || artDate || '') + '</p>'
+      + '<p class="article-cta__text">' + esc(isEn ? (d.cta_en || 'Have legal questions about this topic?') : (d.cta || 'Tem d\u00favidas jur\u00eddicas sobre este tema?')) + '</p>'
+      + '<a href="../contato/index.html" class="btn-primary" id="article-cta-btn">' + (isEn ? 'Contact us' : 'Fale conosco') + '</a>';
     if (d.tags && d.tags.length) {
       html += '<div class="article-tags">';
       d.tags.forEach(function(t) { html += '<span class="article-tag">' + esc(t) + '</span>'; });
@@ -355,23 +375,29 @@
 
   /* ── LEGACY PLAIN TEXT RENDERER (artigos antigos) ── */
   function renderLegacy(art) {
+    var isEn = getLang() === 'en';
+    var artTitle    = lv(art.title,    art.title_en);
+    var artCategory = lv(art.category, art.category_en);
+    var artDate     = lv(art.date,     art.date_en);
+    var artExcerpt  = lv(art.excerpt,  art.excerpt_en);
+    var artContent  = lv(art.content,  art.content_en);
     var coverHtml = art.photo
-      ? '<div class="article-cover"><img loading="lazy" src="' + esc(art.photo) + '" alt="' + esc(art.title) + '" style="width:100%;max-height:420px;object-fit:cover;border-radius:4px;"/></div>'
+      ? '<div class="article-cover"><img loading="lazy" src="' + esc(art.photo) + '" alt="' + esc(artTitle) + '" style="width:100%;max-height:420px;object-fit:cover;border-radius:4px;"/></div>'
       : '';
     document.getElementById('article-content').innerHTML =
       '<header class="article-header">'
-      + '<div class="article-kicker">' + esc(art.category) + '</div>'
-      + '<h1>' + esc(art.title) + '</h1>'
+      + '<div class="article-kicker">' + esc(artCategory) + '</div>'
+      + '<h1>' + esc(artTitle) + '</h1>'
       + '<div class="article-meta">'
-      + (art.date ? '<span>' + esc(art.date) + '</span>' : '')
-      + (art.date && art.category ? '<span class="sep">\u00b7</span>' : '')
-      + '<span>' + esc(art.category) + '</span>'
-      + (art.readTime ? '<span class="sep">\u00b7</span><span>' + esc(art.readTime) + ' de leitura</span>' : '')
+      + (artDate ? '<span>' + esc(artDate) + '</span>' : '')
+      + (artDate && artCategory ? '<span class="sep">\u00b7</span>' : '')
+      + '<span>' + esc(artCategory) + '</span>'
+      + (art.readTime ? '<span class="sep">\u00b7</span><span>' + esc(art.readTime) + (isEn ? ' min read' : ' de leitura') + '</span>' : '')
       + '</div>'
-      + (art.excerpt ? '<p class="article-lede">' + esc(art.excerpt) + '</p>' : '')
+      + (artExcerpt ? '<p class="article-lede">' + esc(artExcerpt) + '</p>' : '')
       + '</header>'
       + coverHtml
-      + '<div class="article-body">' + renderPlainContent(art.content || '') + '</div>';
+      + '<div class="article-body">' + renderPlainContent(artContent || '') + '</div>';
 
     var footer = document.getElementById('article-footer');
     if (footer) footer.hidden = false;
@@ -391,6 +417,11 @@
 
   function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function escSVG(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  // Re-render article when language changes
+  window.addEventListener('falaw:languagechange', function () {
+    if (_currentArt) renderArticle(_currentArt);
+  });
 
   /* ── COMMENTS ── */
   var _commentArticleId = null;

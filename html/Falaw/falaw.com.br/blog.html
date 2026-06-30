@@ -302,12 +302,15 @@
   });
 
   function render() {
+    var isEnSearch = lang() === 'en';
     var filtered = ALL.filter(function (a) {
       var matchCat = (category === 'Todos') || (a.category === category);
+      var searchTitle   = (isEnSearch && a.title_en)   ? a.title_en   : a.title;
+      var searchExcerpt = (isEnSearch && a.excerpt_en) ? a.excerpt_en : a.excerpt;
       var matchQ   = !query ||
-        norm(a.title).indexOf(query) !== -1 ||
+        norm(searchTitle).indexOf(query) !== -1 ||
         norm(a.category).indexOf(query) !== -1 ||
-        norm(a.excerpt).indexOf(query) !== -1;
+        norm(searchExcerpt).indexOf(query) !== -1;
       return matchCat && matchQ;
     });
 
@@ -341,12 +344,17 @@
       return;
     }
 
+    var isEn = lang() === 'en';
     grid.innerHTML = filtered.map(function (a) {
-      return '<article class="blog-card">' +
-        '<div class="blog-card-category">' + esc(displayedCategory(a.category)) + '</div>' +
-        '<h2 class="blog-card-title">' + highlight(esc(a.title), query) + '</h2>' +
-        '<p class="blog-card-excerpt">' + highlight(esc(a.excerpt), query) + '</p>' +
-        '<div class="blog-card-meta"><span>' + esc(a.date) + '</span><span>·</span><span>' + esc(a.readTime) + ' ' + esc(t('blog.readTime') || 'de leitura') + '</span></div>' +
+      var cardTitle    = (isEn && a.title_en)    ? a.title_en    : a.title;
+      var cardExcerpt  = (isEn && a.excerpt_en)  ? a.excerpt_en  : a.excerpt;
+      var cardDate     = (isEn && a.date_en)     ? a.date_en     : a.date;
+      var cardCategory = (isEn && a.category_en) ? a.category_en : a.category;
+      return '<article class="blog-card">'
+        + '<div class="blog-card-category">' + esc(displayedCategory(cardCategory)) + '</div>'
+        + '<h2 class="blog-card-title">' + highlight(esc(cardTitle), query) + '</h2>'
+        + '<p class="blog-card-excerpt">' + highlight(esc(cardExcerpt), query) + '</p>'
+        + '<div class="blog-card-meta"><span>' + esc(cardDate) + '</span><span>·</span><span>' + esc(a.readTime) + ' ' + esc(t('blog.readTime') || 'de leitura') + '</span></div>'
         '<a href="' + esc(a.url) + '" class="blog-card-link">' + esc(t('blog.readArticle') || 'Ler artigo') + ' <span class="arr">→</span></a>' +
         '</article>';
     }).join('');

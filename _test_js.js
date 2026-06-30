@@ -930,18 +930,27 @@ function ghHeaders() {
 
 function generateArticlesJS(articles) {
   // Gera JSON-válido com chaves entre aspas para que JSON.parse funcione na leitura
-  const lines = articles.map(a => JSON.stringify({
-    id:        a.id        || '',
-    title:     a.title     || '',
-    category:  a.category  || '',
-    excerpt:   a.excerpt   || '',
-    date:      a.date      || '',
-    readTime:  a.readTime  || '',
-    url:       a.url       || '',
-    published: a.published !== false,
-    content:   a.content   || '',
-    photo:     a.photo     || ''
-  }, null, 2).split('\n').map((l, i) => i === 0 ? l : '  ' + l).join('\n'));
+  const lines = articles.map(a => {
+    const obj = {
+      id:        a.id        || '',
+      title:     a.title     || '',
+      category:  a.category  || '',
+      excerpt:   a.excerpt   || '',
+      date:      a.date      || '',
+      readTime:  a.readTime  || '',
+      url:       a.url       || '',
+      published: a.published !== false,
+      content:   a.content   || '',
+      photo:     a.photo     || ''
+    };
+    // Include English fields only when present
+    if (a.title_en)    obj.title_en    = a.title_en;
+    if (a.category_en) obj.category_en = a.category_en;
+    if (a.excerpt_en)  obj.excerpt_en  = a.excerpt_en;
+    if (a.date_en)     obj.date_en     = a.date_en;
+    if (a.content_en)  obj.content_en  = a.content_en;
+    return JSON.stringify(obj, null, 2).split('\n').map((l, i) => i === 0 ? l : '  ' + l).join('\n');
+  });
   return 'var FALAW_ARTICLES = [\n  ' + lines.join(',\n  ') + '\n];\n';
 }
 
