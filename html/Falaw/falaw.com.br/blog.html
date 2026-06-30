@@ -355,8 +355,8 @@
         + '<h2 class="blog-card-title">' + highlight(esc(cardTitle), query) + '</h2>'
         + '<p class="blog-card-excerpt">' + highlight(esc(cardExcerpt), query) + '</p>'
         + '<div class="blog-card-meta"><span>' + esc(cardDate) + '</span><span>·</span><span>' + esc(a.readTime) + ' ' + esc(t('blog.readTime') || 'de leitura') + '</span></div>'
-        '<a href="' + esc(a.url) + '" class="blog-card-link">' + esc(t('blog.readArticle') || 'Ler artigo') + ' <span class="arr">→</span></a>' +
-        '</article>';
+        + '<a href="' + esc(a.url) + '" class="blog-card-link">' + esc(t('blog.readArticle') || 'Ler artigo') + ' <span class="arr">→</span></a>'
+        + '</article>';
     }).join('');
   }
 
