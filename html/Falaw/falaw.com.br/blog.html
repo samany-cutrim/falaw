@@ -405,7 +405,7 @@
 
   var _artTransPromises = {};
   function getArticleEnMeta(art) {
-    var cacheKey = 'fa_art_en_v1_' + art.id;
+    var cacheKey = 'fa_art_en_v2_' + art.id;
     if (_artTransPromises[art.id]) return _artTransPromises[art.id];
     var p = Promise.all([_gtx(art.title), _gtx(art.excerpt || ''), _gtx(art.category || '')])
       .then(function(r) {
@@ -422,7 +422,7 @@
   }
 
   function _getCachedEnMeta(artId) {
-    try { var c = localStorage.getItem('fa_art_en_v1_' + artId); return c ? JSON.parse(c) : null; } catch(e) { return null; }
+    try { var c = localStorage.getItem('fa_art_en_v2_' + artId); return c ? JSON.parse(c) : null; } catch(e) { return null; }
   }
 
   function norm(s) { return String(s || '').toLowerCase(); }

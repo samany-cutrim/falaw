@@ -254,13 +254,23 @@
 
   var _transPromises = {};
   function _ensureTranslated(art) {
-    var cacheKey = 'fa_art_en_v1_' + art.id;
-    try { var c = localStorage.getItem(cacheKey); if (c) return Promise.resolve(JSON.parse(c)); } catch(e) {}
+    // v2 key — busts old incomplete cache entries
+    var cacheKey = 'fa_art_en_v2_' + art.id;
+    try {
+      var c = localStorage.getItem(cacheKey);
+      if (c) {
+        var cached = JSON.parse(c);
+        // Only use cache if it has the full translated content
+        if (cached && cached.contentStr) return Promise.resolve(cached);
+      }
+    } catch(e) {}
     if (_transPromises[art.id]) return _transPromises[art.id];
     _setTranslating(true);
     _transPromises[art.id] = _buildTranslation(art)
       .then(function(trans) {
-        try { localStorage.setItem(cacheKey, JSON.stringify(trans)); } catch(e) {}
+        if (trans && trans.contentStr) {
+          try { localStorage.setItem(cacheKey, JSON.stringify(trans)); } catch(e) {}
+        }
         delete _transPromises[art.id];
         _setTranslating(false);
         return trans;
@@ -275,8 +285,11 @@
   function renderArticle(art) {
     _currentArt = art;
     var title = lv(art.title, art.title_en);
-    document.title = title + ' — Falaw Advogados';
+    document.title = title + ' \u2014 Falaw Advogados';
     var content = lv(art.content, art.content_en);
+    // Parse the original PT structure (used as fallback)
+    var dOrig = null;
+    try { var parsedOrig = JSON.parse(art.content || ''); if (parsedOrig && parsedOrig.sections) dOrig = parsedOrig; } catch(e) {}
     var d = null;
     try { var parsed = JSON.parse(content || ''); if (parsed && parsed.sections) d = parsed; } catch(e) {}
     if (d) { renderStructured(art, d); } else { renderLegacy(art); }
@@ -291,10 +304,15 @@
           category_en: trans.category || art.category,
           content_en:  trans.contentStr || art.content
         });
-        var d2 = null;
-        try { var p2 = JSON.parse(trans.contentStr || ''); if (p2 && p2.sections) d2 = p2; } catch(e) {}
-        document.title = (trans.title || art.title) + ' — Falaw Advogados';
-        if (d2) { renderStructured(transArt, d2); } else { renderLegacy(transArt); }
+        document.title = (trans.title || art.title) + ' \u2014 Falaw Advogados';
+        if (trans.contentStr) {
+          // Use translated structured content
+          var d2 = null;
+          try { var p2 = JSON.parse(trans.contentStr); if (p2 && p2.sections) d2 = p2; } catch(e) {}
+          if (d2) { renderStructured(transArt, d2); return; }
+        }
+        // Fallback: original structure + translated metadata (titles, excerpt, category)
+        if (dOrig) { renderStructured(transArt, dOrig); } else { renderLegacy(transArt); }
       });
     }
   }
