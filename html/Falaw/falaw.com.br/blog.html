@@ -346,11 +346,12 @@
 
     var isEn = lang() === 'en';
     grid.innerHTML = filtered.map(function (a) {
-      var cardTitle    = (isEn && a.title_en)    ? a.title_en    : a.title;
-      var cardExcerpt  = (isEn && a.excerpt_en)  ? a.excerpt_en  : a.excerpt;
-      var cardDate     = (isEn && a.date_en)     ? a.date_en     : a.date;
-      var cardCategory = (isEn && a.category_en) ? a.category_en : a.category;
-      return '<article class="blog-card">'
+      var cached = (isEn && !a.title_en) ? _getCachedEnMeta(a.id) : null;
+      var cardTitle    = (isEn && a.title_en)    ? a.title_en    : (cached && cached.title)    ? cached.title    : a.title;
+      var cardExcerpt  = (isEn && a.excerpt_en)  ? a.excerpt_en  : (cached && cached.excerpt)  ? cached.excerpt  : a.excerpt;
+      var cardDate     = (isEn && a.date_en)      ? a.date_en     : translateDate(a.date, isEn ? 'en' : 'pt');
+      var cardCategory = (isEn && a.category_en) ? a.category_en : (cached && cached.category) ? cached.category : a.category;
+      return '<article class="blog-card" data-art-id="' + esc(a.id) + '">'
         + '<div class="blog-card-category">' + esc(displayedCategory(cardCategory)) + '</div>'
         + '<h2 class="blog-card-title">' + highlight(esc(cardTitle), query) + '</h2>'
         + '<p class="blog-card-excerpt">' + highlight(esc(cardExcerpt), query) + '</p>'
@@ -358,6 +359,70 @@
         + '<a href="' + esc(a.url) + '" class="blog-card-link">' + esc(t('blog.readArticle') || 'Ler artigo') + ' <span class="arr">→</span></a>'
         + '</article>';
     }).join('');
+
+    // For EN: fire translations for articles not yet in cache and patch DOM when ready
+    if (isEn) {
+      filtered.forEach(function(a) {
+        if (a.title_en || _getCachedEnMeta(a.id)) return; // already translated
+        (function(artId) {
+          getArticleEnMeta(a).then(function(en) {
+            if (lang() !== 'en') return;
+            var cards = grid.querySelectorAll('article[data-art-id]');
+            for (var ci = 0; ci < cards.length; ci++) {
+              if (cards[ci].getAttribute('data-art-id') === artId) {
+                var titleEl   = cards[ci].querySelector('.blog-card-title');
+                var excerptEl = cards[ci].querySelector('.blog-card-excerpt');
+                var catEl     = cards[ci].querySelector('.blog-card-category');
+                if (titleEl)   titleEl.textContent   = en.title;
+                if (excerptEl) excerptEl.textContent = en.excerpt;
+                if (catEl && en.category) catEl.textContent = en.category;
+                break;
+              }
+            }
+          });
+        })(a.id);
+      });
+    }
+  }
+
+  var MONTHS_PT_EN = {janeiro:'January',fevereiro:'February','março':'March',abril:'April',maio:'May',junho:'June',julho:'July',agosto:'August',setembro:'September',outubro:'October',novembro:'November',dezembro:'December'};
+  function translateDate(d, toLang) {
+    if (toLang !== 'en' || !d) return d;
+    return d.replace(/^(\w+) de (\d{4})$/i, function(_, m, y) {
+      var key = m.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      return (MONTHS_PT_EN[key] || m) + ' ' + y;
+    });
+  }
+
+  /* ── AUTO-TRANSLATION ── */
+  function _gtx(text) {
+    if (!text || text.trim().length < 2) return Promise.resolve(text || '');
+    return fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=pt&tl=en&dt=t&q=' + encodeURIComponent(text))
+      .then(function(r) { return r.json(); })
+      .then(function(d) { return (d[0] || []).map(function(x) { return x[0] || ''; }).join(''); })
+      .catch(function() { return text; });
+  }
+
+  var _artTransPromises = {};
+  function getArticleEnMeta(art) {
+    var cacheKey = 'fa_art_en_v1_' + art.id;
+    if (_artTransPromises[art.id]) return _artTransPromises[art.id];
+    var p = Promise.all([_gtx(art.title), _gtx(art.excerpt || ''), _gtx(art.category || '')])
+      .then(function(r) {
+        var en = { title: r[0], excerpt: r[1], category: r[2] };
+        try { localStorage.setItem(cacheKey, JSON.stringify(en)); } catch(e) {}
+        delete _artTransPromises[art.id];
+        return en;
+      }).catch(function() {
+        delete _artTransPromises[art.id];
+        return { title: art.title, excerpt: art.excerpt, category: art.category };
+      });
+    _artTransPromises[art.id] = p;
+    return p;
+  }
+
+  function _getCachedEnMeta(artId) {
+    try { var c = localStorage.getItem('fa_art_en_v1_' + artId); return c ? JSON.parse(c) : null; } catch(e) { return null; }
   }
 
   function norm(s) { return String(s || '').toLowerCase(); }

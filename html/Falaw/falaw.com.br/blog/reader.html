@@ -171,17 +171,123 @@
     return (getLang() === 'en' && enVal) ? enVal : ptVal;
   }
 
+  /* ── AUTO-TRANSLATION ── */
+  function _gtx(text) {
+    if (!text || text.trim().length < 2) return Promise.resolve(text || '');
+    return fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=pt&tl=en&dt=t&q=' + encodeURIComponent(text))
+      .then(function(r) { return r.json(); })
+      .then(function(d) { return (d[0] || []).map(function(x) { return x[0] || ''; }).join(''); })
+      .catch(function() { return text; });
+  }
+
+  function _setTranslating(on) {
+    var el = document.getElementById('_fa_translating');
+    if (!el) {
+      if (!on) return;
+      el = document.createElement('div');
+      el.id = '_fa_translating';
+      el.style.cssText = 'position:fixed;bottom:20px;right:80px;background:rgba(6,14,26,.9);color:#f0ece0;font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:8px 14px;border-radius:4px;z-index:998;pointer-events:none;transition:opacity .3s ease';
+      el.textContent = 'Translating…';
+      document.body.appendChild(el);
+    }
+    el.style.opacity = on ? '1' : '0';
+  }
+
+  function _buildTranslation(art) {
+    var d = null;
+    try { d = JSON.parse(art.content || ''); if (!d || !d.sections) d = null; } catch(e) {}
+    var strings = [art.title || '', art.excerpt || '', art.category || ''];
+    var legacyParas = null;
+    if (d) {
+      strings.push(d.kicker || '', d.lede || '', d.ledeCite || '', d.cta || '');
+      (d.stats || []).forEach(function(s) { strings.push(s.label || ''); });
+      (d.sections || []).forEach(function(sec) {
+        strings.push(sec.label || '', sec.title || '');
+        (sec.paragraphs || []).forEach(function(p) { strings.push(p || ''); });
+        if (sec.featureBox) {
+          strings.push(sec.featureBox.title || '');
+          (sec.featureBox.items || []).forEach(function(it) { strings.push(it || ''); });
+        }
+        if (sec.quote) { strings.push(sec.quote.text || '', sec.quote.cite || ''); }
+        strings.push(sec.highlight || '');
+        (sec.timeline || []).forEach(function(t) { strings.push(t.title || '', t.text || ''); });
+      });
+    } else {
+      legacyParas = (art.content || '').split(/\n{2,}/);
+      legacyParas.forEach(function(p) { strings.push(p); });
+    }
+    return Promise.all(strings.map(_gtx)).then(function(translated) {
+      var i = 0;
+      var t = function() { return translated[i++] || ''; };
+      var result = { title: t(), excerpt: t(), category: t() };
+      if (d) {
+        var outD = JSON.parse(JSON.stringify(d));
+        outD.kicker = t(); outD.lede = t(); outD.ledeCite = t(); outD.cta = t();
+        (outD.stats || []).forEach(function(s) { s.label = t(); });
+        (outD.sections || []).forEach(function(sec) {
+          sec.label = t(); sec.title = t();
+          sec.paragraphs = (sec.paragraphs || []).map(function() { return t(); });
+          if (sec.featureBox) {
+            sec.featureBox.title = t();
+            sec.featureBox.items = (sec.featureBox.items || []).map(function() { return t(); });
+          }
+          if (sec.quote) { sec.quote.text = t(); sec.quote.cite = t(); }
+          sec.highlight = t();
+          (sec.timeline || []).forEach(function(tl) { tl.title = t(); tl.text = t(); });
+        });
+        result.contentStr = JSON.stringify(outD);
+      } else {
+        result.contentStr = (legacyParas || []).map(function() { return t(); }).join('\n\n');
+      }
+      return result;
+    });
+  }
+
+  var _transPromises = {};
+  function _ensureTranslated(art) {
+    var cacheKey = 'fa_art_en_v1_' + art.id;
+    try { var c = localStorage.getItem(cacheKey); if (c) return Promise.resolve(JSON.parse(c)); } catch(e) {}
+    if (_transPromises[art.id]) return _transPromises[art.id];
+    _setTranslating(true);
+    _transPromises[art.id] = _buildTranslation(art)
+      .then(function(trans) {
+        try { localStorage.setItem(cacheKey, JSON.stringify(trans)); } catch(e) {}
+        delete _transPromises[art.id];
+        _setTranslating(false);
+        return trans;
+      }).catch(function() {
+        delete _transPromises[art.id];
+        _setTranslating(false);
+        return null;
+      });
+    return _transPromises[art.id];
+  }
+
   function renderArticle(art) {
     _currentArt = art;
     var title = lv(art.title, art.title_en);
     document.title = title + ' — Falaw Advogados';
     var content = lv(art.content, art.content_en);
     var d = null;
-    try {
-      var parsed = JSON.parse(content || '');
-      if (parsed && parsed.sections) d = parsed;
-    } catch(e) {}
+    try { var parsed = JSON.parse(content || ''); if (parsed && parsed.sections) d = parsed; } catch(e) {}
     if (d) { renderStructured(art, d); } else { renderLegacy(art); }
+
+    // Auto-translate when EN and no manual translation exists
+    if (getLang() === 'en' && !art.content_en) {
+      _ensureTranslated(art).then(function(trans) {
+        if (!trans || _currentArt !== art || getLang() !== 'en') return;
+        var transArt = Object.assign({}, art, {
+          title_en:    trans.title    || art.title,
+          excerpt_en:  trans.excerpt  || art.excerpt,
+          category_en: trans.category || art.category,
+          content_en:  trans.contentStr || art.content
+        });
+        var d2 = null;
+        try { var p2 = JSON.parse(trans.contentStr || ''); if (p2 && p2.sections) d2 = p2; } catch(e) {}
+        document.title = (trans.title || art.title) + ' — Falaw Advogados';
+        if (d2) { renderStructured(transArt, d2); } else { renderLegacy(transArt); }
+      });
+    }
   }
 
   var articles = (typeof FALAW_ARTICLES !== 'undefined') ? FALAW_ARTICLES : [];
@@ -208,12 +314,22 @@
     }
   }
 
+  var MONTHS_PT_EN = {janeiro:'January',fevereiro:'February','março':'March',abril:'April',maio:'May',junho:'June',julho:'July',agosto:'August',setembro:'September',outubro:'October',novembro:'November',dezembro:'December'};
+  function translateDate(d, toLang) {
+    if (toLang !== 'en' || !d) return d;
+    return d.replace(/^(\w+) de (\d{4})$/i, function(_, m, y) {
+      var key = m.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      return (MONTHS_PT_EN[key] || m) + ' ' + y;
+    });
+  }
+
   /* ── STRUCTURED RENDERER ── */
   function renderStructured(art, d) {
     var isEn = getLang() === 'en';
     var artTitle    = lv(art.title,    art.title_en);
     var artCategory = lv(art.category, art.category_en);
-    var artDate     = lv(art.date,     art.date_en);
+    var artDate     = translateDate(lv(art.date, art.date_en), isEn ? 'en' : 'pt');
+    var dDate       = translateDate(d.date || '', isEn ? 'en' : 'pt');
     var artExcerpt  = lv(art.excerpt,  art.excerpt_en);
     var html = '';
 
@@ -222,7 +338,7 @@
       + '<div class="article-kicker">' + esc(d.kicker || artCategory) + '</div>'
       + '<h1>' + esc(artTitle) + '</h1>'
       + '<div class="article-meta">'
-      + '<span>' + esc(d.date || artDate || '') + '</span>'
+      + '<span>' + esc(dDate || artDate || '') + '</span>'
       + (artCategory ? '<span class="sep">·</span><span>' + esc(artCategory) + '</span>' : '')
       + ((art.readTime || art.readtime || d.readTime) ? '<span class="sep">·</span><span>' + esc(art.readTime || art.readtime || d.readTime) + (isEn ? ' min read' : ' de leitura') + '</span>' : '')
       + '</div>';
@@ -235,7 +351,7 @@
 
     // SVG Cover
     html += '<div class="article-cover">' + buildSVG(d, art)
-      + '<p class="article-cover-caption">' + esc(artTitle) + ' \u00b7 Falaw Blog \u00b7 ' + esc(d.date || artDate || '') + '</p>'
+      + '<p class="article-cover-caption">' + esc(artTitle) + ' \u00b7 Falaw Blog \u00b7 ' + esc(dDate || artDate || '') + '</p>'
       + '</div>';
 
     // Stats
@@ -300,7 +416,7 @@
 
     // Article end
     html += '<div class="article-end">'
-      + '<p class="article-end-meta">Falaw \u00b7 ' + (isEn ? 'Legal Blog' : 'Blog Jur\u00eddico') + ' \u00b7 ' + esc(d.date || artDate || '') + '</p>'
+      + '<p class="article-end-meta">Falaw \u00b7 ' + (isEn ? 'Legal Blog' : 'Blog Jur\u00eddico') + ' \u00b7 ' + esc(dDate || artDate || '') + '</p>'
       + '<p class="article-cta__text">' + esc(isEn ? (d.cta_en || 'Have legal questions about this topic?') : (d.cta || 'Tem d\u00favidas jur\u00eddicas sobre este tema?')) + '</p>'
       + '<a href="../contato/index.html" class="btn-primary" id="article-cta-btn">' + (isEn ? 'Contact us' : 'Fale conosco') + '</a>';
     if (d.tags && d.tags.length) {
@@ -378,7 +494,7 @@
     var isEn = getLang() === 'en';
     var artTitle    = lv(art.title,    art.title_en);
     var artCategory = lv(art.category, art.category_en);
-    var artDate     = lv(art.date,     art.date_en);
+    var artDate     = translateDate(lv(art.date, art.date_en), isEn ? 'en' : 'pt');
     var artExcerpt  = lv(art.excerpt,  art.excerpt_en);
     var artContent  = lv(art.content,  art.content_en);
     var coverHtml = art.photo
@@ -425,9 +541,12 @@
 
   /* ── COMMENTS ── */
   var _commentArticleId = null;
+  var _commentsInitialized = false;
 
   function initComments(articleId) {
     _commentArticleId = articleId;
+    if (_commentsInitialized) { loadComments(articleId); return; }
+    _commentsInitialized = true;
 
     var btnOpen = document.getElementById('btn-comment-open');
     if (btnOpen) btnOpen.addEventListener('click', openCommentModal);
