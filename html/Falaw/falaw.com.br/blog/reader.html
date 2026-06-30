@@ -171,6 +171,15 @@
     return (getLang() === 'en' && enVal) ? enVal : ptVal;
   }
 
+  var MONTHS_PT_EN = {janeiro:'January',fevereiro:'February','março':'March',abril:'April',maio:'May',junho:'June',julho:'July',agosto:'August',setembro:'September',outubro:'October',novembro:'November',dezembro:'December'};
+  function translateDate(d, toLang) {
+    if (toLang !== 'en' || !d) return d;
+    return d.replace(/^(\w+) de (\d{4})$/i, function(_, m, y) {
+      var key = m.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      return (MONTHS_PT_EN[key] || m) + ' ' + y;
+    });
+  }
+
   /* ── AUTO-TRANSLATION ── */
   function _gtx(text) {
     if (!text || text.trim().length < 2) return Promise.resolve(text || '');
@@ -312,15 +321,6 @@
     } else {
       show404();
     }
-  }
-
-  var MONTHS_PT_EN = {janeiro:'January',fevereiro:'February','março':'March',abril:'April',maio:'May',junho:'June',julho:'July',agosto:'August',setembro:'September',outubro:'October',novembro:'November',dezembro:'December'};
-  function translateDate(d, toLang) {
-    if (toLang !== 'en' || !d) return d;
-    return d.replace(/^(\w+) de (\d{4})$/i, function(_, m, y) {
-      var key = m.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-      return (MONTHS_PT_EN[key] || m) + ' ' + y;
-    });
   }
 
   /* ── STRUCTURED RENDERER ── */

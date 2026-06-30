@@ -176,3 +176,22 @@
 2026-06-25 16:15:19,630 [INFO] ============================================================
 2026-06-25 16:15:19,630 [INFO] Sincronizacao concluida.
 2026-06-25 16:15:19,631 [INFO] ============================================================
+2026-06-30 19:34:09,152 [INFO] ============================================================
+2026-06-30 19:34:09,153 [INFO] Pauta de Audiencias — 30/06/2026 19:34
+2026-06-30 19:34:09,154 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-06-30 19:34:09,154 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-06-30 19:34:09,154 [INFO] Periodo: 2026-06-30 -> 2027-06-30
+2026-06-30 19:34:09,154 [INFO] ============================================================
+2026-06-30 19:34:09,154 [INFO] Calendario: 2026-06-30 -> 2027-06-30
+2026-06-30 19:34:09,744 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-06-30 19:34:37,595 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-06-30 19:34:37,794 [INFO] Senha preenchida.
+2026-06-30 19:34:37,995 [INFO] Formulário submetido.
+2026-06-30 19:34:45,258 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=5e98a8a1-5cfe-4be1-86c8-2bf5681dec5d&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=2891a464-bbc4-4e3e-9a65-9478c06323ab.5e98a8a1-5cfe-4be1-86c8-2bf5681dec5d.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-06-30 19:34:45,625 [INFO] Bearer token capturado das requisições de rede.
+2026-06-30 19:34:58,521 [INFO]   Retornou 215 itens
+2026-06-30 19:34:58,563 [INFO] Calendario: 215 tarefas recebidas
+2026-06-30 19:35:06,367 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 215
+2026-06-30 19:35:06,367 [INFO] ============================================================
+2026-06-30 19:35:06,367 [INFO] Sincronizacao concluida.
+2026-06-30 19:35:06,367 [INFO] ============================================================
