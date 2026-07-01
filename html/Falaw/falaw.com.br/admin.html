@@ -1712,12 +1712,19 @@
           <option value="adiada">Adiada</option>
           <option value="cancelada">Cancelada</option>
         </select>
-        <select id="aud-filter-resp" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none">
-          <option value="">Todas as responsabilidades</option>
-        </select>
-        <select id="aud-filter-recda" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none;max-width:220px">
-          <option value="">Todas as reclamadas</option>
-        </select>
+        <select id="aud-filter-resp" onchange="loadAudiencias()" style="display:none"></select>
+        <div id="aud-ms-resp" class="ms-wrap" data-placeholder="Todas as responsabilidades" data-onchange="loadAudiencias" style="position:relative">
+          <button type="button" onclick="_msToggle('aud-ms-resp')" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap">
+            <span id="aud-ms-resp-lbl">Todas as responsabilidades</span><span style="color:#9CA3AF;font-size:10px">▾</span>
+          </button>
+          <div id="aud-ms-resp-drop" class="ms-drop" style="display:none;position:absolute;z-index:200;top:100%;left:0;min-width:200px;max-height:220px;overflow-y:auto;background:#fff;border:1px solid var(--c-divider);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:2px"></div>
+        </div>
+        <div id="aud-ms-recda" class="ms-wrap" data-placeholder="Todas as reclamadas" data-onchange="loadAudiencias" style="position:relative">
+          <button type="button" onclick="_msToggle('aud-ms-recda')" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;max-width:220px">
+            <span id="aud-ms-recda-lbl" style="overflow:hidden;text-overflow:ellipsis">Todas as reclamadas</span><span style="color:#9CA3AF;font-size:10px;flex-shrink:0">▾</span>
+          </button>
+          <div id="aud-ms-recda-drop" class="ms-drop" style="display:none;position:absolute;z-index:200;top:100%;left:0;min-width:240px;max-height:260px;overflow-y:auto;background:#fff;border:1px solid var(--c-divider);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:2px"></div>
+        </div>
         <input type="month" id="aud-filter-mes" onchange="audSyncDateFilters('mes')" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
         <input type="date"  id="aud-filter-dia" onchange="audSyncDateFilters('dia')" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
         <input type="text" id="aud-filter-busca" placeholder="Buscar processo, reclamante…" oninput="loadAudiencias()" style="flex:1;min-width:160px;border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
@@ -13541,23 +13548,22 @@ async function loadAudiencias() {
   const today = new Date().toISOString().slice(0,10);
 
   // filtros client-side
-  const fTipo  = document.getElementById('aud-filter-tipo')?.value      || '';
+  const fTipos = _msGetValues('aud-filter-tipo');
   const fMod   = document.getElementById('aud-filter-modalidade')?.value|| '';
   const fSt    = document.getElementById('aud-filter-status')?.value    || '';
-  const fResp  = document.getElementById('aud-filter-resp')?.value      || '';
-  const fRecda = document.getElementById('aud-filter-recda')?.value     || '';
+  const fResps = _msGetValues('aud-ms-resp');
+  const fRecdas= _msGetValues('aud-ms-recda');
   const fMes   = document.getElementById('aud-filter-mes')?.value       || '';
   const fDia   = document.getElementById('aud-filter-dia')?.value        || '';
   const fBusca = (document.getElementById('aud-filter-busca')?.value    || '').toLowerCase().trim();
 
   const filtered = items.filter(a => {
-    // sem filtro de período: mostra apenas hoje e datas futuras
     if (!fMes && !fDia && a.data_audiencia < today) return false;
-    if (fTipo  && a.tipo_audiencia       !== fTipo)  return false;
+    if (fTipos.length  && !fTipos.includes(a.tipo_audiencia||''))        return false;
     if (fMod   && a.modalidade           !== fMod)   return false;
     if (fSt    && a.status               !== fSt)    return false;
-    if (fResp  && a.tipo_responsabilidade!== fResp)  return false;
-    if (fRecda && !(a.reclamada||'').includes(fRecda)) return false;
+    if (fResps.length  && !fResps.includes(a.tipo_responsabilidade||'')) return false;
+    if (fRecdas.length && !fRecdas.some(q=>(a.reclamada||'').includes(q))) return false;
     if (fDia) {
       if (a.data_audiencia !== fDia) return false;
     } else if (fMes) {
@@ -13570,16 +13576,11 @@ async function loadAudiencias() {
     return true;
   });
 
-  // Popula selects dinâmicos com valores únicos dos dados carregados
-  function _audPopulateSelect(id, vals, placeholder) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const curr = el.value;
-    el.innerHTML = `<option value="">${placeholder}</option>` + vals.map(v=>`<option value="${v}"${v===curr?' selected':''}>${v}</option>`).join('');
-  }
+  // Popula multi-selects dinâmicos
   function _audExtractCliente(rec) { if (!rec) return ''; const f = rec.split(',').find(p=>p.includes('(CLIENTE)')); return f ? f.replace(/\s*\(CLIENTE\)/gi,'').trim() : ''; }
-  _audPopulateSelect('aud-filter-resp',  [...new Set(items.map(r=>r.tipo_responsabilidade||'').filter(Boolean))].sort(), 'Todas as responsabilidades');
-  _audPopulateSelect('aud-filter-recda', [...new Set(items.map(r=>_audExtractCliente(r.reclamada)).filter(Boolean))].sort(), 'Todas as reclamadas');
+  _msPopulate('aud-filter-tipo', [...new Set(items.map(r=>r.tipo_audiencia||'').filter(Boolean))].sort());
+  _msPopulate('aud-ms-resp',  [...new Set(items.map(r=>r.tipo_responsabilidade||'').filter(Boolean))].sort());
+  _msPopulate('aud-ms-recda', [...new Set(items.map(r=>_audExtractCliente(r.reclamada)).filter(Boolean))].sort());
 
   _audRenderStats(items);
   const countEl = document.getElementById('aud-count');
@@ -13625,13 +13626,51 @@ function audSyncDateFilters(changed) {
   loadAudiencias();
 }
 
+/* ── Multi-Select helpers (shared) ── */
+if (!window._msState) {
+  window._msState = {};
+  window._msGetValues = id => [...(_msState[id]||new Set())];
+  window._msToggle = id => {
+    const d=document.getElementById(id+'-drop'); if(!d)return;
+    const open=d.style.display!=='none';
+    document.querySelectorAll('.ms-drop').forEach(x=>x.style.display='none');
+    if(!open) d.style.display='block';
+  };
+  window._msCheck = (id,el) => {
+    const val=el.dataset.val;
+    if(!_msState[id]) _msState[id]=new Set();
+    el.checked?_msState[id].add(val):_msState[id].delete(val);
+    _msUpdateBtn(id);
+    const w=document.getElementById(id); if(w&&w.dataset.onchange){const fn=w.dataset.onchange;if(window[fn])window[fn]();}
+  };
+  window._msClear = id => {
+    _msState[id]=new Set();
+    const d=document.getElementById(id+'-drop'); if(d)d.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=false);
+    _msUpdateBtn(id);
+    const w=document.getElementById(id); if(w&&w.dataset.onchange){const fn=w.dataset.onchange;if(window[fn])window[fn]();}
+  };
+  window._msReset = id => { _msState[id]=new Set(); _msUpdateBtn(id); const d=document.getElementById(id+'-drop'); if(d)d.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=false); };
+  window._msUpdateBtn = id => {
+    const lbl=document.getElementById(id+'-lbl'); if(!lbl)return;
+    const s=_msState[id]||new Set(); const w=document.getElementById(id);
+    const ph=(w&&w.dataset.placeholder)||'Todas';
+    lbl.textContent=s.size===0?ph:s.size===1?[...s][0]:s.size+' selecionados';
+  };
+  window._msPopulate = (id,vals) => {
+    const d=document.getElementById(id+'-drop'); if(!d)return;
+    const curr=_msState[id]||new Set();
+    d.innerHTML=`<div style="display:flex;justify-content:flex-end;padding:3px 6px;border-bottom:1px solid #f3f4f6"><button type="button" onclick="_msClear('${id}')" style="font-family:var(--f-mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#9CA3AF;background:none;border:none;cursor:pointer;padding:2px 6px">Limpar</button></div>`
+      +vals.map(v=>{const safe=v.replace(/&/g,'&amp;').replace(/"/g,'&quot;');return `<label style="display:flex;align-items:center;gap:7px;padding:5px 10px;cursor:pointer;font-size:11px;font-family:var(--f-mono);color:var(--c-dark);border-bottom:1px solid #f9fafb" title="${safe}"><input type="checkbox" data-val="${safe}" ${curr.has(v)?'checked':''} onchange="_msCheck('${id}',this)" style="width:12px;height:12px;accent-color:#0D2B5E;cursor:pointer;flex-shrink:0"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px">${safe}</span></label>`;}).join('');
+    _msUpdateBtn(id);
+  };
+  document.addEventListener('click',e=>{if(!e.target.closest('.ms-wrap'))document.querySelectorAll('.ms-drop').forEach(d=>d.style.display='none');},true);
+}
+
 function audLimparFiltros() {
-  ['aud-filter-tipo','aud-filter-modalidade','aud-filter-status','aud-filter-resp','aud-filter-mes','aud-filter-dia'].forEach(id => {
+  ['aud-filter-tipo','aud-filter-modalidade','aud-filter-status','aud-filter-mes','aud-filter-dia'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  ['aud-filter-recda'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.selectedIndex = 0;
-  });
+  ['aud-ms-resp','aud-ms-recda','aud-filter-tipo'].forEach(id => _msReset(id));
   const b = document.getElementById('aud-filter-busca'); if (b) b.value = '';
   loadAudiencias();
 }

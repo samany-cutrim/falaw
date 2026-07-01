@@ -790,21 +790,30 @@
             </div>
             <div style="flex:1;min-width:130px">
               <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Tipo de Audiência</label>
-              <select id="esc-sel-tipo" onchange="_escApplyFilters()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none;background:#fff">
-                <option value="">Todos</option>
-              </select>
+              <div id="esc-sel-tipo" class="ms-wrap" data-placeholder="Todos" data-onchange="_escApplyFilters" style="position:relative;width:100%;box-sizing:border-box">
+                <button type="button" onclick="_msToggle('esc-sel-tipo')" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none;background:#fff;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:4px">
+                  <span id="esc-sel-tipo-lbl" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Todos</span><span style="flex-shrink:0;color:#9CA3AF;font-size:10px">▾</span>
+                </button>
+                <div id="esc-sel-tipo-drop" class="ms-drop" style="display:none;position:absolute;z-index:200;top:100%;left:0;min-width:100%;max-height:220px;overflow-y:auto;background:#fff;border:1px solid #e5e7eb;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:2px"></div>
+              </div>
             </div>
             <div style="flex:1;min-width:140px">
               <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Responsabilidade</label>
-              <select id="esc-sel-resp" onchange="_escApplyFilters()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none;background:#fff">
-                <option value="">Todas</option>
-              </select>
+              <div id="esc-sel-resp" class="ms-wrap" data-placeholder="Todas" data-onchange="_escApplyFilters" style="position:relative;width:100%;box-sizing:border-box">
+                <button type="button" onclick="_msToggle('esc-sel-resp')" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none;background:#fff;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:4px">
+                  <span id="esc-sel-resp-lbl" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Todas</span><span style="flex-shrink:0;color:#9CA3AF;font-size:10px">▾</span>
+                </button>
+                <div id="esc-sel-resp-drop" class="ms-drop" style="display:none;position:absolute;z-index:200;top:100%;left:0;min-width:100%;max-height:220px;overflow-y:auto;background:#fff;border:1px solid #e5e7eb;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:2px"></div>
+              </div>
             </div>
             <div style="flex:2;min-width:180px">
               <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Reclamada</label>
-              <select id="esc-sel-recda" onchange="_escApplyFilters()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none;background:#fff">
-                <option value="">Todas</option>
-              </select>
+              <div id="esc-sel-recda" class="ms-wrap" data-placeholder="Todas" data-onchange="_escApplyFilters" style="position:relative;width:100%;box-sizing:border-box">
+                <button type="button" onclick="_msToggle('esc-sel-recda')" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none;background:#fff;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:4px">
+                  <span id="esc-sel-recda-lbl" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Todas</span><span style="flex-shrink:0;color:#9CA3AF;font-size:10px">▾</span>
+                </button>
+                <div id="esc-sel-recda-drop" class="ms-drop" style="display:none;position:absolute;z-index:200;top:100%;left:0;min-width:220px;max-height:260px;overflow-y:auto;background:#fff;border:1px solid #e5e7eb;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:2px"></div>
+              </div>
             </div>
             <div style="display:flex;gap:8px">
               <button onclick="_escLimparBusca()" style="font-family:monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;color:#6B7280;cursor:pointer;white-space:nowrap">✕ Limpar</button>
@@ -2203,9 +2212,9 @@ function _escApplyFilters() {
   const qAdv  = (document.getElementById('esc-busca-adv')?.value  || '').trim().toLowerCase();
   const qProc = (document.getElementById('esc-busca-proc')?.value || '').trim().toLowerCase();
   const qRecl = (document.getElementById('esc-busca-recl')?.value || '').trim().toLowerCase();
-  const qRecda= (document.getElementById('esc-sel-recda')?.value  || '').trim();
-  const qTipo = (document.getElementById('esc-sel-tipo')?.value   || '').trim();
-  const qResp = (document.getElementById('esc-sel-resp')?.value   || '').trim();
+  const qRecda = _msGetValues('esc-sel-recda');
+  const qTipo  = _msGetValues('esc-sel-tipo');
+  const qResp  = _msGetValues('esc-sel-resp');
 
   let filtered = dateVal
     ? rows.filter(r => (r.data_audiencia||'') === dateVal)
@@ -2214,9 +2223,9 @@ function _escApplyFilters() {
   if (qAdv)  filtered = filtered.filter(r => (r.advogado||'').toLowerCase().includes(qAdv));
   if (qProc) filtered = filtered.filter(r => (r.processo||'').toLowerCase().includes(qProc));
   if (qRecl) filtered = filtered.filter(r => (r.reclamante||'').toLowerCase().includes(qRecl));
-  if (qRecda)filtered = filtered.filter(r => (r.reclamada||'').includes(qRecda));
-  if (qTipo) filtered = filtered.filter(r => (r.tipo_audiencia||'') === qTipo);
-  if (qResp) filtered = filtered.filter(r => (r.tipo_responsabilidade||'') === qResp);
+  if (qRecda.length) filtered = filtered.filter(r => qRecda.some(q => (r.reclamada||'').includes(q)));
+  if (qTipo.length)  filtered = filtered.filter(r => qTipo.includes(r.tipo_audiencia||''));
+  if (qResp.length)  filtered = filtered.filter(r => qResp.includes(r.tipo_responsabilidade||''));
 
   const count = document.getElementById('pauta-cal-count');
   if (count) {
@@ -2237,15 +2246,57 @@ function _escApplyFilters() {
   }
 }
 
+/* ── Multi-Select helpers ── */
+const _msState = {};
+function _msGetValues(id) { return [...(_msState[id]||new Set())]; }
+function _msToggle(id) {
+  const d = document.getElementById(id+'-drop');
+  if (!d) return;
+  const open = d.style.display !== 'none';
+  document.querySelectorAll('.ms-drop').forEach(x => x.style.display='none');
+  if (!open) d.style.display = 'block';
+}
+function _msCheck(id, el) {
+  const val = el.dataset.val;
+  if (!_msState[id]) _msState[id] = new Set();
+  el.checked ? _msState[id].add(val) : _msState[id].delete(val);
+  _msUpdateBtn(id);
+  const wrap = document.getElementById(id);
+  if (wrap && wrap.dataset.onchange) { const fn=wrap.dataset.onchange; if(window[fn]) window[fn](); }
+}
+function _msClear(id) {
+  _msState[id] = new Set();
+  const d = document.getElementById(id+'-drop');
+  if (d) d.querySelectorAll('input[type=checkbox]').forEach(c => c.checked=false);
+  _msUpdateBtn(id);
+  const wrap = document.getElementById(id);
+  if (wrap && wrap.dataset.onchange) { const fn=wrap.dataset.onchange; if(window[fn]) window[fn](); }
+}
+function _msReset(id) { _msState[id]=new Set(); _msUpdateBtn(id); const d=document.getElementById(id+'-drop'); if(d) d.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=false); }
+function _msUpdateBtn(id) {
+  const lbl = document.getElementById(id+'-lbl');
+  if (!lbl) return;
+  const s = _msState[id]||new Set();
+  const wrap = document.getElementById(id);
+  const ph = (wrap&&wrap.dataset.placeholder)||'Todas';
+  lbl.textContent = s.size===0 ? ph : s.size===1 ? [...s][0] : s.size+' selecionados';
+}
+function _msPopulate(id, vals) {
+  const d = document.getElementById(id+'-drop');
+  if (!d) return;
+  const curr = _msState[id]||new Set();
+  d.innerHTML = `<div style="display:flex;justify-content:flex-end;padding:3px 6px 3px;border-bottom:1px solid #f3f4f6"><button type="button" onclick="_msClear('${id}')" style="font-family:monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#9CA3AF;background:none;border:none;cursor:pointer;padding:2px 6px">Limpar</button></div>`
+    + vals.map(v => { const safe=v.replace(/&/g,'&amp;').replace(/"/g,'&quot;'); return `<label style="display:flex;align-items:center;gap:7px;padding:5px 10px;cursor:pointer;font-size:11px;font-family:monospace;color:#374151;border-bottom:1px solid #f9fafb" title="${safe}"><input type="checkbox" data-val="${safe}" ${curr.has(v)?'checked':''} onchange="_msCheck('${id}',this)" style="width:12px;height:12px;accent-color:#0D2B5E;cursor:pointer;flex-shrink:0"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px">${safe}</span></label>`; }).join('');
+  _msUpdateBtn(id);
+}
+document.addEventListener('click', e=>{ if(!e.target.closest('.ms-wrap')) document.querySelectorAll('.ms-drop').forEach(d=>d.style.display='none'); }, true);
+
 function _escLimparBusca() {
   ['esc-busca-adv','esc-busca-proc','esc-busca-recl'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  ['esc-sel-tipo','esc-sel-resp','esc-sel-recda'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.selectedIndex = 0;
-  });
+  ['esc-sel-tipo','esc-sel-resp','esc-sel-recda'].forEach(id => _msReset(id));
   _escApplyFilters();
 }
 
@@ -2260,15 +2311,9 @@ function _escPopulateSelects(rows) {
   const tipos   = [...new Set(rows.map(r=>r.tipo_audiencia||'').filter(Boolean))].sort();
   const resps   = [...new Set(rows.map(r=>r.tipo_responsabilidade||'').filter(Boolean))].sort();
   const recadas = [...new Set(rows.map(r=>_escExtractCliente(r.reclamada)).filter(Boolean))].sort();
-  function populate(id, vals) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const curr = el.value;
-    el.innerHTML = '<option value="">Todas</option>' + vals.map(v=>`<option value="${v}"${v===curr?' selected':''}>${v}</option>`).join('');
-  }
-  populate('esc-sel-tipo',  tipos);
-  populate('esc-sel-resp',  resps);
-  populate('esc-sel-recda', recadas);
+  _msPopulate('esc-sel-tipo',  tipos);
+  _msPopulate('esc-sel-resp',  resps);
+  _msPopulate('esc-sel-recda', recadas);
 }
 
 function escDownloadExcel() {
@@ -2282,9 +2327,9 @@ function escDownloadExcel() {
   const qAdv  = (document.getElementById('esc-busca-adv')?.value  || '').trim().toLowerCase();
   const qProc = (document.getElementById('esc-busca-proc')?.value || '').trim().toLowerCase();
   const qRecl = (document.getElementById('esc-busca-recl')?.value || '').trim().toLowerCase();
-  const qRecda= (document.getElementById('esc-sel-recda')?.value  || '').trim();
-  const qTipo = (document.getElementById('esc-sel-tipo')?.value   || '').trim();
-  const qResp = (document.getElementById('esc-sel-resp')?.value   || '').trim();
+  const qRecda = _msGetValues('esc-sel-recda');
+  const qTipo  = _msGetValues('esc-sel-tipo');
+  const qResp  = _msGetValues('esc-sel-resp');
 
   let filtered = dateVal
     ? rows.filter(r => (r.data_audiencia||'') === dateVal)
@@ -2292,9 +2337,9 @@ function escDownloadExcel() {
   if (qAdv)  filtered = filtered.filter(r => (r.advogado||'').toLowerCase().includes(qAdv));
   if (qProc) filtered = filtered.filter(r => (r.processo||'').toLowerCase().includes(qProc));
   if (qRecl) filtered = filtered.filter(r => (r.reclamante||'').toLowerCase().includes(qRecl));
-  if (qRecda)filtered = filtered.filter(r => (r.reclamada||'').includes(qRecda));
-  if (qTipo) filtered = filtered.filter(r => (r.tipo_audiencia||'') === qTipo);
-  if (qResp) filtered = filtered.filter(r => (r.tipo_responsabilidade||'') === qResp);
+  if (qRecda.length) filtered = filtered.filter(r => qRecda.some(q => (r.reclamada||'').includes(q)));
+  if (qTipo.length)  filtered = filtered.filter(r => qTipo.includes(r.tipo_audiencia||''));
+  if (qResp.length)  filtered = filtered.filter(r => qResp.includes(r.tipo_responsabilidade||''));
 
   const data = filtered.map(r => ({
     'Data':           r.data_audiencia || '',
