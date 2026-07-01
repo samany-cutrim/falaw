@@ -313,3 +313,11 @@ task: <Task pending name='Task-3' coro=<Connection.run.<locals>.init() running a
 2026-07-01 16:44:04,921 [INFO] Usuário preenchido: controladoria@falaw.com.br
 2026-07-01 16:44:05,119 [INFO] Senha preenchida.
 2026-07-01 16:44:05,709 [INFO] Formulário submetido.
+2026-07-01 16:44:07,331 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=9755100b-cb8e-49ee-b600-34bcf431de05&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=c7f790c1-65a8-46e7-8ce4-9693dcd2bab5.9755100b-cb8e-49ee-b600-34bcf431de05.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-07-01 16:44:09,324 [INFO] Bearer token capturado das requisições de rede.
+2026-07-01 16:44:21,063 [INFO]   Retornou 675 itens
+2026-07-01 16:44:21,066 [INFO] Calendario: 675 tarefas recebidas
+2026-07-01 16:44:38,931 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 675
+2026-07-01 16:44:38,931 [INFO] ============================================================
+2026-07-01 16:44:38,932 [INFO] Sincronizacao concluida.
+2026-07-01 16:44:38,933 [INFO] ============================================================
