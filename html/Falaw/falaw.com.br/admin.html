@@ -8247,7 +8247,6 @@ async function notifyCorrespondentePauta(corr, allRows) {
       <td style="padding:10px 12px;font-size:12px">${escHtml(clienteNome||r.cliente||'')}</td>
       <td style="padding:10px 12px;font-size:12px">${escHtml(r.reclamante||'')}</td>
       <td style="padding:10px 12px;font-size:11px;color:#1B7A4E">${isAdv?'Advogado':''} ${isPrep?'Preposto':''}</td>
-      <td style="padding:10px 12px;font-size:11px">${r.testemunhas?escHtml(r.testemunhas):''}</td>
     </tr>`;
   }).join('');
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${escHtml(subject)}</title></head>
@@ -8274,7 +8273,6 @@ async function notifyCorrespondentePauta(corr, allRows) {
         <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Cliente</th>
         <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Reclamante</th>
         <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Função</th>
-        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Testemunha</th>
       </tr></thead>
       <tbody>${rowsHtml}</tbody>
     </table>
