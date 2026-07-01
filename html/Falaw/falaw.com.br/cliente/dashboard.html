@@ -2109,8 +2109,8 @@ async function loadPautaCorrespondente(nome, email) {
       if (data) {
         const q = nome.toLowerCase();
         rows = data.filter(r =>
-          (r.advogado || '').toLowerCase().includes(q) ||
-          (r.preposto  || '').toLowerCase().includes(q)
+          (r.advogado       || '').toLowerCase().includes(q) ||
+          (r.dados_preposto || '').toLowerCase().includes(q)
         );
       }
     } catch(e) { console.warn('corr pauta:', e.message); }
@@ -2126,20 +2126,49 @@ async function loadPautaCorrespondente(nome, email) {
     const past = dt && dt < today;
     const isToday = dt === today;
     const opacity = past ? 'opacity:.55' : '';
-    const todayBorder = isToday ? 'border-left:4px solid #0D2B5E;' : '';
-    return `<div style="background:#fff;border:1px solid #e8e4df;border-radius:4px;padding:20px 24px;margin-bottom:12px;${opacity}${todayBorder}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
-        <div>
-          <p style="font-family:monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0">${escHtml(r.cliente||r.reclamada||'')}</p>
-          <p style="font-family:Georgia,serif;font-size:16px;font-weight:600;color:#060E1A;margin:0 0 6px 0">${escHtml(r.tipo_audiencia||'Audiência')}</p>
-          <p style="font-family:monospace;font-size:12px;color:#4a5568;margin:0">${escHtml(dt)} ${r.hora_audiencia ? '· ' + escHtml(r.hora_audiencia) : ''}</p>
-        </div>
-        <div style="text-align:right">
-          ${r.modalidade ? `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${r.modalidade==='VIRTUAL'?'#dbeafe':'#dcfce7'};color:${r.modalidade==='VIRTUAL'?'#1e40af':'#166534'};font-weight:700">${escHtml(r.modalidade)}</span>` : ''}
-        </div>
+    const todayBorder = isToday ? 'border-left:4px solid #0D2B5E;background:#f8faff;' : 'border-left:4px solid #e8e4df;';
+    // cliente: extrai da tag (CLIENTE) em reclamada
+    let clienteNome = r.cliente || '';
+    if (r.reclamada && r.reclamada.includes('(CLIENTE)')) {
+      const f = r.reclamada.split(',').find(p => p.includes('(CLIENTE)'));
+      if (f) clienteNome = f.replace(/\s*\(CLIENTE\)/gi,'').trim();
+    }
+    const dtFmt = dt ? dt.split('-').reverse().join('/') : '—';
+    const linkHtml = (r.link && r.link.startsWith('http'))
+      ? `<a href="${escHtml(r.link)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:#0D2B5E;color:#fff;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:2px;text-decoration:none">🔗 Acessar Audiência</a>`
+      : '';
+    return `<div style="background:#fff;border:1px solid #e8e4df;border-radius:6px;padding:20px 22px;margin-bottom:14px;${opacity}${todayBorder}">
+      <!-- cabeçalho: hora + tipo + status -->
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <span style="font-family:monospace;font-size:22px;font-weight:900;color:${isToday?'#0D2B5E':'#111'}">${escHtml(r.horario||'—')}</span>
+        <span style="background:#0D2B5E;color:#fff;font-family:monospace;font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;text-transform:uppercase">${escHtml(r.tipo_audiencia||'Audiência')}</span>
+        ${r.modalidade ? `<span style="font-family:monospace;font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;background:${r.modalidade==='VIRTUAL'?'#dbeafe':'#dcfce7'};color:${r.modalidade==='VIRTUAL'?'#1e40af':'#166534'}">${escHtml(r.modalidade)}</span>` : ''}
+        ${isToday ? '<span style="background:#FEF9C3;color:#92400E;font-family:monospace;font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px">● HOJE</span>' : ''}
+        <span style="margin-left:auto;font-family:monospace;font-size:11px;color:#6B7280">${dtFmt}</span>
       </div>
-      ${r.local_audiencia ? `<p style="font-size:12px;color:#888;margin:10px 0 0 0">📍 ${escHtml(r.local_audiencia)}</p>` : ''}
-      ${r.link_audiencia  ? `<p style="font-size:12px;margin:6px 0 0 0"><a href="${escHtml(r.link_audiencia)}" target="_blank" rel="noopener" style="color:#0D2B5E">🔗 Link da audiência</a></p>` : ''}
+      <!-- processo + vara -->
+      <div style="font-family:monospace;font-size:12px;font-weight:700;color:#111;margin-bottom:2px">${escHtml(r.processo||'—')}</div>
+      ${r.vara ? `<div style="font-size:11px;color:#6B7280;margin-bottom:10px">${escHtml(r.vara)}</div>` : '<div style="margin-bottom:10px"></div>'}
+      <!-- partes -->
+      <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;padding:10px 12px;background:#f9fafb;border-radius:4px;font-size:12px">
+        ${r.reclamante ? `<div><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#9CA3AF">Reclamante</span><br><b>${escHtml(r.reclamante)}</b></div>` : ''}
+        ${clienteNome  ? `<div><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#9CA3AF">Cliente que representa</span><br><b style="color:#7B1A2E;text-decoration:underline">${escHtml(clienteNome)}</b></div>` : ''}
+      </div>
+      <!-- preposto e testemunha -->
+      ${r.dados_preposto || r.testemunhas ? `<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;padding:10px 12px;background:#f9fafb;border-radius:4px;font-size:12px">
+        ${r.dados_preposto ? `<div><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#9CA3AF">Preposto</span><br><b>${escHtml(r.dados_preposto)}</b></div>` : ''}
+        ${r.testemunhas    ? `<div><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#92400e">Testemunha</span><br><b>${escHtml(r.testemunhas)}</b></div>` : ''}
+      </div>` : ''}
+      <!-- id/senha + link -->
+      ${(r.id_senha && r.id_senha !== '-') ? `<div style="font-family:monospace;font-size:10px;color:#6B7280;margin-bottom:8px">${escHtml(r.id_senha)}</div>` : ''}
+      ${linkHtml ? `<div style="margin-bottom:10px">${linkHtml}</div>` : ''}
+      <!-- orientação enviada -->
+      <div style="display:flex;align-items:center;gap:6px;padding-top:8px;border-top:1px solid #f3f4f6">
+        ${r.orientacao_enviada
+          ? `<span style="display:inline-flex;align-items:center;gap:5px;background:#E8F5EE;border:1px solid #A7F3D0;border-radius:10px;padding:3px 12px;font-family:monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#1B7A4E;font-weight:700">✓ Orientação enviada pelo escritório</span>`
+          : `<span style="display:inline-flex;align-items:center;gap:5px;background:#F3F4F6;border:1px solid #E5E7EB;border-radius:10px;padding:3px 12px;font-family:monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#9CA3AF">⏳ Orientação pendente</span>`
+        }
+      </div>
     </div>`;
   }).join('');
 }
