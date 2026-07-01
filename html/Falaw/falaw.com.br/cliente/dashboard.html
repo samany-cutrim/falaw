@@ -12,6 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="../sb-config.js" onerror="void 0"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap');
@@ -770,6 +771,32 @@
           </div>
 
           <div id="pauta-cal-count" style="font-family:monospace;font-size:10px;color:#9CA3AF;margin-top:8px;text-align:right"></div>
+        </div>
+
+        <!-- Barra de busca / filtros de texto -->
+        <div id="pauta-search-bar" style="display:none;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:14px 16px;margin-bottom:16px">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+            <div style="flex:1;min-width:160px">
+              <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Advogado / Sigla</label>
+              <input id="esc-busca-adv" type="text" placeholder="ex: João Silva" oninput="_escApplyFilters()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none" />
+            </div>
+            <div style="flex:1;min-width:160px">
+              <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Nº Processo</label>
+              <input id="esc-busca-proc" type="text" placeholder="ex: 0001234-56.2024" oninput="_escApplyFilters()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none" />
+            </div>
+            <div style="flex:1;min-width:160px">
+              <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Reclamante</label>
+              <input id="esc-busca-recl" type="text" placeholder="nome do reclamante" oninput="_escApplyFilters()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none" />
+            </div>
+            <div style="flex:1;min-width:160px">
+              <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Reclamada</label>
+              <input id="esc-busca-recda" type="text" placeholder="nome da reclamada" oninput="_escApplyFilters()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none" />
+            </div>
+            <div style="display:flex;gap:8px">
+              <button onclick="_escLimparBusca()" style="font-family:monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;color:#6B7280;cursor:pointer;white-space:nowrap">✕ Limpar</button>
+              <button onclick="escDownloadExcel()" style="font-family:monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:#1B7A4E;border:none;border-radius:4px;padding:8px 14px;color:#fff;cursor:pointer;white-space:nowrap">⬇ Excel</button>
+            </div>
+          </div>
         </div>
 
         <div id="pauta-list" style="margin-top:8px"></div>
@@ -2112,9 +2139,11 @@ async function loadPautaEscritorio() {
   window._escCalYear  = +today.slice(0,4);
   window._escCalMonth = +today.slice(5,7) - 1;
 
-  // Mostra barra de calendário
+  // Mostra barra de calendário e barra de busca
   const calBar = document.getElementById('pauta-cal-bar');
   if (calBar) calBar.style.display = '';
+  const searchBar = document.getElementById('pauta-search-bar');
+  if (searchBar) searchBar.style.display = '';
 
   // Padrão: apenas audiências a partir de hoje
   const futuras = rows.filter(r => (r.data_audiencia||'') >= today);
@@ -2126,14 +2155,33 @@ function escFiltrarData(dateVal) {
   window._escCalSel = dateVal || null;
   const clearBtn = document.getElementById('pauta-cal-clear');
   if (clearBtn) clearBtn.style.display = dateVal ? '' : 'none';
+  _escApplyFilters();
+}
+
+function escTogglePassadas(checked) {
+  _escApplyFilters();
+}
+
+function _escApplyFilters() {
   const rows    = window._escRows  || [];
   const today   = window._escToday || new Date().toISOString().slice(0,10);
+  const dateVal = window._escCalSel || null;
   const verPass = document.getElementById('pauta-ver-passadas');
   const showOld = verPass ? verPass.checked : false;
+
+  const qAdv  = (document.getElementById('esc-busca-adv')?.value  || '').trim().toLowerCase();
+  const qProc = (document.getElementById('esc-busca-proc')?.value || '').trim().toLowerCase();
+  const qRecl = (document.getElementById('esc-busca-recl')?.value || '').trim().toLowerCase();
+  const qRecda= (document.getElementById('esc-busca-recda')?.value|| '').trim().toLowerCase();
 
   let filtered = dateVal
     ? rows.filter(r => (r.data_audiencia||'') === dateVal)
     : rows.filter(r => showOld || (r.data_audiencia||'') >= today);
+
+  if (qAdv)  filtered = filtered.filter(r => (r.advogado||'').toLowerCase().includes(qAdv));
+  if (qProc) filtered = filtered.filter(r => (r.processo||'').toLowerCase().includes(qProc));
+  if (qRecl) filtered = filtered.filter(r => (r.reclamante||'').toLowerCase().includes(qRecl));
+  if (qRecda)filtered = filtered.filter(r => (r.reclamada||'').toLowerCase().includes(qRecda));
 
   const count = document.getElementById('pauta-cal-count');
   if (count) {
@@ -2148,8 +2196,64 @@ function escFiltrarData(dateVal) {
   _escRenderRows(filtered, today);
 }
 
-function escTogglePassadas(checked) {
-  escFiltrarData(window._escCalSel || '');
+function _escLimparBusca() {
+  ['esc-busca-adv','esc-busca-proc','esc-busca-recl','esc-busca-recda'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  _escApplyFilters();
+}
+
+function escDownloadExcel() {
+  if (typeof XLSX === 'undefined') { alert('Biblioteca Excel não carregada. Verifique sua conexão e tente novamente.'); return; }
+  const rows = window._escRows || [];
+  const today = window._escToday || new Date().toISOString().slice(0,10);
+  const dateVal = window._escCalSel || null;
+  const verPass = document.getElementById('pauta-ver-passadas');
+  const showOld = verPass ? verPass.checked : false;
+
+  const qAdv  = (document.getElementById('esc-busca-adv')?.value  || '').trim().toLowerCase();
+  const qProc = (document.getElementById('esc-busca-proc')?.value || '').trim().toLowerCase();
+  const qRecl = (document.getElementById('esc-busca-recl')?.value || '').trim().toLowerCase();
+  const qRecda= (document.getElementById('esc-busca-recda')?.value|| '').trim().toLowerCase();
+
+  let filtered = dateVal
+    ? rows.filter(r => (r.data_audiencia||'') === dateVal)
+    : rows.filter(r => showOld || (r.data_audiencia||'') >= today);
+  if (qAdv)  filtered = filtered.filter(r => (r.advogado||'').toLowerCase().includes(qAdv));
+  if (qProc) filtered = filtered.filter(r => (r.processo||'').toLowerCase().includes(qProc));
+  if (qRecl) filtered = filtered.filter(r => (r.reclamante||'').toLowerCase().includes(qRecl));
+  if (qRecda)filtered = filtered.filter(r => (r.reclamada||'').toLowerCase().includes(qRecda));
+
+  const data = filtered.map(r => ({
+    'Data':           r.data_audiencia || '',
+    'Horário':        r.horario        || '',
+    'Tipo':           r.tipo_audiencia || '',
+    'Modalidade':     r.modalidade     || '',
+    'Processo':       r.processo       || '',
+    'Vara / Juízo':   r.vara           || '',
+    'Cliente':        r.cliente        || '',
+    'Reclamante':     r.reclamante     || '',
+    'Reclamada':      r.reclamada      || '',
+    'Advogado':       r.advogado       || '',
+    'Responsável':    r.responsavel_conducao || '',
+    'Tipo Resp.':     r.tipo_responsabilidade || '',
+    'Testemunha':     r.testemunha_necessaria ? 'Sim' : '',
+    'Dados Preposto': r.dados_preposto  || '',
+    'Obs. Preposto':  r.observacoes_preposto || '',
+    'ID / Senha':     r.id_senha        || '',
+    'Link':           r.link            || '',
+    'Orientação':     r.orientacao      || '',
+    'Comentários':    r.comentarios     || '',
+    'Status':         r.status          || '',
+    'Origem':         r.origem          || '',
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Pauta');
+  const hoje = today.replace(/-/g,'');
+  XLSX.writeFile(wb, `pauta_audiencias_${hoje}.xlsx`);
 }
 
 function escCalHoje() {

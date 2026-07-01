@@ -3494,7 +3494,6 @@ async function doLogin() {
         sessionStorage.setItem('fa_admin_supabase_auth', '1');
         // Papel baseado no e-mail — sem necessidade de tabela no banco
         const EMAILS_RESTRITOS = [
-          'secretaria@falaw.com.br',
           'audiencias@falaw.com.br',
           // adicione outros e-mails restritos aqui
         ];
@@ -3521,13 +3520,42 @@ async function doLogin() {
   const inputHash  = await _sha256(pwd);
   const storedHash = await _getStoredHash();
 
+  // Senha exclusiva para audiencias@falaw.com.br (perfil restrito)
+  const HASH_AUDIENCIAS = '0a55f92bdf71ad24bb549394f5b2661470ce8d5d3d4c4c33c9864bdee6a12812';
+  if (authEmail.toLowerCase() === 'audiencias@falaw.com.br' && inputHash === HASH_AUDIENCIAS) {
+    _setLock({ attempts: 0, lockedUntil: 0 });
+    sessionStorage.setItem('fa_admin_session', String(Date.now()));
+    sessionStorage.removeItem('fa_admin_supabase_auth');
+    sessionStorage.setItem('fa_admin_role', 'restrito');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-shell').style.display = 'block';
+    errEl.style.display = 'none';
+    applyRoleRestrictions();
+    seedData();
+    loadArticlesFromGitHub().then(renderBlog);
+    renderEquipe();
+    loadNewsletterFromSupabase().then(renderNewsletter);
+    loadContatoFromSupabase().then(renderContato);
+    loadConfig();
+    loadNotifBadges();
+    return;
+  }
+
   if (inputHash === storedHash) {
     _setLock({ attempts: 0, lockedUntil: 0 });
     sessionStorage.setItem('fa_admin_session', String(Date.now()));
     sessionStorage.removeItem('fa_admin_supabase_auth');
-    // Aplica papel também no login por hash (cobre audiencias@falaw.com.br sem conta Supabase Auth)
-    const EMAILS_RESTRITOS_HASH = ['secretaria@falaw.com.br','audiencias@falaw.com.br'];
+    // Aplica papel também no login por hash (cobre outros e-mails restritos sem conta Supabase Auth)
+    const EMAILS_RESTRITOS_HASH = ['audiencias@falaw.com.br'];
     const hashRole = EMAILS_RESTRITOS_HASH.includes(authEmail.toLowerCase()) ? 'restrito' : 'superadmin';
+    // Bloqueia audiencias@falaw.com.br de entrar pela senha compartilhada
+    if (authEmail.toLowerCase() === 'audiencias@falaw.com.br') {
+      const lock2 = _getLock(); lock2.attempts++;
+      _setLock(lock2);
+      errEl.textContent = 'Senha incorreta.';
+      errEl.style.display = 'block';
+      return;
+    }
     sessionStorage.setItem('fa_admin_role', hashRole);
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-shell').style.display = 'block';

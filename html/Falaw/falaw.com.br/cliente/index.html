@@ -323,6 +323,10 @@
 </div>
 
 <script>
+async function _sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 const STORAGE_KEY = 'falaw_portal';
 const _CLI_LOCK_KEY = 'falaw_login_lock';
 const _CLI_MAX = 5;
@@ -419,8 +423,9 @@ async function handleLogin(e) {
 
   // Login especial: escritório de audiências
   if (email === 'audiencias@falaw.com.br') {
-    const escritorioPwd = window.SB_ESCRITORIO_PWD || 'Falawaud@2026';
-    if (code === escritorioPwd) {
+    const HASH_ESC = window.SB_ESCRITORIO_PWD_HASH || 'f8678a58d79ec24c0fa3e8d12e12616d8348c2ae9ac7ce2443e79e0d92387d77';
+    const inputHash = await _sha256(code);
+    if (inputHash === HASH_ESC) {
       _setCLILock({ attempts: 0, lockedUntil: 0 });
       sessionStorage.setItem('falaw_session', JSON.stringify({
         id: 'escritorio',
