@@ -2188,6 +2188,13 @@ async function loadPautaCorrespondente(nome, email) {
           : `<span style="display:inline-flex;align-items:center;gap:5px;background:#F3F4F6;border:1px solid #E5E7EB;border-radius:10px;padding:3px 12px;font-family:monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#9CA3AF">⏳ Orientação pendente</span>`
         }
       </div>
+      <!-- pesquisa de satisfação (só em audiências realizadas) -->
+      ${r.status === 'realizada' ? `<div style="margin-top:10px">
+        <a href="https://falaw.com.br/pesquisa" target="_blank" rel="noopener"
+          style="display:inline-flex;align-items:center;gap:6px;background:#7B1A2E;color:#fff;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:7px 16px;border-radius:3px;text-decoration:none;font-weight:700">
+          📋 Responder Pesquisa de Satisfação
+        </a>
+      </div>` : ''}
     </div>`;
   }).join('');
 }
