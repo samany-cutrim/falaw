@@ -1712,6 +1712,12 @@
           <option value="adiada">Adiada</option>
           <option value="cancelada">Cancelada</option>
         </select>
+        <select id="aud-filter-resp" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none">
+          <option value="">Todas as responsabilidades</option>
+        </select>
+        <select id="aud-filter-recda" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none;max-width:220px">
+          <option value="">Todas as reclamadas</option>
+        </select>
         <input type="month" id="aud-filter-mes" onchange="audSyncDateFilters('mes')" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
         <input type="date"  id="aud-filter-dia" onchange="audSyncDateFilters('dia')" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
         <input type="text" id="aud-filter-busca" placeholder="Buscar processo, reclamante…" oninput="loadAudiencias()" style="flex:1;min-width:160px;border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
@@ -13286,8 +13292,9 @@ const AUD_TIPO_BG      = { INICIAL:'#EEF2FF', 'INSTRUÇÃO':'#F5F3FF', 'CONCILIA
 const AUD_MOD_LABEL    = { VIRTUAL:'Virtual', PRESENCIAL:'Presencial', 'HÍBRIDA':'Híbrida' };
 const AUD_MOD_ICON     = { VIRTUAL:'', PRESENCIAL:'', 'HÍBRIDA':'' };
 const AUD_STATUS_LABEL = { agendada:'Agendada', realizada:'Realizada', adiada:'Adiada', cancelada:'Cancelada', cancelado_pje:'Cancelada no PJe?' };
-const AUD_STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62828', cancelada:'#6B7280', cancelado_pje:'#92400E' };
-const AUD_STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#F3F4F6', cancelado_pje:'#FEF3C7' };
+const AUD_STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62828', cancelada:'#DC2626', cancelado_pje:'#92400E' };
+const AUD_STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#FEE2E2', cancelado_pje:'#FEF3C7' };
+const AUD_RESP_COLOR   = { 'SUBSIDIÁRIA':'#7C3AED','SOLIDÁRIA':'#2563EB','PRINCIPAL':'#DC2626','TOMADOR DE SERVIÇO':'#D97706' };
 
 /* helpers */
 function _audParseDate(v) {
@@ -13363,7 +13370,15 @@ function _audCard(a) {
     : '';
 
   const isCancelPje = a.status === 'cancelado_pje';
-  return `<div class="item-card" style="border-left:4px solid ${isCancelPje ? '#D97706' : tipoColor};padding:18px 20px;${isCancelPje ? 'background:#FFFBEB;opacity:.85;' : isHoje ? 'background:#fffef0;' : ''}" data-aud-id="${_escHtml(a.id)}">
+  const isCancelada  = a.status === 'cancelada';
+  // Cliente: prioriza tag (CLIENTE) no campo reclamada
+  let _clienteNome = a.cliente || '';
+  if (a.reclamada && a.reclamada.includes('(CLIENTE)')) {
+    const _found = a.reclamada.split(',').find(p => p.includes('(CLIENTE)'));
+    if (_found) _clienteNome = _found.replace(/\s*\(CLIENTE\)/gi,'').replace(/\s*S\.?A\.?$/i,'').trim();
+  }
+  const respColor = AUD_RESP_COLOR[a.tipo_responsabilidade] || '#374151';
+  return `<div class="item-card" style="border-left:4px solid ${isCancelPje ? '#D97706' : tipoColor};padding:18px 20px;${isCancelPje ? 'background:#FFFBEB;opacity:.85;' : isCancelada ? 'background:#FFF5F5;' : isHoje ? 'background:#fffef0;' : ''}" data-aud-id="${_escHtml(a.id)}">
     ${isCancelPje ? `<div style="background:#FEF3C7;border:1px solid #FCD34D;border-left:3px solid #D97706;border-radius:2px;padding:8px 12px;margin-bottom:12px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#92400E"><strong>Audiência não encontrada no PJe</strong> — Pode ter sido cancelada. Confirme abaixo ou ignore se for engano do scraper.</div>` : ''}
     <!-- linha topo -->
     <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
@@ -13380,6 +13395,7 @@ function _audCard(a) {
           <span style="background:${tipoBg};color:${tipoColor};font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${tipoLabel}</span>
           ${modLabel ? `<span style="background:#f3f4f6;color:#374151;font-family:var(--f-mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${modIcon} ${modLabel}</span>` : ''}
           <span style="background:${stBg};color:${stColor};font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${stLabel}</span>
+          ${a.tipo_responsabilidade ? `<span style="background:${respColor}22;color:${respColor};font-family:var(--f-mono);font-size:9px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap">${a.tipo_responsabilidade}</span>` : ''}
           ${isHoje ? '<span style="background:#FEF9C3;color:#92400E;font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px;animation:pulse 2s infinite">● HOJE</span>' : ''}
         </div>
         <!-- processo e vara -->
@@ -13389,7 +13405,7 @@ function _audCard(a) {
         <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin-bottom:6px">
           ${a.reclamante ? `<span><span style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted)">Reclamante</span><br/><strong>${_escHtml(a.reclamante)}</strong></span>` : ''}
           ${a.reclamada  ? `<span><span style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted)">Reclamada</span><br/><strong>${_escHtml(a.reclamada)}</strong></span>` : ''}
-          ${a.cliente    ? `<span><span style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted)">Cliente</span><br/><strong>${_escHtml(a.cliente)}</strong></span>` : ''}
+          ${_clienteNome ? `<span><span style="background:#FEF3C7;color:#92400E;font-family:var(--f-mono);font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px">${_escHtml(_clienteNome)}</span></span>` : ''}
         </div>
         <!-- responsáveis -->
         <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--c-muted);margin-bottom:4px">
@@ -13528,6 +13544,8 @@ async function loadAudiencias() {
   const fTipo  = document.getElementById('aud-filter-tipo')?.value      || '';
   const fMod   = document.getElementById('aud-filter-modalidade')?.value|| '';
   const fSt    = document.getElementById('aud-filter-status')?.value    || '';
+  const fResp  = document.getElementById('aud-filter-resp')?.value      || '';
+  const fRecda = document.getElementById('aud-filter-recda')?.value     || '';
   const fMes   = document.getElementById('aud-filter-mes')?.value       || '';
   const fDia   = document.getElementById('aud-filter-dia')?.value        || '';
   const fBusca = (document.getElementById('aud-filter-busca')?.value    || '').toLowerCase().trim();
@@ -13535,20 +13553,32 @@ async function loadAudiencias() {
   const filtered = items.filter(a => {
     // sem filtro de período: mostra apenas hoje e datas futuras
     if (!fMes && !fDia && a.data_audiencia < today) return false;
-    if (fTipo && a.tipo_audiencia !== fTipo) return false;
-    if (fMod  && a.modalidade    !== fMod)  return false;
-    if (fSt   && a.status        !== fSt)   return false;
+    if (fTipo  && a.tipo_audiencia       !== fTipo)  return false;
+    if (fMod   && a.modalidade           !== fMod)   return false;
+    if (fSt    && a.status               !== fSt)    return false;
+    if (fResp  && a.tipo_responsabilidade!== fResp)  return false;
+    if (fRecda && a.reclamada            !== fRecda) return false;
     if (fDia) {
       if (a.data_audiencia !== fDia) return false;
     } else if (fMes) {
       if (!a.data_audiencia || !a.data_audiencia.startsWith(fMes)) return false;
     }
     if (fBusca) {
-      const haystack = [a.processo, a.reclamante, a.reclamada, a.vara, a.cliente, a.advogado].join(' ').toLowerCase();
+      const haystack = [a.processo, a.reclamante, a.reclamada, a.vara, a.cliente, a.advogado, a.tipo_responsabilidade].join(' ').toLowerCase();
       if (!haystack.includes(fBusca)) return false;
     }
     return true;
   });
+
+  // Popula selects dinâmicos com valores únicos dos dados carregados
+  function _audPopulateSelect(id, vals, placeholder) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const curr = el.value;
+    el.innerHTML = `<option value="">${placeholder}</option>` + vals.map(v=>`<option value="${v}"${v===curr?' selected':''}>${v}</option>`).join('');
+  }
+  _audPopulateSelect('aud-filter-resp',  [...new Set(items.map(r=>r.tipo_responsabilidade||'').filter(Boolean))].sort(), 'Todas as responsabilidades');
+  _audPopulateSelect('aud-filter-recda', [...new Set(items.map(r=>r.reclamada||'').filter(Boolean))].sort(), 'Todas as reclamadas');
 
   _audRenderStats(items);
   const countEl = document.getElementById('aud-count');
@@ -13572,8 +13602,11 @@ async function loadAudiencias() {
     const label = _audFmtDate(d);
     const today = new Date().toISOString().slice(0,10);
     const isHoje = d === today;
-    html += `<div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:${isHoje?'#0D2B5E':'var(--c-muted)'};margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--c-divider);font-weight:${isHoje?'700':'500'}">${isHoje?'● HOJE — ':''} ${label}</div>`;
+    const cnt = byDate[d].length;
+    html += `<div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:${isHoje?'#0D2B5E':'var(--c-muted)'};margin:28px 0 12px;padding-bottom:6px;border-bottom:${isHoje?'2px solid #0D2B5E':'1px solid var(--c-divider)'};font-weight:${isHoje?'700':'500'};display:flex;align-items:center;gap:8px">${isHoje?'● HOJE — ':''} ${label}<span style="font-size:9px;background:${isHoje?'#0D2B5E':'#e5e7eb'};color:${isHoje?'#fff':'#6B7280'};padding:1px 7px;border-radius:10px;font-weight:700">${cnt} audiência${cnt!==1?'s':''}</span></div>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;margin-bottom:8px">`;
     byDate[d].forEach(a => { html += _audCard(a); });
+    html += `</div>`;
   });
   listEl.innerHTML = html;
 }
@@ -13592,8 +13625,11 @@ function audSyncDateFilters(changed) {
 }
 
 function audLimparFiltros() {
-  ['aud-filter-tipo','aud-filter-modalidade','aud-filter-status','aud-filter-mes','aud-filter-dia'].forEach(id => {
+  ['aud-filter-tipo','aud-filter-modalidade','aud-filter-status','aud-filter-resp','aud-filter-mes','aud-filter-dia'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['aud-filter-recda'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.selectedIndex = 0;
   });
   const b = document.getElementById('aud-filter-busca'); if (b) b.value = '';
   loadAudiencias();
