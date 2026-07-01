@@ -3525,9 +3525,14 @@ async function doLogin() {
     _setLock({ attempts: 0, lockedUntil: 0 });
     sessionStorage.setItem('fa_admin_session', String(Date.now()));
     sessionStorage.removeItem('fa_admin_supabase_auth');
+    // Aplica papel também no login por hash (cobre audiencias@falaw.com.br sem conta Supabase Auth)
+    const EMAILS_RESTRITOS_HASH = ['secretaria@falaw.com.br','audiencias@falaw.com.br'];
+    const hashRole = EMAILS_RESTRITOS_HASH.includes(authEmail.toLowerCase()) ? 'restrito' : 'superadmin';
+    sessionStorage.setItem('fa_admin_role', hashRole);
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-shell').style.display = 'block';
     errEl.style.display = 'none';
+    applyRoleRestrictions();
     seedData();
     loadArticlesFromGitHub().then(renderBlog);
     renderEquipe();

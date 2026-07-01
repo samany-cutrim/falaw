@@ -744,13 +744,32 @@
         </div>
 
         <!-- Filtro de data (visível apenas para escritório) -->
-        <div id="pauta-cal-bar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px;padding:14px 16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px">
-          <label style="font-family:monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;white-space:nowrap">Filtrar por data</label>
-          <input type="date" id="pauta-cal-input"
-            onchange="escFiltrarData(this.value)"
-            style="border:1px solid #d1d5db;border-radius:4px;padding:7px 10px;font-size:13px;font-family:inherit;color:#111;background:#fff;cursor:pointer" />
-          <button onclick="escFiltrarData('')" style="font-family:monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid #d1d5db;border-radius:4px;padding:7px 12px;color:#6B7280;cursor:pointer">✕ Limpar filtro</button>
-          <span id="pauta-cal-count" style="font-family:monospace;font-size:10px;color:#9CA3AF;margin-left:4px"></span>
+        <!-- Calendário de navegação (visível apenas para escritório) -->
+        <div id="pauta-cal-bar" style="display:none;margin-bottom:24px">
+
+          <!-- Cabeçalho do calendário -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <button onclick="escCalNav(-1)" style="background:none;border:1px solid #e5e7eb;border-radius:4px;width:30px;height:30px;cursor:pointer;font-size:14px;color:#374151;display:flex;align-items:center;justify-content:center">‹</button>
+              <span id="pauta-cal-mes" style="font-family:monospace;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#111;min-width:140px;text-align:center"></span>
+              <button onclick="escCalNav(1)"  style="background:none;border:1px solid #e5e7eb;border-radius:4px;width:30px;height:30px;cursor:pointer;font-size:14px;color:#374151;display:flex;align-items:center;justify-content:center">›</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button onclick="escCalHoje()" style="font-family:monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid #d1d5db;border-radius:4px;padding:6px 12px;color:#6B7280;cursor:pointer">Hoje</button>
+              <button onclick="escFiltrarData('')" id="pauta-cal-clear" style="display:none;font-family:monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid #d1d5db;border-radius:4px;padding:6px 12px;color:#C62828;cursor:pointer">✕ Limpar filtro</button>
+              <label style="display:flex;align-items:center;gap:6px;font-family:monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#6B7280;cursor:pointer">
+                <input type="checkbox" id="pauta-ver-passadas" onchange="escTogglePassadas(this.checked)" style="accent-color:#0D2B5E" />
+                Ver passadas
+              </label>
+            </div>
+          </div>
+
+          <!-- Grade do calendário -->
+          <div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden">
+            <div id="pauta-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr)"></div>
+          </div>
+
+          <div id="pauta-cal-count" style="font-family:monospace;font-size:10px;color:#9CA3AF;margin-top:8px;text-align:right"></div>
         </div>
 
         <div id="pauta-list" style="margin-top:8px"></div>
@@ -2087,25 +2106,239 @@ async function loadPautaEscritorio() {
   }
 
   // Guarda globalmente para re-filtragem
-  window._escRows = rows;
+  window._escRows  = rows;
   window._escToday = today;
+  window._escCalSel   = null;
+  window._escCalYear  = +today.slice(0,4);
+  window._escCalMonth = +today.slice(5,7) - 1;
 
   // Mostra barra de calendário
   const calBar = document.getElementById('pauta-cal-bar');
-  if (calBar) calBar.style.display = 'flex';
+  if (calBar) calBar.style.display = '';
 
-  _escRenderRows(rows, today);
+  // Padrão: apenas audiências a partir de hoje
+  const futuras = rows.filter(r => (r.data_audiencia||'') >= today);
+  _escRenderCalGrid();
+  _escRenderRows(futuras, today);
 }
 
 function escFiltrarData(dateVal) {
-  const input = document.getElementById('pauta-cal-input');
-  if (input) input.value = dateVal || '';
-  const rows = window._escRows || [];
-  const today = window._escToday || new Date().toISOString().slice(0, 10);
-  const filtered = dateVal ? rows.filter(r => (r.data_audiencia || '') === dateVal) : rows;
+  window._escCalSel = dateVal || null;
+  const clearBtn = document.getElementById('pauta-cal-clear');
+  if (clearBtn) clearBtn.style.display = dateVal ? '' : 'none';
+  const rows    = window._escRows  || [];
+  const today   = window._escToday || new Date().toISOString().slice(0,10);
+  const verPass = document.getElementById('pauta-ver-passadas');
+  const showOld = verPass ? verPass.checked : false;
+
+  let filtered = dateVal
+    ? rows.filter(r => (r.data_audiencia||'') === dateVal)
+    : rows.filter(r => showOld || (r.data_audiencia||'') >= today);
+
   const count = document.getElementById('pauta-cal-count');
-  if (count) count.textContent = dateVal ? `${filtered.length} audiência${filtered.length !== 1 ? 's' : ''} em ${dateVal.split('-').reverse().join('/')}` : '';
+  if (count) {
+    if (dateVal) {
+      const [y,m,d] = dateVal.split('-');
+      count.textContent = `${filtered.length} audiência${filtered.length!==1?'s':''} em ${d}/${m}/${y}`;
+    } else {
+      count.textContent = '';
+    }
+  }
+  _escRenderCalGrid();
   _escRenderRows(filtered, today);
+}
+
+function escTogglePassadas(checked) {
+  escFiltrarData(window._escCalSel || '');
+}
+
+function escCalHoje() {
+  const today = window._escToday || new Date().toISOString().slice(0,10);
+  const [y,m] = today.split('-');
+  window._escCalYear  = +y;
+  window._escCalMonth = +m - 1; // 0-based
+  escFiltrarData(today);
+}
+
+function escCalNav(delta) {
+  let y = window._escCalYear  || new Date().getFullYear();
+  let m = window._escCalMonth !== undefined ? window._escCalMonth : new Date().getMonth();
+  m += delta;
+  if (m < 0)  { m = 11; y--; }
+  if (m > 11) { m = 0;  y++; }
+  window._escCalYear  = y;
+  window._escCalMonth = m;
+  _escRenderCalGrid();
+}
+
+/* ── Feriados Nacionais e Estaduais 2025–2026 ────────────────────────────────
+   tipo: 'BR' = nacional | 'MM/DD' mapped per year | estado = UF ou 'BR'
+─────────────────────────────────────────────────────────────────────────────── */
+const _ESC_FERIADOS = (function() {
+  const F = {};
+  function add(iso, nome, uf) { F[iso] = { nome, uf: uf || 'BR' }; }
+
+  // ── 2025 ──
+  add('2025-01-01','Confraternização Universal','BR');
+  add('2025-01-20','Dia de São Sebastião','RJ');
+  add('2025-01-25','Aniversário de São Paulo','SP');
+  add('2025-02-28','Carnaval — Sexta-feira','BR');
+  add('2025-03-03','Carnaval — Segunda-feira','BR');
+  add('2025-03-04','Carnaval — Terça-feira','BR');
+  add('2025-03-05','Quarta-feira de Cinzas (meio-dia)','BR');
+  add('2025-04-18','Sexta-feira Santa','BR');
+  add('2025-04-20','Páscoa','BR');
+  add('2025-04-21','Tiradentes','BR');
+  add('2025-04-23','Dia de São Jorge','RJ');
+  add('2025-05-01','Dia do Trabalho','BR');
+  add('2025-06-12','Dia dos Namorados (fac.)','BR');
+  add('2025-06-19','Corpus Christi','BR');
+  add('2025-07-09','Revolução Constitucionalista','SP');
+  add('2025-08-11','Dia do Advogado (fac.)','BR');
+  add('2025-09-07','Independência do Brasil','BR');
+  add('2025-09-20','Revolução Farroupilha','RS');
+  add('2025-10-12','Nossa Senhora Aparecida','BR');
+  add('2025-10-15','Dia do Professor (fac.)','BR');
+  add('2025-10-28','Dia do Servidor Público (fac.)','BR');
+  add('2025-11-02','Finados','BR');
+  add('2025-11-15','Proclamação da República','BR');
+  add('2025-11-20','Consciência Negra','BR');
+  add('2025-12-08','Imaculada Conceição','BR');
+  add('2025-12-25','Natal','BR');
+  add('2025-12-26','Recesso de Natal (fac.)','BR');
+  add('2025-12-31','Véspera de Ano Novo (fac.)','BR');
+
+  // ── 2026 ──
+  add('2026-01-01','Confraternização Universal','BR');
+  add('2026-01-20','Dia de São Sebastião','RJ');
+  add('2026-01-25','Aniversário de São Paulo','SP');
+  add('2026-02-16','Carnaval — Segunda-feira','BR');
+  add('2026-02-17','Carnaval — Terça-feira','BR');
+  add('2026-02-18','Quarta-feira de Cinzas (meio-dia)','BR');
+  add('2026-04-03','Sexta-feira Santa','BR');
+  add('2026-04-05','Páscoa','BR');
+  add('2026-04-21','Tiradentes','BR');
+  add('2026-04-23','Dia de São Jorge','RJ');
+  add('2026-05-01','Dia do Trabalho','BR');
+  add('2026-06-04','Corpus Christi','BR');
+  add('2026-07-09','Revolução Constitucionalista','SP');
+  add('2026-08-11','Dia do Advogado (fac.)','BR');
+  add('2026-09-07','Independência do Brasil','BR');
+  add('2026-09-20','Revolução Farroupilha','RS');
+  add('2026-10-12','Nossa Senhora Aparecida','BR');
+  add('2026-11-02','Finados','BR');
+  add('2026-11-15','Proclamação da República','BR');
+  add('2026-11-20','Consciência Negra','BR');
+  add('2026-12-08','Imaculada Conceição','BR');
+  add('2026-12-25','Natal','BR');
+
+  return F;
+})();
+
+function _escRenderCalGrid() {
+  const grid = document.getElementById('pauta-cal-grid');
+  const mesEl = document.getElementById('pauta-cal-mes');
+  if (!grid) return;
+
+  const now   = new Date();
+  const y     = window._escCalYear  !== undefined ? window._escCalYear  : now.getFullYear();
+  const m     = window._escCalMonth !== undefined ? window._escCalMonth : now.getMonth();
+  window._escCalYear  = y;
+  window._escCalMonth = m;
+
+  const today   = window._escToday || now.toISOString().slice(0,10);
+  const selDate = window._escCalSel || null;
+  const rows    = window._escRows  || [];
+
+  // Datas com audiências neste mês
+  const mesStr = `${y}-${String(m+1).padStart(2,'0')}`;
+  const diasComAud = new Set(
+    rows.filter(r=>(r.data_audiencia||'').startsWith(mesStr))
+        .map(r=>r.data_audiencia)
+  );
+
+  // Nome do mês
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  if (mesEl) mesEl.textContent = `${meses[m]} ${y}`;
+
+  const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  let html = '';
+
+  // Header dias da semana
+  DIAS.forEach(dn => {
+    html += `<div style="padding:6px 2px;text-align:center;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;background:#f9fafb;border-bottom:1px solid #e5e7eb">${dn}</div>`;
+  });
+
+  const firstDay    = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+
+  // Células vazias antes do dia 1
+  for (let i=0; i<firstDay; i++) {
+    html += `<div style="min-height:46px;border-bottom:1px solid #f3f4f6;border-right:1px solid #f3f4f6"></div>`;
+  }
+
+  for (let d=1; d<=daysInMonth; d++) {
+    const iso     = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = iso === today;
+    const isSel   = iso === selDate;
+    const hasAud  = diasComAud.has(iso);
+    const isPast  = iso < today;
+    const feriado = _ESC_FERIADOS[iso] || null;
+    const isBR    = feriado && feriado.uf === 'BR';
+    const isEst   = feriado && feriado.uf !== 'BR';
+
+    // Cores de fundo (precedência: selecionado > hoje > feriado > normal)
+    let bg, col, fw;
+    if (isSel) {
+      bg  = '#0D2B5E'; col = '#fff'; fw = '700';
+    } else if (isToday) {
+      bg  = '#EEF2FF'; col = '#0D2B5E'; fw = '700';
+    } else if (isBR) {
+      bg  = isPast ? '#fefce8' : '#fef9c3'; col = isPast ? '#a16207' : '#713f12'; fw = '500';
+    } else if (isEst) {
+      bg  = isPast ? '#fff7ed' : '#ffedd5'; col = isPast ? '#9a3412' : '#7c2d12'; fw = '500';
+    } else {
+      bg  = 'transparent'; col = isPast ? '#D1D5DB' : '#111'; fw = '400';
+    }
+
+    const borderStyle = isSel ? 'none' : '1px solid #f3f4f6';
+    const title = feriado ? `title="${feriado.nome}${feriado.uf!=='BR'?' ('+feriado.uf+')':''}"` : '';
+
+    // Badge de feriado
+    let feriadoBadge = '';
+    if (feriado && !isSel) {
+      const badgeBg  = isBR ? '#fde047' : '#fb923c';
+      const badgeCol = isBR ? '#713f12'  : '#7c2d12';
+      const label    = isBR ? 'BR' : feriado.uf;
+      feriadoBadge = `<span style="position:absolute;top:2px;right:2px;font-size:7px;font-weight:700;font-family:monospace;background:${badgeBg};color:${badgeCol};padding:0 3px;border-radius:2px;line-height:12px">${label}</span>`;
+    }
+
+    // Ponto de audiência
+    const dotColor = isSel ? 'rgba(255,255,255,.8)' : isPast ? '#D1D5DB' : '#0D2B5E';
+    const audDot   = hasAud ? `<span style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:${dotColor}"></span>` : '';
+
+    html += `<div onclick="escFiltrarData('${iso}')" ${title}
+      style="position:relative;min-height:46px;padding:8px 2px 12px;text-align:center;cursor:pointer;background:${bg};border-bottom:${borderStyle};border-right:${borderStyle};transition:background .12s"
+      onmouseover="this._ob='${bg.replace(/'/g,"\\'")}';this.style.background='${isSel?bg:'#e5e7eb'}'"
+      onmouseout="this.style.background=this._ob||'${bg.replace(/'/g,"\\'")}'"
+    >
+      <span style="font-size:12px;font-weight:${fw};color:${col};font-family:monospace">${d}</span>
+      ${feriadoBadge}${audDot}
+    </div>`;
+  }
+
+  grid.innerHTML = html;
+
+  // Legenda
+  const count = document.getElementById('pauta-cal-count');
+  if (count && !window._escCalSel) {
+    const feriadosMes = Object.entries(_ESC_FERIADOS)
+      .filter(([k])=>k.startsWith(mesStr))
+      .map(([,v])=>`<span style="display:inline-flex;align-items:center;gap:3px;margin-right:8px"><span style="width:8px;height:8px;border-radius:2px;background:${v.uf==='BR'?'#fde047':'#fb923c'};display:inline-block"></span><span style="font-size:9px;color:#6B7280">${v.nome}${v.uf!=='BR'?' ('+v.uf+')':''}</span></span>`);
+    count.innerHTML = feriadosMes.length
+      ? `<div style="margin-top:6px;line-height:1.8">${feriadosMes.join('')}</div>`
+      : '';
+  }
 }
 
 function _escRenderRows(rows, today) {
