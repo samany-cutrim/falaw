@@ -302,3 +302,14 @@ task: <Task pending name='Task-3' coro=<Connection.run.<locals>.init() running a
 2026-07-01 16:06:57,732 [INFO] ============================================================
 2026-07-01 16:06:57,732 [INFO] Sincronizacao concluida.
 2026-07-01 16:06:57,732 [INFO] ============================================================
+2026-07-01 16:43:41,985 [INFO] ============================================================
+2026-07-01 16:43:41,990 [INFO] Pauta de Audiencias — 01/07/2026 16:43
+2026-07-01 16:43:41,999 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-07-01 16:43:42,010 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-07-01 16:43:42,012 [INFO] Periodo: 2026-01-01 -> 2026-12-31
+2026-07-01 16:43:42,021 [INFO] ============================================================
+2026-07-01 16:43:42,023 [INFO] Calendario: 2026-01-01 -> 2026-12-31
+2026-07-01 16:43:43,062 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-07-01 16:44:04,921 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-07-01 16:44:05,119 [INFO] Senha preenchida.
+2026-07-01 16:44:05,709 [INFO] Formulário submetido.
