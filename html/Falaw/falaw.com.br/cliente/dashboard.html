@@ -2592,8 +2592,14 @@ function _escRenderRows(rows, today) {
         const _found = a.reclamada.split(',').find(p => p.includes('(CLIENTE)'));
         if (_found) _clienteNome = _found.replace(/\s*\(CLIENTE\)/gi, '').replace(/\s*S\.?A\.?$/i,'').trim();
       }
-      const clienteHtml = _clienteNome
-        ? `<span style="background:#FEF3C7;color:#92400E;font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;white-space:nowrap">${_clienteNome}</span>`
+      // Reclamada: nome do cliente em negrito, remove tag (CLIENTE)
+      const recladaHtml = a.reclamada
+        ? a.reclamada.split(',').map(p => {
+            const t = p.trim();
+            const isC = t.includes('(CLIENTE)');
+            const n = t.replace(/\s*\(CLIENTE\)/gi,'').trim();
+            return isC ? `<b>${n}</b>` : n;
+          }).join(', ')
         : '';
       const linkHtml = a.link
         ? `<a href="${a.link}" target="_blank" rel="noopener" style="color:#2563EB;text-decoration:none;font-size:11px;font-weight:600">🔗 Entrar</a>`
@@ -2620,8 +2626,7 @@ function _escRenderRows(rows, today) {
 
         <div style="border-top:1px solid #f3f4f6;padding-top:9px;display:flex;flex-direction:column;gap:4px">
           ${a.reclamante ? `<div style="font-size:11px;color:#374151"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#9CA3AF">Reclamante</span><br><b>${a.reclamante}</b></div>` : ''}
-          ${a.reclamada  ? `<div style="font-size:11px;color:#374151"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#9CA3AF">Reclamada</span><br><b>${a.reclamada}</b></div>` : ''}
-          ${clienteHtml  ? `<div style="margin-top:2px">${clienteHtml}</div>` : ''}
+          ${recladaHtml  ? `<div style="font-size:11px;color:#374151"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#9CA3AF">Reclamada</span><br>${recladaHtml}</div>` : ''}
         </div>
 
         ${a.advogado||respHtml ? `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">

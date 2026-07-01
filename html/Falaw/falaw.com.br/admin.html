@@ -13404,8 +13404,7 @@ function _audCard(a) {
         <!-- partes -->
         <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin-bottom:6px">
           ${a.reclamante ? `<span><span style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted)">Reclamante</span><br/><strong>${_escHtml(a.reclamante)}</strong></span>` : ''}
-          ${a.reclamada  ? `<span><span style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted)">Reclamada</span><br/><strong>${_escHtml(a.reclamada)}</strong></span>` : ''}
-          ${_clienteNome ? `<span><span style="background:#FEF3C7;color:#92400E;font-family:var(--f-mono);font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px">${_escHtml(_clienteNome)}</span></span>` : ''}
+          ${a.reclamada  ? `<span style="max-width:100%"><span style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted)">Reclamada</span><br/>${a.reclamada.split(',').map(p=>{const t=p.trim();const isC=t.includes('(CLIENTE)');const n=_escHtml(t.replace(/\s*\(CLIENTE\)/gi,'').trim());return isC?`<strong>${n}</strong>`:n;}).join(', ')}</span>` : ''}
         </div>
         <!-- responsáveis -->
         <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--c-muted);margin-bottom:4px">
