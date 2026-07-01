@@ -776,21 +776,35 @@
         <!-- Barra de busca / filtros de texto -->
         <div id="pauta-search-bar" style="display:none;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:14px 16px;margin-bottom:16px">
           <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
-            <div style="flex:1;min-width:160px">
+            <div style="flex:1;min-width:140px">
               <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Advogado / Sigla</label>
               <input id="esc-busca-adv" type="text" placeholder="ex: João Silva" oninput="_escApplyFilters()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none" />
             </div>
-            <div style="flex:1;min-width:160px">
+            <div style="flex:1;min-width:140px">
               <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Nº Processo</label>
               <input id="esc-busca-proc" type="text" placeholder="ex: 0001234-56.2024" oninput="_escApplyFilters()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none" />
             </div>
-            <div style="flex:1;min-width:160px">
+            <div style="flex:1;min-width:140px">
               <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Reclamante</label>
               <input id="esc-busca-recl" type="text" placeholder="nome do reclamante" oninput="_escApplyFilters()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none" />
             </div>
-            <div style="flex:1;min-width:160px">
+            <div style="flex:1;min-width:130px">
+              <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Tipo de Audiência</label>
+              <select id="esc-sel-tipo" onchange="_escApplyFilters()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none;background:#fff">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:140px">
+              <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Responsabilidade</label>
+              <select id="esc-sel-resp" onchange="_escApplyFilters()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none;background:#fff">
+                <option value="">Todas</option>
+              </select>
+            </div>
+            <div style="flex:2;min-width:180px">
               <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Reclamada</label>
-              <input id="esc-busca-recda" type="text" placeholder="nome da reclamada" oninput="_escApplyFilters()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none" />
+              <select id="esc-sel-recda" onchange="_escApplyFilters()" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none;background:#fff">
+                <option value="">Todas</option>
+              </select>
             </div>
             <div style="display:flex;gap:8px">
               <button onclick="_escLimparBusca()" style="font-family:monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;color:#6B7280;cursor:pointer;white-space:nowrap">✕ Limpar</button>
@@ -2160,6 +2174,7 @@ async function loadPautaEscritorio() {
   }
   _escRenderCalGrid();
   _escRenderRows(futuras.length ? futuras : rows, today);
+  _escPopulateSelects(rows);
 }
 
 function escFiltrarData(dateVal) {
@@ -2183,7 +2198,9 @@ function _escApplyFilters() {
   const qAdv  = (document.getElementById('esc-busca-adv')?.value  || '').trim().toLowerCase();
   const qProc = (document.getElementById('esc-busca-proc')?.value || '').trim().toLowerCase();
   const qRecl = (document.getElementById('esc-busca-recl')?.value || '').trim().toLowerCase();
-  const qRecda= (document.getElementById('esc-busca-recda')?.value|| '').trim().toLowerCase();
+  const qRecda= (document.getElementById('esc-sel-recda')?.value  || '').trim();
+  const qTipo = (document.getElementById('esc-sel-tipo')?.value   || '').trim();
+  const qResp = (document.getElementById('esc-sel-resp')?.value   || '').trim();
 
   let filtered = dateVal
     ? rows.filter(r => (r.data_audiencia||'') === dateVal)
@@ -2192,7 +2209,9 @@ function _escApplyFilters() {
   if (qAdv)  filtered = filtered.filter(r => (r.advogado||'').toLowerCase().includes(qAdv));
   if (qProc) filtered = filtered.filter(r => (r.processo||'').toLowerCase().includes(qProc));
   if (qRecl) filtered = filtered.filter(r => (r.reclamante||'').toLowerCase().includes(qRecl));
-  if (qRecda)filtered = filtered.filter(r => (r.reclamada||'').toLowerCase().includes(qRecda));
+  if (qRecda)filtered = filtered.filter(r => (r.reclamada||'') === qRecda);
+  if (qTipo) filtered = filtered.filter(r => (r.tipo_audiencia||'') === qTipo);
+  if (qResp) filtered = filtered.filter(r => (r.tipo_responsabilidade||'') === qResp);
 
   const count = document.getElementById('pauta-cal-count');
   if (count) {
@@ -2208,11 +2227,30 @@ function _escApplyFilters() {
 }
 
 function _escLimparBusca() {
-  ['esc-busca-adv','esc-busca-proc','esc-busca-recl','esc-busca-recda'].forEach(id => {
+  ['esc-busca-adv','esc-busca-proc','esc-busca-recl'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  ['esc-sel-tipo','esc-sel-resp','esc-sel-recda'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.selectedIndex = 0;
+  });
   _escApplyFilters();
+}
+
+function _escPopulateSelects(rows) {
+  const tipos   = [...new Set(rows.map(r=>r.tipo_audiencia||'').filter(Boolean))].sort();
+  const resps   = [...new Set(rows.map(r=>r.tipo_responsabilidade||'').filter(Boolean))].sort();
+  const recadas = [...new Set(rows.map(r=>r.reclamada||'').filter(Boolean))].sort();
+  function populate(id, vals) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const curr = el.value;
+    el.innerHTML = '<option value="">Todas</option>' + vals.map(v=>`<option value="${v}"${v===curr?' selected':''}>${v}</option>`).join('');
+  }
+  populate('esc-sel-tipo',  tipos);
+  populate('esc-sel-resp',  resps);
+  populate('esc-sel-recda', recadas);
 }
 
 function escDownloadExcel() {
@@ -2226,7 +2264,9 @@ function escDownloadExcel() {
   const qAdv  = (document.getElementById('esc-busca-adv')?.value  || '').trim().toLowerCase();
   const qProc = (document.getElementById('esc-busca-proc')?.value || '').trim().toLowerCase();
   const qRecl = (document.getElementById('esc-busca-recl')?.value || '').trim().toLowerCase();
-  const qRecda= (document.getElementById('esc-busca-recda')?.value|| '').trim().toLowerCase();
+  const qRecda= (document.getElementById('esc-sel-recda')?.value  || '').trim();
+  const qTipo = (document.getElementById('esc-sel-tipo')?.value   || '').trim();
+  const qResp = (document.getElementById('esc-sel-resp')?.value   || '').trim();
 
   let filtered = dateVal
     ? rows.filter(r => (r.data_audiencia||'') === dateVal)
@@ -2234,7 +2274,9 @@ function escDownloadExcel() {
   if (qAdv)  filtered = filtered.filter(r => (r.advogado||'').toLowerCase().includes(qAdv));
   if (qProc) filtered = filtered.filter(r => (r.processo||'').toLowerCase().includes(qProc));
   if (qRecl) filtered = filtered.filter(r => (r.reclamante||'').toLowerCase().includes(qRecl));
-  if (qRecda)filtered = filtered.filter(r => (r.reclamada||'').toLowerCase().includes(qRecda));
+  if (qRecda)filtered = filtered.filter(r => (r.reclamada||'') === qRecda);
+  if (qTipo) filtered = filtered.filter(r => (r.tipo_audiencia||'') === qTipo);
+  if (qResp) filtered = filtered.filter(r => (r.tipo_responsabilidade||'') === qResp);
 
   const data = filtered.map(r => ({
     'Data':           r.data_audiencia || '',
@@ -2257,7 +2299,6 @@ function escDownloadExcel() {
     'Orientação':     r.orientacao      || '',
     'Comentários':    r.comentarios     || '',
     'Status':         r.status          || '',
-    'Origem':         r.origem          || '',
   }));
 
   const ws = XLSX.utils.json_to_sheet(data);
@@ -2491,7 +2532,9 @@ function _escRenderRows(rows, today) {
     ${TH('Vara')}
     ${TH('Reclamante')}
     ${TH('Reclamada')}
+    ${TH('Cliente')}
     ${TH('Advogado')}
+    ${TH('Responsab.')}
     ${TH('Preposto / Dados')}
     ${TH('Link / Senha')}
     ${TH('Status','76px')}
@@ -2506,14 +2549,21 @@ function _escRenderRows(rows, today) {
     const st     = state[a.id] || {};
     const sent   = a.orientacao_enviada !== undefined ? !!a.orientacao_enviada : !!st.sent;
     const obs    = a.orientacao || st.obs || '';
-    const isPast = (a.data_audiencia||'') < today;
-    const isHoje = (a.data_audiencia||'') === today;
-    const rowBg  = isHoje ? '#f0f4ff' : i%2===0 ? '#fff' : '#fafafa';
-    const op     = isPast ? 'opacity:.7;' : '';
+    const isPast      = (a.data_audiencia||'') < today;
+    const isHoje      = (a.data_audiencia||'') === today;
+    const isCancelada = a.status === 'cancelada';
+    const rowBg  = isCancelada ? '#FFF5F5' : isHoje ? '#f0f4ff' : i%2===0 ? '#fff' : '#fafafa';
+    const op     = isPast && !isCancelada ? 'opacity:.7;' : '';
 
     const tipoHtml = a.tipo_audiencia
-      ? `<span style="background:#0D2B5E;color:#fff;font-size:8px;padding:1px 5px;border-radius:2px;display:inline-block">${TIPO_LABEL[a.tipo_audiencia]||a.tipo_audiencia}</span>`
+      ? `<span style="background:#0D2B5E;color:#fff;font-size:9px;padding:2px 7px;border-radius:3px;display:inline-block;font-weight:700;letter-spacing:.03em">${TIPO_LABEL[a.tipo_audiencia]||a.tipo_audiencia}</span>`
       : '';
+    const respHtml = a.tipo_responsabilidade
+      ? `<span style="background:${(RESP_COLOR[a.tipo_responsabilidade]||'#374151')}22;color:${RESP_COLOR[a.tipo_responsabilidade]||'#374151'};font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap">${a.tipo_responsabilidade}</span>`
+      : '—';
+    const clienteHtml = a.cliente
+      ? `<span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;white-space:nowrap;display:inline-block">${a.cliente}</span>`
+      : '—';
     const modalBg = a.modalidade==='VIRTUAL'?'#dbeafe':a.modalidade==='PRESENCIAL'?'#dcfce7':'#f3f4f6';
     const modalCo = a.modalidade==='VIRTUAL'?'#1e40af':a.modalidade==='PRESENCIAL'?'#166534':'#374151';
     const modalHtml = a.modalidade
@@ -2540,13 +2590,15 @@ function _escRenderRows(rows, today) {
 
     html += `<tr id="esc-row-${a.id}" style="background:${rowBg};border-left:3px solid ${sc}">
       ${TD(`<span style="font-weight:600;color:${isHoje?'#0D2B5E':'#374151'};white-space:nowrap">${isHoje?'● ':''} ${fmtDia(a.data_audiencia)}</span>`)}
-      ${TD(`<span style="font-weight:700;font-family:monospace;font-size:13px">${a.horario||'—'}</span>`)}
+      ${TD(`<span style="font-weight:900;font-family:monospace;font-size:15px;color:#0D2B5E">${a.horario||'—'}</span>`)}
       <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top;${op}">${tipoHtml}${tipoHtml&&modalHtml?'<br>':''}${modalHtml}${(tipoHtml||modalHtml)&&testemHtml?'<br>':''}${testemHtml}</td>
       ${TD(`<span style="font-family:monospace;font-size:10px">${a.processo||'—'}</span>`)}
       ${TD(a.vara||'—','max-width:140px')}
       ${TD(a.reclamante||'—','max-width:160px')}
       ${TD(a.reclamada||'—','max-width:180px')}
+      ${TD(clienteHtml,'max-width:160px')}
       ${TD(a.advogado||'—')}
+      ${TD(respHtml)}
       ${TD(prepostoFull||'—','max-width:160px')}
       ${TD(linkSenha||'—')}
       <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top;${op}">
@@ -2723,7 +2775,6 @@ async function loadPautaCliente(company) {
         <div style="font-size:12px;color:#374151;margin-top:6px">${a.processo||'—'}</div>
         ${a.vara ? `<div style="font-size:11px;color:#6B7280;margin-top:2px">${a.vara}</div>` : ''}
         ${a.reclamante ? `<div style="font-size:11px;color:#6B7280;margin-top:2px">Reclamante: ${a.reclamante}</div>` : ''}
-        ${a.advogado ? `<div style="font-size:11px;color:#6B7280;margin-top:2px">Advogado: ${a.advogado}</div>` : ''}
         ${linkHtml}${senhaHtml}
       </div>`;
     });
