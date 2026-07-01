@@ -3521,7 +3521,7 @@ async function doLogin() {
   const storedHash = await _getStoredHash();
 
   // Senha exclusiva para audiencias@falaw.com.br (perfil restrito)
-  const HASH_AUDIENCIAS = '0a55f92bdf71ad24bb549394f5b2661470ce8d5d3d4c4c33c9864bdee6a12812';
+  const HASH_AUDIENCIAS = 'dec67595de43cf8c52afabb10ef3e1b261c91d4d01aadae497cb52c3e9367b96';
   if (authEmail.toLowerCase() === 'audiencias@falaw.com.br' && inputHash === HASH_AUDIENCIAS) {
     _setLock({ attempts: 0, lockedUntil: 0 });
     sessionStorage.setItem('fa_admin_session', String(Date.now()));
