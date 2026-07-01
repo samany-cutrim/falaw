@@ -425,25 +425,37 @@ def _ms_to_dt(ms_val) -> datetime | None:
 def _parse_data_hora(item: dict) -> tuple[str, str]:
     data, hora = "", ""
 
-    # Projuris v2: compromisso agendado tem dataInicioCompromisso / horaInicioCompromisso
+    BRT = timedelta(hours=3)  # UTC-3 (Brasília)
+
+    # ── Data ─────────────────────────────────────────────────────────────────
+    # dataConclusaoPrevista / dataLimite são timestamps de meia-noite BRT (= 03:00 UTC)
     dt_ms = (item.get("dataInicioCompromisso") or
              item.get("dataLimite") or
              item.get("dataConclusaoPrevista"))
-    hora_ms = item.get("horaInicioCompromisso") or item.get("horaLimite")
-
     if dt_ms:
         dt = _ms_to_dt(dt_ms)
         if dt:
-            data = dt.strftime("%Y-%m-%d")
-            hora = dt.strftime("%H:%M")
+            # Subtrai offset BRT para obter data local
+            data = (dt - BRT).strftime("%Y-%m-%d")
 
-    # horaInicioCompromisso é também timestamp ms com a hora real
+    # ── Hora: horaConclusao tem o timestamp UTC real da audiência ─────────────
+    # Prioridade: horaConclusao > horaInicioCompromisso > horaLimite
+    hora_ms = (item.get("horaConclusao") or
+               item.get("horaInicioCompromisso") or
+               item.get("horaLimite"))
     if hora_ms:
         ht = _ms_to_dt(hora_ms)
         if ht:
-            hora = ht.strftime("%H:%M")
+            hora = (ht - BRT).strftime("%H:%M")
 
-    # Fallback: campos string convencionais
+    # ── Fallback: extrai hora da descrição ("às HH:MMh" ou "HH:MM") ──────────
+    if not hora:
+        desc = item.get("descricao") or item.get("titulo") or ""
+        m = re.search(r"\b(\d{1,2})[h:](\d{2})h?\b", desc)
+        if m:
+            hora = f"{int(m.group(1)):02d}:{m.group(2)}"
+
+    # ── Fallback campos string ────────────────────────────────────────────────
     if not data:
         for k in ("dataPrevista", "data_prevista", "dataAudiencia",
                   "dataInicio", "data_inicio", "data"):

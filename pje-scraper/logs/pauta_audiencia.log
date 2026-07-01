@@ -251,3 +251,54 @@ task: <Task pending name='Task-3' coro=<Connection.run.<locals>.init() running a
 2026-07-01 14:26:02,473 [INFO] ============================================================
 2026-07-01 14:26:02,473 [INFO] Sincronizacao concluida.
 2026-07-01 14:26:02,474 [INFO] ============================================================
+2026-07-01 16:00:18,234 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-07-01 16:00:47,273 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-07-01 16:00:47,699 [INFO] Senha preenchida.
+2026-07-01 16:00:48,310 [INFO] Formulário submetido.
+2026-07-01 16:00:50,252 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=c0d0e0ca-8b0a-4d32-aed4-4d92da3f1c83&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=d5bd1b24-c273-402e-ab9a-f8a7f44b8ee8.c0d0e0ca-8b0a-4d32-aed4-4d92da3f1c83.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-07-01 16:00:50,668 [INFO] Bearer token capturado das requisições de rede.
+2026-07-01 16:01:15,230 [INFO] Calendario: 2026-07-01 -> 2026-07-03
+2026-07-01 16:01:15,231 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-07-01 16:01:26,993 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-07-01 16:01:27,121 [INFO] Senha preenchida.
+2026-07-01 16:01:27,384 [INFO] Formulário submetido.
+2026-07-01 16:01:29,407 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=76fa24e7-06e2-4935-b1e2-cc642cb2f99b&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=1319788f-64d5-4af7-ad29-f4c6569598c0.76fa24e7-06e2-4935-b1e2-cc642cb2f99b.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-07-01 16:01:29,809 [INFO] Bearer token capturado das requisições de rede.
+2026-07-01 16:01:59,285 [INFO]   Retornou 10 itens
+2026-07-01 16:04:56,270 [INFO] ============================================================
+2026-07-01 16:04:56,277 [INFO] Pauta de Audiencias — 01/07/2026 16:04
+2026-07-01 16:04:56,277 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-07-01 16:04:56,277 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-07-01 16:04:56,278 [INFO] Periodo: 2026-01-01 -> 2026-12-31
+2026-07-01 16:04:56,278 [INFO] ============================================================
+2026-07-01 16:04:56,279 [INFO] Calendario: 2026-01-01 -> 2026-12-31
+2026-07-01 16:04:56,892 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-07-01 16:05:24,606 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-07-01 16:05:24,793 [INFO] Senha preenchida.
+2026-07-01 16:05:25,372 [INFO] Formulário submetido.
+2026-07-01 16:05:26,630 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=dd87a7a8-d265-4472-bfce-838818709841&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=20e00b4c-ef43-4605-bc97-8dc92bad2737.dd87a7a8-d265-4472-bfce-838818709841.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-07-01 16:05:27,012 [INFO] Bearer token capturado das requisições de rede.
+2026-07-01 16:05:37,424 [WARNING] Calendario falhou (401 Client Error: Unauthorized for url: https://service.projurisadv.com.br/adv-service/v2/tarefa/calendario/consulta-sem-paginacao) — usando endpoint paginado...
+2026-07-01 16:05:37,425 [INFO]   Pagina 0 (https://service.projurisadv.com.br/adv-service/v2/tarefa/consulta-com-paginacao)
+2026-07-01 16:05:38,384 [INFO]   Pagina 0 (https://service.projurisadv.com.br/adv-service/tarefa/consulta-com-paginacao)
+2026-07-01 16:05:39,336 [INFO] Paginado: 0 tarefas recebidas
+2026-07-01 16:05:40,188 [INFO] Nenhuma audiencia encontrada no periodo.
+2026-07-01 16:06:11,482 [INFO] ============================================================
+2026-07-01 16:06:11,483 [INFO] Pauta de Audiencias — 01/07/2026 16:06
+2026-07-01 16:06:11,484 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-07-01 16:06:11,484 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-07-01 16:06:11,484 [INFO] Periodo: 2026-01-01 -> 2026-12-31
+2026-07-01 16:06:11,485 [INFO] ============================================================
+2026-07-01 16:06:11,485 [INFO] Calendario: 2026-01-01 -> 2026-12-31
+2026-07-01 16:06:11,781 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-07-01 16:06:19,761 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-07-01 16:06:19,980 [INFO] Senha preenchida.
+2026-07-01 16:06:20,313 [INFO] Formulário submetido.
+2026-07-01 16:06:21,923 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=c7ba66a2-0611-41b0-ba7e-4c8f2f8a7e83&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=0a63710a-cd53-4625-9053-ec3f54615893.c7ba66a2-0611-41b0-ba7e-4c8f2f8a7e83.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-07-01 16:06:22,320 [INFO] Bearer token capturado das requisições de rede.
+2026-07-01 16:06:37,796 [INFO]   Retornou 675 itens
+2026-07-01 16:06:37,800 [INFO] Calendario: 675 tarefas recebidas
+2026-07-01 16:06:57,732 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 675
+2026-07-01 16:06:57,732 [INFO] ============================================================
+2026-07-01 16:06:57,732 [INFO] Sincronizacao concluida.
+2026-07-01 16:06:57,732 [INFO] ============================================================
