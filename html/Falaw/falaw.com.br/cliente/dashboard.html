@@ -2646,7 +2646,7 @@ function _escRenderRows(rows, today) {
             const t = p.trim();
             const isC = t.includes('(CLIENTE)');
             const n = t.replace(/\s*\(CLIENTE\)/gi,'').trim();
-            return isC ? `<b>${n}</b>` : n;
+            return isC ? `<b style="color:#0D2B5E">${n}</b>` : n;
           }).join(', ')
         : '';
       const linkHtml = a.link
