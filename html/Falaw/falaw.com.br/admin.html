@@ -13771,7 +13771,7 @@ async function editAudiencia(id) {
   document.getElementById('aud-reclamada').value    = a.reclamada || '';
   document.getElementById('aud-cliente').value      = a.cliente || '';
   document.getElementById('aud-tipo-resp').value    = a.tipo_responsabilidade || '';
-  document.getElementById('aud-responsavel').value  = a.responsavel_conducao || '';
+  const _respEl = document.getElementById('aud-responsavel'); if (_respEl) _respEl.value = a.responsavel_conducao || '';
   document.getElementById('aud-advogado').value     = a.advogado || '';
   document.getElementById('aud-preposto-obs').value = a.observacoes_preposto || '';
   document.getElementById('aud-dados-preposto').value = a.dados_preposto || '';
@@ -13808,7 +13808,7 @@ async function saveAudiencia() {
     reclamada:             document.getElementById('aud-reclamada').value.trim(),
     cliente:               document.getElementById('aud-cliente').value.trim(),
     tipo_responsabilidade: document.getElementById('aud-tipo-resp').value.trim(),
-    responsavel_conducao:  document.getElementById('aud-responsavel').value.trim(),
+    responsavel_conducao:  (document.getElementById('aud-responsavel')?.value || '').trim(),
     advogado:              document.getElementById('aud-advogado').value.trim(),
     observacoes_preposto:  document.getElementById('aud-preposto-obs').value.trim(),
     dados_preposto:        document.getElementById('aud-dados-preposto').value.trim(),
