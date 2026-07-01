@@ -13420,7 +13420,7 @@ function _audCard(a) {
         <!-- partes -->
         <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin-bottom:6px">
           ${a.reclamante ? `<span><span style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted)">Reclamante</span><br/><strong>${_escHtml(a.reclamante)}</strong></span>` : ''}
-          ${a.reclamada  ? `<span style="max-width:100%"><span style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted)">Reclamada</span><br/>${a.reclamada.split(',').map(p=>{const t=p.trim();const isC=t.includes('(CLIENTE)');const n=_escHtml(t.replace(/\s*\(CLIENTE\)/gi,'').trim());return isC?`<strong style="color:#0D2B5E">${n}</strong>`:n;}).join(', ')}</span>` : ''}
+          ${a.reclamada  ? `<span style="max-width:100%"><span style="font-family:var(--f-mono);font-size:9px;text-transform:uppercase;color:var(--c-muted)">Reclamada</span><br/>${a.reclamada.split(',').map(p=>{const t=p.trim();const isC=t.includes('(CLIENTE)');const n=_escHtml(t.replace(/\s*\(CLIENTE\)/gi,'').trim());return isC?`<strong style="color:#7B1A2E;text-decoration:underline">${n}</strong>`:n;}).join(', ')}</span>` : ''}
         </div>
         <!-- responsáveis -->
         <!-- preposto e testemunha -->
