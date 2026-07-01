@@ -415,3 +415,6 @@ DROP POLICY IF EXISTS "anon full access correspondentes" ON correspondentes;
 CREATE POLICY "anon full access correspondentes"
   ON correspondentes FOR ALL TO anon
   USING (true) WITH CHECK (true);
+
+-- Migração: orientacao_enviada (persistência cross-device do checkbox do escritório)
+ALTER TABLE pauta_audiencias ADD COLUMN IF NOT EXISTS orientacao_enviada BOOLEAN NOT NULL DEFAULT FALSE;

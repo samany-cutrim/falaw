@@ -195,3 +195,32 @@
 2026-06-30 19:35:06,367 [INFO] ============================================================
 2026-06-30 19:35:06,367 [INFO] Sincronizacao concluida.
 2026-06-30 19:35:06,367 [INFO] ============================================================
+2026-07-01 09:14:57,873 [INFO] ============================================================
+2026-07-01 09:14:57,874 [INFO] Pauta de Audiencias — 01/07/2026 09:14
+2026-07-01 09:14:57,875 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-07-01 09:14:57,875 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-07-01 09:14:57,875 [INFO] Periodo: 2025-01-01 -> 2026-12-31
+2026-07-01 09:14:57,875 [INFO] ============================================================
+2026-07-01 09:14:57,876 [INFO] Calendario: 2025-01-01 -> 2026-12-31
+2026-07-01 09:14:58,377 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-07-01 09:15:03,318 [ERROR] Task was destroyed but it is pending!
+task: <Task pending name='Task-3' coro=<Connection.run.<locals>.init() running at C:\Users\manyc\Falaw\.venv\Lib\site-packages\playwright\_impl\_connection.py:310> wait_for=<Future pending cb=[Task.task_wakeup()]> cb=[ProtocolCallback.__init__.<locals>.cb() at C:\Users\manyc\Falaw\.venv\Lib\site-packages\playwright\_impl\_connection.py:230]>
+2026-07-01 09:15:48,884 [INFO] ============================================================
+2026-07-01 09:15:48,884 [INFO] Pauta de Audiencias — 01/07/2026 09:15
+2026-07-01 09:15:48,888 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-07-01 09:15:48,888 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-07-01 09:15:48,889 [INFO] Periodo: 2025-01-01 -> 2026-12-31
+2026-07-01 09:15:48,889 [INFO] ============================================================
+2026-07-01 09:15:48,889 [INFO] Calendario: 2025-01-01 -> 2026-12-31
+2026-07-01 09:15:49,153 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-07-01 09:16:36,689 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-07-01 09:16:36,865 [INFO] Senha preenchida.
+2026-07-01 09:16:37,287 [INFO] Formulário submetido.
+2026-07-01 09:16:39,724 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=5e06e8d1-64e2-439d-96c2-cec680d6c85e&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=9390da2a-6b25-49dc-ba4b-5ea0be4debfc.5e06e8d1-64e2-439d-96c2-cec680d6c85e.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-07-01 09:16:40,064 [INFO] Bearer token capturado das requisições de rede.
+2026-07-01 09:17:00,195 [INFO]   Retornou 2460 itens
+2026-07-01 09:17:00,328 [INFO] Calendario: 2460 tarefas recebidas
+2026-07-01 09:17:59,174 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 2460
+2026-07-01 09:17:59,175 [INFO] ============================================================
+2026-07-01 09:17:59,175 [INFO] Sincronizacao concluida.
+2026-07-01 09:17:59,175 [INFO] ============================================================

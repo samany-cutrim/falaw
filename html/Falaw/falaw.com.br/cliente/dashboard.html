@@ -743,6 +743,16 @@
           <p class="page-subtitle">Próximas audiências agendadas para a sua empresa.</p>
         </div>
 
+        <!-- Filtro de data (visível apenas para escritório) -->
+        <div id="pauta-cal-bar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px;padding:14px 16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px">
+          <label style="font-family:monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;white-space:nowrap">Filtrar por data</label>
+          <input type="date" id="pauta-cal-input"
+            onchange="escFiltrarData(this.value)"
+            style="border:1px solid #d1d5db;border-radius:4px;padding:7px 10px;font-size:13px;font-family:inherit;color:#111;background:#fff;cursor:pointer" />
+          <button onclick="escFiltrarData('')" style="font-family:monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid #d1d5db;border-radius:4px;padding:7px 12px;color:#6B7280;cursor:pointer">✕ Limpar filtro</button>
+          <span id="pauta-cal-count" style="font-family:monospace;font-size:10px;color:#9CA3AF;margin-left:4px"></span>
+        </div>
+
         <div id="pauta-list" style="margin-top:8px"></div>
 
       </div>
@@ -1966,15 +1976,23 @@ function _escSaveState(id, sent, obs) {
   localStorage.setItem(_ESC_ACK_KEY, JSON.stringify(all));
 }
 
-async function _escSaveObs(id, obs) {
-  // Persiste observação no campo `orientacao` do Supabase
+async function _escPatchSupabase(id, patch) {
   const sbUrl = (window.SB_URL || '').trim();
   const sbKey = (window.SB_KEY || '').trim();
   if (!sbUrl || !sbKey || typeof supabase === 'undefined') return;
   try {
     const sb = supabase.createClient(sbUrl, sbKey);
-    await sb.from('pauta_audiencias').update({ orientacao: obs, updated_at: new Date().toISOString() }).eq('id', id);
-  } catch(e) { console.warn('escSaveObs:', e.message); }
+    await sb.from('pauta_audiencias').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id);
+  } catch(e) { console.warn('escPatch:', e.message); }
+}
+
+async function _escSaveObs(id, obs) {
+  _escPatchSupabase(id, { orientacao: obs });
+  // Atualiza cache local
+  if (window._escRows) {
+    const r = window._escRows.find(x => x.id === id);
+    if (r) r.orientacao = obs;
+  }
 }
 
 async function loadPautaCorrespondente(nome, email) {
@@ -2056,7 +2074,7 @@ async function loadPautaEscritorio() {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
       const { data } = await sb.from('pauta_audiencias')
-        .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,cliente,reclamante,reclamada,advogado,status,link,id_senha,orientacao,testemunha_necessaria')
+        .select('*')
         .order('data_audiencia', { ascending: true })
         .order('horario',        { ascending: true });
       if (data) rows = data;
@@ -2065,6 +2083,37 @@ async function loadPautaEscritorio() {
 
   if (!rows.length) {
     el.innerHTML = '<div style="text-align:center;padding:40px 0;color:#aaa;font-size:13px">Nenhuma audiência encontrada.</div>';
+    return;
+  }
+
+  // Guarda globalmente para re-filtragem
+  window._escRows = rows;
+  window._escToday = today;
+
+  // Mostra barra de calendário
+  const calBar = document.getElementById('pauta-cal-bar');
+  if (calBar) calBar.style.display = 'flex';
+
+  _escRenderRows(rows, today);
+}
+
+function escFiltrarData(dateVal) {
+  const input = document.getElementById('pauta-cal-input');
+  if (input) input.value = dateVal || '';
+  const rows = window._escRows || [];
+  const today = window._escToday || new Date().toISOString().slice(0, 10);
+  const filtered = dateVal ? rows.filter(r => (r.data_audiencia || '') === dateVal) : rows;
+  const count = document.getElementById('pauta-cal-count');
+  if (count) count.textContent = dateVal ? `${filtered.length} audiência${filtered.length !== 1 ? 's' : ''} em ${dateVal.split('-').reverse().join('/')}` : '';
+  _escRenderRows(filtered, today);
+}
+
+function _escRenderRows(rows, today) {
+  const el = document.getElementById('pauta-list');
+  if (!el) return;
+
+  if (!rows.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px 0;color:#aaa;font-size:13px">Nenhuma audiência nesta data.</div>';
     return;
   }
 
@@ -2093,35 +2142,63 @@ async function loadPautaEscritorio() {
     byDate[d].forEach(a => {
       const sc   = STATUS_COLOR[a.status]||'#374151';
       const sb2  = STATUS_BG[a.status]||'#F9FAFB';
+      // Fonte de verdade: Supabase (a.orientacao_enviada); localStorage como fallback offline
       const st   = state[a.id] || {};
-      const sent = !!st.sent;
-      const obs  = st.obs !== undefined ? st.obs : (a.orientacao || '');
+      const sent = a.orientacao_enviada !== undefined ? !!a.orientacao_enviada : !!st.sent;
+      const obs  = a.orientacao || st.obs || '';
       const cardOp = isPast ? 'opacity:0.6;' : '';
       const tipo = a.tipo_audiencia ? `<span style="background:#0D2B5E;color:#fff;font-size:9px;padding:2px 6px;border-radius:2px;margin-left:4px">${TIPO_LABEL[a.tipo_audiencia]||a.tipo_audiencia}</span>` : '';
-      const linkHtml = a.link ? `<a href="${a.link}" target="_blank" rel="noopener" style="font-size:11px;color:#2563EB;text-decoration:none;margin-right:10px">🔗 Link</a>` : '';
+      const modalBg = a.modalidade === 'VIRTUAL' ? '#dbeafe' : a.modalidade === 'PRESENCIAL' ? '#dcfce7' : '#f3f4f6';
+      const modalCo = a.modalidade === 'VIRTUAL' ? '#1e40af' : a.modalidade === 'PRESENCIAL' ? '#166534' : '#374151';
+      const modalHtml = a.modalidade ? `<span style="background:${modalBg};color:${modalCo};font-size:9px;padding:2px 6px;border-radius:2px;margin-left:4px;font-weight:600">${a.modalidade}</span>` : '';
+      const linkHtml = a.link ? `<a href="${a.link}" target="_blank" rel="noopener" style="font-size:11px;color:#2563EB;text-decoration:none;margin-right:10px">🔗 Link da audiência</a>` : '';
       const testem = a.testemunha_necessaria ? `<span style="background:#fffbeb;color:#92400e;font-size:9px;padding:2px 6px;border-radius:2px;border:1px solid #fde68a;margin-left:4px">Testemunha</span>` : '';
-      html += `<div id="esc-card-${a.id}" style="background:#fff;border:1px solid #E5E7EB;border-radius:6px;padding:14px 16px;margin-bottom:10px;border-left:4px solid ${sc};${cardOp}">
-        <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">
-          <div style="flex:1;min-width:200px">
-            <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:4px">
-              <span style="font-size:13px;font-weight:700;color:#111">${a.horario||'—'}</span>
-              ${tipo}${testem}
-              <span style="background:${sb2};color:${sc};font-size:9px;padding:1px 6px;border-radius:10px;font-weight:600;text-transform:uppercase">${a.status||''}</span>
-            </div>
-            <div style="font-size:11px;font-weight:600;color:#4B5563">${a.cliente ? `<span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:3px;margin-right:6px">${a.cliente}</span>` : ''}${a.processo||'—'}</div>
-            <div style="font-size:11px;color:#6B7280;margin-top:2px">${a.vara||''}</div>
-            ${a.reclamante ? `<div style="font-size:11px;color:#6B7280">Reclamante: ${a.reclamante}</div>` : ''}
-            ${a.advogado   ? `<div style="font-size:11px;color:#6B7280">Adv.: ${a.advogado}</div>` : ''}
-            <div style="margin-top:4px">${linkHtml}</div>
-          </div>
-          <!-- Controles internos -->
-          <div style="min-width:220px;flex:1;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:10px 12px">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;font-size:12px;font-weight:600;color:${sent?'#1B7A4E':'#374151'}">
-              <input type="checkbox" onchange="escToggleOrient('${a.id}',this.checked)" ${sent?'checked':''} style="width:14px;height:14px;accent-color:#1B7A4E;cursor:pointer" />
-              Orientação enviada
-            </label>
-            <textarea onblur="escSaveObs('${a.id}',this.value)" placeholder="Observação interna…" rows="2" style="width:100%;font-size:11px;padding:6px 8px;border:1px solid #e5e7eb;border-radius:3px;resize:vertical;font-family:inherit;color:#374151;background:#fff">${a.obs !== undefined ? a.obs : obs}</textarea>
-          </div>
+
+      function row(label, val) {
+        if (!val) return '';
+        return `<tr><td style="padding:4px 10px 4px 0;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#9CA3AF;white-space:nowrap;vertical-align:top">${label}</td><td style="padding:4px 0;font-size:12px;color:#111;vertical-align:top">${val}</td></tr>`;
+      }
+
+      const detailRows = [
+        row('Processo',         a.processo),
+        row('Vara / Juízo',     a.vara),
+        row('Cliente',          a.cliente),
+        row('Reclamante',       a.reclamante),
+        row('Reclamada',        a.reclamada),
+        row('Tipo Resp.',       a.tipo_responsabilidade),
+        row('Responsável',      a.responsavel_conducao),
+        row('Advogado',         a.advogado),
+        row('Testemunhas',      a.testemunhas),
+        row('Dados Preposto',   a.dados_preposto),
+        row('Obs. Preposto',    a.observacoes_preposto),
+        row('ID / Senha',       a.id_senha ? `<span style="font-family:monospace">${a.id_senha}</span>` : ''),
+        row('Comentários',      a.comentarios),
+        row('Origem',           a.origem),
+      ].join('');
+
+      html += `<div id="esc-card-${a.id}" style="background:#fff;border:1px solid #E5E7EB;border-radius:6px;padding:16px 18px;margin-bottom:12px;border-left:4px solid ${sc};${cardOp}">
+        <!-- Cabeçalho do card -->
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+          <span style="font-size:15px;font-weight:700;color:#111">${a.horario||'—'}</span>
+          ${tipo}${modalHtml}${testem}
+          <span style="background:${sb2};color:${sc};font-size:9px;padding:1px 6px;border-radius:10px;font-weight:600;text-transform:uppercase">${a.status||''}</span>
+        </div>
+
+        <!-- Data e acesso -->
+        <div style="margin-bottom:10px">
+          ${linkHtml}
+        </div>
+
+        <!-- Tabela de detalhes -->
+        <table style="width:100%;margin-bottom:12px;border-collapse:collapse">${detailRows}</table>
+
+        <!-- Controles internos -->
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:10px 12px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;font-size:12px;font-weight:600;color:${sent?'#1B7A4E':'#374151'}">
+            <input type="checkbox" onchange="escToggleOrient('${a.id}',this.checked)" ${sent?'checked':''} style="width:14px;height:14px;accent-color:#1B7A4E;cursor:pointer" />
+            Orientação enviada
+          </label>
+          <textarea onblur="escSaveObs('${a.id}',this.value)" placeholder="Observação interna…" rows="2" style="width:100%;font-size:11px;padding:6px 8px;border:1px solid #e5e7eb;border-radius:3px;resize:vertical;font-family:inherit;color:#374151;background:#fff">${a.obs !== undefined ? a.obs : obs}</textarea>
         </div>
       </div>`;
     });
@@ -2135,6 +2212,13 @@ function escToggleOrient(id, checked) {
   const textarea = card ? card.querySelector('textarea') : null;
   const obs = textarea ? textarea.value : '';
   _escSaveState(id, checked, obs);
+  // Persiste no Supabase para sincronização entre dispositivos
+  _escPatchSupabase(id, { orientacao_enviada: checked });
+  // Atualiza cache local
+  if (window._escRows) {
+    const r = window._escRows.find(x => x.id === id);
+    if (r) r.orientacao_enviada = checked;
+  }
   const label = card ? card.querySelector('label') : null;
   if (label) label.style.color = checked ? '#1B7A4E' : '#374151';
 }
@@ -2160,6 +2244,11 @@ function _normalizarNomeCliente(company) {
   return s;
 }
 
+// Token de busca: primeiro palavra significativa, sem espaços (para cobrir "MERCADOLIVRE" vs "MERCADO LIVRE")
+function _clienteToken(company) {
+  return _normalizarNomeCliente(company).split(/\s+/)[0];
+}
+
 async function loadPautaCliente(company) {
   const el = document.getElementById('pauta-list');
   if (!el) return;
@@ -2173,7 +2262,8 @@ async function loadPautaCliente(company) {
   // Normaliza o nome da empresa para casar exatamente com o campo `cliente`
   // gerado pelo Python (_extrair_cliente)
   const clienteNorm = _normalizarNomeCliente(company);
-  if (!clienteNorm) {
+  const clienteToken = _clienteToken(company);
+  if (!clienteToken) {
     document.getElementById('pauta-list').innerHTML =
       '<div style="text-align:center;padding:40px 0;color:#aaa;font-size:13px">Nome do cliente não identificado.</div>';
     return;
@@ -2182,25 +2272,36 @@ async function loadPautaCliente(company) {
   if (sbUrl && sbKey && typeof supabase !== 'undefined') {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
-      // Busca exata (case-insensitive) pelo nome normalizado da marca — sem filtro de data
+
+      // 1ª tentativa: campo `cliente` exato normalizado (gerado pelo Python)
       let { data } = await sb.from('pauta_audiencias')
-        .select('data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,status,link,id_senha,advogado')
+        .select('data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado')
         .ilike('cliente', clienteNorm)
         .order('data_audiencia', { ascending: true })
         .order('horario',        { ascending: true });
       if (data && data.length) { rows = data; }
-      else {
-        // Fallback: busca pelo primeiro token (cobre variações menores de grafia)
-        const token = clienteNorm.split(/\s+/)[0];
+
+      // 2ª tentativa: campo `cliente` começando com o primeiro token
+      if (!rows.length) {
         ({ data } = await sb.from('pauta_audiencias')
-          .select('data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,status,link,id_senha,advogado')
-          .ilike('cliente', `${token}%`)
+          .select('data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado')
+          .ilike('cliente', `${clienteToken}%`)
           .order('data_audiencia', { ascending: true })
           .order('horario',        { ascending: true }));
-        // Filtra client-side para garantir que só o cliente correto apareça
-        if (data) rows = data.filter(a =>
-          _normalizarNomeCliente(a.cliente || '').startsWith(token)
-        );
+        if (data && data.length) {
+          rows = data.filter(a => _normalizarNomeCliente(a.cliente || '').startsWith(clienteToken));
+        }
+      }
+
+      // 3ª tentativa: campo `reclamada` contém o nome da empresa (cobre casos onde
+      // o Python ainda não processou/populou o campo `cliente`)
+      if (!rows.length) {
+        ({ data } = await sb.from('pauta_audiencias')
+          .select('data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado')
+          .ilike('reclamada', `%${clienteToken}%`)
+          .order('data_audiencia', { ascending: true })
+          .order('horario',        { ascending: true }));
+        if (data && data.length) rows = data;
       }
     } catch(e) { console.warn('pauta cliente:', e.message); }
   }
