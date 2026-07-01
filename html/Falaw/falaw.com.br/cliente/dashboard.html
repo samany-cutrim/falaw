@@ -2214,7 +2214,7 @@ function _escApplyFilters() {
   if (qAdv)  filtered = filtered.filter(r => (r.advogado||'').toLowerCase().includes(qAdv));
   if (qProc) filtered = filtered.filter(r => (r.processo||'').toLowerCase().includes(qProc));
   if (qRecl) filtered = filtered.filter(r => (r.reclamante||'').toLowerCase().includes(qRecl));
-  if (qRecda)filtered = filtered.filter(r => (r.reclamada||'') === qRecda);
+  if (qRecda)filtered = filtered.filter(r => (r.reclamada||'').includes(qRecda));
   if (qTipo) filtered = filtered.filter(r => (r.tipo_audiencia||'') === qTipo);
   if (qResp) filtered = filtered.filter(r => (r.tipo_responsabilidade||'') === qResp);
 
@@ -2249,10 +2249,17 @@ function _escLimparBusca() {
   _escApplyFilters();
 }
 
+function _escExtractCliente(reclamada) {
+  if (!reclamada) return '';
+  const found = reclamada.split(',').find(p => p.includes('(CLIENTE)'));
+  if (found) return found.replace(/\s*\(CLIENTE\)/gi, '').trim();
+  return '';
+}
+
 function _escPopulateSelects(rows) {
   const tipos   = [...new Set(rows.map(r=>r.tipo_audiencia||'').filter(Boolean))].sort();
   const resps   = [...new Set(rows.map(r=>r.tipo_responsabilidade||'').filter(Boolean))].sort();
-  const recadas = [...new Set(rows.map(r=>r.reclamada||'').filter(Boolean))].sort();
+  const recadas = [...new Set(rows.map(r=>_escExtractCliente(r.reclamada)).filter(Boolean))].sort();
   function populate(id, vals) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -2285,7 +2292,7 @@ function escDownloadExcel() {
   if (qAdv)  filtered = filtered.filter(r => (r.advogado||'').toLowerCase().includes(qAdv));
   if (qProc) filtered = filtered.filter(r => (r.processo||'').toLowerCase().includes(qProc));
   if (qRecl) filtered = filtered.filter(r => (r.reclamante||'').toLowerCase().includes(qRecl));
-  if (qRecda)filtered = filtered.filter(r => (r.reclamada||'') === qRecda);
+  if (qRecda)filtered = filtered.filter(r => (r.reclamada||'').includes(qRecda));
   if (qTipo) filtered = filtered.filter(r => (r.tipo_audiencia||'') === qTipo);
   if (qResp) filtered = filtered.filter(r => (r.tipo_responsabilidade||'') === qResp);
 

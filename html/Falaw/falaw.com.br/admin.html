@@ -13557,7 +13557,7 @@ async function loadAudiencias() {
     if (fMod   && a.modalidade           !== fMod)   return false;
     if (fSt    && a.status               !== fSt)    return false;
     if (fResp  && a.tipo_responsabilidade!== fResp)  return false;
-    if (fRecda && a.reclamada            !== fRecda) return false;
+    if (fRecda && !(a.reclamada||'').includes(fRecda)) return false;
     if (fDia) {
       if (a.data_audiencia !== fDia) return false;
     } else if (fMes) {
@@ -13577,8 +13577,9 @@ async function loadAudiencias() {
     const curr = el.value;
     el.innerHTML = `<option value="">${placeholder}</option>` + vals.map(v=>`<option value="${v}"${v===curr?' selected':''}>${v}</option>`).join('');
   }
+  function _audExtractCliente(rec) { if (!rec) return ''; const f = rec.split(',').find(p=>p.includes('(CLIENTE)')); return f ? f.replace(/\s*\(CLIENTE\)/gi,'').trim() : ''; }
   _audPopulateSelect('aud-filter-resp',  [...new Set(items.map(r=>r.tipo_responsabilidade||'').filter(Boolean))].sort(), 'Todas as responsabilidades');
-  _audPopulateSelect('aud-filter-recda', [...new Set(items.map(r=>r.reclamada||'').filter(Boolean))].sort(), 'Todas as reclamadas');
+  _audPopulateSelect('aud-filter-recda', [...new Set(items.map(r=>_audExtractCliente(r.reclamada)).filter(Boolean))].sort(), 'Todas as reclamadas');
 
   _audRenderStats(items);
   const countEl = document.getElementById('aud-count');
