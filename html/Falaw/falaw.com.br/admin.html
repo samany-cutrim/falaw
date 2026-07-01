@@ -1770,7 +1770,13 @@
 
             <!-- Clientes -->
             <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);margin-bottom:8px">Clientes</div>
-            <div id="pauta-dest-clientes" style="max-height:280px;overflow-y:auto;border:1px solid var(--c-divider);border-radius:4px;padding:4px 0"></div>
+            <div id="pauta-dest-clientes" style="max-height:200px;overflow-y:auto;border:1px solid var(--c-divider);border-radius:4px;padding:4px 0"></div>
+
+            <!-- Correspondentes -->
+            <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);margin:14px 0 8px">Correspondentes &amp; Prepostos</div>
+            <div id="pauta-dest-corrs" style="max-height:200px;overflow-y:auto;border:1px solid var(--c-divider);border-radius:4px;padding:4px 0">
+              <div style="padding:12px;font-size:12px;color:var(--c-muted)">Carregando correspondentes…</div>
+            </div>
 
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
               <button type="button" class="btn btn-ghost btn-sm" onclick="pautaDestSelectAll(true)">Selecionar todos</button>
@@ -8106,33 +8112,54 @@ async function notifyClientDashboard(client, periodLabel) {
 
 /* ── Modal Enviar Pauta ── */
 let _pautaDestClients = [];
+let _pautaDestCorrespondentes = [];
 
 async function openEnviarPautaModal() {
   document.getElementById('enviarPautaModal').style.display = 'flex';
   document.getElementById('pauta-dest-escritorio').checked = false;
   const listEl = document.getElementById('pauta-dest-clientes');
+  const corrEl = document.getElementById('pauta-dest-corrs');
   listEl.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--c-muted)">Carregando clientes…</div>';
+  corrEl.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--c-muted)">Carregando correspondentes…</div>';
   const { sbUrl, sbKey } = getSbCreds();
   _pautaDestClients = [];
+  _pautaDestCorrespondentes = [];
   if (sbUrl && sbKey) {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
-      const { data } = await sb.from('clients').select('id,name,company,email,notify_email,code').order('company', { ascending: true });
-      if (data) _pautaDestClients = data.map(c => ({ ...c, notifyEmail: c.notify_email || c.email }));
+      const [cliRes, corrRes] = await Promise.all([
+        sb.from('clients').select('id,name,company,email,notify_email,code').order('company', { ascending: true }),
+        sb.from('correspondentes').select('*').order('nome', { ascending: true })
+      ]);
+      if (cliRes.data) _pautaDestClients = cliRes.data.map(c => ({ ...c, notifyEmail: c.notify_email || c.email }));
+      if (corrRes.data) _pautaDestCorrespondentes = corrRes.data.filter(c => c.email);
     } catch(e) { listEl.innerHTML = `<div style="padding:12px;font-size:12px;color:red">Erro: ${e.message}</div>`; return; }
   } else {
     _pautaDestClients = JSON.parse(localStorage.getItem('falaw_portal') || '[]');
+    _pautaDestCorrespondentes = getCorrLocal().filter(c => c.email);
   }
   const noIfood = _pautaDestClients.filter(c => !(c.company||c.name||'').toLowerCase().includes('ifood'));
-  if (!noIfood.length) { listEl.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--c-muted)">Nenhum cliente cadastrado.</div>'; return; }
-  listEl.innerHTML = noIfood.map((c, i) => `
+  if (!noIfood.length) { listEl.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--c-muted)">Nenhum cliente cadastrado.</div>'; }
+  else {
+    listEl.innerHTML = noIfood.map((c, i) => `
     <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--c-divider);font-size:13px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
       <input type="checkbox" class="pauta-dest-cb" data-idx="${i}" style="width:14px;height:14px;accent-color:#0D2B5E" />
       <span style="flex:1">${escHtml(c.company||c.name||'—')}</span>
       <span style="font-size:11px;color:var(--c-muted);font-family:var(--f-mono)">${escHtml(c.notifyEmail||c.email||'')}</span>
     </label>`).join('');
-  // update internal list to no-ifood only
-  _pautaDestClients = noIfood;
+    _pautaDestClients = noIfood;
+  }
+  if (!_pautaDestCorrespondentes.length) {
+    corrEl.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--c-muted)">Nenhum correspondente com e-mail cadastrado.</div>';
+  } else {
+    corrEl.innerHTML = _pautaDestCorrespondentes.map((c, i) => `
+    <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--c-divider);font-size:13px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+      <input type="checkbox" class="pauta-dest-corr-cb" data-idx="${i}" style="width:14px;height:14px;accent-color:#6D28D9" />
+      <span style="flex:1">${escHtml(c.nome||'—')}</span>
+      <span style="background:${c.tipo==='advogado'?'#dbeafe':'#fef9c3'};color:${c.tipo==='advogado'?'#1e40af':'#92400e'};font-size:9px;padding:1px 6px;border-radius:10px;font-weight:600;text-transform:uppercase;white-space:nowrap">${c.tipo||'corr'}</span>
+      <span style="font-size:11px;color:var(--c-muted);font-family:var(--f-mono)">${escHtml(c.email||'')}</span>
+    </label>`).join('');
+  }
 }
 
 function closeEnviarPautaModal() {
@@ -8140,7 +8167,8 @@ function closeEnviarPautaModal() {
 }
 
 function pautaDestSelectAll(val) {
-  document.querySelectorAll('.pauta-dest-cb').forEach(cb => cb.checked = val);
+  document.querySelectorAll('.pauta-dest-cb, .pauta-dest-corr-cb').forEach(cb => cb.checked = val);
+  if (val) document.getElementById('pauta-dest-escritorio').checked = true;
 }
 
 async function sendEnviarPauta() {
@@ -8150,15 +8178,37 @@ async function sendEnviarPauta() {
     const c = _pautaDestClients[+cb.dataset.idx];
     if (c) targets.push(c);
   });
+  const corrTargets = [];
+  document.querySelectorAll('.pauta-dest-corr-cb:checked').forEach(cb => {
+    const c = _pautaDestCorrespondentes[+cb.dataset.idx];
+    if (c) corrTargets.push(c);
+  });
   const incluiEscritorio = document.getElementById('pauta-dest-escritorio').checked;
-  if (!targets.length && !incluiEscritorio) { showToast('Selecione ao menos um destinatário.'); return; }
+  if (!targets.length && !corrTargets.length && !incluiEscritorio) { showToast('Selecione ao menos um destinatário.'); return; }
 
   const btn = document.getElementById('btn-enviar-pauta-send');
   btn.disabled = true; btn.textContent = 'Enviando…';
 
+  // Busca pauta para correspondentes (uma vez só)
+  let pautaRows = [];
+  if (corrTargets.length) {
+    try {
+      const { sbUrl, sbKey } = getSbCreds();
+      if (sbUrl && sbKey) {
+        const sb = supabase.createClient(sbUrl, sbKey);
+        const today = new Date().toISOString().slice(0,10);
+        const { data } = await sb.from('pauta_audiencias').select('*').gte('data_audiencia', today).order('data_audiencia').order('horario');
+        if (data) pautaRows = data;
+      }
+    } catch(e) { console.warn('pauta corr fetch:', e.message); }
+  }
+
   let ok = 0, fail = 0;
   for (const c of targets) {
     try { await notifyClientPauta(c); ok++; } catch(e) { fail++; console.warn('pauta email', c.email, e.message); }
+  }
+  for (const c of corrTargets) {
+    try { await notifyCorrespondentePauta(c, pautaRows); ok++; } catch(e) { fail++; console.warn('pauta corr email', c.email, e.message); }
   }
   if (incluiEscritorio) {
     try { await notifyEscritorioPauta(); ok++; } catch(e) { fail++; console.warn('pauta escritorio:', e.message); }
@@ -8167,6 +8217,83 @@ async function sendEnviarPauta() {
   btn.disabled = false; btn.textContent = 'Enviar';
   closeEnviarPautaModal();
   showToast(`✓ Pauta enviada: ${ok} sucesso${fail ? `, ${fail} erro(s)` : ''}`);
+}
+
+async function notifyCorrespondentePauta(corr, allRows) {
+  if (!_gasUrl()) throw new Error('GAS URL não configurada.');
+  const nome = (corr.nome || '').toLowerCase();
+  const rows = allRows.filter(r =>
+    (r.advogado||'').toLowerCase().includes(nome) ||
+    (r.dados_preposto||'').toLowerCase().includes(nome)
+  );
+  if (!rows.length) return; // sem audiências, não envia
+  const subject = `PAUTA DE AUDIÊNCIAS — ${(corr.nome||'CORRESPONDENTE').toUpperCase()}`;
+  const today   = new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+  const portalUrl = 'https://falaw.com.br/cliente/index.html';
+  const rowsHtml = rows.map(r => {
+    const dt = (r.data_audiencia||'').split('-').reverse().join('/');
+    let clienteNome = r.cliente || '';
+    if (r.reclamada && r.reclamada.includes('(CLIENTE)')) {
+      const f = r.reclamada.split(',').find(p=>p.includes('(CLIENTE)'));
+      if (f) clienteNome = f.replace(/\s*\(CLIENTE\)/gi,'').trim();
+    }
+    const isAdv  = (r.advogado||'').toLowerCase().includes(nome);
+    const isPrep = (r.dados_preposto||'').toLowerCase().includes(nome);
+    return `<tr style="border-bottom:1px solid #f0ede8;">
+      <td style="padding:10px 12px;font-family:monospace;font-size:12px;white-space:nowrap">${escHtml(dt)}</td>
+      <td style="padding:10px 12px;font-family:monospace;font-size:13px;font-weight:700">${escHtml(r.horario||'—')}</td>
+      <td style="padding:10px 12px;font-size:11px">${escHtml(r.tipo_audiencia||'')} ${r.modalidade?'&#183; '+escHtml(r.modalidade):''}</td>
+      <td style="padding:10px 12px;font-family:monospace;font-size:11px">${escHtml(r.processo||'—')}</td>
+      <td style="padding:10px 12px;font-size:12px">${escHtml(clienteNome||r.cliente||'')}</td>
+      <td style="padding:10px 12px;font-size:12px">${escHtml(r.reclamante||'')}</td>
+      <td style="padding:10px 12px;font-size:11px;color:#1B7A4E">${isAdv?'Advogado':''} ${isPrep?'Preposto':''}</td>
+      <td style="padding:10px 12px;font-size:11px">${r.testemunhas?escHtml(r.testemunhas):''}</td>
+    </tr>`;
+  }).join('');
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${escHtml(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f4f2ef;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ef;"><tr><td align="center" style="padding:40px 16px;">
+<table width="680" cellpadding="0" cellspacing="0" style="max-width:680px;width:100%;">
+  <tr><td style="background:#060E1A;padding:32px 40px;border-radius:4px 4px 0 0;">
+    <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" alt="Falaw" style="height:36px;width:auto;display:block;margin-bottom:14px" />
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#4a90d9;margin:0 0 4px">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.4);margin:0">Pauta de Audiências &mdash; Correspondente</p>
+  </td></tr>
+  <tr><td style="background:#fff;padding:36px 40px 28px">
+    <p style="font-family:Georgia,serif;font-size:18px;color:#060E1A;margin:0 0 16px">Olá, <strong>${escHtml(corr.nome||'')}</strong>,</p>
+    <p style="font-family:Georgia,serif;font-size:15px;line-height:1.7;color:#1a1a1a;margin:0 0 24px">
+      Seguem abaixo as suas <strong>audiências agendadas</strong> a partir de hoje, ${today}.
+      Acesse o portal para mais detalhes, orientacões e preposto.
+    </p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:28px">
+      <thead><tr style="background:#f4f2ef;">
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Data</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Horário</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Tipo</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Processo</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Cliente</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Reclamante</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Função</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Testemunha</th>
+      </tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <table cellpadding="0" cellspacing="0" style="margin-bottom:28px"><tr>
+      <td style="background:#0D2B5E;border-radius:3px">
+        <a href="${portalUrl}" style="display:inline-block;padding:14px 28px;font-family:monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#fff;text-decoration:none">
+          Acessar portal &rarr;
+        </a>
+      </td></tr></table>
+    ${corr.code ? `<p style="font-family:monospace;font-size:11px;color:#7A7672">Seu código de acesso: <strong style="color:#060E1A">${escHtml(corr.code)}</strong></p>` : ''}
+  </td></tr>
+  <tr><td style="background:#f7f5f2;padding:20px 40px;border-radius:0 0 4px 4px;border-top:1px solid #e8e4df">
+    <p style="font-family:monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#7A7672;margin:0 0 4px">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;color:#b0aba5;margin:0">Av. Francisco Matarazzo, 1752 &middot; Salas 414 e 415 &middot; São Paulo / SP</p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+  await sendViaGAS(subject, html, [corr.email]);
 }
 
 async function notifyEscritorioPauta() {
