@@ -1380,6 +1380,10 @@
               <input id="corr-email" type="email" placeholder="correspondente@email.com" />
             </div>
             <div class="form-field">
+              <label>Celular / WhatsApp</label>
+              <input id="corr-celular" type="tel" placeholder="(11) 9 9999-0000" />
+            </div>
+            <div class="form-field">
               <label>Tipo *</label>
               <select id="corr-tipo" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
                 <option value="advogado">Advogado</option>
@@ -7224,6 +7228,7 @@ function renderCorrespondentes(list) {
     <thead><tr style="background:#f9fafb;border-bottom:2px solid var(--c-divider)">
       <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Nome</th>
       <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">E-mail</th>
+      <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Celular</th>
       <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Tipo</th>
       <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Senha</th>
       <th style="width:80px"></th>
@@ -7232,6 +7237,7 @@ function renderCorrespondentes(list) {
     <tr style="border-bottom:1px solid var(--c-divider)" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
       <td style="padding:12px 14px;font-weight:600">${escHtml(c.nome||'—')}</td>
       <td style="padding:12px 14px;font-family:var(--f-mono);font-size:12px">${escHtml(c.email||'—')}</td>
+      <td style="padding:12px 14px;font-family:var(--f-mono);font-size:12px">${escHtml(c.celular||'—')}</td>
       <td style="padding:12px 14px">
         <span style="background:${c.tipo==='advogado'?'#dbeafe':'#fef9c3'};color:${c.tipo==='advogado'?'#1e40af':'#92400e'};font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;text-transform:uppercase">${c.tipo||'—'}</span>
       </td>
@@ -7246,10 +7252,11 @@ function renderCorrespondentes(list) {
 function openCorrModal(id) {
   document.getElementById('corrModal').classList.add('open');
   document.getElementById('corr-id').value    = id || '';
-  document.getElementById('corr-nome').value  = '';
-  document.getElementById('corr-email').value = '';
-  document.getElementById('corr-code').value  = '';
-  document.getElementById('corr-tipo').value  = 'advogado';
+  document.getElementById('corr-nome').value    = '';
+  document.getElementById('corr-email').value   = '';
+  document.getElementById('corr-celular').value = '';
+  document.getElementById('corr-code').value    = '';
+  document.getElementById('corr-tipo').value    = 'advogado';
   document.getElementById('corr-modal-del').style.display = 'none';
   document.getElementById('corr-btn-notify').style.display = 'none';
   document.getElementById('corrModalTitle').textContent = id ? 'Editar Correspondente' : 'Novo Correspondente';
@@ -7257,10 +7264,11 @@ function openCorrModal(id) {
     const list = getCorrLocal();
     const c = list.find(x => x.id === id);
     if (c) {
-      document.getElementById('corr-nome').value  = c.nome  || '';
-      document.getElementById('corr-email').value = c.email || '';
-      document.getElementById('corr-code').value  = c.code  || '';
-      document.getElementById('corr-tipo').value  = c.tipo  || 'advogado';
+      document.getElementById('corr-nome').value    = c.nome    || '';
+      document.getElementById('corr-email').value   = c.email   || '';
+      document.getElementById('corr-celular').value = c.celular || '';
+      document.getElementById('corr-code').value    = c.code    || '';
+      document.getElementById('corr-tipo').value    = c.tipo    || 'advogado';
       document.getElementById('corr-modal-del').style.display = '';
       document.getElementById('corr-btn-notify').style.display = '';
     }
@@ -7275,12 +7283,13 @@ function closeCorrModal() {
 
 async function saveCorr() {
   const id    = document.getElementById('corr-id').value || ('corr-' + Date.now());
-  const nome  = document.getElementById('corr-nome').value.trim();
-  const email = document.getElementById('corr-email').value.trim().toLowerCase();
-  const code  = document.getElementById('corr-code').value.trim();
-  const tipo  = document.getElementById('corr-tipo').value;
+  const nome    = document.getElementById('corr-nome').value.trim();
+  const email   = document.getElementById('corr-email').value.trim().toLowerCase();
+  const celular = document.getElementById('corr-celular').value.trim();
+  const code    = document.getElementById('corr-code').value.trim();
+  const tipo    = document.getElementById('corr-tipo').value;
   if (!nome || !email || !code) { showToast('Preencha nome, e-mail e senha.'); return; }
-  const rec = { id, nome, email, code, tipo, created_at: new Date().toISOString() };
+  const rec = { id, nome, email, celular, code, tipo, created_at: new Date().toISOString() };
   const { sbUrl, sbKey } = getSbCreds();
   if (sbUrl && sbKey) {
     try {
@@ -8247,6 +8256,7 @@ async function notifyCorrespondentePauta(corr, allRows) {
       <td style="padding:10px 12px;font-size:12px">${escHtml(clienteNome||r.cliente||'')}</td>
       <td style="padding:10px 12px;font-size:12px">${escHtml(r.reclamante||'')}</td>
       <td style="padding:10px 12px;font-size:11px;color:#1B7A4E">${isAdv?'Advogado':''} ${isPrep?'Preposto':''}</td>
+      <td style="padding:10px 12px;font-size:11px;color:#374151">${isPrep&&r.advogado?escHtml(r.advogado):''}</td>
     </tr>`;
   }).join('');
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${escHtml(subject)}</title></head>
@@ -8273,6 +8283,7 @@ async function notifyCorrespondentePauta(corr, allRows) {
         <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Cliente</th>
         <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Reclamante</th>
         <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Função</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672">Advogado</th>
       </tr></thead>
       <tbody>${rowsHtml}</tbody>
     </table>

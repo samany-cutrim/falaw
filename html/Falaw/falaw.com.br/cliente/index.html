@@ -469,7 +469,7 @@ async function handleLogin(e) {
           _setCLILock({ attempts: 0, lockedUntil: 0 });
           sessionStorage.setItem('falaw_session', JSON.stringify({
             id: corrData.id, name: corrData.nome, company: corrData.nome,
-            email: corrData.email, isCorrespondente: true,
+            email: corrData.email, celular: corrData.celular||'', isCorrespondente: true,
             corrTipo: corrData.tipo, loginAt: new Date().toISOString()
           }));
           window.location.href = 'dashboard.html';
@@ -494,6 +494,7 @@ async function handleLogin(e) {
             name: corrData.nome,
             company: corrData.nome,
             email: corrData.email,
+            celular: corrData.celular || '',
             isCorrespondente: true,
             corrTipo: corrData.tipo,
             loginAt: new Date().toISOString()
