@@ -8,8 +8,10 @@ Fluxo:
 """
 
 import os
+import re
 import logging
 import hashlib
+import unicodedata
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -161,6 +163,85 @@ def buscar_audiencias_projuris() -> list[dict]:
 
 # ── Normalização ──────────────────────────────────────────────────────────────
 
+def _normaliza(s: str) -> str:
+    n = unicodedata.normalize("NFD", s)
+    return "".join(c for c in n if unicodedata.category(c) != "Mn").lower()
+
+
+def _extrair_tipo_audiencia(item: dict) -> str:
+    """Infere tipo_audiencia (CHECK constraint) a partir do título/nome/descrição da tarefa."""
+    fontes = [
+        item.get("tituloCompromisso") or "",
+        item.get("titulo") or "",
+        item.get("nomeTarefa") or "",
+        item.get("nomeTarefaModelo") or "",
+        item.get("descricao") or "",
+    ]
+    texto = " ".join(str(f) for f in fontes if f)
+    t = _normaliza(texto)
+    if re.search(r"\buna\b", t):
+        return "UNA"
+    if re.search(r"concilia", t):
+        return "CONCILIAÇÃO"
+    if re.search(r"instruc", t):
+        return "INSTRUÇÃO"
+    if re.search(r"inici", t):
+        return "INICIAL"
+    return ""
+
+
+_SUFIXOS_EMPRESA = re.compile(
+    r"\s*(\(cliente\)|\(r\xe9\)|s/?a\.?|s\.a\.?|ltda\.?|eireli|me\b|epp\b|"
+    r"ag[e\xea]ncia|comercio|com\.br|\.com|industria|servi[c\xe7]os|do brasil|brasil).*$",
+    re.IGNORECASE,
+)
+
+
+def _extrair_modalidade(link: str, item: dict) -> str:
+    """Infere modalidade a partir do link e da descrição/título."""
+    if link:
+        return "VIRTUAL"
+    fontes = [
+        item.get("tituloCompromisso") or "",
+        item.get("titulo") or "",
+        item.get("nomeTarefa") or "",
+        item.get("descricao") or "",
+    ]
+    t = _normaliza(" ".join(str(f) for f in fontes if f))
+    if re.search(r"videoconfer|virtual|online|telepresencial", t):
+        return "VIRTUAL"
+    if re.search(r"presencial", t):
+        return "PRESENCIAL"
+    return ""
+
+
+def _extrair_cliente(item: dict) -> str:
+    """Extrai o nome do cliente Falaw a partir da parte ré/reclamada."""
+    direto = str(
+        item.get("cliente") or item.get("nomeCliente") or
+        item.get("clienteNome") or ""
+    ).strip()
+    if direto:
+        return direto
+    reclamada = str(
+        item.get("reclamada") or item.get("polo_passivo") or
+        item.get("poloPassivo") or item.get("reu") or ""
+    ).strip()
+    if not reclamada:
+        return ""
+    nome = _SUFIXOS_EMPRESA.sub("", reclamada).strip().rstrip(",.").strip()
+    nome = re.split(r"[/|;]", nome)[0].strip()
+    return nome[:80]
+
+
+def _extrair_tipo_responsabilidade(item: dict) -> str:
+    """Extrai tipo de responsabilidade do item Projuris."""
+    return str(
+        item.get("tipoResponsabilidade") or item.get("tipo_responsabilidade") or
+        item.get("responsabilidade") or item.get("tipoParticipacao") or ""
+    ).strip()[:60]
+
+
 def _make_id(processo: str, data: str, hora: str) -> str:
     raw = f"projuris|{processo}|{data}|{hora}".encode()
     return "prj-" + hashlib.md5(raw).hexdigest()[:12]
@@ -210,9 +291,9 @@ def normalizar(item: dict) -> dict:
         item.get("poloPassivo") or item.get("reu") or ""
     )
 
-    tipo = (
+    tipo = _extrair_tipo_audiencia(item) or (
         item.get("tipoAudiencia") or item.get("tipo_audiencia") or
-        item.get("tipo") or "AUDIENCIA"
+        item.get("tipo") or ""
     ).upper()[:30]
 
     modalidade = (
@@ -230,6 +311,10 @@ def normalizar(item: dict) -> dict:
         item.get("link") or item.get("urlVideoconferencia") or ""
     )
 
+    modalidade            = _extrair_modalidade(str(link), item)
+    cliente               = _extrair_cliente(item)
+    tipo_responsabilidade = _extrair_tipo_responsabilidade(item)
+
     id_senha_parts = []
     meeting_id = item.get("meetingId") or item.get("meeting_id") or item.get("idReuniao") or ""
     senha      = item.get("senha") or item.get("password") or item.get("codigoAcesso") or ""
@@ -240,21 +325,26 @@ def normalizar(item: dict) -> dict:
 
     uid = _make_id(processo, data, hora)
 
+    testemunha_necessaria = tipo in ("UNA", "INSTRUÇÃO")
+
     return {
-        "id":             uid,
-        "processo":       str(processo),
-        "reclamante":     str(reclamante),
-        "reclamada":      str(reclamada),
-        "data_audiencia": data,
-        "horario":        hora,
-        "tipo_audiencia": tipo,
-        "modalidade":     modalidade,
-        "vara":           str(vara),
-        "status":         "agendada",
-        "origem":         "projuris",
-        "link":           str(link),
-        "id_senha":       " | ".join(id_senha_parts),
-        "updated_at":     datetime.utcnow().isoformat(),
+        "id":                    uid,
+        "processo":              str(processo),
+        "reclamante":            str(reclamante),
+        "reclamada":             str(reclamada),
+        "data_audiencia":        data,
+        "horario":               hora,
+        "tipo_audiencia":        tipo,
+        "modalidade":            modalidade,
+        "vara":                  str(vara),
+        "status":                "agendada",
+        "origem":                "projuris",
+        "link":                  str(link),
+        "id_senha":              " | ".join(id_senha_parts),
+        "cliente":               cliente,
+        "tipo_responsabilidade": tipo_responsabilidade,
+        "testemunha_necessaria": testemunha_necessaria,
+        "updated_at":            datetime.utcnow().isoformat(),
     }
 
 

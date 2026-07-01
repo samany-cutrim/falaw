@@ -308,6 +308,7 @@ def buscar_feriados(data_inicio: str, data_fim: str) -> set[str]:
 
 # ── Filtragem e normalizacao ──────────────────────────────────────────────────
 
+import re
 import unicodedata
 
 _TIPOS_AUDIENCIA = {
@@ -320,6 +321,85 @@ def _normaliza(s: str) -> str:
     """Remove acentos e converte para minúsculas."""
     n = unicodedata.normalize("NFD", s)
     return "".join(c for c in n if unicodedata.category(c) != "Mn").lower()
+
+
+def _extrair_tipo_audiencia(item: dict) -> str:
+    """Infere tipo_audiencia (CHECK constraint) a partir do título/nome/descrição da tarefa."""
+    fontes = [
+        item.get("tituloCompromisso") or "",
+        item.get("titulo") or "",
+        item.get("nomeTarefa") or "",
+        item.get("nomeTarefaModelo") or "",
+        item.get("descricao") or "",
+    ]
+    texto = " ".join(str(f) for f in fontes if f)
+    t = _normaliza(texto)
+    if re.search(r"\buna\b", t):
+        return "UNA"
+    if re.search(r"concilia", t):
+        return "CONCILIAÇÃO"
+    if re.search(r"instruc", t):
+        return "INSTRUÇÃO"
+    if re.search(r"inici", t):
+        return "INICIAL"
+    return ""
+
+
+def _extrair_modalidade(link: str, item: dict) -> str:
+    """Infere modalidade a partir do link e da descrição/título."""
+    if link:
+        return "VIRTUAL"
+    fontes = [
+        item.get("tituloCompromisso") or "",
+        item.get("titulo") or "",
+        item.get("nomeTarefa") or "",
+        item.get("descricao") or "",
+    ]
+    t = _normaliza(" ".join(str(f) for f in fontes if f))
+    if re.search(r"videoconfer|virtual|online|telepresencial|teleinformatica", t):
+        return "VIRTUAL"
+    if re.search(r"presencial", t):
+        return "PRESENCIAL"
+    return ""
+
+
+_SUFIXOS_EMPRESA = re.compile(
+    r"\s*(\(cliente\)|\(ré\)|s/?a\.?|s\.a\.?|ltda\.?|eireli|me\b|epp\b|"
+    r"ag[e\xea]ncia|comercio|com\.br|\.com|industria|servi[c\xe7]os|do brasil|brasil).*$",
+    re.IGNORECASE,
+)
+
+
+def _extrair_cliente(item: dict) -> str:
+    """Extrai o nome do cliente Falaw a partir da parte ré/reclamada."""
+    # Tenta campo explícito primeiro
+    direto = str(
+        item.get("cliente") or item.get("nomeCliente") or
+        item.get("clienteNome") or ""
+    ).strip()
+    if direto:
+        return direto
+    # Deriva da reclamada
+    reclamada = str(
+        item.get("partePassiva") or item.get("reclamada") or
+        item.get("poloPassivo") or item.get("reu") or ""
+    ).strip()
+    if not reclamada:
+        return ""
+    # Limpa sufixos legais e tags
+    nome = _SUFIXOS_EMPRESA.sub("", reclamada).strip().rstrip(",.").strip()
+    # Pega apenas o primeiro segmento antes de separadores
+    nome = re.split(r"[/|;]", nome)[0].strip()
+    return nome[:80]
+
+
+def _extrair_tipo_responsabilidade(item: dict) -> str:
+    """Extrai tipo de responsabilidade do item Projuris."""
+    direto = str(
+        item.get("tipoResponsabilidade") or item.get("tipo_responsabilidade") or
+        item.get("responsabilidade") or item.get("tipoParticipacao") or ""
+    ).strip()
+    return direto[:60]
 
 
 def _is_audiencia(item: dict) -> bool:
@@ -418,20 +498,28 @@ def normalizar(item: dict) -> dict:
         item.get("poloPassivo") or item.get("reu")
     )
 
-    # tipo_audiencia: deixa em branco para evitar conflito com CHECK constraint
-    tipo = ""
+    tipo = _extrair_tipo_audiencia(item)
 
     # Vara/local: extrai da descricao (ex: "... 2ª Vara do Trabalho de Paulista)")
     vara = ""
     descricao = str(item.get("descricao") or "")
     if descricao:
-        import re
         m = re.search(r"[-–]\s*(.+?)\s*[)\]]?\s*$", descricao)
         if m:
             vara = m.group(1).strip()
 
     link = str(item.get("linkVideoconferencia") or item.get("link_video") or
                item.get("link") or "")
+
+    # Tenta extrair link da descrição caso não venha como campo dedicado
+    if not link and descricao:
+        m_link = re.search(r"https?://\S+", descricao)
+        if m_link:
+            link = m_link.group(0).rstrip(".,)")
+
+    modalidade            = _extrair_modalidade(link, item)
+    cliente               = _extrair_cliente(item)
+    tipo_responsabilidade = _extrair_tipo_responsabilidade(item)
 
     advogado = _str_parte(
         item.get("dadosResponsaveis") or item.get("usuarioResponsaveis") or ""
@@ -445,22 +533,27 @@ def normalizar(item: dict) -> dict:
     else:
         status = "agendada"
 
+    testemunha_necessaria = tipo in ("UNA", "INSTRUÇÃO")
+
     return {
-        "id":             _make_id(processo, data, hora),
-        "processo":       processo,
-        "reclamante":     reclamante,
-        "reclamada":      reclamada,
-        "data_audiencia": data,
-        "horario":        hora,
-        "tipo_audiencia": tipo,
-        "modalidade":     "",
-        "vara":           vara,
-        "status":         status,
-        "origem":         "pje",
-        "link":           link,
-        "id_senha":       "",
-        "advogado":       advogado,
-        "updated_at":     datetime.utcnow().isoformat(),
+        "id":                    _make_id(processo, data, hora),
+        "processo":              processo,
+        "reclamante":            reclamante,
+        "reclamada":             reclamada,
+        "data_audiencia":        data,
+        "horario":               hora,
+        "tipo_audiencia":        tipo,
+        "modalidade":            modalidade,
+        "vara":                  vara,
+        "status":                status,
+        "origem":                "pje",
+        "link":                  link,
+        "id_senha":              "",
+        "cliente":               cliente,
+        "tipo_responsabilidade": tipo_responsabilidade,
+        "advogado":              advogado,
+        "testemunha_necessaria": testemunha_necessaria,
+        "updated_at":            datetime.utcnow().isoformat(),
     }
 
 

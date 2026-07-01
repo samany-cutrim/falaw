@@ -399,3 +399,19 @@ DROP POLICY IF EXISTS "anon insert pesquisas" ON pesquisas;
 CREATE POLICY "anon insert pesquisas" ON pesquisas FOR INSERT TO anon WITH CHECK (true);
 DROP POLICY IF EXISTS "auth read pesquisas" ON pesquisas;
 CREATE POLICY "auth read pesquisas"   ON pesquisas FOR SELECT TO authenticated USING (true);
+
+
+-- -- CORRESPONDENTES ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS correspondentes (
+  id         TEXT PRIMARY KEY,
+  nome       TEXT NOT NULL DEFAULT '',
+  email      TEXT NOT NULL,
+  tipo       TEXT NOT NULL DEFAULT 'advogado' CHECK (tipo IN ('advogado','preposto')),
+  code       TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE correspondentes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon full access correspondentes" ON correspondentes;
+CREATE POLICY "anon full access correspondentes"
+  ON correspondentes FOR ALL TO anon
+  USING (true) WITH CHECK (true);

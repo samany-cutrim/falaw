@@ -416,7 +416,89 @@ async function handleLogin(e) {
   }
 
   const clients = getClients();
+
+  // Login especial: escritório de audiências
+  if (email === 'audiencias@falaw.com.br') {
+    const escritorioPwd = window.SB_ESCRITORIO_PWD || 'Falawaud@2026';
+    if (code === escritorioPwd) {
+      _setCLILock({ attempts: 0, lockedUntil: 0 });
+      sessionStorage.setItem('falaw_session', JSON.stringify({
+        id: 'escritorio',
+        name: 'Escritório',
+        company: 'Falaw Advogados',
+        email: 'audiencias@falaw.com.br',
+        isEscritorio: true,
+        loginAt: new Date().toISOString()
+      }));
+      window.location.href = 'dashboard.html';
+      return;
+    } else {
+      const l = _getCLILock();
+      l.attempts++;
+      if (l.attempts >= _CLI_MAX) {
+        l.lockedUntil = Date.now() + _CLI_LOCKOUT_MS;
+        l.attempts = 0;
+        err.textContent = 'Muitas tentativas. Acesso bloqueado por 15 minutos.';
+      } else {
+        err.textContent = `Senha inválida. ${_CLI_MAX - l.attempts} tentativa(s) restante(s).`;
+      }
+      _setCLILock(l);
+      err.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+      return;
+    }
+  }
+
   const client  = clients.find(c => c.email.toLowerCase() === email && c.code === code);
+
+  // Login correspondente (advogado/preposto) via Supabase
+  if (!client) {
+    const sbUrl2 = (window.SB_URL || '').trim();
+    const sbKey2 = (window.SB_KEY || '').trim();
+    if (sbUrl2 && sbKey2 && typeof supabase !== 'undefined') {
+      try {
+        const sb2 = supabase.createClient(sbUrl2, sbKey2);
+        const { data: corrData } = await sb2.from('correspondentes').select('*').eq('email', email).single();
+        if (corrData && corrData.code === code) {
+          _setCLILock({ attempts: 0, lockedUntil: 0 });
+          sessionStorage.setItem('falaw_session', JSON.stringify({
+            id: corrData.id, name: corrData.nome, company: corrData.nome,
+            email: corrData.email, isCorrespondente: true,
+            corrTipo: corrData.tipo, loginAt: new Date().toISOString()
+          }));
+          window.location.href = 'dashboard.html';
+          return;
+        }
+      } catch(e) { console.warn('corr login:', e.message); }
+    }
+  }
+
+  // Login correspondente (advogado/preposto) via Supabase
+  if (!client) {
+    const sbUrl2 = (window.SB_URL || '').trim();
+    const sbKey2 = (window.SB_KEY || '').trim();
+    if (sbUrl2 && sbKey2 && typeof supabase !== 'undefined') {
+      try {
+        const sb2 = supabase.createClient(sbUrl2, sbKey2);
+        const { data: corrData } = await sb2.from('correspondentes').select('*').eq('email', email).single();
+        if (corrData && corrData.code === code) {
+          _setCLILock({ attempts: 0, lockedUntil: 0 });
+          sessionStorage.setItem('falaw_session', JSON.stringify({
+            id: corrData.id,
+            name: corrData.nome,
+            company: corrData.nome,
+            email: corrData.email,
+            isCorrespondente: true,
+            corrTipo: corrData.tipo,
+            loginAt: new Date().toISOString()
+          }));
+          window.location.href = 'dashboard.html';
+          return;
+        }
+      } catch(e) { console.warn('corr login:', e.message); }
+    }
+  }
 
   if (client) {
     _setCLILock({ attempts: 0, lockedUntil: 0 });
@@ -453,6 +535,7 @@ async function handleLogin(e) {
   if (!raw) return;
   try {
     const s = JSON.parse(raw);
+    if (s.isEscritorio || s.isCorrespondente) { window.location.href = 'dashboard.html'; return; }
     const isIfood = (s.company || '').toLowerCase().includes('ifood');
     window.location.href = isIfood ? 'ifood.html' : 'dashboard.html';
   } catch { window.location.href = 'dashboard.html'; }

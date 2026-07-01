@@ -936,8 +936,9 @@
       <div class="admin-tab-group" id="group-gestao">
         <div class="admin-tab" onclick="toggleGroup('gestao')">Gestão</div>
         <div class="admin-dropdown">
-          <div class="admin-dropdown-item" id="ditem-equipe" onclick="switchTab('equipe')"><span>Equipe</span></div>
-          <div class="admin-dropdown-item" id="ditem-clientes" onclick="switchTab('clientes')"><span>Clientes</span></div>
+          <div class="admin-dropdown-item" id="ditem-equipe"         onclick="switchTab('equipe')"><span>Equipe</span></div>
+          <div class="admin-dropdown-item" id="ditem-clientes"       onclick="switchTab('clientes')"><span>Clientes</span></div>
+          <div class="admin-dropdown-item" id="ditem-correspondentes" onclick="switchTab('correspondentes')"><span>Correspondentes</span></div>
         </div>
       </div>
       <!-- Grupo Dashboards -->
@@ -1346,6 +1347,67 @@
 
     </section>
 
+    <!-- ── CORRESPONDENTES ── -->
+    <section id="tab-correspondentes" class="admin-section">
+      <div class="section-header">
+        <h2>Correspondentes</h2>
+        <button type="button" class="btn btn-primary" onclick="openCorrModal()">+ Novo Correspondente</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;">
+        <div class="stats-card"><div class="stats-label">Total Cadastrados</div><div class="stats-val" id="corr-stat-total">0</div></div>
+        <div class="stats-card"><div class="stats-label">Advogados</div><div class="stats-val" id="corr-stat-adv">0</div></div>
+        <div class="stats-card"><div class="stats-label">Prepostos</div><div class="stats-val" id="corr-stat-prep">0</div></div>
+      </div>
+
+      <div id="corrList"></div>
+
+      <!-- Modal Correspondente -->
+      <div class="modal-overlay" id="corrModal" onclick="if(event.target===this)closeCorrModal()">
+        <div class="modal" style="max-width:500px">
+          <div class="modal-header">
+            <h3 id="corrModalTitle">Novo Correspondente</h3>
+            <button class="modal-close" onclick="closeCorrModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="corr-id" />
+            <div class="form-field">
+              <label>Nome completo *</label>
+              <input id="corr-nome" type="text" placeholder="Dr. João Silva" />
+            </div>
+            <div class="form-field">
+              <label>E-mail de Acesso *</label>
+              <input id="corr-email" type="email" placeholder="correspondente@email.com" />
+            </div>
+            <div class="form-field">
+              <label>Tipo *</label>
+              <select id="corr-tipo" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+                <option value="advogado">Advogado</option>
+                <option value="preposto">Preposto</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Senha de Acesso *</label>
+              <div style="display:flex;gap:8px">
+                <input id="corr-code" type="text" placeholder="Gerada automaticamente" style="flex:1" />
+                <button type="button" class="btn btn-secondary" onclick="genCorrCode()" style="white-space:nowrap;align-self:flex-end">Gerar</button>
+              </div>
+              <small style="color:var(--c-muted)">O correspondente usará o e-mail + senha para acessar o portal.</small>
+            </div>
+            <div id="corr-modal-del" style="display:none;margin-top:8px">
+              <button type="button" class="btn btn-danger" onclick="deleteCorr()">Excluir Correspondente</button>
+            </div>
+          </div>
+          <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="closeCorrModal()">Cancelar</button>
+            <button class="btn btn-ghost" id="corr-btn-notify" onclick="sendCorrEmail()" style="display:none">📧 Enviar credenciais</button>
+            <button class="btn btn-primary" onclick="saveCorr()">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
     <!-- ── DASHBOARD CLIENTES ── -->
     <section id="tab-cli-dash" class="admin-section">
       <div class="section-header">
@@ -1593,11 +1655,6 @@
           <p style="font-size:12px;color:var(--c-muted);margin:0">Sincronize automaticamente via Projuris ADV, importe Excel ou adicione manualmente</p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <!-- Botão principal: usa extensão se disponível, senão mostra instrução -->
-          <button type="button" id="btn-sync-pauta" class="btn btn-primary" onclick="pautaSyncIniciar()" title="Busca audiências do Projuris ADV e salva no Supabase">
-            Sincronizar Projuris ADV
-          </button>
-          <button type="button" class="btn btn-ghost" style="font-size:11px" onclick="document.getElementById('projuris-cred-wrap').style.display=(document.getElementById('projuris-cred-wrap').style.display==='none'?'flex':'none')" title="Configure seu login do Projuris ADV">🔒 Login Projuris</button>
           <label title="Chrome roda invisível em segundo plano" style="display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--c-muted);cursor:pointer;padding:4px 10px;border:1px solid var(--c-divider);border-radius:2px;user-select:none">
             <input type="checkbox" id="pje-modo-oculto" style="width:12px;height:12px;cursor:pointer;accent-color:#0D2B5E">
             Oculto
@@ -1606,15 +1663,11 @@
             Importar Excel
             <input type="file" id="aud-xl-input" accept=".xlsx,.xls" style="display:none" onchange="audImportExcel(this)" />
           </label>
+          <button type="button" class="btn btn-ghost" onclick="audExportExcel()" title="Baixar pauta como planilha Excel">⬇ Baixar Excel</button>
+          <button type="button" class="btn btn-ghost" onclick="openEnviarPautaModal()" title="Enviar e-mail de pauta para clientes selecionados">📧 Enviar Pauta</button>
           <button type="button" class="btn btn-ghost" onclick="openAudienciaModal()">+ Manual</button>
         </div>
-        <div id="projuris-cred-wrap" style="display:none;align-items:center;gap:6px;width:100%;margin-top:6px;flex-wrap:wrap">
-          <span style="font-size:11px;color:var(--c-muted);white-space:nowrap;font-weight:600">Projuris ADV:</span>
-          <input id="projuris-email-input" type="email" placeholder="Email do Projuris (ex: samany@falaw.com.br)" value="samany@falaw.com.br" style="flex:1;min-width:200px;font-size:12px;padding:5px 8px;border:1px solid var(--c-divider);border-radius:3px;background:var(--c-surface);color:var(--c-text)" />
-          <input id="projuris-senha-input" type="password" placeholder="Senha do Projuris" style="width:160px;font-size:12px;padding:5px 8px;border:1px solid var(--c-divider);border-radius:3px;background:var(--c-surface);color:var(--c-text)" />
-          <button class="btn btn-primary" style="font-size:12px" onclick="projurisSalvarCreds()">Salvar e Sincronizar</button>
-          <span id="projuris-cred-status" style="font-size:11px;color:var(--c-muted)"></span>
-        </div>
+
       </div>
 
       <!-- Barra de progresso PJe sync -->
@@ -1659,14 +1712,53 @@
           <option value="adiada">Adiada</option>
           <option value="cancelada">Cancelada</option>
         </select>
-        <input type="month" id="aud-filter-mes" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
+        <input type="month" id="aud-filter-mes" onchange="audSyncDateFilters('mes')" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
+        <input type="date"  id="aud-filter-dia" onchange="audSyncDateFilters('dia')" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
         <input type="text" id="aud-filter-busca" placeholder="Buscar processo, reclamante…" oninput="loadAudiencias()" style="flex:1;min-width:160px;border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
         <button type="button" class="btn btn-ghost btn-sm" onclick="audLimparFiltros()">Limpar</button>
         <span id="aud-count" style="font-family:var(--f-mono);font-size:11px;color:var(--c-muted);white-space:nowrap"></span>
       </div>
 
+      <!-- Alerta de audiências canceladas -->
+      <div id="aud-canceladas-alert" style="margin-bottom:16px"></div>
+
       <!-- Cards de audiências -->
       <div id="audiencias-list"></div>
+
+      <!-- Modal Enviar Pauta -->
+      <div class="modal-overlay" id="enviarPautaModal" onclick="if(event.target===this)closeEnviarPautaModal()" style="display:none">
+        <div class="modal" style="max-width:520px">
+          <div class="modal-header">
+            <h3>📧 Enviar Pauta de Audiências</h3>
+            <button class="modal-close" onclick="closeEnviarPautaModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <p style="font-size:13px;color:var(--c-muted);margin-bottom:16px">Selecione os destinatários. Cada cliente receberá um e-mail informando que a pauta está disponível na área do cliente.</p>
+
+            <!-- Escritório -->
+            <div style="background:#EEF2FF;border:1px solid #c7d2fe;border-radius:4px;padding:12px 14px;margin-bottom:14px">
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;font-size:13px">
+                <input type="checkbox" id="pauta-dest-escritorio" style="width:15px;height:15px;accent-color:#0D2B5E" />
+                🏢 Escritório (pauta completa)
+              </label>
+              <p style="font-size:11px;color:#6366f1;margin:6px 0 0 25px">Envia para <strong>audiencias@falaw.com.br</strong> com todas as audiências de todos os clientes.</p>
+            </div>
+
+            <!-- Clientes -->
+            <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);margin-bottom:8px">Clientes</div>
+            <div id="pauta-dest-clientes" style="max-height:280px;overflow-y:auto;border:1px solid var(--c-divider);border-radius:4px;padding:4px 0"></div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="pautaDestSelectAll(true)">Selecionar todos</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="pautaDestSelectAll(false)">Desmarcar todos</button>
+            </div>
+          </div>
+          <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;padding:16px 24px;border-top:1px solid var(--c-divider)">
+            <button type="button" class="btn btn-ghost" onclick="closeEnviarPautaModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="btn-enviar-pauta-send" onclick="sendEnviarPauta()">Enviar</button>
+          </div>
+        </div>
+      </div>
 
       <!-- ─── MODAL AUDIÊNCIA ─── -->
       <div class="modal-overlay" id="audienciaModal" onclick="if(event.target===this)closeAudienciaModal()">
@@ -2577,6 +2669,11 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
             <label>Google Apps Script — URL de envio de e-mail</label>
             <input type="text" id="cfg-gas-url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" />
             <p class="cfg-hint" style="margin-top:6px;">Cole aqui a URL do Apps Script implantado na conta <strong>ferrazandrade@falaw.com.br</strong>. Usado para enviar notificações e newsletters diretamente pelo Gmail da Falaw.</p>
+          </div>
+          <div class="form-field">
+            <label>Senha do Escritório — <span style="font-weight:400;font-size:11px;font-family:var(--f-mono)">audiencias@falaw.com.br</span></label>
+            <input type="password" id="cfg-escritorio-pwd" placeholder="Senha atual" autocomplete="new-password" maxlength="128" />
+            <p class="cfg-hint" style="margin-top:6px;">Senha de acesso ao painel do escritório (pauta completa de todos os clientes). Padrão: <code>Falawaud@2026</code>.</p>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
             <button type="button" class="btn btn-primary" onclick="saveConfig()">Salvar chaves</button>
@@ -3629,7 +3726,7 @@ function getSbCreds() {
 }
 
 const CONTEUDO_TABS   = ['blog','newsletter','contato','curriculos','comentarios','informativos','calendario','redes-sociais'];
-const GESTAO_TABS     = ['equipe','clientes'];
+const GESTAO_TABS     = ['equipe','clientes','correspondentes'];
 const DASH_TABS       = ['ifood','cli-dash'];
 const PESQUISAS_TABS  = ['pesquisas-lista','pesquisas-dash'];
 const STANDALONE_TABS = ['config','audiencias'];
@@ -4189,7 +4286,8 @@ function switchTab(name) {
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'blog')          { loadArticlesFromGitHub().then(renderBlog); }
   if (name === 'equipe')        { loadTeamFromGitHub().then(renderEquipe); }
-  if (name === 'clientes')      { loadPortalFromSupabase().then(renderClients); }
+  if (name === 'clientes')         { loadPortalFromSupabase().then(renderClients); }
+  if (name === 'correspondentes')  { loadCorrespondentes(); }
   if (name === 'newsletter')    { clearBadge('newsletter'); loadNewsletterFromSupabase().then(renderNewsletter); }
   if (name === 'contato')       { clearBadge('contato'); loadContatoFromSupabase().then(renderContato); }
   if (name === 'curriculos')    { clearBadge('curriculos'); loadCurriculosFromSupabase().then(renderCurriculos); }
@@ -5145,6 +5243,7 @@ function loadConfig() {
   document.getElementById('cfg-linkedin').value     = cfg.linkedin  || '';
   document.getElementById('cfg-github-token').value = ghToken();
   document.getElementById('cfg-gas-url').value = localStorage.getItem('fa_gas_url') || window.SB_GAS_URL || '';
+  document.getElementById('cfg-escritorio-pwd').value = localStorage.getItem('fa_escritorio_pwd') || window.SB_ESCRITORIO_PWD || '';
   document.getElementById('cfg-openai-key').value = localStorage.getItem('fa_openai_key') || '';
   document.getElementById('cfg-pexels-key').value = localStorage.getItem('fa_pexels_key') || '';
   document.getElementById('cfg-gemini-key').value = localStorage.getItem('fa_gemini_key') || '';
@@ -5208,6 +5307,8 @@ function saveConfig() {
   else localStorage.removeItem(KEYS.githubToken);
   const gasUrl = document.getElementById('cfg-gas-url').value.trim();
   if (gasUrl) localStorage.setItem('fa_gas_url', gasUrl); else localStorage.removeItem('fa_gas_url');
+  const escritorioPwd = document.getElementById('cfg-escritorio-pwd').value.trim();
+  if (escritorioPwd) localStorage.setItem('fa_escritorio_pwd', escritorioPwd); else localStorage.removeItem('fa_escritorio_pwd');
   const geminiKey = document.getElementById('cfg-gemini-key').value.trim();
   if (geminiKey) localStorage.setItem('fa_gemini_key', geminiKey); else localStorage.removeItem('fa_gemini_key');
   const openaiKey = document.getElementById('cfg-openai-key').value.trim();
@@ -5227,7 +5328,8 @@ function saveConfig() {
   if (sbUrlVal && sbKeyVal && token) {
     const escCfg = (v) => String(v || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const gasUrl2 = localStorage.getItem('fa_gas_url') || '';
-    const sbCfg = `/* sb-config.js — gerado pelo admin Falaw. */\nwindow.SB_URL='${escCfg(sbUrlVal)}';\nwindow.SB_KEY='${escCfg(sbKeyVal)}';\nwindow.SB_GAS_URL='${escCfg(gasUrl2)}';\nwindow.SB_ADMIN_EMAIL='${escCfg(authEmail)}';\n`;
+    const escritorioPwd2 = localStorage.getItem('fa_escritorio_pwd') || 'Falawaud@2026';
+    const sbCfg = `/* sb-config.js — gerado pelo admin Falaw. */\nwindow.SB_URL='${escCfg(sbUrlVal)}';\nwindow.SB_KEY='${escCfg(sbKeyVal)}';\nwindow.SB_GAS_URL='${escCfg(gasUrl2)}';\nwindow.SB_ADMIN_EMAIL='${escCfg(authEmail)}';\nwindow.SB_ESCRITORIO_PWD='${escCfg(escritorioPwd2)}';\n`;
     _ghPush('html/Falaw/falaw.com.br/sb-config.js', sbCfg, null, 'Admin: update Supabase config')
       .then(sha => { if (sha) showToast('✓ Configurações salvas e sb-config.js publicado.'); else showToast('Configurações salvas.'); });
   } else {
@@ -7002,6 +7104,210 @@ function genCode() {
   document.getElementById('cli-code').value = code;
 }
 
+function genCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'FALAW-';
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  document.getElementById('cli-code').value = code;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CORRESPONDENTES
+═══════════════════════════════════════════════════════ */
+const CORR_STORE_KEY = 'falaw_correspondentes_v1';
+
+function genCorrCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#';
+  let code = '';
+  for (let i = 0; i < 12; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  document.getElementById('corr-code').value = code;
+}
+
+function getCorrLocal() {
+  try { return JSON.parse(localStorage.getItem(CORR_STORE_KEY)) || []; } catch { return []; }
+}
+function saveCorrLocal(list) {
+  localStorage.setItem(CORR_STORE_KEY, JSON.stringify(list));
+}
+
+async function loadCorrespondentes() {
+  const { sbUrl, sbKey } = getSbCreds();
+  let list = [];
+  if (sbUrl && sbKey) {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { data } = await sb.from('correspondentes').select('*').order('nome', { ascending: true });
+      if (data) { list = data; saveCorrLocal(list); }
+    } catch(e) { list = getCorrLocal(); }
+  } else {
+    list = getCorrLocal();
+  }
+  renderCorrespondentes(list);
+}
+
+function renderCorrespondentes(list) {
+  const el = document.getElementById('corrList');
+  if (!el) return;
+  document.getElementById('corr-stat-total').textContent = list.length;
+  document.getElementById('corr-stat-adv').textContent   = list.filter(c => c.tipo === 'advogado').length;
+  document.getElementById('corr-stat-prep').textContent  = list.filter(c => c.tipo === 'preposto').length;
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state"><p>Nenhum correspondente cadastrado.</p><p>Clique em "+ Novo Correspondente" para adicionar.</p></div>';
+    return;
+  }
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:#f9fafb;border-bottom:2px solid var(--c-divider)">
+      <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Nome</th>
+      <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">E-mail</th>
+      <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Tipo</th>
+      <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Senha</th>
+      <th style="width:80px"></th>
+    </tr></thead>
+    <tbody>${list.map(c => `
+    <tr style="border-bottom:1px solid var(--c-divider)" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+      <td style="padding:12px 14px;font-weight:600">${escHtml(c.nome||'—')}</td>
+      <td style="padding:12px 14px;font-family:var(--f-mono);font-size:12px">${escHtml(c.email||'—')}</td>
+      <td style="padding:12px 14px">
+        <span style="background:${c.tipo==='advogado'?'#dbeafe':'#fef9c3'};color:${c.tipo==='advogado'?'#1e40af':'#92400e'};font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;text-transform:uppercase">${c.tipo||'—'}</span>
+      </td>
+      <td style="padding:12px 14px;font-family:var(--f-mono);font-size:11px;color:var(--c-muted)">${escHtml(c.code||'—')}</td>
+      <td style="padding:12px 14px;text-align:right">
+        <button class="btn btn-ghost btn-sm" onclick="openCorrModal('${c.id}')">Editar</button>
+      </td>
+    </tr>`).join('')}
+    </tbody></table>`;
+}
+
+function openCorrModal(id) {
+  document.getElementById('corrModal').classList.add('open');
+  document.getElementById('corr-id').value    = id || '';
+  document.getElementById('corr-nome').value  = '';
+  document.getElementById('corr-email').value = '';
+  document.getElementById('corr-code').value  = '';
+  document.getElementById('corr-tipo').value  = 'advogado';
+  document.getElementById('corr-modal-del').style.display = 'none';
+  document.getElementById('corr-btn-notify').style.display = 'none';
+  document.getElementById('corrModalTitle').textContent = id ? 'Editar Correspondente' : 'Novo Correspondente';
+  if (id) {
+    const list = getCorrLocal();
+    const c = list.find(x => x.id === id);
+    if (c) {
+      document.getElementById('corr-nome').value  = c.nome  || '';
+      document.getElementById('corr-email').value = c.email || '';
+      document.getElementById('corr-code').value  = c.code  || '';
+      document.getElementById('corr-tipo').value  = c.tipo  || 'advogado';
+      document.getElementById('corr-modal-del').style.display = '';
+      document.getElementById('corr-btn-notify').style.display = '';
+    }
+  } else {
+    genCorrCode();
+  }
+}
+
+function closeCorrModal() {
+  document.getElementById('corrModal').classList.remove('open');
+}
+
+async function saveCorr() {
+  const id    = document.getElementById('corr-id').value || ('corr-' + Date.now());
+  const nome  = document.getElementById('corr-nome').value.trim();
+  const email = document.getElementById('corr-email').value.trim().toLowerCase();
+  const code  = document.getElementById('corr-code').value.trim();
+  const tipo  = document.getElementById('corr-tipo').value;
+  if (!nome || !email || !code) { showToast('Preencha nome, e-mail e senha.'); return; }
+  const rec = { id, nome, email, code, tipo, created_at: new Date().toISOString() };
+  const { sbUrl, sbKey } = getSbCreds();
+  if (sbUrl && sbKey) {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { error } = await sb.from('correspondentes').upsert(rec);
+      if (error) { showToast('Erro: ' + error.message); return; }
+    } catch(e) { showToast('Erro: ' + e.message); return; }
+  }
+  const list = getCorrLocal();
+  const idx  = list.findIndex(x => x.id === id);
+  if (idx >= 0) list[idx] = rec; else list.push(rec);
+  saveCorrLocal(list);
+  closeCorrModal();
+  renderCorrespondentes(list);
+  showToast('Correspondente salvo!');
+}
+
+async function deleteCorr() {
+  const id = document.getElementById('corr-id').value;
+  if (!id || !confirm('Excluir este correspondente?')) return;
+  const { sbUrl, sbKey } = getSbCreds();
+  if (sbUrl && sbKey) {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      await sb.from('correspondentes').delete().eq('id', id);
+    } catch(e) { console.warn(e.message); }
+  }
+  const list = getCorrLocal().filter(x => x.id !== id);
+  saveCorrLocal(list);
+  closeCorrModal();
+  renderCorrespondentes(list);
+  showToast('Correspondente excluído.');
+}
+
+async function sendCorrEmail() {
+  if (!_gasUrl()) { showToast('URL do Google Apps Script não configurada.'); return; }
+  const nome  = document.getElementById('corr-nome').value.trim();
+  const email = document.getElementById('corr-email').value.trim();
+  const code  = document.getElementById('corr-code').value.trim();
+  const tipo  = document.getElementById('corr-tipo').value;
+  if (!email || !code) { showToast('Salve o correspondente antes de enviar.'); return; }
+  const portalUrl = 'https://falaw.com.br/cliente/index.html';
+  const tipoLabel = tipo === 'preposto' ? 'Preposto' : 'Advogado Correspondente';
+  const subject   = `ACESSO AO PORTAL FALAW — ${nome.toUpperCase()}`;
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><title>${escHtml(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f4f2ef;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+  <tr><td style="background:#060E1A;padding:32px 40px;border-radius:4px 4px 0 0;">
+    <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" alt="Falaw Advogados" style="display:block;height:36px;width:auto;margin-bottom:14px;" />
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#4a90d9;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.4);margin:0;">${tipoLabel}</p>
+  </td></tr>
+  <tr><td style="background:#ffffff;padding:44px 40px 36px;">
+    <p style="font-family:Georgia,serif;font-size:18px;color:#060E1A;margin:0 0 24px 0;line-height:1.4;">Olá, <strong>${escHtml(nome)}</strong>,</p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 12px 0;">
+      Seu acesso ao portal da Falaw Advogados foi criado. Você pode acessar sua pauta de audiências e responder pesquisas de satisfação.
+    </p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e8e4df;border-radius:3px;margin:24px 0;">
+      <tr><td colspan="2" style="padding:14px 20px 10px;border-bottom:1px solid #e8e4df;">
+        <p style="font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#7A7672;margin:0;">Suas credenciais de acesso</p>
+      </td></tr>
+      <tr>
+        <td style="padding:12px 20px;font-family:monospace;font-size:11px;color:#7A7672;width:40%;border-bottom:1px solid #f0ede8;">E-mail</td>
+        <td style="padding:12px 20px;font-family:monospace;font-size:12px;color:#060E1A;font-weight:600;border-bottom:1px solid #f0ede8;">${escHtml(email)}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 20px;font-family:monospace;font-size:11px;color:#7A7672;">Senha</td>
+        <td style="padding:12px 20px;font-family:monospace;font-size:12px;color:#060E1A;font-weight:600;">${escHtml(code)}</td>
+      </tr>
+    </table>
+    <table cellpadding="0" cellspacing="0" style="margin-bottom:12px;"><tr>
+      <td style="background:#0D2B5E;border-radius:3px;">
+        <a href="${portalUrl}" style="display:inline-block;padding:16px 32px;font-family:monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#ffffff;text-decoration:none;">Acessar portal &rarr;</a>
+      </td>
+    </tr></table>
+    <p style="font-family:monospace;font-size:10px;color:#b0aba5;margin:20px 0 0 0;">Dúvidas? Responda este e-mail.</p>
+  </td></tr>
+  <tr><td style="background:#f7f5f2;padding:24px 40px;border-radius:0 0 4px 4px;border-top:1px solid #e8e4df;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;color:#b0aba5;margin:0;">Av. Francisco Matarazzo, 1752 &middot; Salas 414 e 415 &middot; São Paulo / SP</p>
+  </td></tr>
+</table></td></tr></table>
+</body></html>`;
+  try {
+    await sendViaGAS(subject, html, [email]);
+    showToast('✓ Credenciais enviadas para ' + email);
+  } catch(e) { showToast('Erro ao enviar: ' + e.message); }
+}
+
 function openClientModal(clientId) {
   document.getElementById('clientModal').classList.add('open');
   if (clientId) {
@@ -7737,6 +8043,217 @@ async function notifyClientDashboard(client, periodLabel) {
 </table></td></tr></table>
 </body></html>`;
   await sendViaGAS(subject, html, [client.notifyAddr || client.email]);
+}
+
+/* ── Modal Enviar Pauta ── */
+let _pautaDestClients = [];
+
+async function openEnviarPautaModal() {
+  document.getElementById('enviarPautaModal').style.display = 'flex';
+  document.getElementById('pauta-dest-escritorio').checked = false;
+  const listEl = document.getElementById('pauta-dest-clientes');
+  listEl.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--c-muted)">Carregando clientes…</div>';
+  const { sbUrl, sbKey } = getSbCreds();
+  _pautaDestClients = [];
+  if (sbUrl && sbKey) {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { data } = await sb.from('clients').select('id,name,company,email,notify_email,code').order('company', { ascending: true });
+      if (data) _pautaDestClients = data.map(c => ({ ...c, notifyEmail: c.notify_email || c.email }));
+    } catch(e) { listEl.innerHTML = `<div style="padding:12px;font-size:12px;color:red">Erro: ${e.message}</div>`; return; }
+  } else {
+    _pautaDestClients = JSON.parse(localStorage.getItem('falaw_portal') || '[]');
+  }
+  const noIfood = _pautaDestClients.filter(c => !(c.company||c.name||'').toLowerCase().includes('ifood'));
+  if (!noIfood.length) { listEl.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--c-muted)">Nenhum cliente cadastrado.</div>'; return; }
+  listEl.innerHTML = noIfood.map((c, i) => `
+    <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--c-divider);font-size:13px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+      <input type="checkbox" class="pauta-dest-cb" data-idx="${i}" style="width:14px;height:14px;accent-color:#0D2B5E" />
+      <span style="flex:1">${escHtml(c.company||c.name||'—')}</span>
+      <span style="font-size:11px;color:var(--c-muted);font-family:var(--f-mono)">${escHtml(c.notifyEmail||c.email||'')}</span>
+    </label>`).join('');
+  // update internal list to no-ifood only
+  _pautaDestClients = noIfood;
+}
+
+function closeEnviarPautaModal() {
+  document.getElementById('enviarPautaModal').style.display = 'none';
+}
+
+function pautaDestSelectAll(val) {
+  document.querySelectorAll('.pauta-dest-cb').forEach(cb => cb.checked = val);
+}
+
+async function sendEnviarPauta() {
+  if (!_gasUrl()) { showToast('URL do Google Apps Script não configurada em Configurações.'); return; }
+  const targets = [];
+  document.querySelectorAll('.pauta-dest-cb:checked').forEach(cb => {
+    const c = _pautaDestClients[+cb.dataset.idx];
+    if (c) targets.push(c);
+  });
+  const incluiEscritorio = document.getElementById('pauta-dest-escritorio').checked;
+  if (!targets.length && !incluiEscritorio) { showToast('Selecione ao menos um destinatário.'); return; }
+
+  const btn = document.getElementById('btn-enviar-pauta-send');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+
+  let ok = 0, fail = 0;
+  for (const c of targets) {
+    try { await notifyClientPauta(c); ok++; } catch(e) { fail++; console.warn('pauta email', c.email, e.message); }
+  }
+  if (incluiEscritorio) {
+    try { await notifyEscritorioPauta(); ok++; } catch(e) { fail++; console.warn('pauta escritorio:', e.message); }
+  }
+
+  btn.disabled = false; btn.textContent = 'Enviar';
+  closeEnviarPautaModal();
+  showToast(`✓ Pauta enviada: ${ok} sucesso${fail ? `, ${fail} erro(s)` : ''}`);
+}
+
+async function notifyEscritorioPauta() {
+  if (!_gasUrl()) throw new Error('GAS URL não configurada.');
+  const portalUrl = 'https://falaw.com.br/cliente/index.html';
+  const subject   = 'PAUTA DE AUDIÊNCIAS — ESCRITÓRIO (VISÃO COMPLETA)';
+  const today     = new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>${subject}</title></head>
+<body style="margin:0;padding:0;background:#f4f2ef;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+  <tr><td style="background:#060E1A;padding:32px 40px;border-radius:4px 4px 0 0;">
+    <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" alt="Falaw Advogados" style="display:block;height:36px;width:auto;margin-bottom:14px;" />
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#4a90d9;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.4);margin:0;">Pauta Interna — Escritório</p>
+  </td></tr>
+  <tr><td style="background:#ffffff;padding:44px 40px 36px;">
+    <p style="font-family:Georgia,serif;font-size:18px;color:#060E1A;margin:0 0 24px 0;line-height:1.4;">Pauta de Audiências atualizada</p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 12px 0;">
+      A pauta completa de todos os clientes referente a <strong>${today}</strong> está disponível no portal interno.
+    </p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 32px 0;">
+      Acesse com <strong>audiencias@falaw.com.br</strong> para visualizar todas as audiências, registrar orientações e observações.
+    </p>
+    <table cellpadding="0" cellspacing="0" style="margin-bottom:36px;"><tr>
+      <td style="background:#0D2B5E;border-radius:3px;">
+        <a href="${portalUrl}" style="display:inline-block;padding:16px 32px;font-family:monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#ffffff;text-decoration:none;">
+          Acessar pauta &rarr;
+        </a>
+      </td>
+    </tr></table>
+    <p style="font-family:monospace;font-size:10px;color:#b0aba5;margin:0;">Uso interno — Falaw Advogados</p>
+  </td></tr>
+  <tr><td style="background:#f7f5f2;padding:24px 40px;border-radius:0 0 4px 4px;border-top:1px solid #e8e4df;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;color:#b0aba5;margin:0;">Av. Francisco Matarazzo, 1752 &middot; Salas 414 e 415 &middot; São Paulo / SP</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+  await sendViaGAS(subject, html, ['audiencias@falaw.com.br']);
+}
+
+async function notifyClientPauta(client) {
+  if (!_gasUrl()) throw new Error('URL do Google Apps Script não configurada — configure em Configurações.');
+
+  const portalUrl  = 'https://falaw.com.br/cliente/index.html';
+  const clientName = client.name || client.company || 'Cliente';
+  const subject    = `PAUTA DE AUDIÊNCIAS DISPONÍVEL — ${clientName.toUpperCase()}`;
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>${escHtml(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f4f2ef;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ef;">
+<tr><td align="center" style="padding:40px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+  <!-- Cabeçalho -->
+  <tr><td style="background:#060E1A;padding:32px 40px;border-radius:4px 4px 0 0;">
+    <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" alt="Falaw Advogados" style="display:block;height:36px;width:auto;margin-bottom:14px;" />
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#4a90d9;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.4);margin:0;">Portal do Cliente</p>
+  </td></tr>
+
+  <!-- Corpo -->
+  <tr><td style="background:#ffffff;padding:44px 40px 36px;">
+    <p style="font-family:Georgia,serif;font-size:18px;color:#060E1A;margin:0 0 24px 0;line-height:1.4;">
+      Olá, <strong>${escHtml(clientName)}</strong>,
+    </p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 12px 0;">
+      A <strong>pauta de audiências</strong> do seu processo já está disponível em nosso portal.
+    </p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 32px 0;">
+      Acesse a área do cliente para visualizar as próximas audiências, horários, varas e links de videoconferência.
+    </p>
+
+    <!-- Botão -->
+    <table cellpadding="0" cellspacing="0" style="margin-bottom:36px;"><tr>
+      <td style="background:#0D2B5E;border-radius:3px;">
+        <a href="${portalUrl}" style="display:inline-block;padding:16px 32px;font-family:monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#ffffff;text-decoration:none;">
+          Ver pauta de audiências &rarr;
+        </a>
+      </td>
+    </tr></table>
+
+    <!-- Credenciais -->
+    <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e8e4df;border-radius:3px;margin-bottom:8px;">
+      <tr><td colspan="2" style="padding:14px 20px 10px;border-bottom:1px solid #e8e4df;">
+        <p style="font-family:monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#7A7672;margin:0;">Suas credenciais de acesso</p>
+      </td></tr>
+      <tr>
+        <td style="padding:12px 20px;font-family:monospace;font-size:11px;color:#7A7672;width:40%;border-bottom:1px solid #f0ede8;">E-mail</td>
+        <td style="padding:12px 20px;font-family:monospace;font-size:12px;color:#060E1A;font-weight:600;border-bottom:1px solid #f0ede8;">${escHtml(client.email || '')}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 20px;font-family:monospace;font-size:11px;color:#7A7672;">Código de acesso</td>
+        <td style="padding:12px 20px;font-family:monospace;font-size:12px;color:#060E1A;font-weight:600;">${escHtml(client.code || '')}</td>
+      </tr>
+    </table>
+
+    <p style="font-family:monospace;font-size:10px;color:#b0aba5;margin:20px 0 0 0;">
+      Em caso de dúvidas, entre em contato conosco respondendo este e-mail.
+    </p>
+  </td></tr>
+
+  <!-- Rodapé -->
+  <tr><td style="background:#f7f5f2;padding:24px 40px;border-radius:0 0 4px 4px;border-top:1px solid #e8e4df;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;color:#b0aba5;margin:0;">Av. Francisco Matarazzo, 1752 &middot; Salas 414 e 415 &middot; São Paulo / SP</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`;
+
+  await sendViaGAS(subject, html, [client.notifyEmail || client.email]);
+}
+
+async function notifyClientsPauta() {
+  if (!_gasUrl()) { showToast('URL do Google Apps Script não configurada em Configurações.'); return; }
+  const { sbUrl, sbKey } = getSbCreds();
+  let clients = [];
+  if (sbUrl && sbKey) {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { data } = await sb.from('clients').select('id,name,company,email,notify_email,code').order('company', { ascending: true });
+      if (data) clients = data.map(c => ({ ...c, notifyEmail: c.notify_email || c.email }));
+    } catch(e) { showToast('Erro ao buscar clientes: ' + e.message); return; }
+  } else {
+    clients = JSON.parse(localStorage.getItem('falaw_portal') || '[]');
+  }
+  // Excluir iFood
+  const targets = clients.filter(c => !(c.company || c.name || '').toLowerCase().includes('ifood') && (c.notifyEmail || c.email));
+  if (!targets.length) { showToast('Nenhum cliente elegível encontrado.'); return; }
+  if (!confirm(`Enviar e-mail de pauta para ${targets.length} cliente(s)?\n\n` + targets.map(c => c.company || c.name).join('\n'))) return;
+  let ok = 0, fail = 0;
+  for (const c of targets) {
+    try { await notifyClientPauta(c); ok++; } catch(e) { fail++; console.warn('pauta email', c.email, e.message); }
+  }
+  showToast(`✓ Pauta enviada: ${ok} sucesso${fail ? `, ${fail} erro(s)` : ''}`);
 }
 
 async function notifyClientByEmail(client, report) {
@@ -12860,6 +13377,81 @@ function _audCard(a) {
 }
 
 /* ── load / filter ── */
+const AUD_CANCEL_ACK_KEY = 'falaw_cancel_ack_v1';
+
+function _audCancelAck(id) {
+  const acked = new Set(JSON.parse(localStorage.getItem(AUD_CANCEL_ACK_KEY) || '[]'));
+  acked.add(id);
+  localStorage.setItem(AUD_CANCEL_ACK_KEY, JSON.stringify([...acked]));
+  // Remove a linha do item dentro do alerta
+  const row = document.getElementById('aud-cancel-row-' + id);
+  if (row) row.remove();
+  // Se não sobrou nenhuma linha, fecha o alerta inteiro
+  const body = document.getElementById('aud-cancel-body');
+  if (body && !body.querySelector('[id^="aud-cancel-row-"]')) {
+    document.getElementById('aud-canceladas-alert').innerHTML = '';
+  }
+}
+
+function _audCancelAckAll(ids) {
+  const acked = new Set(JSON.parse(localStorage.getItem(AUD_CANCEL_ACK_KEY) || '[]'));
+  ids.forEach(id => acked.add(id));
+  localStorage.setItem(AUD_CANCEL_ACK_KEY, JSON.stringify([...acked]));
+  document.getElementById('aud-canceladas-alert').innerHTML = '';
+}
+
+async function _audRenderCanceladasAlert(_sbUrl, _sbKey) {
+  const alertEl = document.getElementById('aud-canceladas-alert');
+  if (!alertEl) return;
+  const acked = new Set(JSON.parse(localStorage.getItem(AUD_CANCEL_ACK_KEY) || '[]'));
+  let canceladas = [];
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  if (_sbUrl && _sbKey) {
+    try {
+      const sb = supabase.createClient(_sbUrl, _sbKey);
+      const { data } = await sb.from('pauta_audiencias')
+        .select('id,data_audiencia,horario,tipo_audiencia,processo,reclamante,reclamada,vara')
+        .in('status', ['cancelada', 'cancelado_pje'])
+        .gte('data_audiencia', cutoffStr)
+        .order('data_audiencia', { ascending: false });
+      if (data) canceladas = data;
+    } catch(e) { console.warn('cancel alert:', e.message); }
+  } else {
+    const all = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]');
+    canceladas = all.filter(a =>
+      (a.status === 'cancelada' || a.status === 'cancelado_pje') &&
+      (a.data_audiencia || '') >= cutoffStr
+    ).sort((a, b) => (b.data_audiencia || '').localeCompare(a.data_audiencia || ''));
+  }
+  const novas = canceladas.filter(a => !acked.has(a.id));
+  if (!novas.length) { alertEl.innerHTML = ''; return; }
+  const allIds = JSON.stringify(novas.map(a => a.id));
+  let rows = novas.map(a => {
+    const dt = _audFmtDate(a.data_audiencia);
+    const tipo = a.tipo_audiencia ? `<span style="background:#b91c1c;color:#fff;font-size:9px;padding:1px 5px;border-radius:2px;margin-left:4px">${a.tipo_audiencia}</span>` : '';
+    return `<div id="aud-cancel-row-${a.id}" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #fca5a5">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:700;color:#7f1d1d;font-family:var(--f-mono);letter-spacing:.04em">${dt}${a.horario ? ' · ' + a.horario : ''}${tipo}</div>
+        <div style="font-size:12px;color:#991b1b;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_escHtml(a.processo || '')}${a.reclamante ? ' — ' + _escHtml(a.reclamante) : ''}</div>
+        ${a.vara ? `<div style="font-size:10px;color:#b91c1c;margin-top:1px">${_escHtml(a.vara)}</div>` : ''}
+      </div>
+      <button onclick="_audCancelAck('${a.id}')" style="flex-shrink:0;background:none;border:1px solid #fca5a5;border-radius:2px;color:#991b1b;font-size:10px;padding:3px 8px;cursor:pointer;white-space:nowrap">Ciente</button>
+    </div>`;
+  }).join('');
+  alertEl.innerHTML = `
+    <div style="background:#FEF2F2;border:2px solid #EF4444;border-radius:6px;padding:14px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">🚨</span>
+          <span style="font-family:var(--f-mono);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7f1d1d">${novas.length} audiência(s) cancelada(s) recentemente</span>
+        </div>
+        <button onclick="_audCancelAckAll(${allIds})" style="background:#EF4444;color:#fff;border:none;border-radius:3px;font-size:10px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;cursor:pointer">Marcar todas como ciente</button>
+      </div>
+      <div id="aud-cancel-body">${rows}</div>
+    </div>`;
+}
+
 async function loadAudiencias() {
   const listEl = document.getElementById('audiencias-list');
   if (!listEl) return;
@@ -12868,6 +13460,10 @@ async function loadAudiencias() {
   // para garantir leitura mesmo sem configuração manual no localStorage
   const _sbUrl = window.SB_URL || sbUrl();
   const _sbKey = window.SB_KEY || sbKey();
+
+  // Alerta de canceladas (roda em paralelo, não bloqueia a lista)
+  _audRenderCanceladasAlert(_sbUrl, _sbKey);
+
   let items = [];
   if (_sbUrl && _sbKey) {
     try {
@@ -12893,15 +13489,18 @@ async function loadAudiencias() {
   const fMod   = document.getElementById('aud-filter-modalidade')?.value|| '';
   const fSt    = document.getElementById('aud-filter-status')?.value    || '';
   const fMes   = document.getElementById('aud-filter-mes')?.value       || '';
+  const fDia   = document.getElementById('aud-filter-dia')?.value        || '';
   const fBusca = (document.getElementById('aud-filter-busca')?.value    || '').toLowerCase().trim();
 
   const filtered = items.filter(a => {
-    // sem filtro de mês: mostra apenas hoje e datas futuras
-    if (!fMes && a.data_audiencia < today) return false;
+    // sem filtro de período: mostra apenas hoje e datas futuras
+    if (!fMes && !fDia && a.data_audiencia < today) return false;
     if (fTipo && a.tipo_audiencia !== fTipo) return false;
     if (fMod  && a.modalidade    !== fMod)  return false;
     if (fSt   && a.status        !== fSt)   return false;
-    if (fMes) {
+    if (fDia) {
+      if (a.data_audiencia !== fDia) return false;
+    } else if (fMes) {
       if (!a.data_audiencia || !a.data_audiencia.startsWith(fMes)) return false;
     }
     if (fBusca) {
@@ -12939,8 +13538,21 @@ async function loadAudiencias() {
   listEl.innerHTML = html;
 }
 
+function audSyncDateFilters(changed) {
+  if (changed === 'dia') {
+    const dia = document.getElementById('aud-filter-dia')?.value || '';
+    const mesEl = document.getElementById('aud-filter-mes');
+    if (dia && mesEl) mesEl.value = '';
+  } else {
+    const mes = document.getElementById('aud-filter-mes')?.value || '';
+    const diaEl = document.getElementById('aud-filter-dia');
+    if (mes && diaEl) diaEl.value = '';
+  }
+  loadAudiencias();
+}
+
 function audLimparFiltros() {
-  ['aud-filter-tipo','aud-filter-modalidade','aud-filter-status','aud-filter-mes'].forEach(id => {
+  ['aud-filter-tipo','aud-filter-modalidade','aud-filter-status','aud-filter-mes','aud-filter-dia'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const b = document.getElementById('aud-filter-busca'); if (b) b.value = '';
@@ -13332,7 +13944,8 @@ async function audImportExcel(inputEl) {
       const horario = _cell(row, idx.horario);
       const tipoRaw = _cell(row, idx.tipo);
       const [tipoAud, modalidade] = _audParseTipo(tipoRaw);
-      const testemNec = (_cell(row, idx.testemNec).toUpperCase() === 'SIM');
+      const _testemNecExcel = _cell(row, idx.testemNec).toUpperCase();
+      const testemNec = _testemNecExcel === 'SIM' || (!_testemNecExcel && (tipoAud === 'UNA' || tipoAud === 'INSTRUÇÃO'));
 
       rows.push({
         id:                    _audMakeId(proc, dataIso, horario),
@@ -13383,6 +13996,31 @@ async function audImportExcel(inputEl) {
   } catch(e) {
     console.error(e);
     showToast('Erro ao ler planilha: ' + e.message);
+  }
+}
+
+async function audExportExcel() {
+  try {
+    const { sbUrl, sbKey } = getSbCreds();
+    let rows = [];
+    if (sbUrl && sbKey) {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { data, error } = await sb.from('pauta_audiencias').select('*').order('data_audiencia', { ascending: true });
+      if (error) { showToast('Erro ao buscar dados: ' + error.message); return; }
+      rows = data || [];
+    } else {
+      rows = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]');
+    }
+    if (!rows.length) { showToast('Nenhuma audiência para exportar.'); return; }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Pauta');
+    const hoje = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `pauta_audiencias_${hoje}.xlsx`);
+    showToast('✓ Planilha exportada com sucesso!');
+  } catch(e) {
+    console.error(e);
+    showToast('Erro ao exportar: ' + e.message);
   }
 }
 
