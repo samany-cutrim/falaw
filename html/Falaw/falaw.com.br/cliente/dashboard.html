@@ -2173,7 +2173,12 @@ async function loadPautaEscritorio() {
     window._escCalMonth = +ancora.data_audiencia.slice(5,7) - 1;
   }
   _escRenderCalGrid();
-  _escRenderRows(futuras.length ? futuras : rows, today);
+  try {
+    _escRenderRows(futuras.length ? futuras : rows, today);
+  } catch(e) {
+    console.error('[_escRenderRows]', e);
+    el.innerHTML = `<div style="color:#C62828;font-family:monospace;font-size:11px;padding:20px;background:#fff5f5;border-radius:6px;border:1px solid #fecaca">Erro ao renderizar pauta: ${e.message}</div>`;
+  }
   _escPopulateSelects(rows);
 }
 
@@ -2223,7 +2228,13 @@ function _escApplyFilters() {
     }
   }
   _escRenderCalGrid();
-  _escRenderRows(filtered, today);
+  try {
+    _escRenderRows(filtered, today);
+  } catch(e) {
+    console.error('[_escRenderRows filter]', e);
+    const _el = document.getElementById('pauta-list');
+    if (_el) _el.innerHTML = `<div style="color:#C62828;font-family:monospace;font-size:11px;padding:20px;background:#fff5f5;border-radius:6px;border:1px solid #fecaca">Erro ao renderizar: ${e.message}</div>`;
+  }
 }
 
 function _escLimparBusca() {
@@ -2568,8 +2579,14 @@ function _escRenderRows(rows, today) {
       const respHtml = a.tipo_responsabilidade
         ? `<span style="background:${(RESP_COLOR[a.tipo_responsabilidade]||'#374151')}22;color:${RESP_COLOR[a.tipo_responsabilidade]||'#374151'};font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap">${a.tipo_responsabilidade}</span>`
         : '';
-      const clienteHtml = a.cliente
-        ? `<span style="background:#FEF3C7;color:#92400E;font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;white-space:nowrap">${a.cliente}</span>`
+      // Prioriza tag (CLIENTE) no campo reclamada; fallback para a.cliente
+      let _clienteNome = a.cliente || '';
+      if (a.reclamada && a.reclamada.includes('(CLIENTE)')) {
+        const _found = a.reclamada.split(',').find(p => p.includes('(CLIENTE)'));
+        if (_found) _clienteNome = _found.replace(/\s*\(CLIENTE\)/gi, '').replace(/\s*S\.?A\.?$/i,'').trim();
+      }
+      const clienteHtml = _clienteNome
+        ? `<span style="background:#FEF3C7;color:#92400E;font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;white-space:nowrap">${_clienteNome}</span>`
         : '';
       const linkHtml = a.link
         ? `<a href="${a.link}" target="_blank" rel="noopener" style="color:#2563EB;text-decoration:none;font-size:11px;font-weight:600">🔗 Entrar</a>`
