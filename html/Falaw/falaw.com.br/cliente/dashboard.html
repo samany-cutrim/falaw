@@ -2507,8 +2507,9 @@ function _escRenderRows(rows, today) {
   }
 
   const state = _escGetState();
-  const STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62828', cancelada:'#9CA3AF' };
-  const STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#F3F4F6' };
+  const STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62828', cancelada:'#DC2626' };
+  const STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#FEE2E2' };
+  const RESP_COLOR   = { 'SUBSIDIÁRIA':'#7C3AED','SOLIDÁRIA':'#2563EB','PRINCIPAL':'#DC2626','TOMADOR DE SERVIÇO':'#D97706' };
   const TIPO_LABEL   = { 'INICIAL':'Inicial','INSTRUÇÃO':'Instrução','CONCILIAÇÃO':'Conciliação','UNA':'Una' };
 
   function fmtDia(iso) {
@@ -2520,104 +2521,112 @@ function _escRenderRows(rows, today) {
     return `${dow}, ${d} ${ms[+m-1]} ${y}`;
   }
 
-  const TH = (label, w) => `<th style="padding:8px 10px;text-align:left;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;background:#f9fafb;border-bottom:2px solid #e5e7eb;white-space:nowrap${w?';width:'+w:''}">${label}</th>`;
+  // Agrupar por data
+  const byDate = {};
+  rows.forEach(a => { const k = a.data_audiencia||''; if (!byDate[k]) byDate[k]=[]; byDate[k].push(a); });
 
-  let html = `<div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:6px">
-  <table style="width:100%;border-collapse:collapse;font-size:12px">
-  <thead><tr>
-    ${TH('Data','90px')}
-    ${TH('Hora','54px')}
-    ${TH('Tipo')}
-    ${TH('Processo','160px')}
-    ${TH('Vara')}
-    ${TH('Reclamante')}
-    ${TH('Reclamada')}
-    ${TH('Cliente')}
-    ${TH('Advogado')}
-    ${TH('Responsab.')}
-    ${TH('Preposto / Dados')}
-    ${TH('Link / Senha')}
-    ${TH('Status','76px')}
-    ${TH('Orientação','90px')}
-    ${TH('Obs.','')}
-  </tr></thead>
-  <tbody>`;
+  let html = '';
 
-  rows.forEach((a, i) => {
-    const sc     = STATUS_COLOR[a.status] || '#374151';
-    const sb2    = STATUS_BG[a.status]    || '#F9FAFB';
-    const st     = state[a.id] || {};
-    const sent   = a.orientacao_enviada !== undefined ? !!a.orientacao_enviada : !!st.sent;
-    const obs    = a.orientacao || st.obs || '';
-    const isPast      = (a.data_audiencia||'') < today;
-    const isHoje      = (a.data_audiencia||'') === today;
-    const isCancelada = a.status === 'cancelada';
-    const rowBg  = isCancelada ? '#FFF5F5' : isHoje ? '#f0f4ff' : i%2===0 ? '#fff' : '#fafafa';
-    const op     = isPast && !isCancelada ? 'opacity:.7;' : '';
+  Object.keys(byDate).sort().forEach(d => {
+    const isHojeDate = d === today;
+    const isPastDate = d < today;
+    const dateColor  = isHojeDate ? '#0D2B5E' : isPastDate ? '#D1D5DB' : '#6B7280';
+    const dateBorder = isHojeDate ? '2px solid #0D2B5E' : '1px solid #e5e7eb';
+    const cnt = byDate[d].length;
+    html += `<div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${dateColor};margin:28px 0 12px;padding-bottom:6px;border-bottom:${dateBorder};display:flex;align-items:center;gap:8px">
+      <span>${isHojeDate?'● HOJE — ':''}${fmtDia(d)}</span>
+      <span style="font-size:9px;background:${isHojeDate?'#0D2B5E':'#e5e7eb'};color:${isHojeDate?'#fff':'#6B7280'};padding:1px 7px;border-radius:10px;font-weight:700">${cnt} audiência${cnt!==1?'s':''}</span>
+    </div>`;
 
-    const tipoHtml = a.tipo_audiencia
-      ? `<span style="background:#0D2B5E;color:#fff;font-size:9px;padding:2px 7px;border-radius:3px;display:inline-block;font-weight:700;letter-spacing:.03em">${TIPO_LABEL[a.tipo_audiencia]||a.tipo_audiencia}</span>`
-      : '';
-    const respHtml = a.tipo_responsabilidade
-      ? `<span style="background:${(RESP_COLOR[a.tipo_responsabilidade]||'#374151')}22;color:${RESP_COLOR[a.tipo_responsabilidade]||'#374151'};font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap">${a.tipo_responsabilidade}</span>`
-      : '—';
-    const clienteHtml = a.cliente
-      ? `<span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;white-space:nowrap;display:inline-block">${a.cliente}</span>`
-      : '—';
-    const modalBg = a.modalidade==='VIRTUAL'?'#dbeafe':a.modalidade==='PRESENCIAL'?'#dcfce7':'#f3f4f6';
-    const modalCo = a.modalidade==='VIRTUAL'?'#1e40af':a.modalidade==='PRESENCIAL'?'#166534':'#374151';
-    const modalHtml = a.modalidade
-      ? `<span style="background:${modalBg};color:${modalCo};font-size:8px;padding:1px 5px;border-radius:2px;display:inline-block;margin-top:2px">${a.modalidade}</span>`
-      : '';
-    const testemHtml = a.testemunha_necessaria
-      ? `<span style="background:#fffbeb;color:#92400e;font-size:8px;padding:1px 5px;border-radius:2px;border:1px solid #fde68a;display:inline-block;margin-top:2px">Testemunha</span>`
-      : '';
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;margin-bottom:4px">`;
 
-    const linkHtml = a.link
-      ? `<a href="${a.link}" target="_blank" rel="noopener" style="color:#2563EB;text-decoration:none;font-size:11px">🔗 Link</a>`
-      : '';
-    const senhaHtml = a.id_senha
-      ? `<span style="font-family:monospace;font-size:10px;color:#374151">${a.id_senha}</span>`
-      : '';
-    const linkSenha = [linkHtml, senhaHtml].filter(Boolean).join('<br>');
+    byDate[d].forEach(a => {
+      const sc  = STATUS_COLOR[a.status] || '#374151';
+      const sb2 = STATUS_BG[a.status]   || '#F9FAFB';
+      const st  = state[a.id] || {};
+      const sent = a.orientacao_enviada !== undefined ? !!a.orientacao_enviada : !!st.sent;
+      const obs  = a.orientacao || st.obs || '';
+      const isCancelada = a.status === 'cancelada';
+      const isPast = d < today;
+      const op = isPast && !isCancelada ? 'opacity:.72;' : '';
+      const cardBg = isCancelada ? '#FFF5F5' : '#fff';
+      const cardBorder = isCancelada ? '#FECACA' : '#E5E7EB';
+      const cardShadow = isHojeDate ? '0 2px 12px rgba(13,43,94,.12)' : '0 1px 4px rgba(0,0,0,.05)';
 
-    const prepostoHtml = [a.dados_preposto, a.observacoes_preposto].filter(Boolean).join('<br><span style="color:#9CA3AF">');
-    const prepostoFull = a.dados_preposto || a.observacoes_preposto
-      ? (a.dados_preposto||'') + (a.observacoes_preposto ? `<br><span style="color:#9CA3AF;font-size:10px">${a.observacoes_preposto}</span>` : '')
-      : '';
+      const modalBg = a.modalidade==='VIRTUAL'?'#dbeafe':a.modalidade==='PRESENCIAL'?'#dcfce7':'#f3f4f6';
+      const modalCo = a.modalidade==='VIRTUAL'?'#1e40af':a.modalidade==='PRESENCIAL'?'#166534':'#374151';
 
-    const TD = (content, extra) => `<td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top;${op}${extra||''}">${content||'—'}</td>`;
+      const tipoHtml  = a.tipo_audiencia
+        ? `<span style="background:#0D2B5E;color:#fff;font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.03em">${TIPO_LABEL[a.tipo_audiencia]||a.tipo_audiencia}</span>`
+        : '';
+      const modalHtml = a.modalidade
+        ? `<span style="background:${modalBg};color:${modalCo};font-size:9px;padding:2px 7px;border-radius:3px;font-weight:600">${a.modalidade}</span>`
+        : '';
+      const testemHtml = a.testemunha_necessaria
+        ? `<span style="background:#fffbeb;color:#92400e;font-size:9px;padding:2px 6px;border-radius:3px;border:1px solid #fde68a">⚠ Testemunha</span>`
+        : '';
+      const respHtml = a.tipo_responsabilidade
+        ? `<span style="background:${(RESP_COLOR[a.tipo_responsabilidade]||'#374151')}22;color:${RESP_COLOR[a.tipo_responsabilidade]||'#374151'};font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap">${a.tipo_responsabilidade}</span>`
+        : '';
+      const clienteHtml = a.cliente
+        ? `<span style="background:#FEF3C7;color:#92400E;font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;white-space:nowrap">${a.cliente}</span>`
+        : '';
+      const linkHtml = a.link
+        ? `<a href="${a.link}" target="_blank" rel="noopener" style="color:#2563EB;text-decoration:none;font-size:11px;font-weight:600">🔗 Entrar</a>`
+        : '';
+      const senhaHtml = a.id_senha
+        ? `<span style="font-family:monospace;font-size:10px;color:#6B7280;background:#f3f4f6;padding:1px 6px;border-radius:3px">${a.id_senha}</span>`
+        : '';
 
-    html += `<tr id="esc-row-${a.id}" style="background:${rowBg};border-left:3px solid ${sc}">
-      ${TD(`<span style="font-weight:600;color:${isHoje?'#0D2B5E':'#374151'};white-space:nowrap">${isHoje?'● ':''} ${fmtDia(a.data_audiencia)}</span>`)}
-      ${TD(`<span style="font-weight:900;font-family:monospace;font-size:15px;color:#0D2B5E">${a.horario||'—'}</span>`)}
-      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top;${op}">${tipoHtml}${tipoHtml&&modalHtml?'<br>':''}${modalHtml}${(tipoHtml||modalHtml)&&testemHtml?'<br>':''}${testemHtml}</td>
-      ${TD(`<span style="font-family:monospace;font-size:10px">${a.processo||'—'}</span>`)}
-      ${TD(a.vara||'—','max-width:140px')}
-      ${TD(a.reclamante||'—','max-width:160px')}
-      ${TD(a.reclamada||'—','max-width:180px')}
-      ${TD(clienteHtml,'max-width:160px')}
-      ${TD(a.advogado||'—')}
-      ${TD(respHtml)}
-      ${TD(prepostoFull||'—','max-width:160px')}
-      ${TD(linkSenha||'—')}
-      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top;${op}">
-        <span style="background:${sb2};color:${sc};font-size:9px;padding:2px 7px;border-radius:10px;font-weight:600;text-transform:uppercase;white-space:nowrap">${a.status||''}</span>
-      </td>
-      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle">
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:${sent?'#1B7A4E':'#9CA3AF'};font-size:11px;font-weight:600;white-space:nowrap">
-          <input type="checkbox" onchange="escToggleOrient('${a.id}',this.checked)" ${sent?'checked':''} style="width:14px;height:14px;accent-color:#1B7A4E;cursor:pointer" />
-          ${sent?'Enviada':'Pendente'}
-        </label>
-      </td>
-      <td style="padding:4px 8px;border-bottom:1px solid #f0f0f0;vertical-align:top;min-width:160px">
-        <textarea onblur="escSaveObs('${a.id}',this.value)" placeholder="Obs. interna…" rows="2"
-          style="width:100%;font-size:10px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:3px;resize:vertical;font-family:inherit;color:#374151;background:#fff;box-sizing:border-box">${a.obs !== undefined ? a.obs : obs}</textarea>
-      </td>
-    </tr>`;
+      html += `<div id="esc-row-${a.id}" style="background:${cardBg};border:1px solid ${cardBorder};border-left:4px solid ${sc};border-radius:8px;padding:14px 16px;box-shadow:${cardShadow};${op}display:flex;flex-direction:column;gap:9px">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span style="font-weight:900;font-family:monospace;font-size:20px;color:${isHojeDate?'#0D2B5E':'#111827'};line-height:1">${a.horario||'—'}</span>
+          <span style="background:${sb2};color:${sc};font-size:9px;padding:3px 9px;border-radius:10px;font-weight:700;text-transform:uppercase;white-space:nowrap;flex-shrink:0">${a.status||''}</span>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${tipoHtml}${modalHtml}${testemHtml}
+        </div>
+
+        <div>
+          <div style="font-family:monospace;font-size:11px;font-weight:700;color:#111827;word-break:break-all">${a.processo||'—'}</div>
+          ${a.vara ? `<div style="font-size:10px;color:#6B7280;margin-top:2px">${a.vara}</div>` : ''}
+        </div>
+
+        <div style="border-top:1px solid #f3f4f6;padding-top:9px;display:flex;flex-direction:column;gap:4px">
+          ${a.reclamante ? `<div style="font-size:11px;color:#374151"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#9CA3AF">Reclamante</span><br><b>${a.reclamante}</b></div>` : ''}
+          ${a.reclamada  ? `<div style="font-size:11px;color:#374151"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#9CA3AF">Reclamada</span><br><b>${a.reclamada}</b></div>` : ''}
+          ${clienteHtml  ? `<div style="margin-top:2px">${clienteHtml}</div>` : ''}
+        </div>
+
+        ${a.advogado||respHtml ? `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          ${a.advogado ? `<div style="font-size:11px;color:#374151;flex:1;min-width:0"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#9CA3AF">Advogado</span><br>${a.advogado}</div>` : ''}
+          ${respHtml ? `<div style="flex-shrink:0;margin-top:auto">${respHtml}</div>` : ''}
+        </div>` : ''}
+
+        ${a.dados_preposto||a.observacoes_preposto ? `<div style="font-size:10px;color:#6B7280;background:#f9fafb;border-radius:4px;padding:6px 8px;line-height:1.4">
+          ${a.dados_preposto ? `<div>${a.dados_preposto}</div>` : ''}
+          ${a.observacoes_preposto ? `<div style="margin-top:2px;color:#9CA3AF">${a.observacoes_preposto}</div>` : ''}
+        </div>` : ''}
+
+        ${linkHtml||senhaHtml ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${linkHtml}${senhaHtml}</div>` : ''}
+
+        <div style="border-top:1px solid #f3f4f6;padding-top:9px;display:flex;flex-direction:column;gap:6px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:${sent?'#1B7A4E':'#9CA3AF'};font-size:11px;font-weight:600">
+            <input type="checkbox" onchange="escToggleOrient('${a.id}',this.checked)" ${sent?'checked':''} style="width:14px;height:14px;accent-color:#1B7A4E;cursor:pointer" />
+            ${sent?'✓ Orientação Enviada':'Orientação Pendente'}
+          </label>
+          <textarea onblur="escSaveObs('${a.id}',this.value)" placeholder="Obs. interna…" rows="2"
+            style="width:100%;font-size:10px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:3px;resize:vertical;font-family:inherit;color:#374151;background:#fff;box-sizing:border-box">${obs}</textarea>
+        </div>
+
+      </div>`;
+    });
+
+    html += `</div>`;
   });
 
-  html += '</tbody></table></div>';
   el.innerHTML = html;
 }
 
