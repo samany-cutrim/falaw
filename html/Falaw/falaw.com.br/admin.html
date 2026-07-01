@@ -1725,8 +1725,19 @@
           </button>
           <div id="aud-ms-recda-drop" class="ms-drop" style="display:none;position:absolute;z-index:200;top:100%;left:0;min-width:240px;max-height:260px;overflow-y:auto;background:#fff;border:1px solid var(--c-divider);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:2px"></div>
         </div>
-        <input type="month" id="aud-filter-mes" onchange="audSyncDateFilters('mes')" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
-        <input type="date"  id="aud-filter-dia" onchange="audSyncDateFilters('dia')" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+          <span style="font-family:var(--f-mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--c-muted);white-space:nowrap">Período:</span>
+          <button type="button" id="audp-semana" onclick="_audSetPeriodo('semana')" style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">7 dias</button>
+          <button type="button" id="audp-mes"    onclick="_audSetPeriodo('mes')"    style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">Este mês</button>
+          <button type="button" id="audp-prox"   onclick="_audSetPeriodo('prox')"   style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">Próx. mês</button>
+          <button type="button" id="audp-custom" onclick="_audSetPeriodo('custom')" style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">Personalizado</button>
+          <button type="button" id="audp-todos"  onclick="_audSetPeriodo('')"       style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid #0D2B5E;border-radius:2px;background:#0D2B5E;color:#fff;cursor:pointer">Futuros</button>
+        </div>
+        <div id="audp-custom-inputs" style="display:none;gap:6px;align-items:center">
+          <input id="aud-data-de"  type="date" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:6px 8px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
+          <span style="font-family:var(--f-mono);font-size:9px;color:var(--c-muted)">até</span>
+          <input id="aud-data-ate" type="date" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:6px 8px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
+        </div>
         <input type="text" id="aud-filter-busca" placeholder="Buscar processo, reclamante…" oninput="loadAudiencias()" style="flex:1;min-width:160px;border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
         <button type="button" class="btn btn-ghost btn-sm" onclick="audLimparFiltros()">Limpar</button>
         <span id="aud-count" style="font-family:var(--f-mono);font-size:11px;color:var(--c-muted);white-space:nowrap"></span>
@@ -13550,28 +13561,32 @@ async function loadAudiencias() {
   const fRecdas= _msGetValues('aud-ms-recda');
   const fMes   = document.getElementById('aud-filter-mes')?.value       || '';
   const fDia   = document.getElementById('aud-filter-dia')?.value        || '';
+  const fDe    = document.getElementById('aud-data-de')?.value  || '';
+  const fAte   = document.getElementById('aud-data-ate')?.value || '';
+  const periodo = window._audPeriodo || '';
   const fBusca = (document.getElementById('aud-filter-busca')?.value    || '').toLowerCase().trim();
 
   const filtered = items.filter(a => {
-    if (!fMes && !fDia && a.data_audiencia < today) return false;
+    if (periodo && periodo !== 'todos' && (fDe || fAte)) {
+      const d = a.data_audiencia || '';
+      if (fDe && d < fDe) return false;
+      if (fAte && d > fAte) return false;
+    } else {
+      if (!fMes && !fDia && a.data_audiencia < today) return false;
+      if (fDia && a.data_audiencia !== fDia) return false;
+      if (fMes && (!a.data_audiencia || !a.data_audiencia.startsWith(fMes))) return false;
+    }
     if (fTipos.length  && !fTipos.includes(a.tipo_audiencia||''))        return false;
     if (fMod   && a.modalidade           !== fMod)   return false;
     if (fSt    && a.status               !== fSt)    return false;
     if (fResps.length  && !fResps.includes(a.tipo_responsabilidade||'')) return false;
     if (fRecdas.length && !fRecdas.some(q=>(a.reclamada||'').includes(q))) return false;
-    if (fDia) {
-      if (a.data_audiencia !== fDia) return false;
-    } else if (fMes) {
-      if (!a.data_audiencia || !a.data_audiencia.startsWith(fMes)) return false;
-    }
     if (fBusca) {
       const haystack = [a.processo, a.reclamante, a.reclamada, a.vara, a.cliente, a.advogado, a.tipo_responsabilidade].join(' ').toLowerCase();
       if (!haystack.includes(fBusca)) return false;
     }
     return true;
   });
-
-  // Popula multi-selects dinâmicos
   function _audExtractCliente(rec) { if (!rec) return ''; const f = rec.split(',').find(p=>p.includes('(CLIENTE)')); return f ? f.replace(/\s*\(CLIENTE\)/gi,'').trim() : ''; }
   _msPopulate('aud-filter-tipo', [...new Set(items.map(r=>r.tipo_audiencia||'').filter(Boolean))].sort());
   _msPopulate('aud-ms-resp',  [...new Set(items.map(r=>r.tipo_responsabilidade||'').filter(Boolean))].sort());
@@ -13661,11 +13676,52 @@ if (!window._msState) {
   document.addEventListener('click',e=>{if(!e.target.closest('.ms-wrap'))document.querySelectorAll('.ms-drop').forEach(d=>d.style.display='none');},true);
 }
 
+function _audSetPeriodo(tipo) {
+  const today = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  let de = '', ate = '', showCustom = false;
+  if (tipo === 'semana') {
+    de = fmt(today); const e = new Date(today); e.setDate(e.getDate()+6); ate = fmt(e);
+  } else if (tipo === 'mes') {
+    de = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+    ate = fmt(new Date(today.getFullYear(), today.getMonth()+1, 0));
+  } else if (tipo === 'prox') {
+    de = fmt(new Date(today.getFullYear(), today.getMonth()+1, 1));
+    ate = fmt(new Date(today.getFullYear(), today.getMonth()+2, 0));
+  } else if (tipo === 'custom') {
+    showCustom = true;
+  }
+  const deEl = document.getElementById('aud-data-de');
+  const ateEl = document.getElementById('aud-data-ate');
+  const ci = document.getElementById('audp-custom-inputs');
+  if (deEl && !showCustom) deEl.value = de;
+  if (ateEl && !showCustom) ateEl.value = ate;
+  if (ci) ci.style.display = showCustom ? 'flex' : 'none';
+  ['semana','mes','prox','custom','todos'].forEach(k => {
+    const b = document.getElementById('audp-'+k);
+    if (!b) return;
+    const active = k === (tipo||'todos');
+    b.style.background = active ? '#0D2B5E' : '#fff';
+    b.style.color = active ? '#fff' : 'var(--c-dark)';
+    b.style.borderColor = active ? '#0D2B5E' : 'var(--c-divider)';
+  });
+  window._audPeriodo = tipo;
+  loadAudiencias();
+}
+
+function audSyncDateFilters() { loadAudiencias(); }
+
 function audLimparFiltros() {
   ['aud-filter-tipo','aud-filter-modalidade','aud-filter-status','aud-filter-mes','aud-filter-dia'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   ['aud-ms-resp','aud-ms-recda','aud-filter-tipo'].forEach(id => _msReset(id));
+  const deEl = document.getElementById('aud-data-de');  if (deEl)  deEl.value = '';
+  const ateEl = document.getElementById('aud-data-ate'); if (ateEl) ateEl.value = '';
+  window._audPeriodo = '';
+  ['semana','mes','prox','custom'].forEach(k=>{ const b=document.getElementById('audp-'+k); if(b){b.style.background='#fff';b.style.color='var(--c-dark)';b.style.borderColor='var(--c-divider)';} });
+  const bt=document.getElementById('audp-todos'); if(bt){bt.style.background='#0D2B5E';bt.style.color='#fff';bt.style.borderColor='#0D2B5E';}
   const b = document.getElementById('aud-filter-busca'); if (b) b.value = '';
   loadAudiencias();
 }
