@@ -13499,8 +13499,9 @@ function _audCard(a) {
   const tipoLabel = AUD_TIPO_LABEL[a.tipo_audiencia]  || a.tipo_audiencia || '—';
   const tipoBg    = AUD_TIPO_BG[a.tipo_audiencia]     || '#f3f4f6';
   const tipoColor = AUD_TIPO_COLOR[a.tipo_audiencia]  || '#374151';
-  const modIcon   = AUD_MOD_ICON[a.modalidade]        || '';
-  const modLabel  = AUD_MOD_LABEL[a.modalidade]       || a.modalidade || '';
+  const _mod      = a.modalidade || 'PRESENCIAL';
+  const modIcon   = AUD_MOD_ICON[_mod]  || '';
+  const modLabel  = AUD_MOD_LABEL[_mod] || _mod;
   const stLabel   = AUD_STATUS_LABEL[a.status]        || a.status;
   const stColor   = AUD_STATUS_COLOR[a.status]        || '#374151';
   const stBg      = AUD_STATUS_BG[a.status]           || '#f3f4f6';
@@ -13534,7 +13535,7 @@ function _audCard(a) {
         <!-- tags -->
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
           <span style="background:${tipoBg};color:${tipoColor};font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${tipoLabel}</span>
-          ${modLabel ? `<span style="background:#f3f4f6;color:#374151;font-family:var(--f-mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${modIcon} ${modLabel}</span>` : ''}
+          <span style="background:${_mod==='VIRTUAL'?'#dbeafe':'#dcfce7'};color:${_mod==='VIRTUAL'?'#1e40af':'#166534'};font-family:var(--f-mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${modIcon} ${modLabel}</span>
           <span style="background:${stBg};color:${stColor};font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${stLabel}</span>
           ${a.tipo_responsabilidade ? `<span style="background:${respColor}22;color:${respColor};font-family:var(--f-mono);font-size:9px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap">${a.tipo_responsabilidade}</span>` : ''}
         ${a.advogado ? `<span style="background:#EEF2FF;color:#0D2B5E;font-family:var(--f-mono);font-size:9px;font-weight:700;padding:3px 8px;border-radius:3px;white-space:nowrap">👤 ${_escHtml(a.advogado)}</span>` : ''}
