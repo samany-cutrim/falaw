@@ -2145,10 +2145,20 @@ async function loadPautaEscritorio() {
   const searchBar = document.getElementById('pauta-search-bar');
   if (searchBar) searchBar.style.display = '';
 
-  // Padrão: apenas audiências a partir de hoje
+  // Padrão: audiências a partir de hoje; se não houver, mostra todas
   const futuras = rows.filter(r => (r.data_audiencia||'') >= today);
+  const verPass = document.getElementById('pauta-ver-passadas');
+  if (!futuras.length && verPass) {
+    verPass.checked = true; // ativa "Ver passadas" automaticamente
+  }
+  // Navega para o mês da audiência mais próxima (futura ou, se não houver, a mais recente)
+  const ancora = futuras.length ? futuras[0] : rows[rows.length - 1];
+  if (ancora && ancora.data_audiencia) {
+    window._escCalYear  = +ancora.data_audiencia.slice(0,4);
+    window._escCalMonth = +ancora.data_audiencia.slice(5,7) - 1;
+  }
   _escRenderCalGrid();
-  _escRenderRows(futuras, today);
+  _escRenderRows(futuras.length ? futuras : rows, today);
 }
 
 function escFiltrarData(dateVal) {
