@@ -8054,14 +8054,15 @@ async function sendViaGAS(subject, html, subscribers, replyTo) {
   const url = _gasUrl();
   if (!url) throw new Error('URL do Google Apps Script não configurada — configure em Configurações.');
   const toList = Array.isArray(subscribers) ? subscribers : [subscribers];
-  // GAS não suporta envio em massa nativo; enviamos um por um (ou em bloco via bcc)
+  // Sem Content-Type → browser envia como text/plain (requisição simples, sem preflight)
+  // GAS retorna Access-Control-Allow-Origin: * → podemos ler a resposta normalmente
   const res = await fetch(url, {
     method: 'POST',
-    body: JSON.stringify({ subject, html, to: toList.join(','), replyTo: replyTo || 'ferrazandrade@falaw.com.br' }),
-    // Não enviar Content-Type — GAS exige no-cors ou simple request
-    mode: 'no-cors'
+    body: JSON.stringify({ subject, html, to: toList.join(','), replyTo: replyTo || 'ferrazandrade@falaw.com.br' })
   });
-  // no-cors retorna opaque — não podemos ler a resposta, mas o envio ocorre
+  if (!res.ok) throw new Error('GAS retornou HTTP ' + res.status);
+  const data = await res.json().catch(() => ({}));
+  if (data.ok === false) throw new Error('GAS: ' + (data.error || 'erro desconhecido'));
   return true;
 }
 
