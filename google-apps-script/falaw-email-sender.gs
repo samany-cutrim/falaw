@@ -42,7 +42,15 @@ function doPost(e) {
     if (!to) throw new Error('Campo "to" vazio.');
 
     // Divide destinatários em lotes de 50 (limite do GmailApp por mensagem)
-    var recipients = to.split(',').map(function(e) { return e.trim(); }).filter(Boolean);
+    // Filtra emails inválidos (pontos consecutivos, sem @, etc.)
+    var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    var allRecipients = to.split(',').map(function(e) { return e.trim(); }).filter(Boolean);
+    var recipients = allRecipients.filter(function(addr) {
+      return emailRegex.test(addr) && addr.indexOf('..') === -1;
+    });
+    var skipped = allRecipients.length - recipients.length;
+    if (skipped > 0) Logger.log('Ignorados ' + skipped + ' email(s) inválido(s).');
+    if (!recipients.length) throw new Error('Nenhum destinatário válido após filtragem.');
     var BATCH = 50;
     var sent = 0;
     for (var i = 0; i < recipients.length; i += BATCH) {
