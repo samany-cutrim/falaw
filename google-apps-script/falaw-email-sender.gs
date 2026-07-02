@@ -41,16 +41,23 @@ function doPost(e) {
 
     if (!to) throw new Error('Campo "to" vazio.');
 
-    Logger.log('Enviando para: ' + to);
+    // Divide destinatários em lotes de 50 (limite do GmailApp por mensagem)
+    var recipients = to.split(',').map(function(e) { return e.trim(); }).filter(Boolean);
+    var BATCH = 50;
+    var sent = 0;
+    for (var i = 0; i < recipients.length; i += BATCH) {
+      var batch = recipients.slice(i, i + BATCH);
+      Logger.log('Enviando lote ' + (i/BATCH+1) + ': ' + batch.join(', '));
+      GmailApp.sendEmail(batch[0], subject, '', {
+        htmlBody: html,
+        bcc: batch.slice(1).join(','),
+        replyTo: replyTo,
+        name: 'Falaw Advogados'
+      });
+      sent += batch.length;
+    }
 
-    // Envia de ferrazandrade@falaw.com.br (conta logada)
-    GmailApp.sendEmail(to, subject, '', {
-      htmlBody: html,
-      replyTo: replyTo,
-      name: 'Falaw Advogados'
-    });
-
-    Logger.log('Email enviado com sucesso para: ' + to);
+    Logger.log('Total enviado: ' + sent + ' destinatário(s).');
 
     return ContentService
       .createTextOutput(JSON.stringify({ ok: true }))
