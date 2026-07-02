@@ -44,10 +44,21 @@ function doPost(e) {
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
+    Logger.log('ERRO doPost: ' + err.message);
     return ContentService
       .createTextOutput(JSON.stringify({ ok: false, error: err.message }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function testSendEmail() {
+  GmailApp.sendEmail(
+    'ferrazandrade@falaw.com.br',
+    'Teste GAS Falaw',
+    '',
+    { htmlBody: '<p>Teste de autorização do GAS.</p>', name: 'Falaw Advogados' }
+  );
+  Logger.log('Teste enviado com sucesso.');
 }
 
 // Responde a requisições OPTIONS (preflight CORS) — necessário para no-cors do browser
