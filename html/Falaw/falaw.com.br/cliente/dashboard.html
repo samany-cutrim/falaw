@@ -2324,16 +2324,28 @@ async function loadPautaAdmin() {
         <div style="font-size:12px;font-weight:700;color:#111;margin-bottom:2px">${escHtml(a.processo||'—')}</div>
         ${a.vara ? `<div style="font-size:11px;color:#6B7280;margin-bottom:6px">${escHtml(a.vara)}</div>` : ''}
         ${a.reclamada ? `<div style="font-size:11px;color:#374151;margin-bottom:10px">Reclamada: <b>${escHtml(a.reclamada)}</b></div>` : ''}
-        <div style="display:flex;flex-direction:column;gap:8px">
-          ${needAdv ? `<div style="display:flex;align-items:center;gap:8px">
-            <label style="font-family:monospace;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#1B7A4E;min-width:80px">Advogado</label>
-            <input id="adv-${a.id}" type="text" value="${escHtml(a.advogado||'')}" placeholder="Nome do advogado"
-              style="flex:1;border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          ${needAdv ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:10px 12px">
+            <div style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#1B7A4E;font-weight:700;margin-bottom:8px">Advogado</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <input id="adv-${a.id}" type="text" value="${escHtml(a.advogado||'')}" placeholder="Nome"
+                style="border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
+              <input id="adv-email-${a.id}" type="email" placeholder="E-mail (para acesso ao portal)"
+                style="border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
+              <input id="adv-cel-${a.id}" type="tel" placeholder="Celular / WhatsApp"
+                style="border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
+            </div>
           </div>` : ''}
-          ${needPre ? `<div style="display:flex;align-items:center;gap:8px">
-            <label style="font-family:monospace;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#0D2B5E;min-width:80px">Preposto</label>
-            <input id="pre-${a.id}" type="text" value="${escHtml(a.dados_preposto||'')}" placeholder="Nome do preposto"
-              style="flex:1;border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
+          ${needPre ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:10px 12px">
+            <div style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#0D2B5E;font-weight:700;margin-bottom:8px">Preposto</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <input id="pre-${a.id}" type="text" value="${escHtml(a.dados_preposto||'')}" placeholder="Nome"
+                style="border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
+              <input id="pre-email-${a.id}" type="email" placeholder="E-mail (para acesso ao portal)"
+                style="border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
+              <input id="pre-cel-${a.id}" type="tel" placeholder="Celular / WhatsApp"
+                style="border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
+            </div>
           </div>` : ''}
         </div>
         <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
@@ -2349,23 +2361,53 @@ async function loadPautaAdmin() {
 }
 
 async function salvarCorrAdmin(audId, needAdv, needPre) {
-  const msg    = document.getElementById(`admcorr-msg-${audId}`);
-  const sbUrl  = (window.SB_URL || '').trim();
-  const sbKey  = (window.SB_KEY || '').trim();
-  const patch  = {};
-  if (needAdv) patch.advogado      = (document.getElementById(`adv-${audId}`)?.value || '').trim();
-  if (needPre) patch.dados_preposto = (document.getElementById(`pre-${audId}`)?.value || '').trim();
+  const msg   = document.getElementById(`admcorr-msg-${audId}`);
+  const sbUrl = (window.SB_URL || '').trim();
+  const sbKey = (window.SB_KEY || '').trim();
+  const patch = {};
+
+  const advNome  = needAdv ? (document.getElementById(`adv-${audId}`)?.value       || '').trim() : '';
+  const advEmail = needAdv ? (document.getElementById(`adv-email-${audId}`)?.value || '').trim().toLowerCase() : '';
+  const advCel   = needAdv ? (document.getElementById(`adv-cel-${audId}`)?.value   || '').trim() : '';
+  const preNome  = needPre ? (document.getElementById(`pre-${audId}`)?.value       || '').trim() : '';
+  const preEmail = needPre ? (document.getElementById(`pre-email-${audId}`)?.value || '').trim().toLowerCase() : '';
+  const preCel   = needPre ? (document.getElementById(`pre-cel-${audId}`)?.value   || '').trim() : '';
+
+  if (needAdv) patch.advogado       = advNome;
+  if (needPre) patch.dados_preposto = preNome;
+
   msg.style.color = '#6B7280';
   msg.textContent = 'Salvando…';
   try {
+    // 1. Atualiza a audiência
     const r = await fetch(`${sbUrl}/rest/v1/pauta_audiencias?id=eq.${encodeURIComponent(audId)}`, {
       method: 'PATCH',
       headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify(patch)
     });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
+
+    // 2. Upsert correspondente advogado (se email informado)
+    if (needAdv && advEmail) {
+      const advRec = { id: `corr-adv-${advEmail.replace(/[^a-z0-9]/g,'-')}`, nome: advNome, email: advEmail, celular: advCel, tipo: 'advogado', created_at: new Date().toISOString() };
+      await fetch(`${sbUrl}/rest/v1/correspondentes`, {
+        method: 'POST',
+        headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(advRec)
+      });
+    }
+    // 3. Upsert correspondente preposto (se email informado)
+    if (needPre && preEmail) {
+      const preRec = { id: `corr-pre-${preEmail.replace(/[^a-z0-9]/g,'-')}`, nome: preNome, email: preEmail, celular: preCel, tipo: 'preposto', created_at: new Date().toISOString() };
+      await fetch(`${sbUrl}/rest/v1/correspondentes`, {
+        method: 'POST',
+        headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(preRec)
+      });
+    }
+
     msg.style.color = '#1B7A4E';
-    msg.textContent = '✓ Salvo!';
+    msg.textContent = '✓ Salvo!' + ((needAdv && advEmail)||(needPre && preEmail) ? ' Correspondente(s) cadastrado(s).' : '');
   } catch(e) {
     msg.style.color = '#DC2626';
     msg.textContent = 'Erro ao salvar.';
