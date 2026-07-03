@@ -15,6 +15,61 @@ services:
       - key: SUPABASE_KEY
         sync: false
 
+  # ── Cron: notificações WhatsApp — 1 dia antes da audiência ────────────────
+  # BRT (UTC-3): 08:00 → 11:00 UTC
+  - type: cron
+    name: falaw-whatsapp-notify
+    runtime: docker
+    dockerfilePath: ../pje-scraper/Dockerfile
+    dockerContext: ../pje-scraper
+    region: oregon
+    plan: starter
+    schedule: "0 11 * * *"
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: EVOLUTION_API_URL
+        sync: false
+      - key: EVOLUTION_API_KEY
+        sync: false
+      - key: EVOLUTION_INSTANCE
+        value: falaw
+    dockerCommand: python whatsapp_notify.py
+
+  # ── Evolution API — WhatsApp Business ─────────────────────────────────────
+  - type: web
+    name: falaw-evolution-api
+    runtime: docker
+    dockerfilePath: ./evolution-api/Dockerfile
+    dockerContext: ./evolution-api
+    region: oregon
+    plan: starter
+    envVars:
+      - key: AUTHENTICATION_API_KEY
+        sync: false
+      - key: AUTHENTICATION_TYPE
+        value: apikey
+      - key: DATABASE_ENABLED
+        value: "false"
+      - key: STORE_MESSAGES
+        value: "false"
+      - key: STORE_MESSAGE_UP
+        value: "false"
+      - key: STORE_CONTACTS
+        value: "false"
+      - key: STORE_CHATS
+        value: "false"
+      - key: DEL_INSTANCE
+        value: "false"
+      - key: LOG_LEVEL
+        value: "ERROR,WARN,INFO"
+    disk:
+      name: evolution-data
+      mountPath: /evolution/instances
+      sizeGB: 1
+
   # ── API CockroachDB ───────────────────────────────────────────────────────
   - type: web
     name: falaw-cockroach-api
