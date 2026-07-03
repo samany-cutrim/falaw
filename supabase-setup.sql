@@ -406,7 +406,8 @@ CREATE TABLE IF NOT EXISTS correspondentes (
   id         TEXT PRIMARY KEY,
   nome       TEXT NOT NULL DEFAULT '',
   email      TEXT NOT NULL,
-  tipo       TEXT NOT NULL DEFAULT 'advogado' CHECK (tipo IN ('advogado','preposto')),
+  celular    TEXT DEFAULT '',
+  tipo       TEXT NOT NULL DEFAULT 'advogado' CHECK (tipo IN ('advogado','preposto','admin')),
   code       TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -415,6 +416,26 @@ DROP POLICY IF EXISTS "anon full access correspondentes" ON correspondentes;
 CREATE POLICY "anon full access correspondentes"
   ON correspondentes FOR ALL TO anon
   USING (true) WITH CHECK (true);
+-- Migrações:
+ALTER TABLE correspondentes ADD COLUMN IF NOT EXISTS celular TEXT DEFAULT '';
+ALTER TABLE correspondentes DROP CONSTRAINT IF EXISTS correspondentes_tipo_check;
+ALTER TABLE correspondentes ADD CONSTRAINT correspondentes_tipo_check
+  CHECK (tipo IN ('advogado','preposto','admin'));
 
--- Migra��o: orientacao_enviada (persist�ncia cross-device do checkbox do escrit�rio)
+-- Migra��o: orientacao_enviada (persist�ncia cross-device do checkbox do escrit�rio)
 ALTER TABLE pauta_audiencias ADD COLUMN IF NOT EXISTS orientacao_enviada BOOLEAN NOT NULL DEFAULT FALSE;
+-- Migrações recentes:
+ALTER TABLE pauta_audiencias ADD COLUMN IF NOT EXISTS testemunhas      TEXT NOT NULL DEFAULT '';
+ALTER TABLE pauta_audiencias ADD COLUMN IF NOT EXISTS corr_tipo_envio  TEXT DEFAULT NULL;
+
+-- EQUIPE INTERNA (advogados do escritório — usado para notificação WhatsApp)
+CREATE TABLE IF NOT EXISTS equipe (
+  id      TEXT PRIMARY KEY,
+  nome    TEXT,
+  email   TEXT,
+  celular TEXT,
+  cargo   TEXT
+);
+ALTER TABLE equipe ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "anon full access" ON equipe;
+CREATE POLICY "anon full access" ON equipe FOR ALL TO anon USING (true) WITH CHECK (true);
