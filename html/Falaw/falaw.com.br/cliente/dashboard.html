@@ -2289,6 +2289,9 @@ async function loadPautaAdmin() {
     return;
   }
 
+  // Armazena rows para o modal acessar
+  window._adminCorrRows = rows;
+
   function tipoLabel(t) {
     return t === 'ambos' ? 'Advogado + Preposto' : t === 'preposto' ? 'Só Preposto' : 'Só Advogado';
   }
@@ -2314,48 +2317,26 @@ async function loadPautaAdmin() {
     html += `<div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${clr};margin:24px 0 10px;padding-bottom:6px;border-bottom:${bdr}">${isHoje?'● HOJE — ':''}${fmtDia(d)}</div>`;
     byDate[d].forEach(a => {
       const tc = tipoColor(a.corr_tipo_envio);
-      const needAdv  = a.corr_tipo_envio === 'advogado' || a.corr_tipo_envio === 'ambos';
-      const needPre  = a.corr_tipo_envio === 'preposto' || a.corr_tipo_envio === 'ambos';
-      const cardOp   = isPast ? 'opacity:0.55;' : '';
-      html += `<div id="admcorr-card-${a.id}" style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px 16px;margin-bottom:10px;border-left:4px solid ${tc};${cardOp}">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-          <span style="font-size:13px;font-weight:700;color:#111">${escHtml(a.horario||'—')}</span>
-          <span style="background:${tc};color:#fff;font-size:9px;padding:2px 8px;border-radius:2px">${tipoLabel(a.corr_tipo_envio)}</span>
-          <span style="font-size:9px;color:#6B7280;margin-left:auto">${escHtml(a.tipo_audiencia||'')} ${escHtml(a.modalidade?'· '+a.modalidade:'')}</span>
+      const needAdv = a.corr_tipo_envio === 'advogado' || a.corr_tipo_envio === 'ambos';
+      const needPre = a.corr_tipo_envio === 'preposto' || a.corr_tipo_envio === 'ambos';
+      const cardOp  = isPast ? 'opacity:0.6;' : '';
+      const assigned = (needAdv ? !!a.advogado : true) && (needPre ? !!a.dados_preposto : true);
+      html += `<div id="admcorr-card-${a.id}" style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:12px 16px;margin-bottom:8px;border-left:4px solid ${tc};${cardOp}display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-size:13px;font-weight:900;font-family:monospace;color:#111">${escHtml(a.horario||'—')}</span>
+            <span style="background:${tc};color:#fff;font-size:9px;padding:2px 7px;border-radius:2px;font-weight:700">${tipoLabel(a.corr_tipo_envio)}</span>
+            ${assigned ? '<span style="font-size:9px;color:#1B7A4E;font-weight:700">✓ Atribuído</span>' : '<span style="font-size:9px;color:#F59E0B;font-weight:700">⚠ Pendente</span>'}
+          </div>
+          <div style="font-size:12px;font-weight:700;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(a.processo||'—')}</div>
+          ${a.vara ? `<div style="font-size:10px;color:#9CA3AF">${escHtml(a.vara)}</div>` : ''}
+          ${needAdv && a.advogado ? `<div style="font-size:10px;color:#1B7A4E;margin-top:2px">👤 Adv: <b>${escHtml(a.advogado)}</b></div>` : ''}
+          ${needPre && a.dados_preposto ? `<div style="font-size:10px;color:#0D2B5E;margin-top:1px">🏷 Pre: <b>${escHtml(a.dados_preposto)}</b></div>` : ''}
         </div>
-        <div style="font-size:12px;font-weight:700;color:#111;margin-bottom:2px">${escHtml(a.processo||'—')}</div>
-        ${a.vara ? `<div style="font-size:11px;color:#6B7280;margin-bottom:6px">${escHtml(a.vara)}</div>` : ''}
-        ${a.reclamada ? `<div style="font-size:11px;color:#374151;margin-bottom:10px">Reclamada: <b>${escHtml(a.reclamada)}</b></div>` : ''}
-        ${a.comentarios ? `<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:#0c4a6e"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#0284c7;display:block;margin-bottom:3px">Comentários</span>${escHtml(a.comentarios).replace(/\n/g,'<br>')}</div>` : ''}
-        <div style="display:flex;flex-direction:column;gap:12px">
-          ${needAdv ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:10px 12px">
-            <div style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#1B7A4E;font-weight:700;margin-bottom:8px">Advogado</div>
-            <div style="display:flex;flex-direction:column;gap:6px">
-              <input id="adv-${a.id}" type="text" value="${escHtml(a.advogado||'')}" placeholder="Nome"
-                style="border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
-              <input id="adv-email-${a.id}" type="email" placeholder="E-mail (para acesso ao portal)"
-                style="border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
-              <input id="adv-cel-${a.id}" type="tel" placeholder="Celular / WhatsApp"
-                style="border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
-            </div>
-          </div>` : ''}
-          ${needPre ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:10px 12px">
-            <div style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#0D2B5E;font-weight:700;margin-bottom:8px">Preposto</div>
-            <div style="display:flex;flex-direction:column;gap:6px">
-              <input id="pre-${a.id}" type="text" value="${escHtml(a.dados_preposto||'')}" placeholder="Nome"
-                style="border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
-              <input id="pre-email-${a.id}" type="email" placeholder="E-mail (para acesso ao portal)"
-                style="border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
-              <input id="pre-cel-${a.id}" type="tel" placeholder="Celular / WhatsApp"
-                style="border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
-            </div>
-          </div>` : ''}
-        </div>
-        <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
-          <button onclick="salvarCorrAdmin('${a.id}', ${needAdv}, ${needPre})"
-            style="background:#0D2B5E;color:#fff;border:none;padding:7px 18px;border-radius:3px;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-weight:700">Salvar</button>
-          <span id="admcorr-msg-${a.id}" style="font-size:11px;color:#6B7280"></span>
-        </div>
+        <button onclick="abrirModalCorrAdmin('${a.id}')"
+          style="background:#0D2B5E;color:#fff;border:none;padding:8px 16px;border-radius:4px;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-weight:700;white-space:nowrap;flex-shrink:0">
+          ${assigned ? '✏️ Editar' : '+ Atribuir'}
+        </button>
       </div>`;
     });
   });
@@ -2363,26 +2344,94 @@ async function loadPautaAdmin() {
   el.innerHTML = html;
 }
 
+function abrirModalCorrAdmin(audId) {
+  const a = (window._adminCorrRows || []).find(r => r.id === audId);
+  if (!a) return;
+  const needAdv = a.corr_tipo_envio === 'advogado' || a.corr_tipo_envio === 'ambos';
+  const needPre = a.corr_tipo_envio === 'preposto' || a.corr_tipo_envio === 'ambos';
+  const tipoLabels = { advogado: 'Só Advogado', preposto: 'Só Preposto', ambos: 'Advogado + Preposto' };
+  const tcMap = { ambos: '#7C3AED', preposto: '#0D2B5E', advogado: '#1B7A4E' };
+  const tc = tcMap[a.corr_tipo_envio] || '#374151';
+
+  const existing = document.getElementById('modal-corr-admin');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-corr-admin';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:8px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+      <div style="padding:20px 24px 16px;border-bottom:1px solid #e5e7eb;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-family:monospace;font-size:18px;font-weight:900;color:#111">${escHtml(a.horario||'—')}</span>
+            <span style="background:${tc};color:#fff;font-size:9px;padding:2px 8px;border-radius:2px;font-weight:700">${tipoLabels[a.corr_tipo_envio]||''}</span>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:#111">${escHtml(a.processo||'—')}</div>
+          ${a.vara ? `<div style="font-size:11px;color:#9CA3AF">${escHtml(a.vara)}</div>` : ''}
+          ${a.reclamada ? `<div style="font-size:11px;color:#374151;margin-top:2px">Reclamada: <b>${escHtml(a.reclamada)}</b></div>` : ''}
+          ${a.comentarios ? `<div style="margin-top:8px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px;padding:7px 10px;font-size:11px;color:#0c4a6e"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#0284c7;display:block;margin-bottom:2px">Comentários</span>${escHtml(a.comentarios)}</div>` : ''}
+        </div>
+        <button onclick="document.getElementById('modal-corr-admin').remove()" style="background:none;border:none;font-size:20px;color:#9CA3AF;cursor:pointer;padding:0;line-height:1;flex-shrink:0">×</button>
+      </div>
+      <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+        ${needAdv ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:14px 16px">
+          <div style="font-family:monospace;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#1B7A4E;font-weight:700;margin-bottom:10px">Advogado</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <input id="modal-adv-nome" type="text" value="${escHtml(a.advogado||'')}" placeholder="Nome completo"
+              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
+            <input id="modal-adv-email" type="email" placeholder="E-mail (acesso ao portal)"
+              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
+            <input id="modal-adv-cel" type="tel" placeholder="Celular / WhatsApp"
+              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
+          </div>
+        </div>` : ''}
+        ${needPre ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:14px 16px">
+          <div style="font-family:monospace;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#0D2B5E;font-weight:700;margin-bottom:10px">Preposto</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <input id="modal-pre-nome" type="text" value="${escHtml(a.dados_preposto||'')}" placeholder="Nome completo"
+              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
+            <input id="modal-pre-email" type="email" placeholder="E-mail (acesso ao portal)"
+              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
+            <input id="modal-pre-cel" type="tel" placeholder="Celular / WhatsApp"
+              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
+          </div>
+        </div>` : ''}
+      </div>
+      <div style="padding:16px 24px;border-top:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <span id="modal-corr-msg" style="font-size:11px;color:#6B7280"></span>
+        <div style="display:flex;gap:8px">
+          <button onclick="document.getElementById('modal-corr-admin').remove()"
+            style="background:#F3F4F6;color:#374151;border:none;padding:9px 20px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer">Cancelar</button>
+          <button onclick="salvarCorrAdmin('${audId}', ${needAdv}, ${needPre})"
+            style="background:#0D2B5E;color:#fff;border:none;padding:9px 20px;border-radius:4px;font-family:monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-weight:700">Salvar</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  // Foca no primeiro input
+  setTimeout(() => overlay.querySelector('input')?.focus(), 50);
+}
+
 async function salvarCorrAdmin(audId, needAdv, needPre) {
-  const msg   = document.getElementById(`admcorr-msg-${audId}`);
+  const msg   = document.getElementById('modal-corr-msg');
   const sbUrl = (window.SB_URL || '').trim();
   const sbKey = (window.SB_KEY || '').trim();
   const patch = {};
 
-  const advNome  = needAdv ? (document.getElementById(`adv-${audId}`)?.value       || '').trim() : '';
-  const advEmail = needAdv ? (document.getElementById(`adv-email-${audId}`)?.value || '').trim().toLowerCase() : '';
-  const advCel   = needAdv ? (document.getElementById(`adv-cel-${audId}`)?.value   || '').trim() : '';
-  const preNome  = needPre ? (document.getElementById(`pre-${audId}`)?.value       || '').trim() : '';
-  const preEmail = needPre ? (document.getElementById(`pre-email-${audId}`)?.value || '').trim().toLowerCase() : '';
-  const preCel   = needPre ? (document.getElementById(`pre-cel-${audId}`)?.value   || '').trim() : '';
+  const advNome  = needAdv ? (document.getElementById('modal-adv-nome')?.value  || '').trim() : '';
+  const advEmail = needAdv ? (document.getElementById('modal-adv-email')?.value || '').trim().toLowerCase() : '';
+  const advCel   = needAdv ? (document.getElementById('modal-adv-cel')?.value   || '').trim() : '';
+  const preNome  = needPre ? (document.getElementById('modal-pre-nome')?.value  || '').trim() : '';
+  const preEmail = needPre ? (document.getElementById('modal-pre-email')?.value || '').trim().toLowerCase() : '';
+  const preCel   = needPre ? (document.getElementById('modal-pre-cel')?.value   || '').trim() : '';
 
   if (needAdv) patch.advogado       = advNome;
   if (needPre) patch.dados_preposto = preNome;
 
-  msg.style.color = '#6B7280';
-  msg.textContent = 'Salvando…';
+  if (msg) { msg.style.color = '#6B7280'; msg.textContent = 'Salvando…'; }
   try {
-    // 1. Atualiza a audiência
     const r = await fetch(`${sbUrl}/rest/v1/pauta_audiencias?id=eq.${encodeURIComponent(audId)}`, {
       method: 'PATCH',
       headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -2390,7 +2439,6 @@ async function salvarCorrAdmin(audId, needAdv, needPre) {
     });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
 
-    // 2. Upsert correspondente advogado (se email informado)
     if (needAdv && advEmail) {
       const advRec = { id: `corr-adv-${advEmail.replace(/[^a-z0-9]/g,'-')}`, nome: advNome, email: advEmail, celular: advCel, tipo: 'advogado', created_at: new Date().toISOString() };
       await fetch(`${sbUrl}/rest/v1/correspondentes`, {
@@ -2399,7 +2447,6 @@ async function salvarCorrAdmin(audId, needAdv, needPre) {
         body: JSON.stringify(advRec)
       });
     }
-    // 3. Upsert correspondente preposto (se email informado)
     if (needPre && preEmail) {
       const preRec = { id: `corr-pre-${preEmail.replace(/[^a-z0-9]/g,'-')}`, nome: preNome, email: preEmail, celular: preCel, tipo: 'preposto', created_at: new Date().toISOString() };
       await fetch(`${sbUrl}/rest/v1/correspondentes`, {
@@ -2409,11 +2456,17 @@ async function salvarCorrAdmin(audId, needAdv, needPre) {
       });
     }
 
-    msg.style.color = '#1B7A4E';
-    msg.textContent = '✓ Salvo!' + ((needAdv && advEmail)||(needPre && preEmail) ? ' Correspondente(s) cadastrado(s).' : '');
+    // Atualiza cache local e card
+    const row = (window._adminCorrRows || []).find(x => x.id === audId);
+    if (row) { if (needAdv) row.advogado = advNome; if (needPre) row.dados_preposto = preNome; }
+
+    if (msg) { msg.style.color = '#1B7A4E'; msg.textContent = '✓ Salvo!'; }
+    setTimeout(() => {
+      document.getElementById('modal-corr-admin')?.remove();
+      loadPautaAdmin(); // recarrega a lista
+    }, 700);
   } catch(e) {
-    msg.style.color = '#DC2626';
-    msg.textContent = 'Erro ao salvar.';
+    if (msg) { msg.style.color = '#DC2626'; msg.textContent = 'Erro ao salvar.'; }
   }
 }
 
