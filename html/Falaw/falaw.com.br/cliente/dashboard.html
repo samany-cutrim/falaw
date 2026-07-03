@@ -905,6 +905,10 @@ function showTab(name) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
+  // Hide dashboard tabs when on pauta tab
+  const tb = document.getElementById('dashTabBar');
+  if (tb && tb.style.display !== 'none') tb._wasVisible = true;
+  if (tb) tb.style.display = (name === 'pauta') ? 'none' : (tb._wasVisible ? '' : tb.style.display);
 }
 
 /* ─── DOWNLOAD ──────────────────────────────────────── */
@@ -2251,7 +2255,8 @@ async function salvarTestemunhas(audId) {
       document.getElementById('modal-testemunhas')?.remove();
       // Recarrega o card atualizando a lista
       const sess = JSON.parse(sessionStorage.getItem('falaw_session') || '{}');
-      if (sess.name) loadPautaCorrespondente(sess.name, sess.email);
+      const _comp = (window._clientData && window._clientData.company) || sess.company || sess.name || '';
+      if (_comp) loadPautaCliente(_comp);
     }, 900);
   } catch(e) {
     msg.style.color = '#DC2626';
@@ -2503,6 +2508,7 @@ async function loadPautaEscritorio() {
   window._escCalSel   = null;
   window._escCalYear  = +today.slice(0,4);
   window._escCalMonth = +today.slice(5,7) - 1;
+  window._clientRenderFn = null; // escritório usa _escRenderRows
 
   // Mostra barra de calendário e barra de busca
   const calBar = document.getElementById('pauta-cal-bar');
@@ -2614,7 +2620,11 @@ function _escApplyFilters() {
   }
   _escRenderCalGrid();
   try {
-    _escRenderRows(filtered, today);
+    if (window._clientRenderFn) {
+      window._clientRenderFn(filtered);
+    } else {
+      _escRenderRows(filtered, today);
+    }
   } catch(e) {
     console.error('[_escRenderRows filter]', e);
     const _el = document.getElementById('pauta-list');
@@ -3149,6 +3159,63 @@ function _clienteToken(company) {
   return _normalizarNomeCliente(company).split(/\s+/)[0];
 }
 
+// Render client rows into pauta-list (client-specific, simpler than _escRenderRows)
+function _clientRenderRows(rows) {
+  const el = document.getElementById('pauta-list');
+  if (!el) return;
+  const today = window._escToday || new Date().toISOString().slice(0,10);
+  if (!rows.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px 0;color:#aaa;font-size:13px">Nenhuma audiência encontrada.</div>';
+    return;
+  }
+  const STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62828', cancelada:'#9CA3AF' };
+  const STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#F3F4F6' };
+  const TIPO_LABEL   = { 'INICIAL':'Inicial','INSTRUÇÃO':'Instrução','CONCILIAÇÃO':'Conciliação','UNA':'Una' };
+  const MOD_LABEL    = { 'VIRTUAL':'Virtual','PRESENCIAL':'Presencial','HÍBRIDA':'Híbrida' };
+  function fmtDia(iso) {
+    if (!iso) return '—';
+    const [y,m,d] = iso.split('-');
+    const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    const dias = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    const dow = dias[new Date(iso+'T12:00:00').getDay()];
+    return `${dow}, ${d} ${meses[+m-1]} ${y}`;
+  }
+  const byDate = {};
+  rows.forEach(a => { const k = a.data_audiencia||''; if (!byDate[k]) byDate[k]=[]; byDate[k].push(a); });
+  let html = '';
+  Object.keys(byDate).sort().forEach(d => {
+    const isHoje   = d === today;
+    const isPast   = d < today;
+    const dateColor  = isHoje ? '#0D2B5E' : isPast ? '#D1D5DB' : '#6B7280';
+    const dateBorder = isHoje ? '2px solid #0D2B5E' : '1px solid #e5e7eb';
+    const cnt = byDate[d].length;
+    html += `<div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${dateColor};margin:24px 0 10px;padding-bottom:6px;border-bottom:${dateBorder};display:flex;align-items:center;gap:8px"><span>${isHoje?'● HOJE — ':''}${fmtDia(d)}</span><span style="font-size:9px;background:${isHoje?'#0D2B5E':'#e5e7eb'};color:${isHoje?'#fff':'#6B7280'};padding:1px 7px;border-radius:10px;font-weight:700">${cnt} audiência${cnt!==1?'s':''}</span></div>`;
+    byDate[d].forEach(a => {
+      const sc  = STATUS_COLOR[a.status]||'#374151';
+      const sb2 = STATUS_BG[a.status]||'#F9FAFB';
+      const cardOp = isPast ? 'opacity:0.55;' : '';
+      const tipo = a.tipo_audiencia ? `<span style="background:#0D2B5E;color:#fff;font-size:9px;padding:2px 6px;border-radius:2px;margin-left:4px">${TIPO_LABEL[a.tipo_audiencia]||a.tipo_audiencia}</span>` : '';
+      const mod  = a.modalidade ? `<span style="background:#e0e7ff;color:#3730a3;font-size:9px;padding:2px 6px;border-radius:2px;margin-left:4px">${MOD_LABEL[a.modalidade]||a.modalidade}</span>` : '';
+      const linkHtml  = a.link ? `<a href="${a.link}" target="_blank" rel="noopener" style="font-size:11px;color:#2563EB;text-decoration:none;display:inline-block;margin-top:6px">🔗 Entrar na videoconferência</a>` : '';
+      const senhaHtml = a.id_senha ? `<div style="font-size:11px;color:#6B7280;margin-top:3px;font-family:monospace">${a.id_senha}</div>` : '';
+      html += `<div style="background:#fff;border:1px solid #E5E7EB;border-radius:6px;padding:14px 16px;margin-bottom:10px;border-left:4px solid ${sc};${cardOp}">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:700;color:#111827">${a.horario||'—'}</span>${tipo}${mod}
+          <span style="background:${sb2};color:${sc};font-size:9px;padding:2px 6px;border-radius:10px;font-weight:600;text-transform:uppercase;margin-left:4px">${a.status||''}</span>
+        </div>
+        <div style="font-size:12px;color:#374151;margin-top:6px">${a.processo||'—'}</div>
+        ${a.vara ? `<div style="font-size:11px;color:#6B7280;margin-top:2px">${a.vara}</div>` : ''}
+        ${a.reclamante ? `<div style="font-size:11px;color:#6B7280;margin-top:2px">Reclamante: ${a.reclamante}</div>` : ''}
+        ${a.testemunhas ? `<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border-radius:4px;border:1px solid #fde68a;font-size:11px"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#92400e;display:block;margin-bottom:3px">Testemunhas</span><b style="color:#78350f">${a.testemunhas.replace(/\n/g,'<br>')}</b></div>` : ''}
+        ${linkHtml}${senhaHtml}
+        ${a.status !== 'cancelada' ? `<div style="margin-top:10px"><button onclick="abrirEditarTestemunhas('${a.id}', ${JSON.stringify(a.testemunhas||'')})"
+          style="background:#fff;color:#374151;border:1px solid #d1d5db;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;border-radius:3px;cursor:pointer;font-weight:700">✏️ ${a.testemunhas ? 'Editar Testemunhas' : 'Informar Testemunhas'}</button></div>` : ''}
+      </div>`;
+    });
+  });
+  el.innerHTML = html;
+}
+
 async function loadPautaCliente(company) {
   const el = document.getElementById('pauta-list');
   if (!el) return;
@@ -3173,9 +3240,11 @@ async function loadPautaCliente(company) {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
 
+      const MIN_DATE = '2026-07-01';
       // 1ª tentativa: campo `cliente` exato normalizado (gerado pelo Python)
       let { data } = await sb.from('pauta_audiencias')
         .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado,testemunhas')
+        .gte('data_audiencia', MIN_DATE)
         .ilike('cliente', clienteNorm)
         .order('data_audiencia', { ascending: true })
         .order('horario',        { ascending: true });
@@ -3185,6 +3254,7 @@ async function loadPautaCliente(company) {
       if (!rows.length) {
         ({ data } = await sb.from('pauta_audiencias')
           .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado,testemunhas')
+          .gte('data_audiencia', MIN_DATE)
           .ilike('cliente', `${clienteToken}%`)
           .order('data_audiencia', { ascending: true })
           .order('horario',        { ascending: true }));
@@ -3193,11 +3263,11 @@ async function loadPautaCliente(company) {
         }
       }
 
-      // 3ª tentativa: campo `reclamada` contém o nome da empresa (cobre casos onde
-      // o Python ainda não processou/populou o campo `cliente`)
+      // 3ª tentativa: campo `reclamada` contém o nome da empresa
       if (!rows.length) {
         ({ data } = await sb.from('pauta_audiencias')
           .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado,testemunhas')
+          .gte('data_audiencia', MIN_DATE)
           .ilike('reclamada', `%${clienteToken}%`)
           .order('data_audiencia', { ascending: true })
           .order('horario',        { ascending: true }));
@@ -3207,67 +3277,32 @@ async function loadPautaCliente(company) {
   }
 
   if (!rows.length) {
-    el.innerHTML = '<div style="text-align:center;padding:40px 0;color:#aaa;font-size:13px">Nenhuma audiência encontrada.</div>';
+    el.innerHTML = '<div style="text-align:center;padding:40px 0;color:#aaa;font-size:13px">Nenhuma audiência encontrada a partir de julho.</div>';
     return;
   }
 
-  const STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62828', cancelada:'#9CA3AF' };
-  const STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#F3F4F6' };
-  const TIPO_LABEL   = { 'INICIAL':'Inicial','INSTRUÇÃO':'Instrução','CONCILIAÇÃO':'Conciliação','UNA':'Una' };
-  const MOD_LABEL    = { 'VIRTUAL':'Virtual','PRESENCIAL':'Presencial','HÍBRIDA':'Híbrida' };
+  // Configura calendário para o cliente (reusa mesma infra do escritório)
+  window._escRows  = rows;
+  window._escToday = today;
+  window._escCalSel   = null;
+  window._escCalYear  = +today.slice(0,4);
+  window._escCalMonth = +today.slice(5,7) - 1;
+  window._clientRenderFn = _clientRenderRows;
 
-  function fmtDia(iso) {
-    if (!iso) return '—';
-    const [y,m,d] = iso.split('-');
-    const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-    return `${d} ${meses[+m-1]} ${y}`;
+  const calBar = document.getElementById('pauta-cal-bar');
+  if (calBar) calBar.style.display = '';
+
+  // Navega para o mês da audiência mais próxima futura
+  const futuras = rows.filter(r => (r.data_audiencia||'') >= today);
+  const verPass = document.getElementById('pauta-ver-passadas');
+  if (!futuras.length && verPass) verPass.checked = true;
+  const ancora = futuras.length ? futuras[0] : rows[rows.length - 1];
+  if (ancora && ancora.data_audiencia) {
+    window._escCalYear  = +ancora.data_audiencia.slice(0,4);
+    window._escCalMonth = +ancora.data_audiencia.slice(5,7) - 1;
   }
-
-  // Agrupar por data
-  const byDate = {};
-  rows.forEach(a => { const k = a.data_audiencia||''; if (!byDate[k]) byDate[k]=[]; byDate[k].push(a); });
-
-  let html = '';
-  Object.keys(byDate).sort().forEach(d => {
-    const isHoje   = d === today;
-    const isPast   = d < today;
-    const dateColor = isHoje ? '#0D2B5E' : isPast ? '#D1D5DB' : '#6B7280';
-    const dateBorder = isHoje ? '2px solid #0D2B5E' : '1px solid #e5e7eb';
-    const datePrefix = isHoje ? '● HOJE — ' : '';
-    html += `<div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${dateColor};margin:24px 0 10px;padding-bottom:6px;border-bottom:${dateBorder}">${datePrefix}${fmtDia(d)}</div>`;
-    byDate[d].forEach(a => {
-      const sc  = STATUS_COLOR[a.status]||'#374151';
-      const sb2 = STATUS_BG[a.status]||'#F9FAFB';
-      // Cards passados: opacidade reduzida
-      const cardOpacity = isPast ? 'opacity:0.55;' : '';
-      const cardBorderLeft = isHoje ? `border-left:4px solid ${sc};box-shadow:0 1px 6px rgba(13,43,94,.10);` : `border-left:4px solid ${sc};`;
-      const tipo = a.tipo_audiencia ? `<span style="background:#0D2B5E;color:#fff;font-size:9px;padding:2px 6px;border-radius:2px;margin-left:4px">${TIPO_LABEL[a.tipo_audiencia]||a.tipo_audiencia}</span>` : '';
-      const mod  = a.modalidade ? `<span style="background:#e0e7ff;color:#3730a3;font-size:9px;padding:2px 6px;border-radius:2px;margin-left:4px">${MOD_LABEL[a.modalidade]||a.modalidade}</span>` : '';
-      const linkHtml = a.link ? `<a href="${a.link}" target="_blank" rel="noopener" style="font-size:11px;color:#2563EB;text-decoration:none;display:inline-block;margin-top:6px">🔗 Entrar na videoconferência</a>` : '';
-      const senhaHtml = a.id_senha ? `<div style="font-size:11px;color:#6B7280;margin-top:3px;font-family:monospace">${a.id_senha}</div>` : '';
-      html += `<div style="background:#fff;border:1px solid #E5E7EB;border-radius:6px;padding:14px 16px;margin-bottom:10px;${cardBorderLeft}${cardOpacity}">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span style="font-size:13px;font-weight:700;color:#111827">${a.horario||'—'}</span>
-            ${tipo}${mod}
-            <span style="background:${sb2};color:${sc};font-size:9px;padding:2px 6px;border-radius:10px;font-weight:600;text-transform:uppercase;margin-left:4px">${a.status||''}</span>
-          </div>
-        </div>
-        <div style="font-size:12px;color:#374151;margin-top:6px">${a.processo||'—'}</div>
-        ${a.vara ? `<div style="font-size:11px;color:#6B7280;margin-top:2px">${a.vara}</div>` : ''}
-        ${a.reclamante ? `<div style="font-size:11px;color:#6B7280;margin-top:2px">Reclamante: ${a.reclamante}</div>` : ''}
-        ${a.testemunhas ? `<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border-radius:4px;border:1px solid #fde68a;font-size:11px"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#92400e;display:block;margin-bottom:3px">Testemunhas</span><b style="color:#78350f">${a.testemunhas.replace(/\n/g,'<br>')}</b></div>` : ''}
-        ${linkHtml}${senhaHtml}
-        ${a.status !== 'cancelada' ? `<div style="margin-top:10px"><button onclick="abrirEditarTestemunhas('${a.id}', ${JSON.stringify(a.testemunhas||'')})"
-          style="background:#fff;color:#374151;border:1px solid #d1d5db;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;border-radius:3px;cursor:pointer;font-weight:700">✏️ ${a.testemunhas ? 'Editar Testemunhas' : 'Informar Testemunhas'}</button></div>` : ''}
-      </div>`;
-    });
-  });
-
-  // Rola até a data de hoje (ou a próxima futura) automaticamente
-  el.innerHTML = html;
-  const todayEl = el.querySelector('[data-date="' + today + '"]');
-  if (todayEl) todayEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  _escRenderCalGrid();
+  _clientRenderRows(futuras.length ? futuras : rows);
 }
 
 /* ─── INIT ──────────────────────────────────────────── */
