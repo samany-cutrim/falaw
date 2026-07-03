@@ -2181,6 +2181,8 @@ async function loadPautaCorrespondente(nome, email) {
       <!-- id/senha + link -->
       ${(r.id_senha && r.id_senha !== '-') ? `<div style="font-family:monospace;font-size:10px;color:#6B7280;margin-bottom:8px">${escHtml(r.id_senha)}</div>` : ''}
       ${linkHtml ? `<div style="margin-bottom:10px">${linkHtml}</div>` : ''}
+      <!-- comentários do escritório -->
+      ${r.comentarios ? `<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px;padding:8px 10px;margin-bottom:10px;font-size:11px;color:#0c4a6e"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#0284c7;display:block;margin-bottom:3px">Comentários</span>${escHtml(r.comentarios).replace(/\n/g,'<br>')}</div>` : ''}
       <!-- orientação enviada -->
       <div style="display:flex;align-items:center;gap:6px;padding-top:8px;border-top:1px solid #f3f4f6">
         ${r.orientacao_enviada
@@ -2273,7 +2275,7 @@ async function loadPautaAdmin() {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
       const { data } = await sb.from('pauta_audiencias')
-        .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,advogado,dados_preposto,corr_tipo_envio')
+        .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,advogado,dados_preposto,corr_tipo_envio,comentarios')
         .not('corr_tipo_envio', 'is', null)
         .neq('status', 'cancelada')
         .order('data_audiencia', { ascending: true })
@@ -2324,6 +2326,7 @@ async function loadPautaAdmin() {
         <div style="font-size:12px;font-weight:700;color:#111;margin-bottom:2px">${escHtml(a.processo||'—')}</div>
         ${a.vara ? `<div style="font-size:11px;color:#6B7280;margin-bottom:6px">${escHtml(a.vara)}</div>` : ''}
         ${a.reclamada ? `<div style="font-size:11px;color:#374151;margin-bottom:10px">Reclamada: <b>${escHtml(a.reclamada)}</b></div>` : ''}
+        ${a.comentarios ? `<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:#0c4a6e"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#0284c7;display:block;margin-bottom:3px">Comentários</span>${escHtml(a.comentarios).replace(/\n/g,'<br>')}</div>` : ''}
         <div style="display:flex;flex-direction:column;gap:12px">
           ${needAdv ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:10px 12px">
             <div style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#1B7A4E;font-weight:700;margin-bottom:8px">Advogado</div>
@@ -3025,6 +3028,8 @@ function _escRenderRows(rows, today) {
         </div>` : ''}
 
         ${linkHtml||senhaHtml ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${linkHtml}${senhaHtml}</div>` : ''}
+
+        ${obs ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px;font-size:11px;color:#78350f"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#92400e;display:block;margin-bottom:3px">Orientação</span>${escHtml(obs).replace(/\n/g,'<br>')}</div>` : ''}
 
         <div style="border-top:1px solid #f3f4f6;padding-top:9px;display:flex;flex-direction:column;gap:6px">
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:${sent?'#1B7A4E':'#9CA3AF'};font-size:11px;font-weight:600">
