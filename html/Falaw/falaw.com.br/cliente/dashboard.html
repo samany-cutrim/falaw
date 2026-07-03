@@ -2258,6 +2258,120 @@ async function salvarTestemunhas(audId) {
   }
 }
 
+/* ── Admin de Correspondentes ────────────────────────────────────────────── */
+async function loadPautaAdmin() {
+  const el = document.getElementById('pauta-list');
+  if (!el) return;
+  el.innerHTML = '<p style="color:#888;font-size:13px;padding:20px 0">Carregando audiências de correspondentes…</p>';
+
+  const sbUrl = (window.SB_URL || '').trim();
+  const sbKey = (window.SB_KEY || '').trim();
+  const today = new Date().toISOString().slice(0, 10);
+  let rows = [];
+
+  if (sbUrl && sbKey && typeof supabase !== 'undefined') {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { data } = await sb.from('pauta_audiencias')
+        .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,advogado,dados_preposto,corr_tipo_envio')
+        .not('corr_tipo_envio', 'is', null)
+        .neq('status', 'cancelada')
+        .order('data_audiencia', { ascending: true })
+        .order('horario', { ascending: true });
+      if (data) rows = data;
+    } catch(e) { console.warn('admin corr:', e.message); }
+  }
+
+  if (!rows.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px 0;color:#aaa;font-size:13px">Nenhuma audiência com correspondente atribuído.</div>';
+    return;
+  }
+
+  function tipoLabel(t) {
+    return t === 'ambos' ? 'Advogado + Preposto' : t === 'preposto' ? 'Só Preposto' : 'Só Advogado';
+  }
+  function tipoColor(t) {
+    return t === 'ambos' ? '#7C3AED' : t === 'preposto' ? '#0D2B5E' : '#1B7A4E';
+  }
+  function fmtDia(iso) {
+    if (!iso) return '—';
+    const [y,m,d] = iso.split('-');
+    const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    return `${d} ${meses[+m-1]} ${y}`;
+  }
+
+  const byDate = {};
+  rows.forEach(a => { const k = a.data_audiencia||''; if (!byDate[k]) byDate[k]=[]; byDate[k].push(a); });
+
+  let html = '';
+  Object.keys(byDate).sort().forEach(d => {
+    const isHoje = d === today;
+    const isPast = d < today;
+    const clr = isHoje ? '#0D2B5E' : isPast ? '#D1D5DB' : '#6B7280';
+    const bdr = isHoje ? '2px solid #0D2B5E' : '1px solid #e5e7eb';
+    html += `<div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${clr};margin:24px 0 10px;padding-bottom:6px;border-bottom:${bdr}">${isHoje?'● HOJE — ':''}${fmtDia(d)}</div>`;
+    byDate[d].forEach(a => {
+      const tc = tipoColor(a.corr_tipo_envio);
+      const needAdv  = a.corr_tipo_envio === 'advogado' || a.corr_tipo_envio === 'ambos';
+      const needPre  = a.corr_tipo_envio === 'preposto' || a.corr_tipo_envio === 'ambos';
+      const cardOp   = isPast ? 'opacity:0.55;' : '';
+      html += `<div id="admcorr-card-${a.id}" style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:14px 16px;margin-bottom:10px;border-left:4px solid ${tc};${cardOp}">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <span style="font-size:13px;font-weight:700;color:#111">${escHtml(a.horario||'—')}</span>
+          <span style="background:${tc};color:#fff;font-size:9px;padding:2px 8px;border-radius:2px">${tipoLabel(a.corr_tipo_envio)}</span>
+          <span style="font-size:9px;color:#6B7280;margin-left:auto">${escHtml(a.tipo_audiencia||'')} ${escHtml(a.modalidade?'· '+a.modalidade:'')}</span>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:#111;margin-bottom:2px">${escHtml(a.processo||'—')}</div>
+        ${a.vara ? `<div style="font-size:11px;color:#6B7280;margin-bottom:6px">${escHtml(a.vara)}</div>` : ''}
+        ${a.reclamada ? `<div style="font-size:11px;color:#374151;margin-bottom:10px">Reclamada: <b>${escHtml(a.reclamada)}</b></div>` : ''}
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${needAdv ? `<div style="display:flex;align-items:center;gap:8px">
+            <label style="font-family:monospace;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#1B7A4E;min-width:80px">Advogado</label>
+            <input id="adv-${a.id}" type="text" value="${escHtml(a.advogado||'')}" placeholder="Nome do advogado"
+              style="flex:1;border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
+          </div>` : ''}
+          ${needPre ? `<div style="display:flex;align-items:center;gap:8px">
+            <label style="font-family:monospace;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#0D2B5E;min-width:80px">Preposto</label>
+            <input id="pre-${a.id}" type="text" value="${escHtml(a.dados_preposto||'')}" placeholder="Nome do preposto"
+              style="flex:1;border:1px solid #d1d5db;border-radius:3px;padding:6px 10px;font-size:12px;font-family:inherit">
+          </div>` : ''}
+        </div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+          <button onclick="salvarCorrAdmin('${a.id}', ${needAdv}, ${needPre})"
+            style="background:#0D2B5E;color:#fff;border:none;padding:7px 18px;border-radius:3px;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-weight:700">Salvar</button>
+          <span id="admcorr-msg-${a.id}" style="font-size:11px;color:#6B7280"></span>
+        </div>
+      </div>`;
+    });
+  });
+
+  el.innerHTML = html;
+}
+
+async function salvarCorrAdmin(audId, needAdv, needPre) {
+  const msg    = document.getElementById(`admcorr-msg-${audId}`);
+  const sbUrl  = (window.SB_URL || '').trim();
+  const sbKey  = (window.SB_KEY || '').trim();
+  const patch  = {};
+  if (needAdv) patch.advogado      = (document.getElementById(`adv-${audId}`)?.value || '').trim();
+  if (needPre) patch.dados_preposto = (document.getElementById(`pre-${audId}`)?.value || '').trim();
+  msg.style.color = '#6B7280';
+  msg.textContent = 'Salvando…';
+  try {
+    const r = await fetch(`${sbUrl}/rest/v1/pauta_audiencias?id=eq.${encodeURIComponent(audId)}`, {
+      method: 'PATCH',
+      headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify(patch)
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    msg.style.color = '#1B7A4E';
+    msg.textContent = '✓ Salvo!';
+  } catch(e) {
+    msg.style.color = '#DC2626';
+    msg.textContent = 'Erro ao salvar.';
+  }
+}
+
 async function loadPautaEscritorio() {
   const el = document.getElementById('pauta-list');
   if (!el) return;
@@ -3065,6 +3179,19 @@ async function init() {
 
   // ── Correspondente: pauta filtrada pelo nome ──
   if (session.isCorrespondente) {
+    // ── Admin de Correspondentes: atribui advogado/preposto às audiências ──
+    if (session.corrTipo === 'admin') {
+      document.getElementById('sidebarName').textContent   = session.name || 'Administradora';
+      document.getElementById('sidebarEmail').textContent  = session.email || '';
+      document.getElementById('topbarCompany').textContent = 'Correspondentes';
+      document.getElementById('nav-dashboard').style.display = 'none';
+      document.getElementById('dashTabBar').style.display    = 'none';
+      document.getElementById('nav-pauta').style.display     = '';
+      document.getElementById('nav-pauta').onclick = function(){ showTab('pauta'); closeSidebar(); };
+      showTab('pauta');
+      loadPautaAdmin();
+      return;
+    }
     const tipoLabel = session.corrTipo === 'preposto' ? 'Preposto' : 'Advogado Correspondente';
     document.getElementById('sidebarName').textContent   = session.name || 'Correspondente';
     document.getElementById('sidebarEmail').textContent  = session.email || '';
