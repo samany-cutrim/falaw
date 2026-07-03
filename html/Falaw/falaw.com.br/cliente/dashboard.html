@@ -2195,18 +2195,11 @@ async function loadPautaCorrespondente(nome, email) {
           📋 Responder Pesquisa de Satisfação
         </a>
       </div>` : ''}
-      <!-- botão testemunhas (não exibir em canceladas/realizadas) -->
-      ${r.status !== 'cancelada' ? `<div style="margin-top:10px">
-        <button onclick="abrirEditarTestemunhas('${r.id}', ${JSON.stringify(r.testemunhas||'').replace(/'/g,"&apos;")})"
-          style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#374151;border:1px solid #d1d5db;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;border-radius:3px;cursor:pointer;font-weight:700">
-          ✏️ ${r.testemunhas ? 'Editar Testemunhas' : 'Informar Testemunhas'}
-        </button>
-      </div>` : ''}
     </div>`;
   }).join('');
 }
 
-/* ── Editar Testemunhas (correspondente) ─────────────────────────────── */
+/* ── Editar Testemunhas (cliente) ────────────────────────────────────── */
 function abrirEditarTestemunhas(audId, valorAtual) {
   const existente = document.getElementById('modal-testemunhas');
   if (existente) existente.remove();
@@ -2968,7 +2961,7 @@ async function loadPautaCliente(company) {
 
       // 1ª tentativa: campo `cliente` exato normalizado (gerado pelo Python)
       let { data } = await sb.from('pauta_audiencias')
-        .select('data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado')
+        .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado,testemunhas')
         .ilike('cliente', clienteNorm)
         .order('data_audiencia', { ascending: true })
         .order('horario',        { ascending: true });
@@ -2977,7 +2970,7 @@ async function loadPautaCliente(company) {
       // 2ª tentativa: campo `cliente` começando com o primeiro token
       if (!rows.length) {
         ({ data } = await sb.from('pauta_audiencias')
-          .select('data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado')
+          .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado,testemunhas')
           .ilike('cliente', `${clienteToken}%`)
           .order('data_audiencia', { ascending: true })
           .order('horario',        { ascending: true }));
@@ -2990,7 +2983,7 @@ async function loadPautaCliente(company) {
       // o Python ainda não processou/populou o campo `cliente`)
       if (!rows.length) {
         ({ data } = await sb.from('pauta_audiencias')
-          .select('data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado')
+          .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado,testemunhas')
           .ilike('reclamada', `%${clienteToken}%`)
           .order('data_audiencia', { ascending: true })
           .order('horario',        { ascending: true }));
@@ -3049,7 +3042,10 @@ async function loadPautaCliente(company) {
         <div style="font-size:12px;color:#374151;margin-top:6px">${a.processo||'—'}</div>
         ${a.vara ? `<div style="font-size:11px;color:#6B7280;margin-top:2px">${a.vara}</div>` : ''}
         ${a.reclamante ? `<div style="font-size:11px;color:#6B7280;margin-top:2px">Reclamante: ${a.reclamante}</div>` : ''}
+        ${a.testemunhas ? `<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border-radius:4px;border:1px solid #fde68a;font-size:11px"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#92400e;display:block;margin-bottom:3px">Testemunhas</span><b style="color:#78350f">${a.testemunhas.replace(/\n/g,'<br>')}</b></div>` : ''}
         ${linkHtml}${senhaHtml}
+        ${a.status !== 'cancelada' ? `<div style="margin-top:10px"><button onclick="abrirEditarTestemunhas('${a.id}', ${JSON.stringify(a.testemunhas||'')})"
+          style="background:#fff;color:#374151;border:1px solid #d1d5db;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;border-radius:3px;cursor:pointer;font-weight:700">✏️ ${a.testemunhas ? 'Editar Testemunhas' : 'Informar Testemunhas'}</button></div>` : ''}
       </div>`;
     });
   });
