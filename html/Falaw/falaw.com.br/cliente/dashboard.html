@@ -2195,8 +2195,74 @@ async function loadPautaCorrespondente(nome, email) {
           📋 Responder Pesquisa de Satisfação
         </a>
       </div>` : ''}
+      <!-- botão testemunhas (não exibir em canceladas/realizadas) -->
+      ${r.status !== 'cancelada' ? `<div style="margin-top:10px">
+        <button onclick="abrirEditarTestemunhas('${r.id}', ${JSON.stringify(r.testemunhas||'').replace(/'/g,"&apos;")})"
+          style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#374151;border:1px solid #d1d5db;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;border-radius:3px;cursor:pointer;font-weight:700">
+          ✏️ ${r.testemunhas ? 'Editar Testemunhas' : 'Informar Testemunhas'}
+        </button>
+      </div>` : ''}
     </div>`;
   }).join('');
+}
+
+/* ── Editar Testemunhas (correspondente) ─────────────────────────────── */
+function abrirEditarTestemunhas(audId, valorAtual) {
+  const existente = document.getElementById('modal-testemunhas');
+  if (existente) existente.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-testemunhas';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:8px;padding:28px 24px;width:100%;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+      <div style="font-family:monospace;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#374151;font-weight:700;margin-bottom:16px">✏️ Testemunhas</div>
+      <p style="font-size:12px;color:#6B7280;margin-bottom:14px;line-height:1.5">Informe o nome e telefone de cada testemunha, uma por linha.</p>
+      <textarea id="testemunhas-input" rows="5"
+        style="width:100%;box-sizing:border-box;font-family:monospace;font-size:12px;border:1px solid #d1d5db;border-radius:4px;padding:10px;resize:vertical"
+        placeholder="Ex:\nJoão Silva — (11) 9 9999-0000\nMaria Souza — (11) 9 8888-1111">${escHtml(valorAtual||'')}</textarea>
+      <div id="testemunhas-msg" style="font-size:11px;margin-top:8px;min-height:16px"></div>
+      <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end">
+        <button onclick="document.getElementById('modal-testemunhas').remove()"
+          style="background:#F3F4F6;color:#374151;border:none;padding:8px 18px;border-radius:4px;font-family:monospace;font-size:11px;cursor:pointer">Cancelar</button>
+        <button onclick="salvarTestemunhas('${audId}')"
+          style="background:#0D2B5E;color:#fff;border:none;padding:8px 18px;border-radius:4px;font-family:monospace;font-size:11px;cursor:pointer;font-weight:700">Salvar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.getElementById('testemunhas-input').focus();
+}
+
+async function salvarTestemunhas(audId) {
+  const input = document.getElementById('testemunhas-input');
+  const msg   = document.getElementById('testemunhas-msg');
+  if (!input) return;
+  const valor = input.value.trim();
+  const sbUrl = (window.SB_URL || '').trim();
+  const sbKey = (window.SB_KEY || '').trim();
+  msg.style.color = '#6B7280';
+  msg.textContent = 'Salvando…';
+  try {
+    const r = await fetch(`${sbUrl}/rest/v1/pauta_audiencias?id=eq.${encodeURIComponent(audId)}`, {
+      method: 'PATCH',
+      headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ testemunhas: valor || null })
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    msg.style.color = '#1B7A4E';
+    msg.textContent = '✓ Salvo!';
+    setTimeout(() => {
+      document.getElementById('modal-testemunhas')?.remove();
+      // Recarrega o card atualizando a lista
+      const sess = JSON.parse(sessionStorage.getItem('falaw_session') || '{}');
+      if (sess.name) loadPautaCorrespondente(sess.name, sess.email);
+    }, 900);
+  } catch(e) {
+    msg.style.color = '#DC2626';
+    msg.textContent = 'Erro ao salvar. Tente novamente.';
+    console.error('salvarTestemunhas:', e);
+  }
 }
 
 async function loadPautaEscritorio() {
