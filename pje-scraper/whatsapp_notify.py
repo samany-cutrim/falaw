@@ -1,6 +1,6 @@
 """
 whatsapp_notify.py — Falaw Advogados
-Envia notificação via WhatsApp (Evolution API) para correspondentes/advogados
+Envia notificação via WhatsApp (Evolution API) para os advogados INTERNOS do escritório
 com audiências no dia seguinte.
 
 Variáveis de ambiente necessárias:
@@ -49,7 +49,7 @@ def buscar_audiencias_amanha():
     """Retorna audiências agendadas para amanhã (não canceladas)."""
     amanha = (date.today() + timedelta(days=1)).isoformat()
     params = {
-        'select': 'id,data,hora,vara,reclamada,tipo,correspondente_nome,correspondente_email,modalidade,status',
+        'select': 'id,data,hora,vara,reclamada,tipo,advogado,modalidade,status',
         'data': f'eq.{amanha}',
         'status': 'neq.cancelada',
         'order': 'hora.asc',
@@ -57,10 +57,20 @@ def buscar_audiencias_amanha():
     return _supabase_get('pauta_audiencias', params)
 
 
-def buscar_correspondentes():
-    """Retorna mapa email→{nome,celular} de correspondentes."""
-    rows = _supabase_get('correspondentes', {'select': 'nome,email,celular'})
-    return {r['email']: r for r in rows if r.get('email')}
+def buscar_equipe():
+    """Retorna mapa nome→celular dos advogados internos (tabela equipe)."""
+    rows = _supabase_get('equipe', {'select': 'nome,email,celular'})
+    mapa = {}
+    for r in rows:
+        nome = (r.get('nome') or '').strip()
+        cel  = (r.get('celular') or '').strip()
+        if nome and cel:
+            # Indexa pelo nome completo e por cada palavra (para match por sigla/sobrenome)
+            mapa[nome.lower()] = r
+            for token in nome.lower().split():
+                if len(token) > 2:
+                    mapa.setdefault(token, r)
+    return mapa
 
 
 def _formatar_numero(celular: str) -> str | None:
@@ -77,7 +87,7 @@ def _formatar_numero(celular: str) -> str | None:
     return digits
 
 
-def _formatar_mensagem(aud: dict, corr_nome: str) -> str:
+def _formatar_mensagem(aud: dict, adv_nome: str) -> str:
     data_fmt = aud.get('data', '')
     if data_fmt:
         d = date.fromisoformat(data_fmt)
@@ -91,7 +101,7 @@ def _formatar_mensagem(aud: dict, corr_nome: str) -> str:
     linhas = [
         f'*Falaw Advogados — Lembrete de Audiência*',
         '',
-        f'Olá, *{corr_nome}*! 👋',
+        f'Olá, *{adv_nome}*! 👋',
         '',
         f'Você tem uma audiência *amanhã*:',
         '',
@@ -108,7 +118,6 @@ def _formatar_mensagem(aud: dict, corr_nome: str) -> str:
     linhas.append(f'📍 *Modalidade:* {modal}')
     linhas += [
         '',
-        '_Qualquer dúvida entre em contato com o escritório._',
         '_Falaw Advogados_',
     ]
     return '\n'.join(linhas)
@@ -151,36 +160,55 @@ def main():
         log.info('Nenhuma audiência amanhã. Encerrando.')
         return
 
-    correspondentes = buscar_correspondentes()
+    equipe = buscar_equipe()
 
     enviados = 0
     sem_celular = 0
     erros = 0
-
+    # Agrupa por advogado para não enviar duplicata (vários processos no mesmo dia)
+    por_adv: dict[str, dict] = {}  # celular → {adv_info, audiencias[]}
     for aud in audiencias:
-        email = aud.get('correspondente_email', '')
-        nome  = aud.get('correspondente_nome', '') or 'Correspondente'
-
-        corr = correspondentes.get(email, {})
-        celular_raw = corr.get('celular', '') or ''
-        if not celular_raw:
-            log.warning('Sem celular: %s <%s> — audiência %s', nome, email, aud.get('id'))
+        adv_raw = (aud.get('advogado') or '').strip()
+        if not adv_raw:
+            log.warning('Audiência sem advogado: %s', aud.get('id'))
             sem_celular += 1
             continue
 
-        numero = _formatar_numero(celular_raw)
+        # Tenta encontrar pelo nome/token
+        adv_info = equipe.get(adv_raw.lower())
+        if not adv_info:
+            for token in adv_raw.lower().split():
+                adv_info = equipe.get(token)
+                if adv_info:
+                    break
+
+        if not adv_info or not adv_info.get('celular'):
+            log.warning('Sem celular para advogado "%s"', adv_raw)
+            sem_celular += 1
+            continue
+
+        numero = _formatar_numero(adv_info['celular'])
         if not numero:
-            log.warning('Celular inválido "%s" para %s', celular_raw, nome)
+            log.warning('Celular inválido "%s" para %s', adv_info['celular'], adv_raw)
             sem_celular += 1
             continue
 
-        mensagem = _formatar_mensagem(aud, corr.get('nome') or nome)
-        ok = enviar_whatsapp(numero, mensagem)
-        if ok:
-            log.info('✓ Enviado para %s (%s)', nome, numero)
-            enviados += 1
-        else:
-            erros += 1
+        if numero not in por_adv:
+            por_adv[numero] = {'info': adv_info, 'audiencias': []}
+        por_adv[numero]['audiencias'].append(aud)
+
+    for numero, dados in por_adv.items():
+        adv_nome = dados['info'].get('nome', '')
+        auds = dados['audiencias']
+        # Uma mensagem por audiência
+        for aud in auds:
+            mensagem = _formatar_mensagem(aud, adv_nome)
+            ok = enviar_whatsapp(numero, mensagem)
+            if ok:
+                log.info('✓ Enviado para %s (%s)', adv_nome, numero)
+                enviados += 1
+            else:
+                erros += 1
 
     log.info('=' * 60)
     log.info('Enviados: %d | Sem celular: %d | Erros: %d', enviados, sem_celular, erros)

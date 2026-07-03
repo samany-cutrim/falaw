@@ -2892,6 +2892,10 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
         <input type="email" id="member-email" placeholder="nome@falaw.com.br" />
       </div>
       <div class="form-field">
+        <label>Celular / WhatsApp</label>
+        <input type="tel" id="member-celular" placeholder="(11) 9 9999-0000" />
+      </div>
+      <div class="form-field">
         <label>Cargo / Papel</label>
         <input type="text" id="member-role" placeholder="Advogado(a)" />
       </div>
@@ -5142,20 +5146,22 @@ function openMemberModal(id) {
   if (id) {
     const m = (load(KEYS.members) || []).find(m => m.id === id);
     if (m) {
-      document.getElementById('member-id').value     = m.id;
-      document.getElementById('member-name').value   = m.name;
-      document.getElementById('member-email').value  = m.email || '';
-      document.getElementById('member-role').value   = m.role;
-      document.getElementById('member-bio').value    = m.bio;
-      document.getElementById('member-status').value = m.status;
+      document.getElementById('member-id').value      = m.id;
+      document.getElementById('member-name').value    = m.name;
+      document.getElementById('member-email').value   = m.email || '';
+      document.getElementById('member-celular').value = m.celular || '';
+      document.getElementById('member-role').value    = m.role;
+      document.getElementById('member-bio').value     = m.bio;
+      document.getElementById('member-status').value  = m.status;
     }
   } else {
-    document.getElementById('member-id').value     = '';
-    document.getElementById('member-name').value   = '';
-    document.getElementById('member-email').value  = '';
-    document.getElementById('member-role').value   = 'Advogada';
-    document.getElementById('member-bio').value    = '';
-    document.getElementById('member-status').value = 'active';
+    document.getElementById('member-id').value      = '';
+    document.getElementById('member-name').value    = '';
+    document.getElementById('member-email').value   = '';
+    document.getElementById('member-celular').value = '';
+    document.getElementById('member-role').value    = 'Advogada';
+    document.getElementById('member-bio').value     = '';
+    document.getElementById('member-status').value  = 'active';
   }
   document.getElementById('member-modal').classList.add('open');
 }
@@ -5167,11 +5173,12 @@ function closeMemberModal() {
 function editMember(id) { openMemberModal(id); }
 
 function saveMember() {
-  const name   = document.getElementById('member-name').value.trim();
-  const email  = document.getElementById('member-email').value.trim();
-  const role   = document.getElementById('member-role').value.trim();
-  const bio    = document.getElementById('member-bio').value.trim();
-  const status = document.getElementById('member-status').value;
+  const name    = document.getElementById('member-name').value.trim();
+  const email   = document.getElementById('member-email').value.trim();
+  const celular = document.getElementById('member-celular').value.trim();
+  const role    = document.getElementById('member-role').value.trim();
+  const bio     = document.getElementById('member-bio').value.trim();
+  const status  = document.getElementById('member-status').value;
 
   if (!name) { alert('Por favor, preencha o nome.'); return; }
 
@@ -5180,13 +5187,26 @@ function saveMember() {
 
   if (id) {
     const idx = members.findIndex(m => m.id === id);
-    if (idx !== -1) members[idx] = { ...members[idx], name, email, role, bio, status };
+    if (idx !== -1) members[idx] = { ...members[idx], name, email, celular, role, bio, status };
   } else {
-    members.push({ id: uid(), name, email, role, bio, status });
+    members.push({ id: uid(), name, email, celular, role, bio, status });
   }
 
   members.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   save(KEYS.members, members);
+
+  // Salva celular no Supabase para uso pelo notificador WhatsApp
+  const { sbUrl, sbKey } = getSbCreds();
+  if (sbUrl && sbKey && celular) {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const mid = id || members.find(m => m.name === name && m.email === email)?.id || '';
+      sb.from('equipe').upsert({ id: mid, nome: name, email, celular, cargo: role }).then(({ error }) => {
+        if (error) console.warn('equipe upsert:', error.message);
+      });
+    } catch(e) { console.warn('equipe save:', e.message); }
+  }
+
   closeMemberModal();
   renderEquipe();
   showToast('Salvando no GitHub…');
