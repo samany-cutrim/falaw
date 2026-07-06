@@ -908,8 +908,7 @@ function renderKpis(tabKey, kpis) {
     if (k.chart_data) return false; // charts go to renderCharts, not KPI cards
     if (_hiddenPrefixes.some(p => (k.kpi_key||'').startsWith(p))) return false;
     const v = String(k.value ?? '').trim();
-    const alwaysShow = k.kpi_key === 'encerrados';
-    if (!alwaysShow && (!v || v === '0' || v === '0,0' || v === '0.0')) return false;
+    if (!v || v === '0' || v === '0,0' || v === '0.0') return false;
     return true;
   });
   if (!filtered.length) {
@@ -1027,27 +1026,8 @@ function enhanceFalawChart(cfg) {
 async function renderCharts(tabKey, kpis) {
   const el = document.getElementById('charts-' + tabKey);
   if (!el) return;
-  // Charts removidos permanentemente da aba Visão Geral
-  const VISAO_GERAL_SKIP_KEYS = new Set([
-    'chart_julgadores','chart_julg_fav','chart_julg_desf','chart_dec_julgador',
-    'chart_coreus','chart_radar_cr','chart_cr_dist','chart_novos_cr',
-    'chart_metas','chart_metas_fav','chart_metas_taxa',
-    'chart_adv_adversarios','chart_top_adv'
-  ]);
-  const VISAO_GERAL_SKIP_TITLES = [
-    'metas','taxas de favorabilidade','advogados adversários','adversários',
-    'julgadores','co-réus','co-reus','causa raiz','comparativo de desempenho'
-  ];
   const withCharts = kpis
-    .filter(k => {
-      if (k.tab_key !== tabKey || !k.chart_data) return false;
-      if (tabKey === 'visao-geral') {
-        if (VISAO_GERAL_SKIP_KEYS.has(k.kpi_key)) return false;
-        const title = String(k.chart_title || '').toLowerCase();
-        if (VISAO_GERAL_SKIP_TITLES.some(t => title.includes(t))) return false;
-      }
-      return true;
-    })
+    .filter(k => k.tab_key === tabKey && k.chart_data)
     .sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
   if (!withCharts.length) {
     el.innerHTML = '<div class="analysis-empty">Nenhum gráfico disponível para esta aba.</div>';
