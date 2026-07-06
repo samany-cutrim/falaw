@@ -84,3 +84,14 @@ C:\Users\manyc\Falaw\pje-scraper\pauta_audiencia.py:568: DeprecationWarning: dat
 2026-07-02 13:31:03,863 [INFO] ============================================================
 2026-07-02 13:31:03,864 [INFO] Sincronizacao concluida.
 2026-07-02 13:31:03,864 [INFO] ============================================================
+2026-07-03 13:36:03,958 [INFO] ============================================================
+2026-07-03 13:36:03,993 [INFO] Pauta de Audiencias — 03/07/2026 13:36
+2026-07-03 13:36:03,993 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-07-03 13:36:03,993 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-07-03 13:36:03,993 [INFO] Periodo: 2026-07-03 -> 2027-07-03
+2026-07-03 13:36:03,993 [INFO] ============================================================
+2026-07-03 13:36:03,993 [INFO] Calendario: 2026-07-03 -> 2027-07-03
+C:\Users\manyc\Falaw\pje-scraper\pauta_audiencia.py:154: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now = datetime.utcnow().timestamp()
+2026-07-03 13:36:04,971 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+^C
