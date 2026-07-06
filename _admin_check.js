@@ -8185,11 +8185,14 @@ async function ifoodSaveExcel() {
     let decisoesTabela = [];
     const decFileInput = document.getElementById('ifood-xl-decisoes');
     const decFile = decFileInput && decFileInput.files && decFileInput.files[0];
+    let decWbRef = null;
     if (decFile) {
       setStatus('Lendo arquivo de Decisões separado…');
       const decAb = await decFile.arrayBuffer();
       const decWb = XLSX.read(decAb, { type:'array' });
-      const decShSep = decWb.Sheets[decWb.SheetNames[0]];
+      decWbRef = decWb;
+      const findShDec = (...names) => { for (const n of names) { const f=decWb.SheetNames.find(s=>s.toLowerCase().includes(n.toLowerCase())); if(f) return decWb.Sheets[f]; } return null; };
+      const decShSep = findShDec('Decisões','Decisoes','Decisão','Decisao') || decWb.Sheets[decWb.SheetNames[0]];
       const decRaw = XLSX.utils.sheet_to_json(decShSep, { header:1, defval:'' });
       const firstRow = decRaw[0] || [];
       const skipHeader = firstRow[0] && !/^\d/.test(String(firstRow[0]).trim());
@@ -8197,18 +8200,30 @@ async function ifoodSaveExcel() {
       setStatus(`Decisões: ${decisoes.length} (planilha principal) + ${decisoesTabela.length} (arquivo separado — só tabela)`);
     }
 
-    const novosSh = findSh('Novos Casos Recebidos','Novos Casos','novos');
+    // findShAny busca no arquivo principal e, se não encontrar, no arquivo de Decisões separado
+    const findShAny = (...names) => {
+      const fromMain = findSh(...names);
+      if (fromMain) return fromMain;
+      if (!decWbRef) return null;
+      for (const n of names) {
+        const f = decWbRef.SheetNames.find(s => s.toLowerCase().includes(n.toLowerCase()));
+        if (f) return decWbRef.Sheets[f];
+      }
+      return null;
+    };
+
+    const novosSh = findShAny('Novos Casos Recebidos','Novos Casos','novos');
     const novos = novosSh ? _xlParseNovos(XLSX.utils.sheet_to_json(novosSh,{header:1,defval:''})) : { total:0, byCR:{} };
 
-    const julgadoresSh = findSh('Julgadores','julgadores','JULGADORES');
+    const julgadoresSh = findShAny('Julgadores','julgadores','JULGADORES');
     console.log('[ifoodSave] SheetNames:', wb.SheetNames, '| julgadoresSh encontrado:', !!julgadoresSh);
     const julgadoresData = julgadoresSh ? _xlParseJulgadores(XLSX.utils.sheet_to_json(julgadoresSh,{header:1,defval:''})) : [];
     console.log('[ifoodSave] julgadoresData.length:', julgadoresData.length, julgadoresData.slice(0,2));
 
-    const susp1389Sh = findSh('Suspensos Tema 1389','1389','susp 1389');
+    const susp1389Sh = findShAny('Suspensos Tema 1389','1389','susp 1389');
     const susp1389 = susp1389Sh ? XLSX.utils.sheet_to_json(susp1389Sh,{header:1,defval:''}).slice(1) : [];
 
-    const susp1291Sh = findSh('Suspensos Tema 1291','1291','susp 1291');
+    const susp1291Sh = findShAny('Suspensos Tema 1291','1291','susp 1291');
     const susp1291 = susp1291Sh ? XLSX.utils.sheet_to_json(susp1291Sh,{header:1,defval:''}).slice(1) : [];
 
     const encSh = findSh('ENCERRADOS','Encerrados','encerrados');
