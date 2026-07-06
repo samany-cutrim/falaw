@@ -6830,29 +6830,50 @@ function _xlNormTxt(v) {
 }
 
 const _XL_CR_CANON = {
+  // Nuvem
   'NUVEM': 'ENTREGADOR NUVEM',
   'ENTREGADOR NUVEM': 'ENTREGADOR NUVEM',
+  'ENTREGADORES NUVEM': 'ENTREGADOR NUVEM',
+  'NUVEM ENTREGADOR': 'ENTREGADOR NUVEM',
+  // Operador Logístico
   'OL': 'ENTREGADOR OL',
   'OP LOGISTICO': 'ENTREGADOR OL',
   'OP LOGISTICA': 'ENTREGADOR OL',
-  'OP LOGISTICO': 'ENTREGADOR OL',
+  'OPERADOR LOGISTICO': 'ENTREGADOR OL',
+  'OPERADORA LOGISTICA': 'ENTREGADOR OL',
   'OPERACAO LOGISTICA': 'ENTREGADOR OL',
+  'OPERADOR LOGÍSTICO': 'ENTREGADOR OL',
   'ENTREGADOR OL': 'ENTREGADOR OL',
+  'ENTREGADORES OL': 'ENTREGADOR OL',
+  'LOGISTICO': 'ENTREGADOR OL',
+  // Ex-Foodlover
   'EX FOODLOVER': 'EX-FOODLOVER',
   'EX-FOODLOVER': 'EX-FOODLOVER',
+  'EX FOOD LOVER': 'EX-FOODLOVER',
+  'EXFOODLOVER': 'EX-FOODLOVER',
+  'EX ENTREGADOR': 'EX-FOODLOVER',
+  'FOODLOVER': 'EX-FOODLOVER',
+  // Terceirização
   'TERCEIRIZADO': 'TERCEIRIZAÇÃO',
   'TERCEIRIZADOS': 'TERCEIRIZAÇÃO',
   'TERCEIRIZACAO': 'TERCEIRIZAÇÃO',
   'TERCEIRIZACAO ': 'TERCEIRIZAÇÃO',
   'TERCEIRIZAÇÃO': 'TERCEIRIZAÇÃO',
+  'TERCEIRIZACAO': 'TERCEIRIZAÇÃO',
+  'TERCEIRO': 'TERCEIRIZAÇÃO',
+  'TERCEIROS': 'TERCEIRIZAÇÃO',
+  // Marketplace
   'MARKET PLACE': 'ENTREGADOR - MARKETPLACE',
   'MARKETPLACE': 'ENTREGADOR - MARKETPLACE',
   'ENTREGADOR MARKETPLACE': 'ENTREGADOR - MARKETPLACE',
   'ENTREGADOR - MARKETPLACE': 'ENTREGADOR - MARKETPLACE',
+  'ENTREGADORES MARKETPLACE': 'ENTREGADOR - MARKETPLACE',
+  // Restaurantes
   'RESTAURANTE': 'RESTAURANTES - CONTRATO',
   'RESTAURANTES': 'RESTAURANTES - CONTRATO',
   'RESTAURANTES CONTRATO': 'RESTAURANTES - CONTRATO',
   'RESTAURANTES - CONTRATO': 'RESTAURANTES - CONTRATO',
+  'RESTAURANTE CONTRATO': 'RESTAURANTES - CONTRATO',
 };
 
 function _xlCanonCR(v) {
@@ -8270,6 +8291,11 @@ async function ifoodSaveExcel() {
     const susp1389Sh = findShAny('Suspensos Tema 1389','1389','susp 1389','suspensos 1389','tema 1389','1.389');
     const susp1389 = susp1389Sh ? _xlParseSuspensos(XLSX.utils.sheet_to_json(susp1389Sh,{header:1,defval:''})) : [];
     console.log('[ifoodSave] susp1389Sh encontrado:', !!susp1389Sh, '| linhas:', susp1389.length, '| amostra:', JSON.stringify(susp1389.slice(0,2)));
+    if (susp1389.length) {
+      const crValues = [...new Set(susp1389.map(s => s.causa_raiz))];
+      const crCanon  = crValues.map(v => `"${v}" → "${_xlCanonCR(v)}"`);
+      console.log('[ifoodSave] susp1389 CAUSA RAIZ encontradas:', crCanon);
+    }
 
     const susp1291Sh = findShAny('Suspensos Tema 1291','1291','susp 1291','suspensos 1291','tema 1291','1.291');
     const susp1291 = susp1291Sh ? _xlParseSuspensos(XLSX.utils.sheet_to_json(susp1291Sh,{header:1,defval:''})) : [];
