@@ -7061,6 +7061,53 @@ function _xlParseJulgadores(rawRows) {
   return result;
 }
 
+// ── Parser robusto de abas Suspensos Tema 1389 / 1291 ──────────────────────────
+// Lê por nome de cabeçalho (case-insensitive, busca parcial) com fallback posicional.
+// Funciona independente de colunas adicionadas, removidas ou reordenadas no Excel.
+function _xlParseSuspensos(rawRows) {
+  if (!rawRows || !rawRows.length) return [];
+
+  // Auto-detecta a linha de cabeçalho (primeira linha com ≥ 3 células preenchidas)
+  let hdrIdx = 0;
+  for (let i = 0; i < Math.min(6, rawRows.length); i++) {
+    if ((rawRows[i] || []).filter(c => String(c || '').trim()).length >= 3) { hdrIdx = i; break; }
+  }
+  const headers = (rawRows[hdrIdx] || []).map(h => String(h || '').toLowerCase().trim());
+
+  // Encontra índice da coluna pelo nome (busca parcial, case-insensitive)
+  const findCol = (...names) => {
+    for (const n of names) {
+      const idx = headers.findIndex(h => h.includes(n.toLowerCase()));
+      if (idx >= 0) return idx;
+    }
+    return -1;
+  };
+
+  const colReclamante = findCol('reclamante', 'nome', 'autor', 'requerente');
+  const colProcesso   = findCol('processo', 'número', 'numero', 'n°', 'nº', 'proc');
+  const colTRT        = findCol('trt', 'regional');
+  const colCR         = findCol('causa raiz', 'causa_raiz', 'segmento', 'categoria', 'motivo');
+  const colTribunal   = findCol('tribunal', 'turma', 'órgão', 'orgao', 'câmara', 'camara');
+  const colRelator    = findCol('relator', 'julgador', 'desembargador', 'magistrado');
+  const colObs        = findCol('obs', 'data', 'observ', 'nota');
+
+  const get = (row, col, fallback) =>
+    col >= 0 ? String(row[col] ?? '') : (fallback >= 0 ? String(row[fallback] ?? '') : '');
+
+  return rawRows.slice(hdrIdx + 1)
+    .map(row => ({
+      reclamante: get(row, colReclamante, 0),
+      processo:   get(row, colProcesso,   1),
+      trt:        get(row, colTRT,         2),
+      causa_raiz: get(row, colCR,          3),
+      tribunal:   get(row, colTribunal,    4),
+      turma:      get(row, colTribunal,    4),
+      relator:    get(row, colRelator,     6),
+      obs:        get(row, colObs,         7),
+    }))
+    .filter(r => r.processo.trim() || r.reclamante.trim()); // descarta linhas vazias
+}
+
 function _xlParseNovos(rawRows) {
   // Sheet has summary table: look for 'Causa Raiz' header row, then CR + count
   let total = 0, byCR = {}, inTable = false;
@@ -7985,10 +8032,9 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     const td = decs.filter(d=>_xlClassifyDec(d.resultado)==='D').length;
 
     // Suspensos para esta causa raiz
-    // 1389: [0]=RECLAMANTE [1]=PROCESSO [2]=TRT [3]=CAUSA RAIZ [4]=TRIBUNAL [5]=TURMA [6]=RELATOR [7]=DATA
-    // 1291: [0]=RECLAMANTE [1]=PROCESSO [2]=CAUSA RAIZ [3]=TRIBUNAL [4]=TURMA [5]=RELATOR [6]=OBS
-    const tSusp1389 = susp1389.filter(s=>_xlCanonCR(String(s[3]||''))===cr);
-    const tSusp1291 = susp1291.filter(s=>_xlCanonCR(String(s[2]||''))===cr);
+    // Filtro robusto por campo causa_raiz (lido por nome de cabeçalho via _xlParseSuspensos)
+    const tSusp1389 = susp1389.filter(s=>_xlCanonCR(String(s.causa_raiz||''))===cr);
+    const tSusp1291 = susp1291.filter(s=>_xlCanonCR(String(s.causa_raiz||''))===cr);
     const tSusp = tSusp1389.length + tSusp1291.length;
 
     push(tabKey,'total','Total de Processos',_xlFmtBr(recs.length),'processos');
@@ -7999,8 +8045,8 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     // Tabela de suspensos por tema
     if (tSusp1389.length || tSusp1291.length) {
       const _suspRows = [
-        ...tSusp1389.map(s => ({ reclamante: String(s[0]||''), processo: String(s[1]||''), trt: String(s[2]||''), tribunal: String(s[4]||''), turma: String(s[5]||''), relator: String(s[6]||''), tema: '1389', obs: String(s[7]||'') })),
-        ...tSusp1291.map(s => ({ reclamante: String(s[0]||''), processo: String(s[1]||''), trt: '', tribunal: String(s[3]||''), turma: String(s[4]||''), relator: String(s[5]||''), tema: '1291', obs: String(s[6]||'') })),
+        ...tSusp1389.map(s => ({ reclamante: s.reclamante, processo: s.processo, trt: s.trt, tribunal: s.tribunal, turma: s.turma, relator: s.relator, tema: '1389', obs: s.obs })),
+        ...tSusp1291.map(s => ({ reclamante: s.reclamante, processo: s.processo, trt: s.trt, tribunal: s.tribunal, turma: s.turma, relator: s.relator, tema: '1291', obs: s.obs })),
       ];
       push(tabKey, 'table_suspensos_cr', `Suspensos por Tema (${tSusp})`, '', '',
         { type: 'table_suspensos', rows: _suspRows },
@@ -8167,6 +8213,7 @@ async function ifoodSaveExcel() {
   try {
     const { wb, filename, file } = _ifoodExcelData;
     const findSh = (...names) => { for (const n of names) { const f=wb.SheetNames.find(s=>s.toLowerCase().includes(n.toLowerCase())); if(f) return wb.Sheets[f]; } return null; };
+    console.log('[ifoodSave] Abas do arquivo principal:', wb.SheetNames);
 
     setStatus('Lendo aba IFOOD…');
     const ifoodSh = findSh('IFOOD','todos','ifood','all') || wb.Sheets[wb.SheetNames[0]];
@@ -8212,19 +8259,21 @@ async function ifoodSaveExcel() {
       return null;
     };
 
-    const novosSh = findShAny('Novos Casos Recebidos','Novos Casos','novos');
+    const novosSh = findSh('Novos Casos Recebidos','Novos Casos','novos');
     const novos = novosSh ? _xlParseNovos(XLSX.utils.sheet_to_json(novosSh,{header:1,defval:''})) : { total:0, byCR:{} };
 
-    const julgadoresSh = findShAny('Julgadores','julgadores','JULGADORES');
+    const julgadoresSh = findSh('Julgadores','julgadores','JULGADORES');
     console.log('[ifoodSave] SheetNames:', wb.SheetNames, '| julgadoresSh encontrado:', !!julgadoresSh);
     const julgadoresData = julgadoresSh ? _xlParseJulgadores(XLSX.utils.sheet_to_json(julgadoresSh,{header:1,defval:''})) : [];
     console.log('[ifoodSave] julgadoresData.length:', julgadoresData.length, julgadoresData.slice(0,2));
 
-    const susp1389Sh = findShAny('Suspensos Tema 1389','1389','susp 1389');
-    const susp1389 = susp1389Sh ? XLSX.utils.sheet_to_json(susp1389Sh,{header:1,defval:''}).slice(1) : [];
+    const susp1389Sh = findShAny('Suspensos Tema 1389','1389','susp 1389','suspensos 1389','tema 1389','1.389');
+    const susp1389 = susp1389Sh ? _xlParseSuspensos(XLSX.utils.sheet_to_json(susp1389Sh,{header:1,defval:''})) : [];
+    console.log('[ifoodSave] susp1389Sh encontrado:', !!susp1389Sh, '| linhas:', susp1389.length, '| amostra:', JSON.stringify(susp1389.slice(0,2)));
 
-    const susp1291Sh = findShAny('Suspensos Tema 1291','1291','susp 1291');
-    const susp1291 = susp1291Sh ? XLSX.utils.sheet_to_json(susp1291Sh,{header:1,defval:''}).slice(1) : [];
+    const susp1291Sh = findShAny('Suspensos Tema 1291','1291','susp 1291','suspensos 1291','tema 1291','1.291');
+    const susp1291 = susp1291Sh ? _xlParseSuspensos(XLSX.utils.sheet_to_json(susp1291Sh,{header:1,defval:''})) : [];
+    console.log('[ifoodSave] susp1291Sh encontrado:', !!susp1291Sh, '| linhas:', susp1291.length);
 
     const encSh = findSh('ENCERRADOS','Encerrados','encerrados');
     const encerradosData = encSh ? _xlParseEncerrados(XLSX.utils.sheet_to_json(encSh,{header:1,defval:''}).slice(1)) : [];
