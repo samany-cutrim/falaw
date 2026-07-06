@@ -1,5 +1,17 @@
 var FALAW_ARTICLES = [
   {
+    "id": "analise-advocacia-regional-2026-jul2026",
+    "title": "Tatiana Ferraz é reconhecida no Ranking Regional 2026 da Análise Advocacia",
+    "category": "Reconhecimento",
+    "excerpt": "Tatiana Ferraz foi reconhecida no Ranking Regional 2026 da Análise Advocacia, na categoria Especializados. Mais do que um selo, esse reconhecimento representa a consistência de uma atuação jurídica voltada a entregar segurança, visão empresarial e soluções estratégicas para clientes em todo o Brasil.",
+    "date": "Julho de 2026",
+    "readTime": "4 min",
+    "url": "blog/analise-advocacia-regional-2026-jul2026.html",
+    "published": true,
+    "photo": "https://raw.githubusercontent.com/samany-cutrim/falaw/master/assets/images/Falaw/falaw.com.br/wp-content/uploads/selos/selo-analise-regional-2026.png",
+    "content": ""
+  },
+  {
     "id": "stf-adpf-1316-nr1-riscos-psicossociais-jun2026",
     "title": "STF suspende sanções da NR-1 sobre riscos psicossociais com efeito para todas as empresas do Brasil",
     "category": "Direito do Trabalho",
