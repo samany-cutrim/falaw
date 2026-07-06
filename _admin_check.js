@@ -8046,17 +8046,17 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   for (const { cr, tabKey, label } of _XL_CR_TABS) {
     const recs = records.filter(r=>_xlCanonCR(r.causa_raiz)===cr);
     const decs = decisoes.filter(d=>_xlCanonCR(d.causa_raiz)===cr);
-    if (!recs.length && !decs.length) continue;
+
+    // Suspensos para esta causa raiz — calculados antes do guard para não pular abas só com suspensos
+    const tSusp1389 = susp1389.filter(s=>_xlCanonCR(String(s.causa_raiz||''))===cr);
+    const tSusp1291 = susp1291.filter(s=>_xlCanonCR(String(s.causa_raiz||''))===cr);
+    const tSusp = tSusp1389.length + tSusp1291.length;
+
+    if (!recs.length && !decs.length && !tSusp) continue;
     const ta = recs.filter(r=>r.status==='ativo').length;
     const te = recs.filter(r=>r.status==='encerrado').length;
     const tf = decs.filter(d=>_xlClassifyDec(d.resultado)==='F').length;
     const td = decs.filter(d=>_xlClassifyDec(d.resultado)==='D').length;
-
-    // Suspensos para esta causa raiz
-    // Filtro robusto por campo causa_raiz (lido por nome de cabeçalho via _xlParseSuspensos)
-    const tSusp1389 = susp1389.filter(s=>_xlCanonCR(String(s.causa_raiz||''))===cr);
-    const tSusp1291 = susp1291.filter(s=>_xlCanonCR(String(s.causa_raiz||''))===cr);
-    const tSusp = tSusp1389.length + tSusp1291.length;
 
     push(tabKey,'total','Total de Processos',_xlFmtBr(recs.length),'processos');
     push(tabKey,'ativos','Processos Ativos',_xlFmtBr(ta),'ativos');
