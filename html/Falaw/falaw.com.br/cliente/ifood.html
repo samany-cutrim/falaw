@@ -1381,7 +1381,7 @@ async function renderCharts(tabKey, kpis) {
         const tema1291 = rows.filter(r => r.tema === '1291');
         const renderTema = (tRows, tema) => {
           if (!tRows.length) return '';
-          const temaLabel = tema === '1389' ? 'Tema 1389 — Gestão por Aplicativo' : 'Tema 1291';
+          const temaLabel = tema === '1389' ? 'Tema 1389' : 'Tema 1291';
           return `
             <div style="margin-bottom:20px">
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E;margin-bottom:8px;padding:6px 10px;background:#e8eef8;border-radius:4px">

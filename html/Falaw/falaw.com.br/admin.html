@@ -12023,7 +12023,8 @@ function _xlParseSuspensos(rawRows) {
   const colProcesso   = findCol('processo', 'número', 'numero', 'n°', 'nº', 'proc');
   const colTRT        = findCol('trt', 'regional');
   const colCR         = findCol('causa raiz', 'causa_raiz', 'segmento', 'categoria', 'motivo');
-  const colTribunal   = findCol('tribunal', 'turma', 'órgão', 'orgao');
+  const colTribunal   = findCol('tribunal', 'órgão', 'orgao');
+  const colTurma      = findCol('turma', 'câmara', 'camara', 'vt ');
   const colRelator    = findCol('relator', 'julgador', 'desembargador', 'magistrado');
   const colObs        = findCol('obs', 'data', 'observ', 'nota');
   const get = (row, col, fallback) =>
@@ -12034,8 +12035,8 @@ function _xlParseSuspensos(rawRows) {
       processo:   get(row, colProcesso,   1),
       trt:        get(row, colTRT,         2),
       causa_raiz: get(row, colCR,          3),
-      tribunal:   get(row, colTribunal,    4),
-      turma:      get(row, colTribunal,    4),
+      tribunal:   get(row, colTribunal,    3),
+      turma:      get(row, colTurma,        4),
       relator:    get(row, colRelator,     6),
       obs:        get(row, colObs,         7),
     }))
