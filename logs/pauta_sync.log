@@ -94,4 +94,28 @@ C:\Users\manyc\Falaw\pje-scraper\pauta_audiencia.py:568: DeprecationWarning: dat
 C:\Users\manyc\Falaw\pje-scraper\pauta_audiencia.py:154: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
   now = datetime.utcnow().timestamp()
 2026-07-03 13:36:04,971 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
-^C
+^C^C2026-07-07 19:30:04,846 [INFO] ============================================================
+2026-07-07 19:30:04,847 [INFO] Pauta de Audiencias — 07/07/2026 19:30
+2026-07-07 19:30:04,847 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-07-07 19:30:04,848 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-07-07 19:30:04,848 [INFO] Periodo: 2026-07-07 -> 2027-07-07
+2026-07-07 19:30:04,848 [INFO] ============================================================
+2026-07-07 19:30:04,848 [INFO] Calendario: 2026-07-07 -> 2027-07-07
+C:\Users\manyc\Falaw\pje-scraper\pauta_audiencia.py:154: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now = datetime.utcnow().timestamp()
+2026-07-07 19:30:05,308 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-07-07 19:30:31,847 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-07-07 19:30:31,930 [INFO] Senha preenchida.
+2026-07-07 19:30:32,139 [INFO] Formulário submetido.
+2026-07-07 19:30:33,778 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=90e51539-e2fa-441e-b268-80e90db3e960&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=7b0cd180-7d11-498e-b46b-fb21a23c1b10.90e51539-e2fa-441e-b268-80e90db3e960.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-07-07 19:30:34,139 [INFO] Bearer token capturado das requisições de rede.
+2026-07-07 19:30:44,925 [INFO]   Retornou 221 itens
+2026-07-07 19:30:44,928 [INFO] Calendario: 221 tarefas recebidas
+C:\Users\manyc\Falaw\pje-scraper\pauta_audiencia.py:420: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+  return datetime.utcfromtimestamp(int(ms_val) / 1000)
+C:\Users\manyc\Falaw\pje-scraper\pauta_audiencia.py:568: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "updated_at":            datetime.utcnow().isoformat(),
+2026-07-07 19:30:50,193 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 221
+2026-07-07 19:30:50,194 [INFO] ============================================================
+2026-07-07 19:30:50,194 [INFO] Sincronizacao concluida.
+2026-07-07 19:30:50,195 [INFO] ============================================================
