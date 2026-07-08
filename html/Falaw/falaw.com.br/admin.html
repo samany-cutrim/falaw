@@ -11913,7 +11913,7 @@ function _xlParseIfood(rawRows) {
         }
         // Fallback: extrair ano do número do processo (CNJ: NNNNNNN-NN.YYYY.J.TT.OOOO)
         const procNum = String(r[idx.proc] ?? r[1] ?? '').trim();
-        const mProc = procNum.match(/\d{7}-\d{2}\.(\d{4})\./);
+        const mProc = procNum.match(/\d{7,}-\d{2}\.(\d{4})\./);
         return mProc ? mProc[1] + '-01-01' : '';
       })(),
       autor_recurso: c(r, idx.autorRec, c(r, 43)),
