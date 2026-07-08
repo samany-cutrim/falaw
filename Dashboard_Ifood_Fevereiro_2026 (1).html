@@ -777,17 +777,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
     </div>
   </div>
 
-  <!-- Linha 4b: Distribuídos por Ano -->
+  <!-- Linha 4b: Ações Distribuídas -->
   <div class="g2" style="margin-bottom:20px">
     <div class="card">
-      <div class="card-title"><span class="dot"></span>Distribuídos por Ano — Toda Carteira</div>
-      <canvas id="chart-distrib-ano-total" style="max-height:170px"></canvas>
-      <div class="ibox info" style="margin-top:10px;font-size:11px">Ativos distribuídos por ano de ajuizamento · Total: 1.383 processos</div>
+      <div class="card-title"><span class="dot"></span>Ações Distribuídas por Ano</div>
+      <canvas id="chart-distrib-ano-total" style="max-height:220px"></canvas>
     </div>
     <div class="card">
-      <div class="card-title"><span class="dot"></span>Distribuídos no Ano 2026</div>
-      <canvas id="chart-distrib-ano-2026" style="max-height:170px"></canvas>
-      <div class="ibox info" style="margin-top:10px;font-size:11px">Novas ações distribuídas em 2026 por causa raiz · Total: 4 ações</div>
+      <div class="card-title"><span class="dot"></span>Ações Distribuídas em 2026 por Mês</div>
+      <canvas id="chart-distrib-ano-2026" style="max-height:220px"></canvas>
     </div>
   </div>
 
@@ -2581,37 +2579,42 @@ function renderVisaoGeral(){
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:FONT}},y:{grid:{color:gridColor},ticks:{font:FONT}}}}
   });
 
-  // Distribuídos por Ano — Toda Carteira (ativos por ano de ajuizamento)
+  // Ações Distribuídas por Ano — line chart multi-série
   mk('chart-distrib-ano-total',{
-    type:'bar',
+    type:'line',
     data:{
-      labels:['2022','2023','2024','2025','2026'],
-      datasets:[{
-        label:'Processos Ativos',
-        data:[28,245,487,619,4],
-        backgroundColor:['#CFD8DC','#90A4AE','#1565C0','#E65100','#E8002D'],
-        borderRadius:6
-      }]
+      labels:['2020','2021','2022','2023','2024','2025','2026'],
+      datasets:[
+        {label:'Total',       data:[0,0,197,1249,932,196,38], borderColor:'#0D47A1',backgroundColor:'rgba(13,71,161,.08)',  tension:.4,pointRadius:4,pointBackgroundColor:'#0D47A1',fill:false},
+        {label:'Nuvem',       data:[0,0, 80, 730,463, 97,18], borderColor:'#B71C1C',backgroundColor:'rgba(183,28,28,.08)',  tension:.4,pointRadius:4,pointBackgroundColor:'#B71C1C',fill:false},
+        {label:'Op. Logístico',data:[0,0,102, 425,284, 83,11], borderColor:'#1B5E20',backgroundColor:'rgba(27,94,32,.08)',   tension:.4,pointRadius:4,pointBackgroundColor:'#1B5E20',fill:false},
+        {label:'Ex-Foodlover',data:[0,0, 10,  52,168, 12, 3], borderColor:'#E65100',backgroundColor:'rgba(230,81,0,.08)',   tension:.4,pointRadius:4,pointBackgroundColor:'#E65100',fill:false},
+        {label:'Terceirização',data:[0,0,  4,  26, 12,  3, 6], borderColor:'#0277BD',backgroundColor:'rgba(2,119,189,.08)',  tension:.4,pointRadius:4,pointBackgroundColor:'#0277BD',fill:false},
+        {label:'Marketplace',  data:[0,0,  1,  16,  5,  1, 0], borderColor:'#90A4AE',backgroundColor:'rgba(144,164,174,.08)',tension:.4,pointRadius:4,pointBackgroundColor:'#90A4AE',fill:false}
+      ]
     },
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.parsed.y} processos (${(ctx.parsed.y/1383*100).toFixed(1)}%)`}}},
-      scales:{x:{grid:{display:false},ticks:{font:FONT}},y:{grid:{color:gridColor},ticks:{font:FONT}}}}
+      plugins:{legend:{position:'top',labels:{font:{...FONT,size:10},boxWidth:12,padding:10}}},
+      scales:{x:{grid:{color:gridColor},ticks:{font:FONT}},
+              y:{grid:{color:gridColor},ticks:{font:FONT},beginAtZero:true}}}
   });
 
-  // Distribuídos no Ano 2026 (novas ações 2026 por causa raiz)
+  // Ações Distribuídas em 2026 por Mês — stacked bar
   mk('chart-distrib-ano-2026',{
-    type:'doughnut',
+    type:'bar',
     data:{
-      labels:['OL (1)','Terceirização (1)','Ex-Foodlover (1)','Nuvem (1)'],
-      datasets:[{
-        data:[1,1,1,1],
-        backgroundColor:['#E65100','#2E7D32','#6A1B9A','#1565C0'],
-        borderWidth:3,borderColor:'#fff'
-      }]
+      labels:['Fev','Mar','Abr','Mai','Jun'],
+      datasets:[
+        {label:'Nuvem',        data:[3,5,8,2,0], backgroundColor:'#B71C1C',stack:'s'},
+        {label:'Op. Logístico',data:[2,3,2,3,1], backgroundColor:'#0D47A1',stack:'s'},
+        {label:'Ex-Foodlover', data:[2,0,1,0,0], backgroundColor:'#2E7D32',stack:'s'},
+        {label:'Terceirização', data:[0,0,0,5,1], backgroundColor:'#F9A825',stack:'s'}
+      ]
     },
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'right',labels:{font:{...FONT,size:10},boxWidth:10,padding:8}}},
-      cutout:'55%'}
+      plugins:{legend:{position:'bottom',labels:{font:{...FONT,size:10},boxWidth:10,padding:8}}},
+      scales:{x:{grid:{display:false},stacked:true,ticks:{font:FONT}},
+              y:{grid:{color:gridColor},stacked:true,ticks:{font:FONT},beginAtZero:true}}}
   });
 
   // Sentença vs Acórdão (dados reais fev/26)
