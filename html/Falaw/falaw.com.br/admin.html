@@ -11908,6 +11908,12 @@ function _xlParseIfood(rawRows) {
             const y = raw.getFullYear(), mo = raw.getMonth()+1, d = raw.getDate();
             return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           }
+          // Número serial do Excel (SheetJS sem cellDates): converter para ISO
+          if (typeof raw === 'number' && raw > 40000 && raw < 60000) {
+            const dt = new Date(Math.round((raw - 25569) * 86400000));
+            const y = dt.getUTCFullYear(), mo = dt.getUTCMonth()+1, d = dt.getUTCDate();
+            return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          }
           const s = String(raw ?? '').trim();
           if (s) return s;
         }
@@ -12531,7 +12537,18 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
 
   // Gráfico de linha: distribuições por ano (PRIMEIRO gráfico da visão geral)
   {
-    const _parseYear = d => { const m=String(d||'').match(/(\d{4})/); return m?m[1]:null; };
+    const _parseYear = d => {
+      if (d instanceof Date && !isNaN(d)) return String(d.getFullYear());
+      if (typeof d === 'number' && d > 40000 && d < 60000)
+        return String(new Date(Math.round((d-25569)*86400000)).getUTCFullYear());
+      const s = String(d||'');
+      let m = s.match(/^(\d{4})[-\/]/);
+      if (m) return m[1];
+      m = s.match(/^\d{1,2}[-\/]\d{1,2}[-\/](\d{4})/);
+      if (m) return m[1];
+      m = s.match(/(\d{4})/);
+      return m ? m[1] : null;
+    };
     const _byYearAll  = {}; // todos os processos
     const _byYearCR   = {}; // por causa raiz
     records.forEach(r => {
