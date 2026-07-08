@@ -1333,6 +1333,8 @@ async function renderCharts(tabKey, kpis) {
           : '<span style="background:#ffebee;color:#c62828;border-radius:3px;padding:2px 8px;font-size:11px;font-weight:700">✗ Abaixo</span>';
         const fmtPct = v => (v != null ? Number(v).toFixed(2).replace('.',',') + '%' : '—');
         const fmtN   = v => (v != null ? Number(v).toLocaleString('pt-BR') : '—');
+        // Sanity: meta_qtd/meta_pct corrompidos (> 2x base) mostram '—' e aviso
+        const saneMeta1 = m => m.meta_qtd == null || (m.base_inicial > 0 && m.meta_qtd <= m.base_inicial * 2);
 
         const metaHtml = metas.filter(m => m.id !== 4).map(m => {
           if (m.id === 1) return `
@@ -1340,7 +1342,7 @@ async function renderCharts(tabKey, kpis) {
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E;margin-bottom:10px">🏁 Meta 1 — Encerramento da Base</div>
               <table style="width:100%;font-size:12px;font-family:'IBM Plex Mono',monospace;border-collapse:collapse">
                 <tr><td style="color:#888;padding:3px 0">Base inicial</td><td style="text-align:right;font-weight:600">${fmtN(m.base_inicial)} processos</td></tr>
-                <tr><td style="color:#888;padding:3px 0">Meta (${fmtPct(m.meta_pct)})</td><td style="text-align:right;font-weight:600">${fmtN(m.meta_qtd)} casos</td></tr>
+                <tr><td style="color:#888;padding:3px 0">Meta (${saneMeta1(m)?fmtPct(m.meta_pct):'—'})</td><td style="text-align:right;font-weight:600">${saneMeta1(m)?fmtN(m.meta_qtd)+' casos':'<span style="color:#c62828;font-size:11px">⚠ Corrija em Admin → Metas</span>'}</td></tr>
                 <tr><td style="color:#888;padding:3px 0">Realizado no mês</td><td style="text-align:right;font-weight:700;color:${m.realizado>=0?'#1b7a4e':'#c62828'}">${m.realizado>=0?'+':''}${fmtN(m.realizado)} (${fmtPct(m.pct_realizado)})</td></tr>
                 <tr><td style="color:#888;padding:3px 0">Base atual</td><td style="text-align:right">${fmtN(m.base_atual)} processos</td></tr>
               </table>

@@ -11221,7 +11221,7 @@ async function ifoodSaveMetas() {
 
   const gn = id => parseFloat(document.getElementById(id)?.value || '0') || 0;
   const m1_base_ciclo = gn('m1_base_ciclo');
-  const m1_meta_pct   = gn('m1_meta_pct');
+  const m1_meta_pct   = Math.min(Math.abs(gn('m1_meta_pct')), 99999); // sanity: nunca mais que 99999 casos
   const m2_baseline   = gn('m2_baseline');
   const m2_alvo       = gn('m2_alvo');
   const m3_baseline   = gn('m3_baseline');
