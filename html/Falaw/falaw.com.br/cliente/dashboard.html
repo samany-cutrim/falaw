@@ -2334,6 +2334,8 @@ async function loadPautaAdmin() {
             ${assigned ? '<span style="font-size:9px;color:#1B7A4E;font-weight:700">✓ Atribuído</span>' : '<span style="font-size:9px;color:#F59E0B;font-weight:700">⚠ Pendente</span>'}
           </div>
           <div style="font-size:12px;font-weight:700;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(a.processo||'—')}</div>
+          ${a.reclamante ? `<div style="font-size:11px;color:#374151;margin-top:1px">👤 ${escHtml(a.reclamante)}</div>` : ''}
+          ${a.cliente ? `<div style="font-size:10px;color:#6B7280;margin-top:1px">🏢 ${escHtml(a.cliente)}</div>` : ''}
           ${a.vara ? `<div style="font-size:10px;color:#9CA3AF">${escHtml(a.vara)}</div>` : ''}
           ${needAdv && a.advogado ? `<div style="font-size:10px;color:#1B7A4E;margin-top:2px">👤 Adv: <b>${escHtml(a.advogado)}</b></div>` : ''}
           ${needPre && a.dados_preposto ? `<div style="font-size:10px;color:#0D2B5E;margin-top:1px">🏷 Pre: <b>${escHtml(a.dados_preposto)}</b></div>` : ''}
