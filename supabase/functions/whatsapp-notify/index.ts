@@ -1,12 +1,15 @@
 /**
  * whatsapp-notify — Falaw Advogados
- * Envia notificação WhatsApp (CallMeBot) para advogados internos
- * com audiências no dia seguinte, no mesmo horário da audiência.
+ * Envia notificação WhatsApp (CallMeBot) para advogados internos.
  *
- * Lógica: roda a cada hora (pg_cron: "0 * * * *").
- * A cada execução, busca audiências de amanhã cujo horário (HH:MM)
- * bate com a hora atual em BRT — garantindo que o aviso chega
- * exatamente 24h antes da audiência.
+ * Roda a cada hora (pg_cron: "0 * * * *"). A cada execução envia para:
+ *   1. Audiências de amanhã cujo horário (HH) == hora atual em BRT
+ *      → aviso chega 24h antes da audiência
+ *   2. Audiências de amanhã cadastradas/atualizadas na última hora
+ *      que ainda NÃO foram notificadas (whatsapp_notificado_at IS NULL)
+ *      → cobre urgências adicionadas fora do horário normal
+ *
+ * Após envio, marca whatsapp_notificado_at para evitar reenvio.
  *
  * Variáveis necessárias (Edge Functions → Secrets):
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
@@ -86,21 +89,51 @@ async function sleep(ms: number) {
 
 // ── Busca dados ───────────────────────────────────────────────────────────────
 
+const COLS = "id,data_audiencia,horario,vara,reclamada,tipo_audiencia,modalidade,status,advogado";
+
+/** Audiências de amanhã cujo horário bate com a hora atual (aviso 24h antes) */
 async function buscarAudienciasNaHora() {
   const data  = amanhaEmBRT();
-  const hora  = horaAtualBRT(); // ex: "08"
+  const hora  = horaAtualBRT();
 
-  // Busca audiências de amanhã cujo horario começa com a hora atual (ex: "08:")
   const { data: rows, error } = await sb
     .from("pauta_audiencias")
-    .select("id,data_audiencia,horario,vara,reclamada,tipo_audiencia,modalidade,status,advogado")
+    .select(COLS)
     .eq("data_audiencia", data)
     .neq("status", "cancelada")
     .like("horario", `${hora}:%`)
+    .is("whatsapp_notificado_at", null)
     .order("horario", { ascending: true });
 
-  if (error) throw new Error(`Supabase pauta: ${error.message}`);
+  if (error) throw new Error(`Supabase pauta (hora): ${error.message}`);
   return rows ?? [];
+}
+
+/** Audiências de amanhã cadastradas/atualizadas na última hora e ainda não notificadas */
+async function buscarAudienciasUrgentes() {
+  const data    = amanhaEmBRT();
+  const ha1hora = new Date(Date.now() - 3600_000).toISOString();
+
+  const { data: rows, error } = await sb
+    .from("pauta_audiencias")
+    .select(COLS)
+    .eq("data_audiencia", data)
+    .neq("status", "cancelada")
+    .is("whatsapp_notificado_at", null)
+    .or(`created_at.gte.${ha1hora},updated_at.gte.${ha1hora}`)
+    .order("horario", { ascending: true });
+
+  if (error) throw new Error(`Supabase pauta (urgentes): ${error.message}`);
+  return rows ?? [];
+}
+
+/** Marca audiências como notificadas */
+async function marcarNotificadas(ids: string[]) {
+  if (!ids.length) return;
+  await sb
+    .from("pauta_audiencias")
+    .update({ whatsapp_notificado_at: new Date().toISOString() })
+    .in("id", ids);
 }
 
 async function buscarEquipe(): Promise<Map<string, Record<string, string>>> {
@@ -150,13 +183,20 @@ async function enviarWhatsapp(numero: string, apikey: string, mensagem: string):
 
 Deno.serve(async (_req) => {
   try {
-    const horaAtual = horaAtualBRT();
+    const horaAtual  = horaAtualBRT();
     const dataAmanha = amanhaEmBRT();
 
-    const audiencias = await buscarAudienciasNaHora();
+    // Busca as duas listas e une sem duplicatas
+    const [porHora, urgentes] = await Promise.all([
+      buscarAudienciasNaHora(),
+      buscarAudienciasUrgentes(),
+    ]);
+    const idsVistos = new Set(porHora.map((a: {id: string}) => a.id));
+    const audiencias = [...porHora, ...urgentes.filter((a: {id: string}) => !idsVistos.has(a.id))];
+
     if (!audiencias.length) {
       return new Response(
-        JSON.stringify({ ok: true, msg: `Nenhuma audiência amanhã (${dataAmanha}) às ${horaAtual}h.` }),
+        JSON.stringify({ ok: true, msg: `Nenhuma audiência pendente para amanhã (${dataAmanha}) às ${horaAtual}h.` }),
         { headers: { "Content-Type": "application/json" } },
       );
     }
@@ -187,6 +227,8 @@ Deno.serve(async (_req) => {
 
     let enviados = 0; let erros = 0; let abortado = false;
     const inicio = Date.now();
+    const idsNotificados: string[] = [];
+
     for (const [numero, { info, auds }] of porNumero) {
       if (Date.now() - inicio > MAX_EXEC_MS) { abortado = true; break; }
       const advNome = (info.nome ?? "").split(" ")[0];
@@ -194,13 +236,15 @@ Deno.serve(async (_req) => {
         if (Date.now() - inicio > MAX_EXEC_MS) { abortado = true; break; }
         const msg = formatarMensagem(aud as Record<string, string>, advNome);
         const ok  = await enviarWhatsapp(numero, info.callmebot_apikey, msg);
-        ok ? enviados++ : erros++;
+        if (ok) { enviados++; idsNotificados.push(aud.id); } else erros++;
         await sleep(CALLMEBOT_DELAY_MS);
       }
     }
 
+    await marcarNotificadas(idsNotificados);
+
     return new Response(
-      JSON.stringify({ ok: true, hora_brt: `${horaAtual}h`, data_amanha: dataAmanha, enviados, erros, abortado, total_audiencias: audiencias.length }),
+      JSON.stringify({ ok: true, hora_brt: `${horaAtual}h`, data_amanha: dataAmanha, enviados, erros, abortado, urgentes: urgentes.length, total_audiencias: audiencias.length }),
       { headers: { "Content-Type": "application/json" } },
     );
   } catch (e) {
