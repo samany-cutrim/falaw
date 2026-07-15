@@ -889,7 +889,7 @@
     }
   </style>
 </head>
-<body>
+<body onload="_autoRestoreSession()">
 
 <!-- ══════════════════════════════════════
      LOGIN SCREEN
@@ -901,6 +901,10 @@
     <p>Área Administrativa</p>
     <input type="email" id="login-email" placeholder="E-mail admin (Supabase)" maxlength="180" autocomplete="username" />
     <input type="password" id="login-pwd" placeholder="Senha de acesso" maxlength="128" autocomplete="current-password" />
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(26,10,13,.55);cursor:pointer;margin-top:-4px;margin-bottom:4px">
+      <input type="checkbox" id="login-lembrar" checked style="width:14px;height:14px;accent-color:#7B1A2E;cursor:pointer" />
+      Manter conectado
+    </label>
     <button onclick="doLogin()">Entrar →</button>
     <p class="login-error" id="login-error">Senha incorreta. Tente novamente.</p>
   </div>
@@ -3580,6 +3584,7 @@ async function doLogin() {
         ];
         const role = EMAILS_RESTRITOS.includes(authEmail.toLowerCase()) ? 'restrito' : 'superadmin';
         sessionStorage.setItem('fa_admin_role', role);
+        _savePersistIfChecked(role, true);
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('admin-shell').style.display = 'block';
         errEl.style.display = 'none';
@@ -3609,6 +3614,7 @@ async function doLogin() {
     sessionStorage.setItem('fa_admin_session', String(Date.now()));
     sessionStorage.removeItem('fa_admin_supabase_auth');
     sessionStorage.setItem('fa_admin_role', 'restrito');
+    _savePersistIfChecked('restrito', false);
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-shell').style.display = 'block';
     errEl.style.display = 'none';
@@ -3639,6 +3645,7 @@ async function doLogin() {
       return;
     }
     sessionStorage.setItem('fa_admin_role', hashRole);
+    _savePersistIfChecked(hashRole, false);
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-shell').style.display = 'block';
     errEl.style.display = 'none';
@@ -3726,12 +3733,44 @@ function doLogout() {
   sessionStorage.removeItem('fa_admin_session');
   sessionStorage.removeItem('fa_admin_supabase_auth');
   sessionStorage.removeItem('fa_admin_role');
+  // Limpa persistência
+  localStorage.removeItem('fa_admin_persist');
+  localStorage.removeItem('fa_admin_persist_role');
+  localStorage.removeItem('fa_admin_persist_supabase');
   // Restaura visibilidade de todos os itens de nav
   document.querySelectorAll('.admin-tab-group, .admin-tab, .admin-dropdown-item').forEach(el => { el.style.display = ''; });
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('admin-shell').style.display = 'none';
   document.getElementById('login-pwd').value = '';
   document.getElementById('login-error').style.display = 'none';
+}
+
+function _savePersistIfChecked(role, isSupa) {
+  if (document.getElementById('login-lembrar')?.checked) {
+    localStorage.setItem('fa_admin_persist', '1');
+    localStorage.setItem('fa_admin_persist_role', role || 'superadmin');
+    localStorage.setItem('fa_admin_persist_supabase', isSupa ? '1' : '0');
+  }
+}
+
+function _autoRestoreSession() {
+  const persisted = localStorage.getItem('fa_admin_persist');
+  if (!persisted) return;
+  const role = localStorage.getItem('fa_admin_persist_role') || 'superadmin';
+  const isSupa = localStorage.getItem('fa_admin_persist_supabase') === '1';
+  sessionStorage.setItem('fa_admin_session', String(Date.now()));
+  sessionStorage.setItem('fa_admin_role', role);
+  if (isSupa) sessionStorage.setItem('fa_admin_supabase_auth', '1');
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-shell').style.display = 'block';
+  applyRoleRestrictions();
+  seedData();
+  loadArticlesFromGitHub().then(renderBlog);
+  renderEquipe();
+  loadNewsletterFromSupabase().then(renderNewsletter);
+  loadContatoFromSupabase().then(renderContato);
+  loadConfig();
+  loadNotifBadges();
 }
 
 /* ══════════════════════════════════════
