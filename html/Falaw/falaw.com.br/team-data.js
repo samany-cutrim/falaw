@@ -62,7 +62,8 @@ var FALAW_TEAM = [
     "role": "Advogada",
     "status": "active",
     "bio": "Graduada em Direito pela UNICID e pós-graduada em Direito e Processo do Trabalho pelo Damasio Educacional. Graduanda em Inteligência Artificial pela FMU. Atua no contencioso e na controladoria do escritório.",
-    "email": "samany@falaw.com.br"
+    "email": "samany@falaw.com.br",
+    "sigla": "SC"
   },
   {
     "id": "mn1yd8t2hc6u",

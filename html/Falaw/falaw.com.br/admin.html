@@ -1658,6 +1658,7 @@
         <div>
           <h2 style="margin-bottom:2px">Pauta de Audiências</h2>
           <p style="font-size:12px;color:var(--c-muted);margin:0">Sincronize automaticamente via Projuris ADV, importe Excel ou adicione manualmente</p>
+          <p id="aud-last-sync" style="font-size:11px;font-family:var(--f-mono);letter-spacing:.04em;margin:4px 0 0;color:var(--c-muted)"></p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <label title="Chrome roda invisível em segundo plano" style="display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--c-muted);cursor:pointer;padding:4px 10px;border:1px solid var(--c-divider);border-radius:2px;user-select:none">
@@ -2888,12 +2889,22 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
         <input type="text" id="member-name" placeholder="Nome Sobrenome" />
       </div>
       <div class="form-field">
+        <label>Sigla</label>
+        <input type="text" id="member-sigla" placeholder="SC" maxlength="6" style="text-transform:uppercase" />
+        <p class="cfg-hint" style="margin-top:4px;font-size:11px;color:var(--c-muted)">Sigla usada pelo escritório (ex: Samany Cutrim → SC). O lembrete de audiência no WhatsApp usa a sigla para identificar o advogado quando a pauta não traz o nome completo.</p>
+      </div>
+      <div class="form-field">
         <label>E-mail</label>
         <input type="email" id="member-email" placeholder="nome@falaw.com.br" />
       </div>
       <div class="form-field">
         <label>Celular / WhatsApp</label>
         <input type="tel" id="member-celular" placeholder="(11) 9 9999-0000" />
+      </div>
+      <div class="form-field">
+        <label>API key CallMeBot (lembrete de audiência)</label>
+        <input type="text" id="member-callmebot" placeholder="123456" autocomplete="off" />
+        <p class="cfg-hint" style="margin-top:4px;font-size:11px;color:var(--c-muted)">Para obter: adicione o nº do CallMeBot aos contatos e envie "I allow callmebot to send me messages" pelo WhatsApp — o bot responde com a key. Instruções: callmebot.com</p>
       </div>
       <div class="form-field">
         <label>Cargo / Papel</label>
@@ -4702,7 +4713,10 @@ async function pushArticlesToGitHub() {
 }
 
 function generateTeamJS(members) {
-  return '/* team-data.js — gerado pelo admin Ferraz Andrade. Não editar manualmente. */\nvar FALAW_TEAM = ' + JSON.stringify(members, null, 2) + ';\n';
+  // Campos privados (celular e API key CallMeBot) ficam só no Supabase —
+  // nunca no team-data.js, que é público no site.
+  const publicos = members.map(({ celular, callmebotApikey, ...m }) => m);
+  return '/* team-data.js — gerado pelo admin Ferraz Andrade. Não editar manualmente. */\nvar FALAW_TEAM = ' + JSON.stringify(publicos, null, 2) + ';\n';
 }
 
 async function loadTeamFromGitHub() {
@@ -5148,17 +5162,37 @@ function openMemberModal(id) {
     if (m) {
       document.getElementById('member-id').value      = m.id;
       document.getElementById('member-name').value    = m.name;
+      document.getElementById('member-sigla').value   = m.sigla || '';
       document.getElementById('member-email').value   = m.email || '';
       document.getElementById('member-celular').value = m.celular || '';
+      document.getElementById('member-callmebot').value = m.callmebotApikey || '';
       document.getElementById('member-role').value    = m.role;
       document.getElementById('member-bio').value     = m.bio;
       document.getElementById('member-status').value  = m.status;
+      // Celular e API key não vão para o team-data.js público — completa
+      // a partir do Supabase (tabela equipe), que é a fonte de verdade.
+      (async () => {
+        try {
+          const { sbUrl, sbKey } = getSbCreds();
+          if (!sbUrl || !sbKey) return;
+          const sb = supabase.createClient(sbUrl, sbKey);
+          const { data } = await sb.from('equipe').select('celular,callmebot_apikey').eq('id', m.id).limit(1);
+          const row = data && data[0];
+          if (!row) return;
+          const celEl = document.getElementById('member-celular');
+          const keyEl = document.getElementById('member-callmebot');
+          if (celEl && !celEl.value && row.celular) celEl.value = row.celular;
+          if (keyEl && !keyEl.value && row.callmebot_apikey) keyEl.value = row.callmebot_apikey;
+        } catch(e) { console.warn('equipe load:', e.message); }
+      })();
     }
   } else {
     document.getElementById('member-id').value      = '';
     document.getElementById('member-name').value    = '';
+    document.getElementById('member-sigla').value   = '';
     document.getElementById('member-email').value   = '';
     document.getElementById('member-celular').value = '';
+    document.getElementById('member-callmebot').value = '';
     document.getElementById('member-role').value    = 'Advogada';
     document.getElementById('member-bio').value     = '';
     document.getElementById('member-status').value  = 'active';
@@ -5174,8 +5208,10 @@ function editMember(id) { openMemberModal(id); }
 
 function saveMember() {
   const name    = document.getElementById('member-name').value.trim();
+  const sigla   = document.getElementById('member-sigla').value.trim().toUpperCase();
   const email   = document.getElementById('member-email').value.trim();
   const celular = document.getElementById('member-celular').value.trim();
+  const callmebotApikey = document.getElementById('member-callmebot').value.trim();
   const role    = document.getElementById('member-role').value.trim();
   const bio     = document.getElementById('member-bio').value.trim();
   const status  = document.getElementById('member-status').value;
@@ -5187,21 +5223,21 @@ function saveMember() {
 
   if (id) {
     const idx = members.findIndex(m => m.id === id);
-    if (idx !== -1) members[idx] = { ...members[idx], name, email, celular, role, bio, status };
+    if (idx !== -1) members[idx] = { ...members[idx], name, sigla, email, celular, callmebotApikey, role, bio, status };
   } else {
-    members.push({ id: uid(), name, email, celular, role, bio, status });
+    members.push({ id: uid(), name, sigla, email, celular, callmebotApikey, role, bio, status });
   }
 
   members.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   save(KEYS.members, members);
 
-  // Salva celular no Supabase para uso pelo notificador WhatsApp
+  // Salva celular + API key CallMeBot no Supabase para uso pelo notificador WhatsApp
   const { sbUrl, sbKey } = getSbCreds();
   if (sbUrl && sbKey && celular) {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
       const mid = id || members.find(m => m.name === name && m.email === email)?.id || '';
-      sb.from('equipe').upsert({ id: mid, nome: name, email, celular, cargo: role }).then(({ error }) => {
+      sb.from('equipe').upsert({ id: mid, nome: name, sigla: sigla || null, email, celular, cargo: role, callmebot_apikey: callmebotApikey || null }).then(({ error }) => {
         if (error) console.warn('equipe upsert:', error.message);
       });
     } catch(e) { console.warn('equipe save:', e.message); }
@@ -13705,6 +13741,33 @@ function _audCancelAckAll(ids) {
   document.getElementById('aud-canceladas-alert').innerHTML = '';
 }
 
+async function _audRenderLastSync(_sbUrl, _sbKey) {
+  const el = document.getElementById('aud-last-sync');
+  if (!el || !_sbUrl || !_sbKey) return;
+  try {
+    const sb = supabase.createClient(_sbUrl, _sbKey);
+    const { data, error } = await sb.from('pauta_sync_log')
+      .select('executado_em,salvas,canceladas,sucesso,erro')
+      .order('executado_em', { ascending: false })
+      .limit(1);
+    if (error || !data || !data.length) return;
+    const s = data[0];
+    const dt = new Date(s.executado_em);
+    const quando = dt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const horasAtras = (Date.now() - dt.getTime()) / 36e5;
+    if (!s.sucesso) {
+      el.style.color = '#b91c1c';
+      el.textContent = `⚠ Última sincronização FALHOU em ${quando}` + (s.erro ? ` — ${s.erro.slice(0, 120)}` : '');
+    } else if (horasAtras > 30) {
+      el.style.color = '#b45309';
+      el.textContent = `⚠ Pauta sem sincronizar desde ${quando} (verifique o cron no Render)`;
+    } else {
+      el.style.color = 'var(--c-muted)';
+      el.textContent = `✓ Pauta atualizada em ${quando} — ${s.salvas} audiência(s)` + (s.canceladas ? `, ${s.canceladas} cancelada(s)` : '');
+    }
+  } catch(e) { console.warn('last sync:', e.message); }
+}
+
 async function _audRenderCanceladasAlert(_sbUrl, _sbKey) {
   const alertEl = document.getElementById('aud-canceladas-alert');
   if (!alertEl) return;
@@ -13766,8 +13829,9 @@ async function loadAudiencias() {
   const _sbUrl = window.SB_URL || sbUrl();
   const _sbKey = window.SB_KEY || sbKey();
 
-  // Alerta de canceladas (roda em paralelo, não bloqueia a lista)
+  // Alerta de canceladas e última sincronização (em paralelo, não bloqueiam a lista)
   _audRenderCanceladasAlert(_sbUrl, _sbKey);
+  _audRenderLastSync(_sbUrl, _sbKey);
 
   let items = [];
   if (_sbUrl && _sbKey) {

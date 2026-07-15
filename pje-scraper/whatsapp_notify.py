@@ -1,17 +1,25 @@
 """
 whatsapp_notify.py — Falaw Advogados
-Envia notificação via WhatsApp (Evolution API) para os advogados INTERNOS do escritório
+Envia notificação via WhatsApp (CallMeBot) para os advogados INTERNOS do escritório
 com audiências no dia seguinte.
 
 Variáveis de ambiente necessárias:
   SUPABASE_URL, SUPABASE_KEY
-  EVOLUTION_API_URL   — ex: https://falaw-evolution.onrender.com
-  EVOLUTION_API_KEY   — chave definida em AUTHENTICATION_API_KEY do serviço
-  EVOLUTION_INSTANCE  — nome da instância (ex: falaw)
+
+Cadastro de cada advogado no CallMeBot (feito UMA VEZ por pessoa):
+  1. Adicionar o número do CallMeBot aos contatos do celular:
+     +34 644 51 95 23 (conferir o número atual em https://www.callmebot.com/blog/free-api-whatsapp-messages/)
+  2. Enviar pelo WhatsApp a mensagem: "I allow callmebot to send me messages"
+  3. O bot responde com a API key pessoal (ex: "Your APIKEY is 123456")
+  4. Cadastrar essa key no admin (Equipe → editar membro → campo "API key CallMeBot")
+     ou direto na tabela `equipe` do Supabase, coluna `callmebot_apikey`.
+
+Sem a API key cadastrada, o advogado é pulado (fica registrado no log).
 """
 
 import os
 import sys
+import time
 import logging
 import requests
 from datetime import date, timedelta
@@ -27,11 +35,12 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-SUPABASE_URL  = os.getenv('SUPABASE_URL', '').rstrip('/')
-SUPABASE_KEY  = os.getenv('SUPABASE_KEY', '')
-EVO_URL       = os.getenv('EVOLUTION_API_URL', '').rstrip('/')
-EVO_KEY       = os.getenv('EVOLUTION_API_KEY', '')
-EVO_INSTANCE  = os.getenv('EVOLUTION_INSTANCE', 'falaw')
+SUPABASE_URL = os.getenv('SUPABASE_URL', '').rstrip('/')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
+
+CALLMEBOT_URL = 'https://api.callmebot.com/whatsapp.php'
+# Pausa entre envios — o CallMeBot é gratuito e limita a frequência de requisições
+CALLMEBOT_INTERVALO_S = 5
 
 SUPABASE_HEADERS = {
     'apikey': SUPABASE_KEY,
@@ -58,18 +67,25 @@ def buscar_audiencias_amanha():
 
 
 def buscar_equipe():
-    """Retorna mapa nome→celular dos advogados internos (tabela equipe)."""
-    rows = _supabase_get('equipe', {'select': 'nome,email,celular'})
+    """Retorna mapa nome/sigla→dados dos advogados internos (tabela equipe)."""
+    rows = _supabase_get('equipe', {'select': 'nome,email,celular,callmebot_apikey,sigla'})
     mapa = {}
     for r in rows:
         nome = (r.get('nome') or '').strip()
         cel  = (r.get('celular') or '').strip()
         if nome and cel:
-            # Indexa pelo nome completo e por cada palavra (para match por sigla/sobrenome)
+            # Indexa pelo nome completo e por cada palavra (para match por sobrenome)
             mapa[nome.lower()] = r
             for token in nome.lower().split():
                 if len(token) > 2:
                     mapa.setdefault(token, r)
+    # Sigla do escritório (ex: SC = Samany Cutrim) tem prioridade sobre
+    # qualquer coincidência de nome — por isso é indexada por último,
+    # sobrescrevendo entradas anteriores.
+    for r in rows:
+        sigla = (r.get('sigla') or '').strip().lower()
+        if sigla and (r.get('celular') or '').strip():
+            mapa[sigla] = r
     return mapa
 
 
@@ -123,22 +139,21 @@ def _formatar_mensagem(aud: dict, adv_nome: str) -> str:
     return '\n'.join(linhas)
 
 
-def enviar_whatsapp(numero: str, mensagem: str) -> bool:
-    """Envia mensagem de texto via Evolution API."""
-    url = f'{EVO_URL}/message/sendText/{EVO_INSTANCE}'
-    headers = {
-        'apikey': EVO_KEY,
-        'Content-Type': 'application/json',
-    }
-    payload = {
-        'number': numero,
+def enviar_whatsapp(numero: str, apikey: str, mensagem: str) -> bool:
+    """Envia mensagem de texto via CallMeBot (API key pessoal do destinatário)."""
+    params = {
+        'phone': f'+{numero}',
         'text': mensagem,
+        'apikey': apikey,
     }
     try:
-        r = requests.post(url, json=payload, headers=headers, timeout=30)
-        if r.status_code in (200, 201):
+        r = requests.get(CALLMEBOT_URL, params=params, timeout=60)
+        # O CallMeBot responde 200 com HTML; erros vêm no corpo
+        # (ex.: "APIKey is invalid", "ERROR: ...").
+        corpo = (r.text or '').upper()
+        if r.status_code == 200 and 'INVALID' not in corpo and 'ERROR' not in corpo:
             return True
-        log.warning('Evolution API retornou %s: %s', r.status_code, r.text[:200])
+        log.warning('CallMeBot retornou %s: %s', r.status_code, r.text[:200])
         return False
     except Exception as e:
         log.error('Erro ao enviar WhatsApp para %s: %s', numero, e)
@@ -147,11 +162,11 @@ def enviar_whatsapp(numero: str, mensagem: str) -> bool:
 
 def main():
     log.info('=' * 60)
-    log.info('Falaw WhatsApp Notify — %s', date.today().isoformat())
+    log.info('Falaw WhatsApp Notify (CallMeBot) — %s', date.today().isoformat())
     log.info('=' * 60)
 
-    if not all([SUPABASE_URL, SUPABASE_KEY, EVO_URL, EVO_KEY]):
-        log.error('Variáveis de ambiente incompletas. Abortando.')
+    if not all([SUPABASE_URL, SUPABASE_KEY]):
+        log.error('Variáveis de ambiente incompletas (SUPABASE_URL/SUPABASE_KEY). Abortando.')
         sys.exit(1)
 
     audiencias = buscar_audiencias_amanha()
@@ -164,6 +179,7 @@ def main():
 
     enviados = 0
     sem_celular = 0
+    sem_apikey = 0
     erros = 0
     # Agrupa por advogado para não enviar duplicata (vários processos no mesmo dia)
     por_adv: dict[str, dict] = {}  # celular → {adv_info, audiencias[]}
@@ -187,6 +203,12 @@ def main():
             sem_celular += 1
             continue
 
+        if not (adv_info.get('callmebot_apikey') or '').strip():
+            log.warning('Advogado "%s" sem API key CallMeBot cadastrada — '
+                        'ver instruções no cabeçalho deste script.', adv_raw)
+            sem_apikey += 1
+            continue
+
         numero = _formatar_numero(adv_info['celular'])
         if not numero:
             log.warning('Celular inválido "%s" para %s', adv_info['celular'], adv_raw)
@@ -197,13 +219,18 @@ def main():
             por_adv[numero] = {'info': adv_info, 'audiencias': []}
         por_adv[numero]['audiencias'].append(aud)
 
+    primeiro = True
     for numero, dados in por_adv.items():
         adv_nome = dados['info'].get('nome', '')
+        apikey   = dados['info']['callmebot_apikey'].strip()
         auds = dados['audiencias']
         # Uma mensagem por audiência
         for aud in auds:
+            if not primeiro:
+                time.sleep(CALLMEBOT_INTERVALO_S)
+            primeiro = False
             mensagem = _formatar_mensagem(aud, adv_nome)
-            ok = enviar_whatsapp(numero, mensagem)
+            ok = enviar_whatsapp(numero, apikey, mensagem)
             if ok:
                 log.info('✓ Enviado para %s (%s)', adv_nome, numero)
                 enviados += 1
@@ -211,7 +238,8 @@ def main():
                 erros += 1
 
     log.info('=' * 60)
-    log.info('Enviados: %d | Sem celular: %d | Erros: %d', enviados, sem_celular, erros)
+    log.info('Enviados: %d | Sem celular: %d | Sem API key: %d | Erros: %d',
+             enviados, sem_celular, sem_apikey, erros)
     log.info('=' * 60)
 
 

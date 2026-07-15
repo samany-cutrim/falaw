@@ -46,3 +46,7 @@ pje-scraper/bookmarklet_escaped.txt
 pje-scraper/make_page.py
 *.xlsx
 *.xls
+
+# Python bytecode
+__pycache__/
+*.pyc
