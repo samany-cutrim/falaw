@@ -509,3 +509,22 @@ task: <Task pending name='Task-3' coro=<Connection.run.<locals>.init() running a
 2026-07-14 19:30:54,233 [INFO] ============================================================
 2026-07-14 19:30:54,233 [INFO] Sincronizacao concluida.
 2026-07-14 19:30:54,233 [INFO] ============================================================
+2026-07-15 13:30:06,557 [INFO] ============================================================
+2026-07-15 13:30:06,558 [INFO] Pauta de Audiencias — 15/07/2026 13:30
+2026-07-15 13:30:06,558 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-07-15 13:30:06,558 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-07-15 13:30:06,558 [INFO] Periodo: 2026-07-15 -> 2027-07-15
+2026-07-15 13:30:06,558 [INFO] ============================================================
+2026-07-15 13:30:06,558 [INFO] Calendario: 2026-07-15 -> 2027-07-15
+2026-07-15 13:30:07,424 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-07-15 13:30:39,432 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-07-15 13:30:39,542 [INFO] Senha preenchida.
+2026-07-15 13:30:39,899 [INFO] Formulário submetido.
+2026-07-15 13:30:41,537 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=a577b41c-48db-4883-861e-0ff01a22d365&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=b5b453c1-a650-4cf1-851e-a40439103eb5.a577b41c-48db-4883-861e-0ff01a22d365.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-07-15 13:30:41,946 [INFO] Bearer token capturado das requisições de rede.
+2026-07-15 13:30:54,212 [INFO]   Retornou 227 itens
+2026-07-15 13:30:54,387 [INFO] Calendario: 227 tarefas recebidas
+2026-07-15 13:31:01,296 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 227
+2026-07-15 13:31:01,296 [INFO] ============================================================
+2026-07-15 13:31:01,296 [INFO] Sincronizacao concluida.
+2026-07-15 13:31:01,296 [INFO] ============================================================

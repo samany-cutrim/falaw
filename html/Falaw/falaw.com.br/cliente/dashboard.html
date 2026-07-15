@@ -2280,7 +2280,7 @@ async function loadPautaAdmin() {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
       const { data } = await sb.from('pauta_audiencias')
-        .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,advogado,dados_preposto,corr_tipo_envio,comentarios')
+        .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,advogado,dados_preposto,corr_tipo_envio,comentarios,valor_advogado,valor_preposto')
         .not('corr_tipo_envio', 'is', null)
         .neq('status', 'cancelada')
         .order('data_audiencia', { ascending: true })
@@ -2402,6 +2402,17 @@ function abrirModalCorrAdmin(audId) {
               style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
           </div>
         </div>` : ''}
+        ${(window._fawSession?.corrTipo === 'admin') ? `<div style="background:#fefce8;border:1px solid #fde68a;border-radius:6px;padding:14px 16px">
+          <div style="font-family:monospace;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#92400e;font-weight:700;margin-bottom:10px">Valores (somente admin)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            ${needAdv ? `<div><label style="font-size:10px;color:#374151;display:block;margin-bottom:3px">Valor Advogado (R$)</label>
+            <input id="modal-valor-adv" type="number" min="0" step="0.01" value="${a.valor_advogado != null ? a.valor_advogado : ''}" placeholder="0,00"
+              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box"></div>` : ''}
+            ${needPre ? `<div><label style="font-size:10px;color:#374151;display:block;margin-bottom:3px">Valor Preposto (R$)</label>
+            <input id="modal-valor-pre" type="number" min="0" step="0.01" value="${a.valor_preposto != null ? a.valor_preposto : ''}" placeholder="0,00"
+              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box"></div>` : ''}
+          </div>
+        </div>` : ''}
       </div>
       <div style="padding:16px 24px;border-top:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;gap:12px">
         <span id="modal-corr-msg" style="font-size:11px;color:#6B7280"></span>
@@ -2435,6 +2446,13 @@ async function salvarCorrAdmin(audId, needAdv, needPre) {
   if (needAdv) patch.advogado       = advNome;
   if (needPre) patch.dados_preposto = preNome;
 
+  if (window._fawSession?.corrTipo === 'admin') {
+    const valorAdv = needAdv ? document.getElementById('modal-valor-adv')?.value : null;
+    const valorPre = needPre ? document.getElementById('modal-valor-pre')?.value : null;
+    if (needAdv) patch.valor_advogado = valorAdv !== null && valorAdv !== '' ? parseFloat(valorAdv) : null;
+    if (needPre) patch.valor_preposto = valorPre !== null && valorPre !== '' ? parseFloat(valorPre) : null;
+  }
+
   if (msg) { msg.style.color = '#6B7280'; msg.textContent = 'Salvando…'; }
   try {
     const r = await fetch(`${sbUrl}/rest/v1/pauta_audiencias?id=eq.${encodeURIComponent(audId)}`, {
@@ -2463,7 +2481,12 @@ async function salvarCorrAdmin(audId, needAdv, needPre) {
 
     // Atualiza cache local e card
     const row = (window._adminCorrRows || []).find(x => x.id === audId);
-    if (row) { if (needAdv) row.advogado = advNome; if (needPre) row.dados_preposto = preNome; }
+    if (row) {
+      if (needAdv) row.advogado = advNome;
+      if (needPre) row.dados_preposto = preNome;
+      if (patch.valor_advogado !== undefined) row.valor_advogado = patch.valor_advogado;
+      if (patch.valor_preposto !== undefined) row.valor_preposto = patch.valor_preposto;
+    }
 
     if (msg) { msg.style.color = '#1B7A4E'; msg.textContent = '✓ Salvo!'; }
     setTimeout(() => {
@@ -3311,6 +3334,7 @@ async function init() {
   if (!raw) { window.location.href = 'index.html'; return; }
 
   const session = JSON.parse(raw);
+  window._fawSession = session;
 
   // ── Correspondente: pauta filtrada pelo nome ──
   if (session.isCorrespondente) {
