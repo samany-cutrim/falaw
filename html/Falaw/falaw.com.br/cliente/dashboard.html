@@ -3115,6 +3115,11 @@ function _escRenderRows(rows, today) {
           ${a.observacoes_preposto ? `<div style="margin-top:4px;color:#9CA3AF">${a.observacoes_preposto}</div>` : ''}
         </div>` : ''}
 
+        ${(a.valor_advogado != null || a.valor_preposto != null) ? `<div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${a.valor_advogado != null ? `<span style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:3px 10px;font-size:10px;color:#1B7A4E;font-weight:700;font-family:monospace">💰 Adv: R$ ${Number(a.valor_advogado).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>` : ''}
+          ${a.valor_preposto != null ? `<span style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:3px 10px;font-size:10px;color:#0D2B5E;font-weight:700;font-family:monospace">💰 Pre: R$ ${Number(a.valor_preposto).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>` : ''}
+        </div>` : ''}
+
         ${linkHtml||senhaHtml ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${linkHtml}${senhaHtml}</div>` : ''}
 
         ${obs ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px;font-size:11px;color:#78350f"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#92400e;display:block;margin-bottom:3px">Orientação</span>${escHtml(obs).replace(/\n/g,'<br>')}</div>` : ''}
