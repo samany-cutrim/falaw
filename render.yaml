@@ -5,10 +5,11 @@
 # Serviços:
 #   1. falaw-pauta-sync      — cron: pauta de audiências Projuris ADV → Supabase
 #   2. falaw-whatsapp-notify — cron: aviso WhatsApp 1 dia antes da audiência
-#   3. falaw-evolution-api   — web:  Evolution API (WhatsApp Business)
+#                              (via CallMeBot — gratuito, sem servidor próprio)
 #
-# Obs: o serviço falaw-cockroach-api foi removido — o projeto passou a usar
-# apenas o Supabase como banco/armazenamento.
+# Obs: falaw-cockroach-api foi removido (projeto usa apenas o Supabase) e
+# falaw-evolution-api também (o envio de WhatsApp migrou para o CallMeBot,
+# que dispensa servidor 24h e disco persistente).
 
 services:
   # ── Cron: sincroniza pauta de audiências Projuris ADV → Supabase ──────────
@@ -30,8 +31,10 @@ services:
       - key: SUPABASE_KEY
         sync: false
 
-  # ── Cron: notificações WhatsApp — 1 dia antes da audiência ────────────────
+  # ── Cron: notificações WhatsApp (CallMeBot) — 1 dia antes da audiência ────
   # BRT (UTC-3): 08:00 → 11:00 UTC
+  # As API keys pessoais do CallMeBot ficam na tabela `equipe` do Supabase
+  # (coluna callmebot_apikey) — nenhuma variável extra é necessária aqui.
   - type: cron
     name: falaw-whatsapp-notify
     runtime: docker
@@ -46,46 +49,3 @@ services:
         sync: false
       - key: SUPABASE_KEY
         sync: false
-      - key: EVOLUTION_API_URL
-        sync: false
-      - key: EVOLUTION_API_KEY
-        sync: false
-      - key: EVOLUTION_INSTANCE
-        value: falaw
-
-  # ── Evolution API — WhatsApp Business ─────────────────────────────────────
-  # Imagem fixada na v1.8.2: a linha v1.x aceita rodar SEM banco de dados
-  # (DATABASE_ENABLED=false). A v2.x exige Postgres e ignora essas variáveis.
-  # O disco persistente guarda a sessão do WhatsApp entre deploys
-  # (sem ele, seria preciso escanear o QR code a cada deploy).
-  # Requer plano pago: o plano free do Render não suporta discos.
-  - type: web
-    name: falaw-evolution-api
-    runtime: docker
-    dockerfilePath: ./cockroach-api/evolution-api/Dockerfile
-    dockerContext: ./cockroach-api/evolution-api
-    region: oregon
-    plan: starter
-    envVars:
-      - key: AUTHENTICATION_API_KEY
-        sync: false
-      - key: AUTHENTICATION_TYPE
-        value: apikey
-      - key: DATABASE_ENABLED
-        value: "false"
-      - key: STORE_MESSAGES
-        value: "false"
-      - key: STORE_MESSAGE_UP
-        value: "false"
-      - key: STORE_CONTACTS
-        value: "false"
-      - key: STORE_CHATS
-        value: "false"
-      - key: DEL_INSTANCE
-        value: "false"
-      - key: LOG_LEVEL
-        value: "ERROR,WARN,INFO"
-    disk:
-      name: evolution-data
-      mountPath: /evolution/instances
-      sizeGB: 1
