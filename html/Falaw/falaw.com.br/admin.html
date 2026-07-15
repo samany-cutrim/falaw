@@ -1658,6 +1658,7 @@
         <div>
           <h2 style="margin-bottom:2px">Pauta de Audiências</h2>
           <p style="font-size:12px;color:var(--c-muted);margin:0">Sincronize automaticamente via Projuris ADV, importe Excel ou adicione manualmente</p>
+          <p id="aud-last-sync" style="font-size:11px;font-family:var(--f-mono);letter-spacing:.04em;margin:4px 0 0;color:var(--c-muted)"></p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <label title="Chrome roda invisível em segundo plano" style="display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--c-muted);cursor:pointer;padding:4px 10px;border:1px solid var(--c-divider);border-radius:2px;user-select:none">
@@ -13705,6 +13706,33 @@ function _audCancelAckAll(ids) {
   document.getElementById('aud-canceladas-alert').innerHTML = '';
 }
 
+async function _audRenderLastSync(_sbUrl, _sbKey) {
+  const el = document.getElementById('aud-last-sync');
+  if (!el || !_sbUrl || !_sbKey) return;
+  try {
+    const sb = supabase.createClient(_sbUrl, _sbKey);
+    const { data, error } = await sb.from('pauta_sync_log')
+      .select('executado_em,salvas,canceladas,sucesso,erro')
+      .order('executado_em', { ascending: false })
+      .limit(1);
+    if (error || !data || !data.length) return;
+    const s = data[0];
+    const dt = new Date(s.executado_em);
+    const quando = dt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const horasAtras = (Date.now() - dt.getTime()) / 36e5;
+    if (!s.sucesso) {
+      el.style.color = '#b91c1c';
+      el.textContent = `⚠ Última sincronização FALHOU em ${quando}` + (s.erro ? ` — ${s.erro.slice(0, 120)}` : '');
+    } else if (horasAtras > 30) {
+      el.style.color = '#b45309';
+      el.textContent = `⚠ Pauta sem sincronizar desde ${quando} (verifique o cron no Render)`;
+    } else {
+      el.style.color = 'var(--c-muted)';
+      el.textContent = `✓ Pauta atualizada em ${quando} — ${s.salvas} audiência(s)` + (s.canceladas ? `, ${s.canceladas} cancelada(s)` : '');
+    }
+  } catch(e) { console.warn('last sync:', e.message); }
+}
+
 async function _audRenderCanceladasAlert(_sbUrl, _sbKey) {
   const alertEl = document.getElementById('aud-canceladas-alert');
   if (!alertEl) return;
@@ -13766,8 +13794,9 @@ async function loadAudiencias() {
   const _sbUrl = window.SB_URL || sbUrl();
   const _sbKey = window.SB_KEY || sbKey();
 
-  // Alerta de canceladas (roda em paralelo, não bloqueia a lista)
+  // Alerta de canceladas e última sincronização (em paralelo, não bloqueiam a lista)
   _audRenderCanceladasAlert(_sbUrl, _sbKey);
+  _audRenderLastSync(_sbUrl, _sbKey);
 
   let items = [];
   if (_sbUrl && _sbKey) {

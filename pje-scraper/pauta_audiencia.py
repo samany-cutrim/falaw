@@ -22,7 +22,7 @@ import hashlib
 import logging
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -565,7 +565,7 @@ def normalizar(item: dict) -> dict:
         "tipo_responsabilidade": tipo_responsabilidade,
         "advogado":              advogado,
         "testemunha_necessaria": testemunha_necessaria,
-        "updated_at":            datetime.utcnow().isoformat(),
+        "updated_at":            datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -595,6 +595,86 @@ def sb_upsert(records: list[dict]) -> int:
     return sent
 
 
+def sb_reconciliar(ids_atuais: set[str], data_inicio: str, data_fim: str) -> int:
+    """
+    Marca como 'cancelada' as audiencias do periodo que existem no Supabase
+    (origem pje, status agendada) mas NAO vieram na resposta atual do Projuris
+    — tipicamente remarcadas ou excluidas, que ficariam como registros
+    "fantasma" na pauta. Registros manuais (origem != pje) nao sao tocados.
+    """
+    if not SB_URL or not SB_KEY:
+        return 0
+    url = f"{SB_URL}/rest/v1/{SB_TABLE}"
+    params = [
+        ("select", "id"),
+        ("data_audiencia", f"gte.{data_inicio}"),
+        ("data_audiencia", f"lte.{data_fim}"),
+        ("origem", "eq.pje"),
+        ("status", "eq.agendada"),
+        ("limit", "10000"),
+    ]
+    try:
+        r = requests.get(url, headers=_sb_headers(), params=params, timeout=20)
+        r.raise_for_status()
+        existentes = [str(row["id"]) for row in r.json()]
+    except Exception as exc:
+        log.error(f"Reconciliacao: falha ao listar registros existentes: {exc}")
+        return 0
+
+    fantasmas = [i for i in existentes if i not in ids_atuais]
+    if not fantasmas:
+        return 0
+
+    agora = datetime.now(timezone.utc).isoformat()
+    total = 0
+    for i in range(0, len(fantasmas), 30):
+        lote = fantasmas[i : i + 30]
+        r = requests.patch(
+            url,
+            headers={**_sb_headers(), "Prefer": "return=minimal"},
+            params={"id": f"in.({','.join(lote)})"},
+            json={"status": "cancelada", "updated_at": agora},
+            timeout=20,
+        )
+        if r.status_code in (200, 204):
+            total += len(lote)
+        else:
+            log.error(f"Reconciliacao Supabase {r.status_code}: {r.text[:300]}")
+    return total
+
+
+def sb_log_sync(data_inicio: str, data_fim: str, recebidas: int, salvas: int,
+                canceladas: int, sucesso: bool, erro: str | None = None) -> None:
+    """
+    Registra o resultado da execucao na tabela pauta_sync_log, para o admin
+    exibir "Pauta atualizada em ..." e permitir detectar sync parado.
+    Falha aqui nunca derruba a sincronizacao (apenas warning no log).
+    """
+    if not SB_URL or not SB_KEY:
+        return
+    payload = {
+        "executado_em":   datetime.now(timezone.utc).isoformat(),
+        "periodo_inicio": data_inicio,
+        "periodo_fim":    data_fim,
+        "recebidas":      recebidas,
+        "salvas":         salvas,
+        "canceladas":     canceladas,
+        "sucesso":        sucesso,
+        "erro":           (erro or "")[:2000] or None,
+    }
+    try:
+        r = requests.post(
+            f"{SB_URL}/rest/v1/pauta_sync_log",
+            headers={**_sb_headers(), "Prefer": "return=minimal"},
+            json=payload,
+            timeout=20,
+        )
+        if r.status_code not in (200, 201, 204):
+            log.warning(f"pauta_sync_log {r.status_code}: {r.text[:300]}")
+    except Exception as exc:
+        log.warning(f"pauta_sync_log falhou: {exc}")
+
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -620,39 +700,62 @@ def main() -> None:
         log.error("SUPABASE_URL / SUPABASE_KEY nao configurados — abortando.")
         raise SystemExit(1)
 
-    # 1. Busca tarefas (calendario; fallback paginado)
-    tarefas: list[dict] = []
+    recebidas = enviados = canceladas = 0
     try:
-        tarefas = buscar_calendario(data_inicio, data_fim)
-        log.info(f"Calendario: {len(tarefas)} tarefas recebidas")
+        # 1. Busca tarefas (calendario; fallback paginado)
+        tarefas: list[dict] = []
+        try:
+            tarefas = buscar_calendario(data_inicio, data_fim)
+            log.info(f"Calendario: {len(tarefas)} tarefas recebidas")
+        except Exception as exc:
+            log.warning(f"Calendario falhou ({exc}) — usando endpoint paginado...")
+
+        if not tarefas:
+            tarefas = buscar_paginado(data_inicio, data_fim)
+            log.info(f"Paginado: {len(tarefas)} tarefas recebidas")
+        recebidas = len(tarefas)
+
+        # 2. Feriados (informativo)
+        feriados = buscar_feriados(data_inicio, data_fim)
+        if feriados:
+            log.info(f"Feriados no periodo: {sorted(feriados)}")
+
+        # 3. Filtra audiencias
+        if args.todas:
+            selecionadas = tarefas
+        else:
+            selecionadas = [t for t in tarefas if _is_audiencia(t)]
+            log.info(f"Audiencias filtradas: {len(selecionadas)} de {len(tarefas)}")
+
+        if not selecionadas:
+            log.info("Nenhuma audiencia encontrada no periodo.")
+            sb_log_sync(data_inicio, data_fim, recebidas, 0, 0, sucesso=True)
+            return
+
+        # 4. Normaliza e salva no Supabase
+        records  = [normalizar(t) for t in selecionadas]
+        enviados = sb_upsert(records)
+        log.info(f"Audiencias salvas no Supabase ({SB_TABLE}): {enviados}")
+
+        # 5. Reconciliacao: marca como canceladas as audiencias agendadas do
+        #    periodo que sumiram do Projuris (remarcadas/excluidas). So roda
+        #    quando o upsert foi 100% bem-sucedido, para nunca cancelar por
+        #    causa de falha parcial de rede.
+        if enviados == len(records):
+            ids_atuais = {str(r["id"]) for r in records}
+            canceladas = sb_reconciliar(ids_atuais, data_inicio, data_fim)
+            if canceladas:
+                log.info(f"Reconciliacao: {canceladas} audiencia(s) marcadas como cancelada(s)")
+        else:
+            log.warning("Upsert parcial — reconciliacao pulada nesta execucao.")
+
     except Exception as exc:
-        log.warning(f"Calendario falhou ({exc}) — usando endpoint paginado...")
+        log.error(f"Sincronizacao falhou: {exc}")
+        sb_log_sync(data_inicio, data_fim, recebidas, enviados, canceladas,
+                    sucesso=False, erro=str(exc))
+        raise
 
-    if not tarefas:
-        tarefas = buscar_paginado(data_inicio, data_fim)
-        log.info(f"Paginado: {len(tarefas)} tarefas recebidas")
-
-    # 2. Feriados (informativo)
-    feriados = buscar_feriados(data_inicio, data_fim)
-    if feriados:
-        log.info(f"Feriados no periodo: {sorted(feriados)}")
-
-    # 3. Filtra audiencias
-    if args.todas:
-        selecionadas = tarefas
-    else:
-        selecionadas = [t for t in tarefas if _is_audiencia(t)]
-        log.info(f"Audiencias filtradas: {len(selecionadas)} de {len(tarefas)}")
-
-    if not selecionadas:
-        log.info("Nenhuma audiencia encontrada no periodo.")
-        return
-
-    # 4. Normaliza e salva no Supabase
-    records  = [normalizar(t) for t in selecionadas]
-    enviados = sb_upsert(records)
-
-    log.info(f"Audiencias salvas no Supabase ({SB_TABLE}): {enviados}")
+    sb_log_sync(data_inicio, data_fim, recebidas, enviados, canceladas, sucesso=True)
     log.info("=" * 60)
     log.info("Sincronizacao concluida.")
     log.info("=" * 60)
