@@ -427,6 +427,8 @@ ALTER TABLE pauta_audiencias ADD COLUMN IF NOT EXISTS orientacao_enviada BOOLEAN
 -- Migrações recentes:
 ALTER TABLE pauta_audiencias ADD COLUMN IF NOT EXISTS testemunhas      TEXT NOT NULL DEFAULT '';
 ALTER TABLE pauta_audiencias ADD COLUMN IF NOT EXISTS corr_tipo_envio  TEXT DEFAULT NULL;
+ALTER TABLE pauta_audiencias ADD COLUMN IF NOT EXISTS valor_advogado   NUMERIC(10,2) DEFAULT NULL;
+ALTER TABLE pauta_audiencias ADD COLUMN IF NOT EXISTS valor_preposto   NUMERIC(10,2) DEFAULT NULL;
 
 -- EQUIPE INTERNA (advogados do escritório — usado para notificação WhatsApp)
 CREATE TABLE IF NOT EXISTS equipe (
