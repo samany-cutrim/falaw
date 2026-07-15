@@ -21,8 +21,8 @@ services:
     # starter = 512 MB RAM. O login no Projuris usa Chromium headless;
     # se o job falhar por falta de memória (OOM), suba para "standard".
     plan: starter
-    # BRT (UTC-3): 07:30 → 10:30 UTC | 13:30 → 16:30 UTC | 19:30 → 22:30 UTC
-    schedule: "30 10,16,22 * * *"
+    # 1x ao dia — BRT (UTC-3): 16:00 → 19:00 UTC
+    schedule: "0 19 * * *"
     envVars:
       - key: SUPABASE_URL
         sync: false
