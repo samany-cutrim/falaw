@@ -1765,6 +1765,25 @@
           <div class="modal-body">
             <p style="font-size:13px;color:var(--c-muted);margin-bottom:16px">Selecione os destinatários. Cada cliente receberá um e-mail informando que a pauta está disponível na área do cliente.</p>
 
+            <!-- Período -->
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:12px 14px;margin-bottom:14px">
+              <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);margin-bottom:10px">📅 Período das audiências</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+                <button type="button" onclick="_pautaSetPeriodo('semana',this)" style="font-family:var(--f-mono);font-size:9px;padding:4px 10px;border:1px solid #d1d5db;border-radius:3px;background:#fff;color:#374151;cursor:pointer">7 dias</button>
+                <button type="button" onclick="_pautaSetPeriodo('mes',this)"    style="font-family:var(--f-mono);font-size:9px;padding:4px 10px;border:1px solid #d1d5db;border-radius:3px;background:#fff;color:#374151;cursor:pointer">Este mês</button>
+                <button type="button" onclick="_pautaSetPeriodo('prox',this)"   style="font-family:var(--f-mono);font-size:9px;padding:4px 10px;border:1px solid #d1d5db;border-radius:3px;background:#fff;color:#374151;cursor:pointer">Próx. mês</button>
+                <button type="button" onclick="_pautaSetPeriodo('todos',this)"  style="font-family:var(--f-mono);font-size:9px;padding:4px 10px;border:1px solid #0D2B5E;border-radius:3px;background:#0D2B5E;color:#fff;cursor:pointer">Todos</button>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <div style="flex:1"><label style="font-family:var(--f-mono);font-size:9px;color:var(--c-muted);display:block;margin-bottom:3px">DE</label>
+                  <input id="pauta-periodo-de" type="date" style="width:100%;box-sizing:border-box;padding:6px 10px;border:1px solid #e5e7eb;border-radius:3px;font-size:12px;font-family:var(--f-mono);outline:none" /></div>
+                <span style="font-family:var(--f-mono);font-size:10px;color:var(--c-muted);padding-top:16px">até</span>
+                <div style="flex:1"><label style="font-family:var(--f-mono);font-size:9px;color:var(--c-muted);display:block;margin-bottom:3px">ATÉ</label>
+                  <input id="pauta-periodo-ate" type="date" style="width:100%;box-sizing:border-box;padding:6px 10px;border:1px solid #e5e7eb;border-radius:3px;font-size:12px;font-family:var(--f-mono);outline:none" /></div>
+              </div>
+              <p style="font-size:11px;color:var(--c-muted);margin:8px 0 0 0">Clientes sem audiências no período selecionado não receberão e-mail.</p>
+            </div>
+
             <!-- Escritório -->
             <div style="background:#EEF2FF;border:1px solid #c7d2fe;border-radius:4px;padding:12px 14px;margin-bottom:14px">
               <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;font-size:13px">
@@ -8249,6 +8268,33 @@ function closeEnviarPautaModal() {
   document.getElementById('enviarPautaModal').style.display = 'none';
 }
 
+function _pautaSetPeriodo(tipo, btn) {
+  const today = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const deEl  = document.getElementById('pauta-periodo-de');
+  const ateEl = document.getElementById('pauta-periodo-ate');
+  // highlight
+  btn.closest('div').querySelectorAll('button[type=button]').forEach(b => {
+    b.style.background = '#fff'; b.style.color = '#374151'; b.style.borderColor = '#d1d5db';
+  });
+  btn.style.background = '#0D2B5E'; btn.style.color = '#fff'; btn.style.borderColor = '#0D2B5E';
+  if (tipo === 'semana') {
+    if (deEl) deEl.value = fmt(today);
+    const e = new Date(today); e.setDate(e.getDate()+6);
+    if (ateEl) ateEl.value = fmt(e);
+  } else if (tipo === 'mes') {
+    if (deEl)  deEl.value  = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+    if (ateEl) ateEl.value = fmt(new Date(today.getFullYear(), today.getMonth()+1, 0));
+  } else if (tipo === 'prox') {
+    if (deEl)  deEl.value  = fmt(new Date(today.getFullYear(), today.getMonth()+1, 1));
+    if (ateEl) ateEl.value = fmt(new Date(today.getFullYear(), today.getMonth()+2, 0));
+  } else {
+    if (deEl)  deEl.value  = '';
+    if (ateEl) ateEl.value = '';
+  }
+}
+
 function pautaDestSelectAll(val) {
   document.querySelectorAll('.pauta-dest-cb, .pauta-dest-corr-cb').forEach(cb => cb.checked = val);
   if (val) document.getElementById('pauta-dest-escritorio').checked = true;
@@ -8272,34 +8318,51 @@ async function sendEnviarPauta() {
   const btn = document.getElementById('btn-enviar-pauta-send');
   btn.disabled = true; btn.textContent = 'Enviando…';
 
-  // Busca pauta para correspondentes (uma vez só)
-  let pautaRows = [];
-  if (corrTargets.length) {
-    try {
-      const { sbUrl, sbKey } = getSbCreds();
-      if (sbUrl && sbKey) {
-        const sb = supabase.createClient(sbUrl, sbKey);
-        const today = new Date().toISOString().slice(0,10);
-        const { data } = await sb.from('pauta_audiencias').select('*').gte('data_audiencia', today).order('data_audiencia').order('horario');
-        if (data) pautaRows = data;
-      }
-    } catch(e) { console.warn('pauta corr fetch:', e.message); }
-  }
+  // Período selecionado
+  const periodoDE  = (document.getElementById('pauta-periodo-de')?.value  || '').trim();
+  const periodoATE = (document.getElementById('pauta-periodo-ate')?.value || '').trim();
 
-  let ok = 0, fail = 0;
+  // Busca pauta do período (para clientes E correspondentes)
+  let pautaRows = [];
+  try {
+    const { sbUrl, sbKey } = getSbCreds();
+    if (sbUrl && sbKey) {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const today = new Date().toISOString().slice(0,10);
+      let q = sb.from('pauta_audiencias').select('*').neq('status','cancelada').order('data_audiencia').order('horario');
+      if (periodoDE)  q = q.gte('data_audiencia', periodoDE);
+      else            q = q.gte('data_audiencia', today); // padrão: a partir de hoje
+      if (periodoATE) q = q.lte('data_audiencia', periodoATE);
+      const { data } = await q;
+      if (data) pautaRows = data;
+    }
+  } catch(e) { console.warn('pauta fetch:', e.message); }
+
+  let ok = 0, fail = 0, pulados = 0;
   for (const c of targets) {
+    // Verifica se o cliente tem audiências no período
+    const nomeCliente = (c.company || c.name || '').toLowerCase();
+    const temAudiencia = pautaRows.some(r => {
+      const clienteR = (r.cliente || '').toLowerCase();
+      const recladaR  = (r.reclamada || '').toLowerCase();
+      return clienteR.includes(nomeCliente) || recladaR.includes(nomeCliente) ||
+             nomeCliente.includes(clienteR.replace(/\s*\(cliente\)/gi,'').trim()) ||
+             nomeCliente.split(' ')[0].length > 3 && recladaR.includes(nomeCliente.split(' ')[0]);
+    });
+    if (!temAudiencia) { pulados++; continue; }
     try { await notifyClientPauta(c); ok++; } catch(e) { fail++; console.warn('pauta email', c.email, e.message); }
   }
   for (const c of corrTargets) {
     try { await notifyCorrespondentePauta(c, pautaRows); ok++; } catch(e) { fail++; console.warn('pauta corr email', c.email, e.message); }
   }
   if (incluiEscritorio) {
-    try { await notifyEscritorioPauta(); ok++; } catch(e) { fail++; console.warn('pauta escritorio:', e.message); }
+    try { await notifyEscritorioPauta(pautaRows); ok++; } catch(e) { fail++; console.warn('pauta escritorio:', e.message); }
   }
 
   btn.disabled = false; btn.textContent = 'Enviar';
   closeEnviarPautaModal();
-  showToast(`✓ Pauta enviada: ${ok} sucesso${fail ? `, ${fail} erro(s)` : ''}`);
+  const msg = `✓ Pauta enviada: ${ok} sucesso${fail ? `, ${fail} erro(s)` : ''}${pulados ? ` · ${pulados} cliente(s) sem audiência no período (não enviado)` : ''}`;
+  showToast(msg);
 }
 
 async function notifyCorrespondentePauta(corr, allRows) {
@@ -13699,6 +13762,11 @@ function _audCard(a) {
         ${a.dados_preposto||a.testemunhas ? `<div style="margin-top:4px;font-size:11px;color:var(--c-dark);background:#f9fafb;border-radius:4px;padding:7px 10px;line-height:1.7">
           ${a.dados_preposto ? `<div><span style="font-family:var(--f-mono);font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:var(--c-muted)">Preposto</span><br/><strong>${_escHtml(a.dados_preposto)}</strong></div>` : ''}
           ${a.testemunhas ? `<div style="margin-top:${a.dados_preposto?'6px':'0'}"><span style="font-family:var(--f-mono);font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#92400e">Testemunha</span><br/><strong>${_escHtml(a.testemunhas)}</strong></div>` : ''}
+        </div>` : ''}
+        <!-- valores correspondentes -->
+        ${(a.valor_advogado != null || a.valor_preposto != null) ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+          ${a.valor_advogado != null ? `<span style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:2px 9px;font-size:10px;color:#1B7A4E;font-weight:700;font-family:var(--f-mono)">💰 Adv: R$ ${Number(a.valor_advogado).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>` : ''}
+          ${a.valor_preposto != null ? `<span style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:2px 9px;font-size:10px;color:#0D2B5E;font-weight:700;font-family:var(--f-mono)">💰 Pre: R$ ${Number(a.valor_preposto).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>` : ''}
         </div>` : ''}
         <!-- link -->
         ${linkHtml}

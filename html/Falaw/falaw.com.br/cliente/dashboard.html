@@ -818,7 +818,7 @@
             </div>
             <div style="display:flex;gap:8px">
               <button onclick="_escLimparBusca()" style="font-family:monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;color:#6B7280;cursor:pointer;white-space:nowrap">✕ Limpar</button>
-              <button onclick="escDownloadExcel()" style="font-family:monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:#1B7A4E;border:none;border-radius:4px;padding:8px 14px;color:#fff;cursor:pointer;white-space:nowrap">⬇ Excel</button>
+              <button onclick="abrirModalExcel()" style="font-family:monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:#1B7A4E;border:none;border-radius:4px;padding:8px 14px;color:#fff;cursor:pointer;white-space:nowrap">⬇ Excel</button>
             </div>
           </div>
           <!-- Filtro de período -->
@@ -2729,43 +2729,197 @@ function _escPopulateSelects(rows) {
   _msPopulate('esc-sel-recda', recadas);
 }
 
-function escDownloadExcel() {
-  if (typeof XLSX === 'undefined') { alert('Biblioteca Excel não carregada. Verifique sua conexão e tente novamente.'); return; }
+function abrirModalExcel() {
+  if (typeof XLSX === 'undefined') { alert('Biblioteca Excel não carregada. Verifique sua conexão.'); return; }
+  const existing = document.getElementById('modal-excel-export');
+  if (existing) existing.remove();
+
+  // Lista de clientes únicos
   const rows = window._escRows || [];
-  const today = window._escToday || new Date().toISOString().slice(0,10);
-  const dateVal = window._escCalSel || null;
-  const verPass = document.getElementById('pauta-ver-passadas');
-  const showOld = verPass ? verPass.checked : false;
+  const clientes = [...new Set(rows.map(r => {
+    if (r.reclamada && r.reclamada.includes('(CLIENTE)')) {
+      const f = r.reclamada.split(',').find(p => p.includes('(CLIENTE)'));
+      if (f) return f.replace(/\s*\(CLIENTE\)/gi,'').replace(/\s*S\.?A\.?$/i,'').trim();
+    }
+    return (r.cliente || '').trim();
+  }).filter(Boolean))].sort();
 
-  const qAdv  = (document.getElementById('esc-busca-adv')?.value  || '').trim().toLowerCase();
-  const qProc = (document.getElementById('esc-busca-proc')?.value || '').trim().toLowerCase();
-  const qRecl = (document.getElementById('esc-busca-recl')?.value || '').trim().toLowerCase();
-  const qRecda = _msGetValues('esc-sel-recda');
-  const qTipo  = _msGetValues('esc-sel-tipo');
-  const qResp  = _msGetValues('esc-sel-resp');
-  const qDe   = document.getElementById('esc-data-de')?.value  || '';
-  const qAte  = document.getElementById('esc-data-ate')?.value || '';
-  const periodo = window._escPeriodo || '';
+  const today = new Date().toISOString().slice(0,10);
+  const clienteOpts = clientes.map(c =>
+    `<label style="display:flex;align-items:center;gap:8px;padding:5px 10px;cursor:pointer;font-size:11px;font-family:monospace;color:#374151;border-bottom:1px solid #f9fafb;hover:background:#f9fafb">
+      <input type="checkbox" value="${c.replace(/"/g,'&quot;')}" checked style="width:12px;height:12px;accent-color:#1B7A4E;cursor:pointer;flex-shrink:0">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c}</span>
+    </label>`
+  ).join('');
 
-  let filtered;
-  if (dateVal) {
-    filtered = rows.filter(r => (r.data_audiencia||'') === dateVal);
-  } else if (periodo && periodo !== 'todos' && (qDe || qAte)) {
-    filtered = rows.filter(r => {
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-excel-export';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:8px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+      <div style="padding:20px 24px 16px;border-bottom:1px solid #e5e7eb">
+        <div style="font-family:monospace;font-size:13px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#1B7A4E">⬇ Exportar Excel</div>
+        <div style="font-size:11px;color:#9CA3AF;margin-top:3px">Selecione o período e os clientes desejados</div>
+      </div>
+      <div style="padding:20px 24px;display:flex;flex-direction:column;gap:18px">
+
+        <!-- Período -->
+        <div>
+          <div style="font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:8px">Período</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">
+            <button onclick="_xlSetPeriodo('semana',this)" style="font-family:monospace;font-size:9px;padding:4px 10px;border:1px solid #d1d5db;border-radius:3px;background:#fff;color:#374151;cursor:pointer">7 dias</button>
+            <button onclick="_xlSetPeriodo('mes',this)"    style="font-family:monospace;font-size:9px;padding:4px 10px;border:1px solid #d1d5db;border-radius:3px;background:#fff;color:#374151;cursor:pointer">Este mês</button>
+            <button onclick="_xlSetPeriodo('prox',this)"   style="font-family:monospace;font-size:9px;padding:4px 10px;border:1px solid #d1d5db;border-radius:3px;background:#fff;color:#374151;cursor:pointer">Próx. mês</button>
+            <button onclick="_xlSetPeriodo('todos',this)"  style="font-family:monospace;font-size:9px;padding:4px 10px;border:1px solid #0D2B5E;border-radius:3px;background:#0D2B5E;color:#fff;cursor:pointer">Todos</button>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="flex:1">
+              <label style="font-family:monospace;font-size:9px;color:#9CA3AF;display:block;margin-bottom:3px">DE</label>
+              <input id="xl-data-de" type="date" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none" />
+            </div>
+            <span style="font-family:monospace;font-size:10px;color:#9CA3AF;padding-top:16px">até</span>
+            <div style="flex:1">
+              <label style="font-family:monospace;font-size:9px;color:#9CA3AF;display:block;margin-bottom:3px">ATÉ</label>
+              <input id="xl-data-ate" type="date" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Clientes -->
+        ${clientes.length ? `<div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF">Clientes</div>
+            <div style="display:flex;gap:8px">
+              <button onclick="_xlSelectAllClientes(true)"  style="font-family:monospace;font-size:9px;color:#1B7A4E;background:none;border:none;cursor:pointer;padding:0">Todos</button>
+              <button onclick="_xlSelectAllClientes(false)" style="font-family:monospace;font-size:9px;color:#DC2626;background:none;border:none;cursor:pointer;padding:0">Nenhum</button>
+            </div>
+          </div>
+          <div id="xl-clientes-list" style="border:1px solid #e5e7eb;border-radius:4px;max-height:200px;overflow-y:auto">
+            ${clienteOpts}
+          </div>
+        </div>` : ''}
+
+      </div>
+      <div style="padding:16px 24px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:8px">
+        <button onclick="document.getElementById('modal-excel-export').remove()"
+          style="background:#F3F4F6;color:#374151;border:none;padding:9px 20px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer">Cancelar</button>
+        <button onclick="escDownloadExcelModal()"
+          style="background:#1B7A4E;color:#fff;border:none;padding:9px 20px;border-radius:4px;font-family:monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-weight:700">⬇ Baixar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+function _xlSetPeriodo(tipo, btn) {
+  const today = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const deEl  = document.getElementById('xl-data-de');
+  const ateEl = document.getElementById('xl-data-ate');
+  // highlight
+  btn.closest('div').querySelectorAll('button').forEach(b => {
+    b.style.background = '#fff'; b.style.color = '#374151'; b.style.borderColor = '#d1d5db';
+  });
+  btn.style.background = '#0D2B5E'; btn.style.color = '#fff'; btn.style.borderColor = '#0D2B5E';
+  if (tipo === 'semana') {
+    if (deEl) deEl.value = fmt(today);
+    const e = new Date(today); e.setDate(e.getDate()+6);
+    if (ateEl) ateEl.value = fmt(e);
+  } else if (tipo === 'mes') {
+    if (deEl)  deEl.value  = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+    if (ateEl) ateEl.value = fmt(new Date(today.getFullYear(), today.getMonth()+1, 0));
+  } else if (tipo === 'prox') {
+    if (deEl)  deEl.value  = fmt(new Date(today.getFullYear(), today.getMonth()+1, 1));
+    if (ateEl) ateEl.value = fmt(new Date(today.getFullYear(), today.getMonth()+2, 0));
+  } else if (tipo === 'todos') {
+    if (deEl)  deEl.value  = '';
+    if (ateEl) ateEl.value = '';
+  }
+}
+
+function _xlSelectAllClientes(checked) {
+  document.querySelectorAll('#xl-clientes-list input[type=checkbox]').forEach(c => c.checked = checked);
+}
+
+function escDownloadExcelModal() {
+  const de  = (document.getElementById('xl-data-de')?.value  || '').trim();
+  const ate = (document.getElementById('xl-data-ate')?.value || '').trim();
+  const checkedClientes = new Set(
+    [...document.querySelectorAll('#xl-clientes-list input[type=checkbox]:checked')].map(c => c.value.toLowerCase())
+  );
+  const hasClientFilter = checkedClientes.size > 0;
+
+  let rows = window._escRows || [];
+
+  // Filtro de período
+  if (de || ate) {
+    rows = rows.filter(r => {
       const d = r.data_audiencia || '';
-      if (qDe && d < qDe) return false;
-      if (qAte && d > qAte) return false;
+      if (de  && d < de)  return false;
+      if (ate && d > ate) return false;
       return true;
     });
-  } else {
-    filtered = rows.filter(r => showOld || (r.data_audiencia||'') >= today);
   }
-  if (qAdv)  filtered = filtered.filter(r => (r.advogado||'').toLowerCase().includes(qAdv));
-  if (qProc) filtered = filtered.filter(r => (r.processo||'').toLowerCase().includes(qProc));
-  if (qRecl) filtered = filtered.filter(r => (r.reclamante||'').toLowerCase().includes(qRecl));
-  if (qRecda.length) filtered = filtered.filter(r => qRecda.some(q => (r.reclamada||'').includes(q)));
-  if (qTipo.length)  filtered = filtered.filter(r => qTipo.includes(r.tipo_audiencia||''));
-  if (qResp.length)  filtered = filtered.filter(r => qResp.includes(r.tipo_responsabilidade||''));
+
+  // Filtro de clientes
+  if (hasClientFilter) {
+    rows = rows.filter(r => {
+      let nome = (r.cliente || '').trim();
+      if (r.reclamada && r.reclamada.includes('(CLIENTE)')) {
+        const f = r.reclamada.split(',').find(p => p.includes('(CLIENTE)'));
+        if (f) nome = f.replace(/\s*\(CLIENTE\)/gi,'').replace(/\s*S\.?A\.?$/i,'').trim();
+      }
+      return checkedClientes.has(nome.toLowerCase());
+    });
+  }
+
+  document.getElementById('modal-excel-export')?.remove();
+  escDownloadExcel(rows);
+}
+
+function escDownloadExcel(rowsOverride) {
+  if (typeof XLSX === 'undefined') { alert('Biblioteca Excel não carregada. Verifique sua conexão e tente novamente.'); return; }
+
+  let filtered;
+  if (rowsOverride) {
+    // Chamado pelo modal — já filtrado por período e clientes
+    filtered = rowsOverride;
+  } else {
+    // Chamado diretamente (compatibilidade) — usa filtros ativos da barra
+    const rows = window._escRows || [];
+    const today = window._escToday || new Date().toISOString().slice(0,10);
+    const dateVal = window._escCalSel || null;
+    const verPass = document.getElementById('pauta-ver-passadas');
+    const showOld = verPass ? verPass.checked : false;
+    const qAdv   = (document.getElementById('esc-busca-adv')?.value  || '').trim().toLowerCase();
+    const qProc  = (document.getElementById('esc-busca-proc')?.value || '').trim().toLowerCase();
+    const qRecl  = (document.getElementById('esc-busca-recl')?.value || '').trim().toLowerCase();
+    const qRecda = _msGetValues('esc-sel-recda');
+    const qTipo  = _msGetValues('esc-sel-tipo');
+    const qResp  = _msGetValues('esc-sel-resp');
+    const qDe    = document.getElementById('esc-data-de')?.value  || '';
+    const qAte   = document.getElementById('esc-data-ate')?.value || '';
+    const periodo = window._escPeriodo || '';
+    if (dateVal) {
+      filtered = rows.filter(r => (r.data_audiencia||'') === dateVal);
+    } else if (periodo && periodo !== 'todos' && (qDe || qAte)) {
+      filtered = rows.filter(r => {
+        const d = r.data_audiencia || '';
+        if (qDe && d < qDe) return false;
+        if (qAte && d > qAte) return false;
+        return true;
+      });
+    } else {
+      filtered = rows.filter(r => showOld || (r.data_audiencia||'') >= today);
+    }
+    if (qAdv)  filtered = filtered.filter(r => (r.advogado||'').toLowerCase().includes(qAdv));
+    if (qProc) filtered = filtered.filter(r => (r.processo||'').toLowerCase().includes(qProc));
+    if (qRecl) filtered = filtered.filter(r => (r.reclamante||'').toLowerCase().includes(qRecl));
+    if (qRecda.length) filtered = filtered.filter(r => qRecda.some(q => (r.reclamada||'').includes(q)));
+    if (qTipo.length)  filtered = filtered.filter(r => qTipo.includes(r.tipo_audiencia||''));
+    if (qResp.length)  filtered = filtered.filter(r => qResp.includes(r.tipo_responsabilidade||''));
+  }
 
   const data = filtered.map(r => ({
     'Data':           r.data_audiencia || '',
@@ -3115,11 +3269,6 @@ function _escRenderRows(rows, today) {
           ${a.observacoes_preposto ? `<div style="margin-top:4px;color:#9CA3AF">${a.observacoes_preposto}</div>` : ''}
         </div>` : ''}
 
-        ${(a.valor_advogado != null || a.valor_preposto != null) ? `<div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${a.valor_advogado != null ? `<span style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:3px 10px;font-size:10px;color:#1B7A4E;font-weight:700;font-family:monospace">💰 Adv: R$ ${Number(a.valor_advogado).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>` : ''}
-          ${a.valor_preposto != null ? `<span style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:3px 10px;font-size:10px;color:#0D2B5E;font-weight:700;font-family:monospace">💰 Pre: R$ ${Number(a.valor_preposto).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>` : ''}
-        </div>` : ''}
-
         ${linkHtml||senhaHtml ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${linkHtml}${senhaHtml}</div>` : ''}
 
         ${obs ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:8px 10px;font-size:11px;color:#78350f"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#92400e;display:block;margin-bottom:3px">Orientação</span>${escHtml(obs).replace(/\n/g,'<br>')}</div>` : ''}
@@ -3238,7 +3387,7 @@ function _clientRenderRows(rows) {
         ${a.reclamante ? `<div style="font-size:11px;color:#6B7280;margin-top:2px">Reclamante: ${a.reclamante}</div>` : ''}
         ${a.testemunhas ? `<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border-radius:4px;border:1px solid #fde68a;font-size:11px"><span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#92400e;display:block;margin-bottom:3px">Testemunhas</span><b style="color:#78350f">${a.testemunhas.replace(/\n/g,'<br>')}</b></div>` : ''}
         ${linkHtml}${senhaHtml}
-        ${a.status !== 'cancelada' ? `<div style="margin-top:10px"><button onclick="abrirEditarTestemunhas('${a.id}', ${JSON.stringify(a.testemunhas||'')})"
+        ${a.status !== 'cancelada' ? `<div style="margin-top:10px"><button data-aud-id="${a.id}" data-aud-test="${escHtml(a.testemunhas||'')}" onclick="abrirEditarTestemunhas(this.dataset.audId, this.dataset.audTest)"
           style="background:#fff;color:#374151;border:1px solid #d1d5db;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;border-radius:3px;cursor:pointer;font-weight:700">✏️ ${a.testemunhas ? 'Editar Testemunhas' : 'Informar Testemunhas'}</button></div>` : ''}
       </div>`;
     });
