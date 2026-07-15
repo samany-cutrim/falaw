@@ -2889,6 +2889,11 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
         <input type="text" id="member-name" placeholder="Nome Sobrenome" />
       </div>
       <div class="form-field">
+        <label>Sigla</label>
+        <input type="text" id="member-sigla" placeholder="SC" maxlength="6" style="text-transform:uppercase" />
+        <p class="cfg-hint" style="margin-top:4px;font-size:11px;color:var(--c-muted)">Sigla usada pelo escritório (ex: Samany Cutrim → SC). O lembrete de audiência no WhatsApp usa a sigla para identificar o advogado quando a pauta não traz o nome completo.</p>
+      </div>
+      <div class="form-field">
         <label>E-mail</label>
         <input type="email" id="member-email" placeholder="nome@falaw.com.br" />
       </div>
@@ -5157,6 +5162,7 @@ function openMemberModal(id) {
     if (m) {
       document.getElementById('member-id').value      = m.id;
       document.getElementById('member-name').value    = m.name;
+      document.getElementById('member-sigla').value   = m.sigla || '';
       document.getElementById('member-email').value   = m.email || '';
       document.getElementById('member-celular').value = m.celular || '';
       document.getElementById('member-callmebot').value = m.callmebotApikey || '';
@@ -5183,6 +5189,7 @@ function openMemberModal(id) {
   } else {
     document.getElementById('member-id').value      = '';
     document.getElementById('member-name').value    = '';
+    document.getElementById('member-sigla').value   = '';
     document.getElementById('member-email').value   = '';
     document.getElementById('member-celular').value = '';
     document.getElementById('member-callmebot').value = '';
@@ -5201,6 +5208,7 @@ function editMember(id) { openMemberModal(id); }
 
 function saveMember() {
   const name    = document.getElementById('member-name').value.trim();
+  const sigla   = document.getElementById('member-sigla').value.trim().toUpperCase();
   const email   = document.getElementById('member-email').value.trim();
   const celular = document.getElementById('member-celular').value.trim();
   const callmebotApikey = document.getElementById('member-callmebot').value.trim();
@@ -5215,9 +5223,9 @@ function saveMember() {
 
   if (id) {
     const idx = members.findIndex(m => m.id === id);
-    if (idx !== -1) members[idx] = { ...members[idx], name, email, celular, callmebotApikey, role, bio, status };
+    if (idx !== -1) members[idx] = { ...members[idx], name, sigla, email, celular, callmebotApikey, role, bio, status };
   } else {
-    members.push({ id: uid(), name, email, celular, callmebotApikey, role, bio, status });
+    members.push({ id: uid(), name, sigla, email, celular, callmebotApikey, role, bio, status });
   }
 
   members.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
@@ -5229,7 +5237,7 @@ function saveMember() {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
       const mid = id || members.find(m => m.name === name && m.email === email)?.id || '';
-      sb.from('equipe').upsert({ id: mid, nome: name, email, celular, cargo: role, callmebot_apikey: callmebotApikey || null }).then(({ error }) => {
+      sb.from('equipe').upsert({ id: mid, nome: name, sigla: sigla || null, email, celular, cargo: role, callmebot_apikey: callmebotApikey || null }).then(({ error }) => {
         if (error) console.warn('equipe upsert:', error.message);
       });
     } catch(e) { console.warn('equipe save:', e.message); }

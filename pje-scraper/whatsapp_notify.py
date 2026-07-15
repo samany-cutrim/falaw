@@ -67,18 +67,25 @@ def buscar_audiencias_amanha():
 
 
 def buscar_equipe():
-    """Retorna mapa nome→dados dos advogados internos (tabela equipe)."""
-    rows = _supabase_get('equipe', {'select': 'nome,email,celular,callmebot_apikey'})
+    """Retorna mapa nome/sigla→dados dos advogados internos (tabela equipe)."""
+    rows = _supabase_get('equipe', {'select': 'nome,email,celular,callmebot_apikey,sigla'})
     mapa = {}
     for r in rows:
         nome = (r.get('nome') or '').strip()
         cel  = (r.get('celular') or '').strip()
         if nome and cel:
-            # Indexa pelo nome completo e por cada palavra (para match por sigla/sobrenome)
+            # Indexa pelo nome completo e por cada palavra (para match por sobrenome)
             mapa[nome.lower()] = r
             for token in nome.lower().split():
                 if len(token) > 2:
                     mapa.setdefault(token, r)
+    # Sigla do escritório (ex: SC = Samany Cutrim) tem prioridade sobre
+    # qualquer coincidência de nome — por isso é indexada por último,
+    # sobrescrevendo entradas anteriores.
+    for r in rows:
+        sigla = (r.get('sigla') or '').strip().lower()
+        if sigla and (r.get('celular') or '').strip():
+            mapa[sigla] = r
     return mapa
 
 
