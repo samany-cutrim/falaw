@@ -1669,7 +1669,7 @@
             Importar Excel
             <input type="file" id="aud-xl-input" accept=".xlsx,.xls" style="display:none" onchange="audImportExcel(this)" />
           </label>
-          <button type="button" class="btn btn-ghost" onclick="audExportExcel()" title="Baixar pauta como planilha Excel">⬇ Baixar Excel</button>
+          <button type="button" class="btn btn-ghost" onclick="abrirModalExcelAdmin()" title="Baixar pauta como planilha Excel">⬇ Baixar Excel</button>
           <button type="button" class="btn btn-ghost" onclick="openEnviarPautaModal()" title="Enviar e-mail de pauta para clientes selecionados">📧 Enviar Pauta</button>
           <button type="button" class="btn btn-ghost" onclick="openAudienciaModal()">+ Manual</button>
         </div>
@@ -14545,19 +14545,153 @@ async function audImportExcel(inputEl) {
   }
 }
 
+async function abrirModalExcelAdmin() {
+  if (typeof XLSX === 'undefined') { showToast('Biblioteca Excel não carregada.'); return; }
+
+  // Busca lista de clientes para o filtro
+  const { sbUrl, sbKey } = getSbCreds();
+  let allRows = [];
+  if (sbUrl && sbKey) {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { data } = await sb.from('pauta_audiencias').select('cliente,reclamada').order('data_audiencia');
+      allRows = data || [];
+    } catch(e) { console.warn('excel admin clientes:', e.message); }
+  }
+
+  // Extrai clientes únicos
+  const clientes = [...new Set(allRows.map(r => {
+    if (r.reclamada && r.reclamada.includes('(CLIENTE)')) {
+      const f = r.reclamada.split(',').find(p => p.includes('(CLIENTE)'));
+      if (f) return f.replace(/\s*\(CLIENTE\)/gi,'').replace(/\s*S\.?A\.?$/i,'').trim();
+    }
+    return (r.cliente || '').trim();
+  }).filter(Boolean))].sort();
+
+  const existing = document.getElementById('modal-excel-admin');
+  if (existing) existing.remove();
+
+  const clienteOpts = clientes.map(c =>
+    `<label style="display:flex;align-items:center;gap:8px;padding:5px 10px;cursor:pointer;font-size:12px;color:var(--c-dark);border-bottom:1px solid var(--c-divider)">
+      <input type="checkbox" value="${_escHtml(c)}" checked style="width:12px;height:12px;accent-color:#0D2B5E;cursor:pointer;flex-shrink:0">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(c)}</span>
+    </label>`
+  ).join('');
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-excel-admin';
+  modal.className = 'modal-overlay';
+  modal.style.cssText = 'display:flex';
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div class="modal" style="max-width:480px">
+      <div class="modal-header">
+        <h3>⬇ Baixar Excel — Pauta</h3>
+        <button class="modal-close" onclick="document.getElementById('modal-excel-admin').remove()">×</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+
+        <!-- Período -->
+        <div>
+          <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);margin-bottom:8px">Período</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">
+            <button type="button" onclick="_xlAdmPeriodo('semana',this)" style="font-family:var(--f-mono);font-size:9px;padding:4px 10px;border:1px solid var(--c-divider);border-radius:3px;background:#fff;color:var(--c-dark);cursor:pointer">7 dias</button>
+            <button type="button" onclick="_xlAdmPeriodo('mes',this)"    style="font-family:var(--f-mono);font-size:9px;padding:4px 10px;border:1px solid var(--c-divider);border-radius:3px;background:#fff;color:var(--c-dark);cursor:pointer">Este mês</button>
+            <button type="button" onclick="_xlAdmPeriodo('prox',this)"   style="font-family:var(--f-mono);font-size:9px;padding:4px 10px;border:1px solid var(--c-divider);border-radius:3px;background:#fff;color:var(--c-dark);cursor:pointer">Próx. mês</button>
+            <button type="button" onclick="_xlAdmPeriodo('todos',this)"  style="font-family:var(--f-mono);font-size:9px;padding:4px 10px;border:1px solid #0D2B5E;border-radius:3px;background:#0D2B5E;color:#fff;cursor:pointer">Todos</button>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="flex:1"><label style="font-family:var(--f-mono);font-size:9px;color:var(--c-muted);display:block;margin-bottom:3px">DE</label>
+              <input id="xl-adm-de"  type="date" style="width:100%;box-sizing:border-box;padding:6px 10px;border:1px solid var(--c-divider);border-radius:3px;font-size:12px;font-family:var(--f-mono);outline:none" /></div>
+            <span style="font-family:var(--f-mono);font-size:10px;color:var(--c-muted);padding-top:16px">até</span>
+            <div style="flex:1"><label style="font-family:var(--f-mono);font-size:9px;color:var(--c-muted);display:block;margin-bottom:3px">ATÉ</label>
+              <input id="xl-adm-ate" type="date" style="width:100%;box-sizing:border-box;padding:6px 10px;border:1px solid var(--c-divider);border-radius:3px;font-size:12px;font-family:var(--f-mono);outline:none" /></div>
+          </div>
+        </div>
+
+        <!-- Clientes -->
+        ${clientes.length ? `<div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Clientes</div>
+            <div style="display:flex;gap:10px">
+              <button type="button" onclick="document.querySelectorAll('#xl-adm-cli input').forEach(c=>c.checked=true)"  style="font-family:var(--f-mono);font-size:9px;color:#1B7A4E;background:none;border:none;cursor:pointer;padding:0">Todos</button>
+              <button type="button" onclick="document.querySelectorAll('#xl-adm-cli input').forEach(c=>c.checked=false)" style="font-family:var(--f-mono);font-size:9px;color:#DC2626;background:none;border:none;cursor:pointer;padding:0">Nenhum</button>
+            </div>
+          </div>
+          <div id="xl-adm-cli" style="border:1px solid var(--c-divider);border-radius:4px;max-height:200px;overflow-y:auto">${clienteOpts}</div>
+        </div>` : ''}
+
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;padding:16px 24px;border-top:1px solid var(--c-divider)">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('modal-excel-admin').remove()">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="audExportExcel()">⬇ Baixar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function _xlAdmPeriodo(tipo, btn) {
+  const today = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  btn.closest('div').querySelectorAll('button[type=button]').forEach(b => {
+    b.style.background = '#fff'; b.style.color = 'var(--c-dark)'; b.style.borderColor = 'var(--c-divider)';
+  });
+  btn.style.background = '#0D2B5E'; btn.style.color = '#fff'; btn.style.borderColor = '#0D2B5E';
+  const de  = document.getElementById('xl-adm-de');
+  const ate = document.getElementById('xl-adm-ate');
+  if (tipo === 'semana') {
+    if (de) de.value = fmt(today);
+    const e = new Date(today); e.setDate(e.getDate()+6);
+    if (ate) ate.value = fmt(e);
+  } else if (tipo === 'mes') {
+    if (de)  de.value  = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+    if (ate) ate.value = fmt(new Date(today.getFullYear(), today.getMonth()+1, 0));
+  } else if (tipo === 'prox') {
+    if (de)  de.value  = fmt(new Date(today.getFullYear(), today.getMonth()+1, 1));
+    if (ate) ate.value = fmt(new Date(today.getFullYear(), today.getMonth()+2, 0));
+  } else {
+    if (de)  de.value  = '';
+    if (ate) ate.value = '';
+  }
+}
+
 async function audExportExcel() {
+  document.getElementById('modal-excel-admin')?.remove();
   try {
+    const de  = (document.getElementById('xl-adm-de')?.value  || '').trim();
+    const ate = (document.getElementById('xl-adm-ate')?.value || '').trim();
+    const checkedClientes = new Set(
+      [...document.querySelectorAll('#xl-adm-cli input:checked')].map(c => c.value.toLowerCase())
+    );
+    const hasCliFilter = checkedClientes.size > 0;
+
     const { sbUrl, sbKey } = getSbCreds();
     let rows = [];
     if (sbUrl && sbKey) {
       const sb = supabase.createClient(sbUrl, sbKey);
-      const { data, error } = await sb.from('pauta_audiencias').select('*').order('data_audiencia', { ascending: true });
+      let q = sb.from('pauta_audiencias').select('*').order('data_audiencia', { ascending: true });
+      if (de)  q = q.gte('data_audiencia', de);
+      if (ate) q = q.lte('data_audiencia', ate);
+      const { data, error } = await q;
       if (error) { showToast('Erro ao buscar dados: ' + error.message); return; }
       rows = data || [];
     } else {
       rows = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]');
     }
-    if (!rows.length) { showToast('Nenhuma audiência para exportar.'); return; }
+
+    if (hasCliFilter) {
+      rows = rows.filter(r => {
+        let nome = (r.cliente || '').trim();
+        if (r.reclamada && r.reclamada.includes('(CLIENTE)')) {
+          const f = r.reclamada.split(',').find(p => p.includes('(CLIENTE)'));
+          if (f) nome = f.replace(/\s*\(CLIENTE\)/gi,'').replace(/\s*S\.?A\.?$/i,'').trim();
+        }
+        return checkedClientes.has(nome.toLowerCase());
+      });
+    }
+
+    if (!rows.length) { showToast('Nenhuma audiência encontrada para os filtros selecionados.'); return; }
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Pauta');
