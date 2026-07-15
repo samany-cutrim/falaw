@@ -207,22 +207,31 @@ ALTER TABLE sync_log ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "service full access" ON sync_log;
 CREATE POLICY "service full access" ON sync_log FOR ALL TO service_role USING (true) WITH CHECK (true);
 
--- ── Agendamento automático via pg_cron (a cada 15 min, dias úteis 06h–22h BRT) ──
--- Execute no SQL Editor do Supabase após habilitar a extensão pg_cron:
---   Database → Extensions → pg_cron → Enable
+-- ── Agendamento via pg_cron — Edge Functions (gratuito, sem Render) ──────────
+-- Jobs ativos (consultado em 2026-07-15):
+--   jobid 1 — sync-pauta-diario      → 0 10 * * 1-5  (seg–sex 07h BRT, job legado)
+--   jobid 2 — projuris-sync-2x-dia   → 0 11,19 * * * (08h e 16h BRT, todos os dias)
+--   jobid 3 — whatsapp-notify-diario → 0 * * * *     (a cada hora — avisa 24h antes do horário da audiência)
+--
+-- Para consultar: SELECT jobid, jobname, schedule, active FROM cron.job;
+-- Para remover:   SELECT cron.unschedule('projuris-sync-2x-dia');
+--                 SELECT cron.unschedule('whatsapp-notify-diario');
+--                 SELECT cron.unschedule('sync-pauta-diario');
+--
+-- Para recriar os jobs das Edge Functions (caso necessário):
+-- SELECT cron.schedule(
+--   'projuris-sync-2x-dia', '0 11,19 * * *',
+--   $$ SELECT net.http_post(
+--        url     := 'https://yleofidqkimeanpuothv.supabase.co/functions/v1/projuris-sync',
+--        headers := '{"Content-Type":"application/json","Authorization":"Bearer <SERVICE_ROLE_KEY>"}'::jsonb,
+--        body    := '{}'::jsonb); $$);
 --
 -- SELECT cron.schedule(
---   'projuris-sync-15min',
---   '*/15 9-1 * * 1-5',
---   $$
---     SELECT net.http_post(
---       url    := 'https://yleofidqkimeanpuothv.supabase.co/functions/v1/projuris-sync',
---       headers := '{"Content-Type":"application/json"}'::jsonb,
---       body   := '{}'::jsonb
---     );
---   $$
--- );
--- Para remover: SELECT cron.unschedule('projuris-sync-15min');
+--   'whatsapp-notify-diario', '0 * * * *',  -- a cada hora; função filtra pelo horário da audiência (BRT)
+--   $$ SELECT net.http_post(
+--        url     := 'https://yleofidqkimeanpuothv.supabase.co/functions/v1/whatsapp-notify',
+--        headers := '{"Content-Type":"application/json","Authorization":"Bearer <SERVICE_ROLE_KEY>"}'::jsonb,
+--        body    := '{}'::jsonb); $$);
 
 
 -- ── iFood Dashboard ──────────────────────────────────────────────────────────

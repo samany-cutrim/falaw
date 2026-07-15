@@ -1,51 +1,7 @@
 # Render Blueprint — Falaw Advogados
-# Este arquivo DEVE ficar na raiz do repositório para o Render detectá-lo.
-# Todos os paths (dockerfilePath, dockerContext) são relativos à raiz do repo.
+# Os cron jobs foram migrados para Supabase Edge Functions (pg_cron) — gratuito.
+# Agendamento configurado em supabase-setup.sql.
 #
-# Serviços:
-#   1. falaw-pauta-sync      — cron: pauta de audiências Projuris ADV → Supabase
-#   2. falaw-whatsapp-notify — cron: aviso WhatsApp 1 dia antes da audiência
-#                              (via CallMeBot — gratuito, sem servidor próprio)
-#
-# Obs: falaw-cockroach-api foi removido (projeto usa apenas o Supabase) e
-# falaw-evolution-api também (o envio de WhatsApp migrou para o CallMeBot,
-# que dispensa servidor 24h e disco persistente).
+# Este arquivo pode ser mantido vazio ou usado para futuros serviços pagos.
 
-services:
-  # ── Cron: sincroniza pauta de audiências Projuris ADV → Supabase ──────────
-  - type: cron
-    name: falaw-pauta-sync
-    runtime: docker
-    dockerfilePath: ./pje-scraper/Dockerfile
-    dockerContext: ./pje-scraper
-    region: oregon
-    # starter = 512 MB RAM. O login no Projuris usa Chromium headless;
-    # se o job falhar por falta de memória (OOM), suba para "standard".
-    plan: starter
-    # 2x ao dia — BRT (UTC-3): 08:00 → 11:00 UTC | 16:00 → 19:00 UTC
-    # (a execução da manhã cobre audiências marcadas na véspera após as 16h)
-    schedule: "0 11,19 * * *"
-    envVars:
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_KEY
-        sync: false
-
-  # ── Cron: notificações WhatsApp (CallMeBot) — 1 dia antes da audiência ────
-  # BRT (UTC-3): 08:00 → 11:00 UTC
-  # As API keys pessoais do CallMeBot ficam na tabela `equipe` do Supabase
-  # (coluna callmebot_apikey) — nenhuma variável extra é necessária aqui.
-  - type: cron
-    name: falaw-whatsapp-notify
-    runtime: docker
-    dockerfilePath: ./pje-scraper/Dockerfile
-    dockerContext: ./pje-scraper
-    region: oregon
-    plan: starter
-    schedule: "0 11 * * *"
-    dockerCommand: python whatsapp_notify.py
-    envVars:
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_KEY
-        sync: false
+services: []
