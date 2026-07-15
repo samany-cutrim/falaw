@@ -14703,15 +14703,17 @@ function _xlAdmPeriodo(tipo, btn) {
 }
 
 async function audExportExcel() {
-  document.getElementById('modal-excel-admin')?.remove();
-  try {
-    const de  = (document.getElementById('xl-adm-de')?.value  || '').trim();
-    const ate = (document.getElementById('xl-adm-ate')?.value || '').trim();
-    const checkedClientes = new Set(
-      [...document.querySelectorAll('#xl-adm-cli input:checked')].map(c => c.value.toLowerCase())
-    );
-    const hasCliFilter = checkedClientes.size > 0;
+  // Lê filtros ANTES de remover o modal
+  const de  = (document.getElementById('xl-adm-de')?.value  || '').trim();
+  const ate = (document.getElementById('xl-adm-ate')?.value || '').trim();
+  const checkedClientes = new Set(
+    [...document.querySelectorAll('#xl-adm-cli input:checked')].map(c => c.value.toLowerCase())
+  );
+  const hasCliFilter = checkedClientes.size > 0;
 
+  document.getElementById('modal-excel-admin')?.remove();
+
+  try {
     const { sbUrl, sbKey } = getSbCreds();
     let rows = [];
     if (sbUrl && sbKey) {
