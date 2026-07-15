@@ -1,11 +1,25 @@
+# Render Blueprint — Falaw Advogados
+# Este arquivo DEVE ficar na raiz do repositório para o Render detectá-lo.
+# Todos os paths (dockerfilePath, dockerContext) são relativos à raiz do repo.
+#
+# Serviços:
+#   1. falaw-pauta-sync      — cron: pauta de audiências Projuris ADV → Supabase
+#   2. falaw-whatsapp-notify — cron: aviso WhatsApp 1 dia antes da audiência
+#   3. falaw-evolution-api   — web:  Evolution API (WhatsApp Business)
+#
+# Obs: o serviço falaw-cockroach-api foi removido — o projeto passou a usar
+# apenas o Supabase como banco/armazenamento.
+
 services:
   # ── Cron: sincroniza pauta de audiências Projuris ADV → Supabase ──────────
   - type: cron
     name: falaw-pauta-sync
     runtime: docker
-    dockerfilePath: ../pje-scraper/Dockerfile
-    dockerContext: ../pje-scraper
+    dockerfilePath: ./pje-scraper/Dockerfile
+    dockerContext: ./pje-scraper
     region: oregon
+    # starter = 512 MB RAM. O login no Projuris usa Chromium headless;
+    # se o job falhar por falta de memória (OOM), suba para "standard".
     plan: starter
     # BRT (UTC-3): 07:30 → 10:30 UTC | 13:30 → 16:30 UTC | 19:30 → 22:30 UTC
     schedule: "30 10,16,22 * * *"
@@ -20,11 +34,12 @@ services:
   - type: cron
     name: falaw-whatsapp-notify
     runtime: docker
-    dockerfilePath: ../pje-scraper/Dockerfile
-    dockerContext: ../pje-scraper
+    dockerfilePath: ./pje-scraper/Dockerfile
+    dockerContext: ./pje-scraper
     region: oregon
     plan: starter
     schedule: "0 11 * * *"
+    dockerCommand: python whatsapp_notify.py
     envVars:
       - key: SUPABASE_URL
         sync: false
@@ -36,14 +51,18 @@ services:
         sync: false
       - key: EVOLUTION_INSTANCE
         value: falaw
-    dockerCommand: python whatsapp_notify.py
 
   # ── Evolution API — WhatsApp Business ─────────────────────────────────────
+  # Imagem fixada na v1.8.2: a linha v1.x aceita rodar SEM banco de dados
+  # (DATABASE_ENABLED=false). A v2.x exige Postgres e ignora essas variáveis.
+  # O disco persistente guarda a sessão do WhatsApp entre deploys
+  # (sem ele, seria preciso escanear o QR code a cada deploy).
+  # Requer plano pago: o plano free do Render não suporta discos.
   - type: web
     name: falaw-evolution-api
     runtime: docker
-    dockerfilePath: ./evolution-api/Dockerfile
-    dockerContext: ./evolution-api
+    dockerfilePath: ./cockroach-api/evolution-api/Dockerfile
+    dockerContext: ./cockroach-api/evolution-api
     region: oregon
     plan: starter
     envVars:
@@ -69,20 +88,3 @@ services:
       name: evolution-data
       mountPath: /evolution/instances
       sizeGB: 1
-
-  # ── API CockroachDB ───────────────────────────────────────────────────────
-  - type: web
-    name: falaw-cockroach-api
-    runtime: node
-    region: oregon
-    plan: free
-    rootDir: cockroach-api
-    buildCommand: npm ci && npx prisma generate && npx prisma db push --accept-data-loss
-    startCommand: npm run start
-    envVars:
-      - key: DATABASE_URL
-        sync: false
-      - key: PORT
-        value: "8787"
-      - key: CORS_ORIGIN
-        value: "*"
