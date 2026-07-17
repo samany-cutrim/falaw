@@ -3,11 +3,16 @@
  * Envia notificação WhatsApp (CallMeBot) para advogados internos.
  *
  * Roda a cada hora (pg_cron: "0 * * * *"). A cada execução envia para:
- *   1. Audiências de amanhã cujo horário (HH) == hora atual em BRT
- *      → aviso chega 24h antes da audiência
- *   2. Audiências de amanhã cadastradas/atualizadas na última hora
+ *   1. Audiências do próximo dia útil cujo horário (HH) == hora atual em BRT
+ *      → aviso chega ~24h antes (ou na sexta para segunda-feira)
+ *   2. Audiências do próximo dia útil cadastradas/atualizadas na última hora
  *      que ainda NÃO foram notificadas (whatsapp_notificado_at IS NULL)
  *      → cobre urgências adicionadas fora do horário normal
+ *
+ * Regra de dia útil:
+ *   - Sexta-feira → notifica audiências de segunda-feira (pula sáb/dom)
+ *   - Sábado / Domingo → não envia nada
+ *   - Demais dias → notifica audiências de amanhã
  *
  * Após envio, marca whatsapp_notificado_at para evitar reenvio.
  *
@@ -28,12 +33,24 @@ const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Retorna a data de amanhã em BRT no formato YYYY-MM-DD */
-function amanhaEmBRT(): string {
+/**
+ * Retorna { data, skip } onde:
+ *  - data: próximo dia útil a notificar (YYYY-MM-DD)
+ *  - skip: true se hoje for sábado ou domingo
+ * Sexta-feira → segunda-feira (+3); Sáb/Dom → skip; demais → amanhã (+1)
+ */
+function proximoDiaUtilBRT(): { data: string; skip: boolean } {
   const now = new Date();
   const brt = new Date(now.getTime() + BRT_OFFSET_H * 3600_000);
-  brt.setDate(brt.getDate() + 1);
-  return brt.toISOString().slice(0, 10);
+  const diaSemana = brt.getUTCDay(); // 0=Dom, 1=Seg … 5=Sex, 6=Sáb
+
+  if (diaSemana === 0 || diaSemana === 6) {
+    return { data: "", skip: true };
+  }
+
+  const diasAFrente = diaSemana === 5 ? 3 : 1; // Sexta → +3 (segunda); demais → +1
+  brt.setUTCDate(brt.getUTCDate() + diasAFrente);
+  return { data: brt.toISOString().slice(0, 10), skip: false };
 }
 
 /** Retorna a hora atual em BRT como string "HH" (ex: "08") */
@@ -56,7 +73,7 @@ function formatarData(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
-function formatarMensagem(aud: Record<string, string>, advNome: string): string {
+function formatarMensagem(aud: Record<string, string>, advNome: string, dataAlvo: string): string {
   const data  = formatarData(aud.data_audiencia ?? aud.data ?? "");
   const hora  = aud.horario ?? aud.hora ?? "";
   const vara  = aud.vara ?? "";
@@ -64,12 +81,18 @@ function formatarMensagem(aud: Record<string, string>, advNome: string): string 
   const tipo  = aud.tipo_audiencia ?? aud.tipo ?? "";
   const modal = (aud.modalidade ?? "PRESENCIAL").toUpperCase();
 
+  // Determina o texto do prazo: "amanhã" ou "na segunda-feira"
+  const hoje = new Date();
+  const brt  = new Date(hoje.getTime() + BRT_OFFSET_H * 3600_000);
+  const diaSemana = brt.getUTCDay();
+  const prazoTexto = diaSemana === 5 ? "na segunda-feira" : "amanhã";
+
   const linhas = [
     `*Falaw Advogados — Lembrete de Audiência*`,
     ``,
     `Olá, *${advNome}*! 👋`,
     ``,
-    `Você tem uma audiência *amanhã*:`,
+    `Você tem uma audiência *${prazoTexto}*:`,
     ``,
     `📅 *Data:* ${data}`,
     hora  ? `🕐 *Horário:* ${hora}` : "",
@@ -91,15 +114,14 @@ async function sleep(ms: number) {
 
 const COLS = "id,data_audiencia,horario,vara,reclamada,tipo_audiencia,modalidade,status,advogado";
 
-/** Audiências de amanhã cujo horário bate com a hora atual (aviso 24h antes) */
-async function buscarAudienciasNaHora() {
-  const data  = amanhaEmBRT();
+/** Audiências do próximo dia útil cujo horário bate com a hora atual */
+async function buscarAudienciasNaHora(dataAlvo: string) {
   const hora  = horaAtualBRT();
 
   const { data: rows, error } = await sb
     .from("pauta_audiencias")
     .select(COLS)
-    .eq("data_audiencia", data)
+    .eq("data_audiencia", dataAlvo)
     .neq("status", "cancelada")
     .like("horario", `${hora}:%`)
     .is("whatsapp_notificado_at", null)
@@ -109,15 +131,14 @@ async function buscarAudienciasNaHora() {
   return rows ?? [];
 }
 
-/** Audiências de amanhã cadastradas/atualizadas na última hora e ainda não notificadas */
-async function buscarAudienciasUrgentes() {
-  const data    = amanhaEmBRT();
+/** Audiências do próximo dia útil cadastradas/atualizadas na última hora e ainda não notificadas */
+async function buscarAudienciasUrgentes(dataAlvo: string) {
   const ha1hora = new Date(Date.now() - 3600_000).toISOString();
 
   const { data: rows, error } = await sb
     .from("pauta_audiencias")
     .select(COLS)
-    .eq("data_audiencia", data)
+    .eq("data_audiencia", dataAlvo)
     .neq("status", "cancelada")
     .is("whatsapp_notificado_at", null)
     .or(`created_at.gte.${ha1hora},updated_at.gte.${ha1hora}`)
@@ -183,20 +204,27 @@ async function enviarWhatsapp(numero: string, apikey: string, mensagem: string):
 
 Deno.serve(async (_req) => {
   try {
-    const horaAtual  = horaAtualBRT();
-    const dataAmanha = amanhaEmBRT();
+    const horaAtual = horaAtualBRT();
+    const { data: dataAlvo, skip } = proximoDiaUtilBRT();
+
+    if (skip) {
+      return new Response(
+        JSON.stringify({ ok: true, msg: `Fim de semana — sem envios.` }),
+        { headers: { "Content-Type": "application/json" } },
+      );
+    }
 
     // Busca as duas listas e une sem duplicatas
     const [porHora, urgentes] = await Promise.all([
-      buscarAudienciasNaHora(),
-      buscarAudienciasUrgentes(),
+      buscarAudienciasNaHora(dataAlvo),
+      buscarAudienciasUrgentes(dataAlvo),
     ]);
     const idsVistos = new Set(porHora.map((a: {id: string}) => a.id));
     const audiencias = [...porHora, ...urgentes.filter((a: {id: string}) => !idsVistos.has(a.id))];
 
     if (!audiencias.length) {
       return new Response(
-        JSON.stringify({ ok: true, msg: `Nenhuma audiência pendente para amanhã (${dataAmanha}) às ${horaAtual}h.` }),
+        JSON.stringify({ ok: true, msg: `Nenhuma audiência pendente para ${dataAlvo} às ${horaAtual}h.` }),
         { headers: { "Content-Type": "application/json" } },
       );
     }
@@ -234,7 +262,7 @@ Deno.serve(async (_req) => {
       const advNome = (info.nome ?? "").split(" ")[0];
       for (const aud of auds) {
         if (Date.now() - inicio > MAX_EXEC_MS) { abortado = true; break; }
-        const msg = formatarMensagem(aud as Record<string, string>, advNome);
+        const msg = formatarMensagem(aud as Record<string, string>, advNome, dataAlvo);
         const ok  = await enviarWhatsapp(numero, info.callmebot_apikey, msg);
         if (ok) { enviados++; idsNotificados.push(aud.id); } else erros++;
         await sleep(CALLMEBOT_DELAY_MS);
@@ -244,7 +272,7 @@ Deno.serve(async (_req) => {
     await marcarNotificadas(idsNotificados);
 
     return new Response(
-      JSON.stringify({ ok: true, hora_brt: `${horaAtual}h`, data_amanha: dataAmanha, enviados, erros, abortado, urgentes: urgentes.length, total_audiencias: audiencias.length }),
+      JSON.stringify({ ok: true, hora_brt: `${horaAtual}h`, data_alvo: dataAlvo, enviados, erros, abortado, urgentes: urgentes.length, total_audiencias: audiencias.length }),
       { headers: { "Content-Type": "application/json" } },
     );
   } catch (e) {
