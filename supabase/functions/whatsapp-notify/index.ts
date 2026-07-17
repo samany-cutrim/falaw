@@ -83,31 +83,35 @@ function formatarMensagem(aud: Record<string, string>, advNome: string, dataAlvo
   const tipo  = aud.tipo_audiencia ?? aud.tipo ?? "";
   const resp  = aud.tipo_responsabilidade ?? "";
   const modal = (aud.modalidade ?? "PRESENCIAL").toUpperCase();
+  const link  = aud.link ?? "";
+  const senha = aud.id_senha ?? "";
 
   // Determina o texto do prazo: "amanhã" ou "na segunda-feira"
   const hoje = new Date();
   const brt  = new Date(hoje.getTime() + BRT_OFFSET_H * 3600_000);
   const diaSemana = brt.getUTCDay();
-  const prazoTexto = diaSemana === 5 ? "na segunda-feira" : "amanhã";
+  const prazoTexto = diaSemana === 5 ? "segunda-feira" : "amanhã";
 
   const linhas = [
-    `*Falaw Advogados — Lembrete de Audiência*`,
+    `🚨*Lembrete de Audiência*`,
     ``,
     `Olá, *${advNome}*! 👋`,
     ``,
-    `Você tem uma audiência *${prazoTexto}*:`,
+    `Você tem uma audiência ${diaSemana === 5 ? "na *segunda-feira*" : "*amanhã*"}:`,
     ``,
     `📅 *Data:* ${data}`,
     hora  ? `🕐 *Horário:* ${hora}` : "",
     proc  ? `📁 *Processo:* ${proc}` : "",
     recl2 ? `👤 *Reclamante:* ${recl2}` : "",
-    vara  ? `⚖️  *Vara:* ${vara}`   : "",
+    vara  ? `⚖️  *Vara:* ${vara}` : "",
     recl  ? `🏢 *Reclamada:* ${recl}` : "",
-    tipo  ? `📋 *Tipo:* ${tipo}`    : "",
+    tipo  ? `📋 *Tipo:* ${tipo}` : "",
     resp  ? `🔖 *Responsabilidade:* ${resp}` : "",
     `📍 *Modalidade:* ${modal}`,
+    link  ? `🔗 *Link:* ${link}` : "",
+    senha ? `🔑 *ID/Senha:* ${senha}` : "",
     ``,
-    `_Falaw Advogados_`,
+    `_*Falaw Advogados*_`,
   ];
   return linhas.filter(l => l !== "").join("\n");
 }
@@ -118,21 +122,26 @@ async function sleep(ms: number) {
 
 // ── Busca dados ───────────────────────────────────────────────────────────────
 
-const COLS = "id,data_audiencia,horario,vara,reclamada,reclamante,processo,tipo_audiencia,modalidade,tipo_responsabilidade,status,advogado";
+const COLS = "id,data_audiencia,horario,vara,reclamada,reclamante,processo,tipo_audiencia,modalidade,tipo_responsabilidade,link,id_senha,status,advogado";
 
-/** Audiências do próximo dia útil cujo horário bate com a hora atual */
-async function buscarAudienciasNaHora(dataAlvo: string) {
-  const hora  = horaAtualBRT();
+/** Audiências do próximo dia útil cujo horário bate com a hora atual (seg-qui) */
+async function buscarAudienciasNaHora(dataAlvo: string, sexta: boolean) {
+  const hora = horaAtualBRT();
 
-  const { data: rows, error } = await sb
+  let query = sb
     .from("pauta_audiencias")
     .select(COLS)
     .eq("data_audiencia", dataAlvo)
     .neq("status", "cancelada")
-    .like("horario", `${hora}:%`)
     .is("whatsapp_notificado_at", null)
     .order("horario", { ascending: true });
 
+  // Na sexta envia todas (sem filtro de hora); nos demais dias filtra pela hora atual
+  if (!sexta) {
+    query = query.like("horario", `${hora}:%`);
+  }
+
+  const { data: rows, error } = await query;
   if (error) throw new Error(`Supabase pauta (hora): ${error.message}`);
   return rows ?? [];
 }
@@ -220,9 +229,13 @@ Deno.serve(async (_req) => {
       );
     }
 
+    const hoje = new Date();
+    const brt  = new Date(hoje.getTime() + BRT_OFFSET_H * 3600_000);
+    const sexta = brt.getUTCDay() === 5;
+
     // Busca as duas listas e une sem duplicatas
     const [porHora, urgentes] = await Promise.all([
-      buscarAudienciasNaHora(dataAlvo),
+      buscarAudienciasNaHora(dataAlvo, sexta),
       buscarAudienciasUrgentes(dataAlvo),
     ]);
     const idsVistos = new Set(porHora.map((a: {id: string}) => a.id));
