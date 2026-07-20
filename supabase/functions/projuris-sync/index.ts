@@ -379,6 +379,7 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
   else if (tipoRaw.includes("conciliac") || tipoRaw.includes("conciliação")) tipo_audiencia = "CONCILIAÇÃO";
   else if (tipoRaw.includes("una")) tipo_audiencia = "UNA";
   else if (tipoRaw.includes("inicial")) tipo_audiencia = "INICIAL";
+  else if (tipoRaw.includes("peric") || tipoRaw.includes("perícia") || tipoRaw.includes("pericia")) tipo_audiencia = "PERÍCIA";
   // else deixa vazio — encaixa no CHECK constraint ''
 
   // Modalidade

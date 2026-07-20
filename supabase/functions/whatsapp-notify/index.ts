@@ -83,8 +83,10 @@ function formatarMensagem(aud: Record<string, string>, advNome: string, dataAlvo
   const tipo  = aud.tipo_audiencia ?? aud.tipo ?? "";
   const resp  = aud.tipo_responsabilidade ?? "";
   const modal = (aud.modalidade ?? "PRESENCIAL").toUpperCase();
-  const link  = aud.link ?? "";
-  const senha = aud.id_senha ?? "";
+  const link   = aud.link ?? "";
+  const senha  = aud.id_senha ?? "";
+  const prep   = aud.dados_preposto ?? "";
+  const prepObs = aud.observacoes_preposto ?? "";
 
   // Determina o texto do prazo: "amanhã" ou "na segunda-feira"
   const hoje = new Date();
@@ -108,8 +110,10 @@ function formatarMensagem(aud: Record<string, string>, advNome: string, dataAlvo
     tipo  ? `📋 *Tipo:* ${tipo}` : "",
     resp  ? `🔖 *Responsabilidade:* ${resp}` : "",
     `📍 *Modalidade:* ${modal}`,
-    link  ? `🔗 *Link:* ${link}` : "",
-    senha ? `🔑 *ID/Senha:* ${senha}` : "",
+    link    ? `🔗 *Link:* ${link}` : "",
+    senha   ? `🔑 *ID/Senha:* ${senha}` : "",
+    prep    ? `🧑‍💼 *Preposto:* ${prep}` : "",
+    prepObs ? `📝 *Obs. Preposto:* ${prepObs}` : "",
     ``,
     `_*Falaw Advogados*_`,
   ];
@@ -122,7 +126,7 @@ async function sleep(ms: number) {
 
 // ── Busca dados ───────────────────────────────────────────────────────────────
 
-const COLS = "id,data_audiencia,horario,vara,reclamada,reclamante,processo,tipo_audiencia,modalidade,tipo_responsabilidade,link,id_senha,status,advogado";
+const COLS = "id,data_audiencia,horario,vara,reclamada,reclamante,processo,tipo_audiencia,modalidade,tipo_responsabilidade,link,id_senha,dados_preposto,observacoes_preposto,status,advogado";
 
 /** Audiências do próximo dia útil cujo horário bate com a hora atual (seg-qui) */
 async function buscarAudienciasNaHora(dataAlvo: string, sexta: boolean) {

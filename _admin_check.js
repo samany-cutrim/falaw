@@ -8558,9 +8558,9 @@ function _escHtml(str) {
 const AUD_STORE_KEY    = 'falaw_audiencias_v1';
 const PJE_SERVER       = 'http://localhost:7777';
 
-const AUD_TIPO_LABEL   = { INICIAL:'Inicial', 'INSTRUÇÃO':'Instrução', 'CONCILIAÇÃO':'Conciliação', UNA:'Una' };
-const AUD_TIPO_COLOR   = { INICIAL:'#0D2B5E', 'INSTRUÇÃO':'#6D28D9', 'CONCILIAÇÃO':'#1B7A4E', UNA:'#92400e' };
-const AUD_TIPO_BG      = { INICIAL:'#EEF2FF', 'INSTRUÇÃO':'#F5F3FF', 'CONCILIAÇÃO':'#E8F5EE', UNA:'#fffbeb' };
+const AUD_TIPO_LABEL   = { INICIAL:'Inicial', 'INSTRUÇÃO':'Instrução', 'CONCILIAÇÃO':'Conciliação', UNA:'Una', 'PERÍCIA':'Perícia' };
+const AUD_TIPO_COLOR   = { INICIAL:'#0D2B5E', 'INSTRUÇÃO':'#6D28D9', 'CONCILIAÇÃO':'#1B7A4E', UNA:'#92400e', 'PERÍCIA':'#0e7490' };
+const AUD_TIPO_BG      = { INICIAL:'#EEF2FF', 'INSTRUÇÃO':'#F5F3FF', 'CONCILIAÇÃO':'#E8F5EE', UNA:'#fffbeb', 'PERÍCIA':'#ecfeff' };
 const AUD_MOD_LABEL    = { VIRTUAL:'Virtual', PRESENCIAL:'Presencial', 'HÍBRIDA':'Híbrida' };
 const AUD_MOD_ICON     = { VIRTUAL:'', PRESENCIAL:'', 'HÍBRIDA':'' };
 const AUD_STATUS_LABEL = { agendada:'Agendada', realizada:'Realizada', adiada:'Adiada', cancelada:'Cancelada', cancelado_pje:'Cancelada no PJe?' };

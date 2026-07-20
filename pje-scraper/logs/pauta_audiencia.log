@@ -549,3 +549,24 @@ task: <Task pending name='Task-3' coro=<Connection.run.<locals>.init() running a
 2026-07-16 19:31:14,559 [INFO] ============================================================
 2026-07-16 19:31:14,559 [INFO] Sincronizacao concluida.
 2026-07-16 19:31:14,559 [INFO] ============================================================
+2026-07-19 19:30:05,542 [INFO] ============================================================
+2026-07-19 19:30:05,543 [INFO] Pauta de Audiencias — 19/07/2026 19:30
+2026-07-19 19:30:05,543 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-07-19 19:30:05,543 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-07-19 19:30:05,543 [INFO] Periodo: 2026-07-19 -> 2027-07-19
+2026-07-19 19:30:05,543 [INFO] ============================================================
+2026-07-19 19:30:05,544 [INFO] Calendario: 2026-07-19 -> 2027-07-19
+2026-07-19 19:30:06,125 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-07-19 19:30:33,939 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-07-19 19:30:34,058 [INFO] Senha preenchida.
+2026-07-19 19:30:34,311 [INFO] Formulário submetido.
+2026-07-19 19:30:36,292 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=ff2574d3-2665-4325-a187-b0a68ce54636&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=889866b2-189c-4cf3-ad14-d5ae5eb2bf68.ff2574d3-2665-4325-a187-b0a68ce54636.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-07-19 19:30:37,795 [INFO] Bearer token capturado das requisições de rede.
+2026-07-19 19:30:47,421 [INFO]   Retornou 219 itens
+2026-07-19 19:30:47,424 [INFO] Calendario: 219 tarefas recebidas
+2026-07-19 19:30:54,240 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 219
+2026-07-19 19:30:55,796 [INFO] Reconciliacao: 4 audiencia(s) marcadas como cancelada(s)
+2026-07-19 19:30:56,422 [WARNING] pauta_sync_log 404: {"code":"PGRST205","details":null,"hint":"Perhaps you meant the table 'public.sync_log'","message":"Could not find the table 'public.pauta_sync_log' in the schema cache"}
+2026-07-19 19:30:56,424 [INFO] ============================================================
+2026-07-19 19:30:56,424 [INFO] Sincronizacao concluida.
+2026-07-19 19:30:56,425 [INFO] ============================================================
