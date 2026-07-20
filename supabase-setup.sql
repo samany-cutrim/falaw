@@ -163,7 +163,7 @@ CREATE TABLE IF NOT EXISTS pauta_audiencias (
   data_audiencia        DATE NOT NULL,
   horario               TEXT NOT NULL DEFAULT '',
   -- Tipo (ex: "INICIAL - VIRTUAL") — dividido nos dois campos abaixo
-  tipo_audiencia        TEXT NOT NULL DEFAULT '' CHECK (tipo_audiencia IN ('INICIAL','INSTRUÇÃO','CONCILIAÇÃO','UNA','PERÍCIA','')),  
+  tipo_audiencia        TEXT NOT NULL DEFAULT '' CHECK (tipo_audiencia IN ('INICIAL','INSTRUÇÃO','CONCILIAÇÃO','UNA','PERÍCIA','ENCERRAMENTO DE INSTRUÇÃO','')),    
   modalidade            TEXT NOT NULL DEFAULT '' CHECK (modalidade IN ('VIRTUAL','PRESENCIAL','HÍBRIDA','')),
   -- Acesso
   id_senha              TEXT NOT NULL DEFAULT '',

@@ -615,22 +615,123 @@ async function fetchMarcadoresPorProcesso(numeros: string[]): Promise<Map<string
 }
 
 function calcularResponsabilidade(reclamada: string, marcadoresStr: string): string {
-  if (!reclamada) return "";
   const marcadores = marcadoresStr ? marcadoresStr.toUpperCase().split(",").map(s => s.trim()).filter(Boolean) : [];
-  const isIfood = reclamada.toLowerCase().includes("ifood");
-  const temExFoodlover = marcadores.some(m => m.includes("EX-FOODLOVER") || m.includes("EXFOODLOVER"));
 
-  // Posição do nosso cliente no polo: identificado por "(CLIENTE)" na string
+  // Marcadores do Projuris têm prioridade absoluta (mapeamento direto)
+  const TIPOS_VALIDOS = ["EX-FOODLOVER", "NUVEM", "TERCEIRIZAÇÃO", "OL-SUBSIDIÁRIA", "SUBSIDIÁRIA", "EX-FUNCIONÁRIO"];
+  for (const tipo of TIPOS_VALIDOS) {
+    if (marcadores.includes(tipo)) return tipo;
+  }
+
+  // Sem marcadores reconhecidos: fallback por posição no polo passivo
+  if (!reclamada) return "";
   const partes = reclamada.split(",").map(p => p.trim()).filter(p => p.length > 0);
   const idxCliente = partes.findIndex(p => p.toUpperCase().includes("(CLIENTE)"));
-  const clienteEhPrimeiro = idxCliente <= 0; // 0 = primeiro; -1 = sem marcador, assume primeiro
+  const clienteEhPrimeiro = idxCliente <= 0; // 0 = primeiro; -1 = sem tag, assume primeiro
 
+  const isIfood = reclamada.toLowerCase().includes("ifood");
   if (isIfood) {
-    if (temExFoodlover)     return "EX-FOODLOVER";
-    if (!clienteEhPrimeiro) return "OL-SUBSIDIÁRIA";
-    return "NUVEM";
+    return clienteEhPrimeiro ? "NUVEM" : "OL-SUBSIDIÁRIA";
   }
   return clienteEhPrimeiro ? "EX-FUNCIONÁRIO" : "SUBSIDIÁRIA";
+}
+
+/** Busca parteAtiva/partePassiva no endpoint de processos do Projuris e preenche registros sem reclamante */
+async function completarPartesAusentes(sb: ReturnType<typeof createClient>): Promise<number> {
+  const { data, error } = await sb
+    .from("pauta_audiencias")
+    .select("id,processo")
+    .or("reclamante.is.null,reclamante.eq.")
+    .not("processo", "is", null)
+    .neq("processo", "");
+  if (error || !data?.length) return 0;
+
+  const numeros = [...new Set((data as {processo:string}[]).map(r => r.processo).filter(Boolean))];
+  if (!numeros.length) return 0;
+
+  // Busca dados do processo (parteAtiva/partePassiva + marcadores)
+  const processoMap = new Map<string, { reclamante: string; reclamada: string; cliente: string; tipo_responsabilidade: string }>();
+
+  for (let i = 0; i < numeros.length; i += 20) {
+    const batch = numeros.slice(i, i + 20);
+    try {
+      const resp = await fetch(
+        `${PROJURIS_BASE}/adv-service/processo/consulta-com-paginacao?quan-registros=20&pagina=0`,
+        {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            filtroGeral: "", flHabilitado: true,
+            numerosProcesso: batch,
+            marcadores: [], resultados: [], sistemas: [],
+            campoDinamicoConsultaFiltro: [], codigoGruposResponsaveis: [],
+            codigoUsuariosResponsaveis: [], codigosCarteira: [], codigosGrupoEmpresarial: [],
+          }),
+        }
+      );
+      if (!resp.ok) continue;
+      const body = await resp.json() as Record<string,unknown>;
+      const items = ((body.content ?? body.data ?? body.processoConsultaWs ?? []) as Record<string,unknown>[]);
+
+      for (const proc of items) {
+        const num = str(proc.numeroProcesso ?? proc.numero_processo ?? proc.processo ?? "");
+        if (!num) continue;
+
+        // Extrai reclamante (polo ativo)
+        const reclamante = str(
+          proc.parteAtiva ?? proc.poloAtivo ?? proc.polo_ativo ?? proc.autor ??
+          (Array.isArray(proc.partesAtivas) ? (proc.partesAtivas as Record<string,unknown>[])[0]?.nome ?? "" : "") ?? ""
+        );
+        // Extrai reclamada (polo passivo) — pode ser array
+        let reclamada = "";
+        if (Array.isArray(proc.partesPassivas)) {
+          reclamada = (proc.partesPassivas as Record<string,unknown>[])
+            .map(p => str(p.nome ?? p.name ?? p.razaoSocial ?? "")).filter(Boolean).join(",");
+        } else {
+          reclamada = str(proc.partePassiva ?? proc.poloPassivo ?? proc.polo_passivo ?? proc.reu ?? "");
+        }
+        // Extrai cliente (parte com "(CLIENTE)")
+        const clienteTag = reclamada.split(",").find(p => p.toUpperCase().includes("(CLIENTE)"));
+        const cliente = clienteTag
+          ? clienteTag.replace(/\s*\(CLIENTE\)\s*/i, "").trim()
+          : str(proc.cliente ?? proc.nomeCliente ?? "");
+
+        // Marcadores para tipo_responsabilidade
+        const marcRaw = proc.marcadores ?? proc.etiquetas ?? proc.tags ?? [];
+        const marcadores: string[] = [];
+        if (Array.isArray(marcRaw)) {
+          for (const m of marcRaw as unknown[]) {
+            const label = typeof m === "string" ? m : str((m as Record<string,unknown>).descricao ?? (m as Record<string,unknown>).nome ?? "");
+            if (label) marcadores.push(label.toUpperCase().trim());
+          }
+        }
+        const tipo_responsabilidade = calcularResponsabilidade(reclamada, marcadores.join(","));
+
+        if (reclamante || reclamada) {
+          processoMap.set(num, { reclamante, reclamada, cliente, tipo_responsabilidade });
+        }
+      }
+    } catch(e) { console.warn("completarPartes lote " + i + ":", e); }
+  }
+
+  if (!processoMap.size) return 0;
+
+  let atualizados = 0;
+  for (const row of data as {id:string; processo:string}[]) {
+    const partes = processoMap.get(row.processo);
+    if (!partes) continue;
+    const upd: Record<string,string> = {};
+    if (partes.reclamante) upd.reclamante = partes.reclamante;
+    if (partes.reclamada)  upd.reclamada  = partes.reclamada;
+    if (partes.cliente)    upd.cliente    = partes.cliente;
+    if (partes.tipo_responsabilidade) upd.tipo_responsabilidade = partes.tipo_responsabilidade;
+    if (Object.keys(upd).length) {
+      await sb.from("pauta_audiencias").update(upd).eq("id", row.id);
+      atualizados++;
+    }
+  }
+  console.log("Partes completadas: " + atualizados);
+  return atualizados;
 }
 
 /** Classifica registros já no banco que têm reclamada mas tipo_responsabilidade vazio */
@@ -688,6 +789,37 @@ Deno.serve(async (req: Request) => {
     return Response.json({ diag: resultado }, { headers: CORS });
   }
 
+  // Modo re-classificação total: POST ?reclassify=1
+  if (url.searchParams.get("reclassify") === "1") {
+    try {
+      await getToken();
+      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+      // Busca TODOS os registros com reclamada preenchida
+      const { data, error } = await sb
+        .from("pauta_audiencias")
+        .select("id,processo,reclamada")
+        .neq("reclamada", "")
+        .not("reclamada", "is", null);
+      if (error || !data?.length) return Response.json({ ok:false, error: error?.message ?? "Nenhum registro" }, { headers:CORS });
+
+      const numeros = [...new Set((data as {processo:string}[]).map(r => r.processo).filter(Boolean))];
+      const marcadoresMap = await fetchMarcadoresPorProcesso(numeros);
+
+      let atualizados = 0;
+      for (const row of data as {id:string; processo:string; reclamada:string}[]) {
+        const marcadores = (marcadoresMap.get(row.processo ?? "") ?? []).join(",");
+        const resp = calcularResponsabilidade(row.reclamada ?? "", marcadores);
+        if (resp) {
+          await sb.from("pauta_audiencias").update({ tipo_responsabilidade: resp }).eq("id", row.id);
+          atualizados++;
+        }
+      }
+      return Response.json({ ok:true, message:`${atualizados} registros reclassificados`, total: data.length, atualizados }, { headers:CORS });
+    } catch(e) {
+      return Response.json({ ok:false, error: String(e) }, { status:500, headers:CORS });
+    }
+  }
+
   try {
     console.log("=== Projuris ADV Sync " + new Date().toISOString() + " ===");
     if (!PROJURIS_CLIENT_ID || !PROJURIS_SECRET) return Response.json({ ok:false, error:"PROJURIS_CLIENT_ID/SECRET nao configurados" }, { status:500, headers:CORS });
@@ -743,14 +875,15 @@ Deno.serve(async (req: Request) => {
       return true;
     });
     const saved   = await upsertSupabase(sb, records);
+    const partesCompletadas = await completarPartesAusentes(sb);
     const classificados = await classificarExistentes(sb);
     await recordSync(sb, saved);
-    console.log("Salvas: " + saved + " | Classificadas: " + classificados);
+    console.log("Salvas: " + saved + " | Partes completadas: " + partesCompletadas + " | Classificadas: " + classificados);
     const debugMode = url.searchParams.get("debug") === "1";
     if (debugMode) {
-      return Response.json({ ok:true, message:`${saved} audiencias sincronizadas`, saved, classificados, sample: records.slice(0,2), total_found: raw.length }, { headers:CORS });
+      return Response.json({ ok:true, message:`${saved} audiencias sincronizadas`, saved, partesCompletadas, classificados, sample: records.slice(0,2), total_found: raw.length }, { headers:CORS });
     }
-    return Response.json({ ok:true, message:`${saved} audiencias sincronizadas`, saved, classificados }, { headers:CORS });
+    return Response.json({ ok:true, message:`${saved} audiencias sincronizadas`, saved, partesCompletadas, classificados }, { headers:CORS });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Erro:", msg);

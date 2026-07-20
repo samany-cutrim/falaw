@@ -570,3 +570,24 @@ task: <Task pending name='Task-3' coro=<Connection.run.<locals>.init() running a
 2026-07-19 19:30:56,424 [INFO] ============================================================
 2026-07-19 19:30:56,424 [INFO] Sincronizacao concluida.
 2026-07-19 19:30:56,425 [INFO] ============================================================
+2026-07-20 19:30:04,352 [INFO] ============================================================
+2026-07-20 19:30:04,353 [INFO] Pauta de Audiencias — 20/07/2026 19:30
+2026-07-20 19:30:04,353 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-07-20 19:30:04,353 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-07-20 19:30:04,353 [INFO] Periodo: 2026-07-20 -> 2027-07-20
+2026-07-20 19:30:04,354 [INFO] ============================================================
+2026-07-20 19:30:04,354 [INFO] Calendario: 2026-07-20 -> 2027-07-20
+2026-07-20 19:30:04,715 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-07-20 19:30:28,060 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-07-20 19:30:28,169 [INFO] Senha preenchida.
+2026-07-20 19:30:28,484 [INFO] Formulário submetido.
+2026-07-20 19:30:30,153 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=a29d6af9-786b-434d-a1ca-0c674ae12625&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=0a78bfa4-7950-4643-90fe-6309418cd42d.a29d6af9-786b-434d-a1ca-0c674ae12625.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-07-20 19:30:30,547 [INFO] Bearer token capturado das requisições de rede.
+2026-07-20 19:30:40,697 [INFO]   Retornou 227 itens
+2026-07-20 19:30:40,699 [INFO] Calendario: 227 tarefas recebidas
+2026-07-20 19:30:58,803 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 227
+2026-07-20 19:31:05,062 [INFO] Reconciliacao: 208 audiencia(s) marcadas como cancelada(s)
+2026-07-20 19:31:05,959 [WARNING] pauta_sync_log 404: {"code":"PGRST205","details":null,"hint":"Perhaps you meant the table 'public.sync_log'","message":"Could not find the table 'public.pauta_sync_log' in the schema cache"}
+2026-07-20 19:31:05,962 [INFO] ============================================================
+2026-07-20 19:31:05,962 [INFO] Sincronizacao concluida.
+2026-07-20 19:31:05,962 [INFO] ============================================================
