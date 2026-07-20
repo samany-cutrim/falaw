@@ -8398,13 +8398,13 @@ async function sendEnviarPauta() {
              nomeCliente.split(' ')[0].length > 3 && recladaR.includes(nomeCliente.split(' ')[0]);
     });
     if (!temAudiencia) { pulados++; continue; }
-    try { await notifyClientPauta(c); ok++; } catch(e) { fail++; console.warn('pauta email', c.email, e.message); }
+    try { await notifyClientPauta(c, periodoDE, periodoATE); ok++; } catch(e) { fail++; console.warn('pauta email', c.email, e.message); }
   }
   for (const c of corrTargets) {
-    try { await notifyCorrespondentePauta(c, pautaRows); ok++; } catch(e) { fail++; console.warn('pauta corr email', c.email, e.message); }
+    try { await notifyCorrespondentePauta(c, pautaRows, periodoDE, periodoATE); ok++; } catch(e) { fail++; console.warn('pauta corr email', c.email, e.message); }
   }
   if (incluiEscritorio) {
-    try { await notifyEscritorioPauta(pautaRows); ok++; } catch(e) { fail++; console.warn('pauta escritorio:', e.message); }
+    try { await notifyEscritorioPauta(pautaRows, periodoDE, periodoATE); ok++; } catch(e) { fail++; console.warn('pauta escritorio:', e.message); }
   }
 
   btn.disabled = false; btn.textContent = 'Enviar';
@@ -8413,7 +8413,15 @@ async function sendEnviarPauta() {
   showToast(msg);
 }
 
-async function notifyCorrespondentePauta(corr, allRows) {
+function _fmtPeriodo(de, ate) {
+  const fmt = iso => iso ? iso.split('-').reverse().join('/') : '';
+  if (de && ate) return `${fmt(de)} a ${fmt(ate)}`;
+  if (de)  return `a partir de ${fmt(de)}`;
+  if (ate) return `até ${fmt(ate)}`;
+  return new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+}
+
+async function notifyCorrespondentePauta(corr, allRows, periodoDE, periodoATE) {
   if (!_gasUrl()) throw new Error('GAS URL não configurada.');
   const nome = (corr.nome || '').toLowerCase();
   const rows = allRows.filter(r =>
@@ -8422,7 +8430,7 @@ async function notifyCorrespondentePauta(corr, allRows) {
   );
   if (!rows.length) return; // sem audiências, não envia
   const subject = `PAUTA DE AUDIÊNCIAS — ${(corr.nome||'CORRESPONDENTE').toUpperCase()}`;
-  const today   = new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+  const periodo = _fmtPeriodo(periodoDE, periodoATE);
   const portalUrl = 'https://falaw.com.br/cliente/index.html';
   const rowsHtml = rows.map(r => {
     const dt = (r.data_audiencia||'').split('-').reverse().join('/');
@@ -8456,8 +8464,8 @@ async function notifyCorrespondentePauta(corr, allRows) {
   <tr><td style="background:#fff;padding:36px 40px 28px">
     <p style="font-family:Georgia,serif;font-size:18px;color:#060E1A;margin:0 0 16px">Olá, <strong>${escHtml(corr.nome||'')}</strong>,</p>
     <p style="font-family:Georgia,serif;font-size:15px;line-height:1.7;color:#1a1a1a;margin:0 0 24px">
-      Seguem abaixo as suas <strong>audiências agendadas</strong> a partir de hoje, ${today}.
-      Acesse o portal para mais detalhes, orientacões e preposto.
+      Seguem abaixo as suas <strong>audiências agendadas</strong> no período <strong>${periodo}</strong>.
+      Acesse o portal para mais detalhes, orientações e preposto.
     </p>
     <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:28px">
       <thead><tr style="background:#f4f2ef;">
@@ -8490,11 +8498,11 @@ async function notifyCorrespondentePauta(corr, allRows) {
   await sendViaGAS(subject, html, [corr.email]);
 }
 
-async function notifyEscritorioPauta() {
+async function notifyEscritorioPauta(pautaRows, periodoDE, periodoATE) {
   if (!_gasUrl()) throw new Error('GAS URL não configurada.');
   const portalUrl = 'https://falaw.com.br/cliente/index.html';
   const subject   = 'PAUTA DE AUDIÊNCIAS — ESCRITÓRIO (VISÃO COMPLETA)';
-  const today     = new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+  const periodo   = _fmtPeriodo(periodoDE, periodoATE);
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><title>${subject}</title></head>
@@ -8510,7 +8518,7 @@ async function notifyEscritorioPauta() {
   <tr><td style="background:#ffffff;padding:44px 40px 36px;">
     <p style="font-family:Georgia,serif;font-size:18px;color:#060E1A;margin:0 0 24px 0;line-height:1.4;">Pauta de Audiências atualizada</p>
     <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 12px 0;">
-      A pauta completa de todos os clientes referente a <strong>${today}</strong> está disponível no portal interno.
+      A pauta completa de todos os clientes referente ao período <strong>${periodo}</strong> está disponível no portal interno.
     </p>
     <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 32px 0;">
       Acesse com <strong>audiencias@falaw.com.br</strong> para visualizar todas as audiências, registrar orientações e observações.
@@ -8535,11 +8543,12 @@ async function notifyEscritorioPauta() {
   await sendViaGAS(subject, html, ['fa---geral@falaw.com.br']);
 }
 
-async function notifyClientPauta(client) {
+async function notifyClientPauta(client, periodoDE, periodoATE) {
   if (!_gasUrl()) throw new Error('URL do Google Apps Script não configurada — configure em Configurações.');
 
   const portalUrl  = 'https://falaw.com.br/cliente/index.html';
   const clientName = client.name || client.company || 'Cliente';
+  const periodo    = _fmtPeriodo(periodoDE, periodoATE);
   const subject    = `PAUTA DE AUDIÊNCIAS DISPONÍVEL — ${clientName.toUpperCase()}`;
 
   const html = `<!DOCTYPE html>
@@ -8563,10 +8572,10 @@ async function notifyClientPauta(client) {
       Olá, <strong>${escHtml(clientName)}</strong>,
     </p>
     <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 12px 0;">
-      A <strong>pauta de audiências</strong> do seu processo já está disponível em nosso portal.
+      A <strong>pauta de audiências</strong> referente ao período <strong>${periodo}</strong> está disponível em nosso portal.
     </p>
     <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 32px 0;">
-      Acesse a área do cliente para visualizar as próximas audiências, horários, varas e links de videoconferência.
+      Acesse a área do cliente para visualizar as audiências, horários, varas e links de videoconferência.
     </p>
 
     <!-- Botão -->
