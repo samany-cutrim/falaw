@@ -13921,7 +13921,7 @@ async function _audRenderCanceladasAlert(_sbUrl, _sbKey) {
   }
   const novas = canceladas.filter(a => !acked.has(a.id));
   if (!novas.length) { alertEl.innerHTML = ''; return; }
-  const allIds = JSON.stringify(novas.map(a => a.id));
+  window._audCancelPendingIds = novas.map(a => a.id);
   let rows = novas.map(a => {
     const dt = _audFmtDate(a.data_audiencia);
     const tipo = a.tipo_audiencia ? `<span style="background:#b91c1c;color:#fff;font-size:9px;padding:1px 5px;border-radius:2px;margin-left:4px">${a.tipo_audiencia}</span>` : '';
@@ -13941,7 +13941,7 @@ async function _audRenderCanceladasAlert(_sbUrl, _sbKey) {
           <span style="font-size:18px">🚨</span>
           <span style="font-family:var(--f-mono);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7f1d1d">${novas.length} audiência(s) cancelada(s) recentemente</span>
         </div>
-        <button onclick="_audCancelAckAll(${allIds})" style="background:#EF4444;color:#fff;border:none;border-radius:3px;font-size:10px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;cursor:pointer">Marcar todas como ciente</button>
+        <button onclick="_audCancelAckAll(window._audCancelPendingIds)" style="background:#EF4444;color:#fff;border:none;border-radius:3px;font-size:10px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;cursor:pointer">Marcar todas como ciente</button>
       </div>
       <div id="aud-cancel-body">${rows}</div>
     </div>`;
