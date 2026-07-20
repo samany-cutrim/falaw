@@ -3442,7 +3442,7 @@ async function loadPautaCliente(company) {
         }
       }
 
-      // 3ª tentativa: campo `reclamada` contém o nome da empresa
+      // 3ª tentativa: campo `reclamada` contém o nome da empresa (como palavra inteira)
       if (!rows.length) {
         ({ data } = await sb.from('pauta_audiencias')
           .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado,testemunhas')
@@ -3450,7 +3450,11 @@ async function loadPautaCliente(company) {
           .ilike('reclamada', `%${clienteToken}%`)
           .order('data_audiencia', { ascending: true })
           .order('horario',        { ascending: true }));
-        if (data && data.length) rows = data;
+        if (data && data.length) {
+          // Garante que o token seja uma palavra inteira (evita "PIER" dentro de "KROUPIER")
+          const tokenRe = new RegExp(`(?<![A-Za-zÀ-ÿ])${clienteToken}(?![A-Za-zÀ-ÿ])`, 'i');
+          rows = data.filter(a => tokenRe.test(a.reclamada || '') || tokenRe.test(a.cliente || ''));
+        }
       }
     } catch(e) { console.warn('pauta cliente:', e.message); }
   }
