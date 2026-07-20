@@ -831,7 +831,7 @@
               <button onclick="_escSetPeriodo('custom')" id="esc-per-custom" style="font-family:monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border:1px solid #d1d5db;border-radius:3px;background:#fff;color:#374151;cursor:pointer">Personalizado</button>
               <button onclick="_escSetPeriodo('')"       id="esc-per-todos"  style="font-family:monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border:1px solid #0D2B5E;border-radius:3px;background:#0D2B5E;color:#fff;cursor:pointer">Todos</button>
             </div>
-            <div id="esc-per-custom-inputs" style="display:none;display:flex;gap:6px;align-items:center">
+            <div id="esc-per-custom-inputs" style="display:none;gap:6px;align-items:center">
               <input id="esc-data-de"  type="date" oninput="_escApplyFilters()" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:3px;font-size:11px;font-family:monospace;outline:none" />
               <span style="font-family:monospace;font-size:9px;color:#9CA3AF">até</span>
               <input id="esc-data-ate" type="date" oninput="_escApplyFilters()" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:3px;font-size:11px;font-family:monospace;outline:none" />
@@ -2625,7 +2625,20 @@ function _escApplyFilters() {
 
   let filtered = dateVal
     ? rows.filter(r => (r.data_audiencia||'') === dateVal)
-    : rows.filter(r => showOld || (r.data_audiencia||'') >= today);
+    : (() => {
+        const periodo = window._escPeriodo || '';
+        const fDe  = document.getElementById('esc-data-de')?.value  || '';
+        const fAte = document.getElementById('esc-data-ate')?.value || '';
+        return rows.filter(r => {
+          const d = r.data_audiencia || '';
+          if (periodo && periodo !== 'todos' && (fDe || fAte)) {
+            if (fDe && d < fDe) return false;
+            if (fAte && d > fAte) return false;
+            return true;
+          }
+          return showOld || d >= today;
+        });
+      })();
 
   if (qAdv)  filtered = filtered.filter(r => (r.advogado||'').toLowerCase().includes(qAdv));
   if (qProc) filtered = filtered.filter(r => (r.processo||'').toLowerCase().includes(qProc));
