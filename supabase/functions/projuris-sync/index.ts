@@ -318,8 +318,8 @@ async function fetchComRetry(url: string, opts: RequestInit, tentativas = 3): Pr
 
 async function fetchAudienciasKeyset(iniISO: string, fimISO: string): Promise<{ itens: Record<string, unknown>[]; parcial: boolean }> {
   const url = `${PROJURIS_BASE}/adv-service/v2/tarefa/consulta-keyset`;
-  const TAM_PAGINA = 50;  // keyset endpoint tem limite máximo menor que o paginado normal
-  const MAX_PAGINAS = 100; // 100 x 200 = 20.000 registros de margem de segurança
+  const TAM_PAGINA = 50;  // limite máximo aceito pelo endpoint keyset
+  const MAX_PAGINAS = 400; // 400 x 50 = 20.000 registros de margem de segurança
   let cursor: string | undefined;
   let pagina = 0;
   let total = 0;
@@ -347,7 +347,7 @@ async function fetchAudienciasKeyset(iniISO: string, fimISO: string): Promise<{ 
 
     let resp: Response;
     try {
-      resp = await fetch(`${url}?${params}`, { method: "POST", headers: authHeaders(), body: JSON.stringify(body) });
+      resp = await fetchComRetry(`${url}?${params}`, { method: "POST", headers: authHeaders(), body: JSON.stringify(body) });
     } catch (e) {
       console.error(`Falha na p\u00e1gina ${pagina} \u2014 mantendo ${acumulado.length} j\u00e1 coletados:`, e);
       parcial = true;
@@ -371,6 +371,10 @@ async function fetchAudienciasKeyset(iniISO: string, fimISO: string): Promise<{ 
     cursor = proximoCursor;
     pagina++;
   }
+  if (acumulado.length < total) {
+    console.warn(`Coleta incompleta: ${acumulado.length}/${total} — aumente MAX_PAGINAS se isso persistir`);
+    parcial = true;
+  }
   return { itens: acumulado, parcial };
 }
 
@@ -387,6 +391,118 @@ async function fetchAudiencias(janela: { hojeStr: string; fimStr: string; iniISO
   });
   console.log(`Audiências pendentes (não canceladas/concluídas): ${pendentes.length}`);
   return { itens: pendentes, parcial };
+}
+
+/** Busca o código interno de cada marcador de tipo-responsabilidade no Projuris */
+async function buscarCodigosMarcadores(sb: ReturnType<typeof createClient>): Promise<Map<string, number>> {
+  const mapa = new Map<string, number>();
+  const TIPOS_VALIDOS = ["EX-FOODLOVER", "NUVEM", "TERCEIRIZAÇÃO", "OL-SUBSIDIÁRIA", "SUBSIDIÁRIA", "EX-FUNCIONÁRIO"];
+  try {
+    const { data: cacheRow } = await sb
+      .from("projuris_processo_cache")
+      .select("codigo_processo")
+      .not("codigo_processo", "is", null)
+      .limit(1)
+      .single();
+    const rawCod = (cacheRow as Record<string, unknown> | null)?.codigo_processo;
+    const codProcesso = rawCod ? Number(rawCod) : 0;
+    if (!codProcesso) { console.log("buscarCodigosMarcadores: sem codigoProcesso no cache"); return mapa; }
+
+    // Busca cada marcador de interesse individualmente via filtro-geral
+    for (const tipo of TIPOS_VALIDOS) {
+      try {
+        const filtro = encodeURIComponent(tipo);
+        const resp = await fetch(
+          `${PROJURIS_BASE}/adv-service/marcador/consulta?quan-registros=10&pagina=0&filtro-geral=${filtro}&codigo-processo=${codProcesso}`,
+          { method: "GET", headers: authHeaders() }
+        );
+        if (!resp.ok) continue;
+        const body = await resp.json() as Record<string, unknown>;
+        const marcadores = (body.marcadorWs ?? body.content ?? body.data ?? []) as Record<string, unknown>[];
+        for (const m of marcadores) {
+          const nome = str(m.nomeMarcador ?? m.nome ?? m.descricao ?? "").toUpperCase().trim();
+          const codigo = typeof m.codigoMarcador === "number" ? m.codigoMarcador : 0;
+          if (codigo && nome === tipo) {
+            mapa.set(nome, codigo);
+            console.log(`Marcador encontrado: ${nome} → código ${codigo}`);
+            break;
+          }
+        }
+      } catch(_) { /* ignora erro individual */ }
+    }
+    console.log(`buscarCodigosMarcadores: ${mapa.size}/${TIPOS_VALIDOS.length} marcadores de interesse encontrados`);
+  } catch(e) { console.warn("buscarCodigosMarcadores:", e); }
+  return mapa;
+}
+
+/** Atualiza tipo_responsabilidade buscando os marcadores reais de cada processo no Projuris */
+async function sincronizarMarcadoresProcessos(sb: ReturnType<typeof createClient>): Promise<number> {
+  // Busca processos que podem ter marcadores de tipo-responsabilidade
+  // (iFood com NUVEM/OL-SUBSIDIÁRIA — podem ser EX-FOODLOVER ou TERCEIRIZAÇÃO na verdade)
+  const { data, error } = await sb
+    .from("pauta_audiencias")
+    .select("processo")
+    .neq("reclamada", "")
+    .in("tipo_responsabilidade", ["NUVEM", "OL-SUBSIDIÁRIA", "SUBSIDIÁRIA", "EX-FUNCIONÁRIO"])
+    .limit(200);
+  if (error || !data?.length) return 0;
+
+  // Processos únicos com codigoProcesso no cache
+  const processosUnicos = [...new Set((data as {processo:string}[]).map(r => r.processo).filter(Boolean))];
+  const { data: cacheRows } = await sb
+    .from("projuris_processo_cache")
+    .select("numero_processo,codigo_processo,marcadores")
+    .in("numero_processo", processosUnicos)
+    .not("codigo_processo", "is", null);
+
+  if (!cacheRows?.length) return 0;
+
+  let atualizados = 0;
+  // Para cada processo com codigoProcesso, busca os marcadores via GET /processo/{codigoProcesso}
+  for (const row of (cacheRows as Record<string,unknown>[]).slice(0, 50)) { // máx 50 por sync
+    const num = str(row.numero_processo);
+    const rawCod = row.codigo_processo;
+    const codProcesso = rawCod ? Number(rawCod) : 0;
+    if (!codProcesso) continue;
+
+    // Só busca se o cache não tem marcadores ainda
+    const marcadoresCached = (row.marcadores as string[]) ?? [];
+    const TIPOS_VALIDOS = ["EX-FOODLOVER", "NUVEM", "TERCEIRIZAÇÃO", "OL-SUBSIDIÁRIA", "SUBSIDIÁRIA", "EX-FUNCIONÁRIO"];
+    const temTipoConhecido = marcadoresCached.some(m => TIPOS_VALIDOS.includes(m.toUpperCase().trim()));
+    if (temTipoConhecido) {
+      // Aplica tipo já cacheado
+      const tipo = marcadoresCached.find(m => TIPOS_VALIDOS.includes(m.toUpperCase().trim()))?.toUpperCase().trim();
+      if (tipo) {
+        const { error: upErr } = await sb.from("pauta_audiencias").update({ tipo_responsabilidade: tipo }).eq("processo", num);
+        if (!upErr) atualizados++;
+      }
+      continue;
+    }
+
+    // Busca marcadores individuais via detalhe do processo
+    try {
+      const r = await fetch(`${PROJURIS_BASE}/adv-service/processo/${codProcesso}`, { method: "GET", headers: authHeaders() });
+      if (!r.ok) continue;
+      const body = await r.json() as Record<string,unknown>;
+      const marcWs = (body.marcadorWs ?? []) as Record<string,unknown>[];
+      const marcadores = marcWs.map(m => str(m.nomeMarcador ?? m.nome ?? "").toUpperCase().trim()).filter(Boolean);
+      if (!marcadores.length) continue;
+
+      // Atualiza cache com marcadores reais
+      await sb.from("projuris_processo_cache")
+        .update({ marcadores, updated_at: new Date().toISOString() })
+        .eq("numero_processo", num);
+
+      // Aplica tipo_responsabilidade se um marcador é tipo conhecido
+      const tipo = marcadores.find(m => TIPOS_VALIDOS.includes(m));
+      if (tipo) {
+        const { error: upErr } = await sb.from("pauta_audiencias").update({ tipo_responsabilidade: tipo }).eq("processo", num);
+        if (!upErr) { atualizados++; console.log(`Marcador aplicado: ${num} → ${tipo}`); }
+      }
+    } catch(_) { /* ignora */ }
+  }
+  console.log(`sincronizarMarcadoresProcessos: ${atualizados} processos atualizados com marcadores reais`);
+  return atualizados;
 }
 
 async function reconciliarCanceladas(
@@ -781,7 +897,7 @@ async function fetchProcessoDetalhes(
         parte_ativa: det.parteAtiva,
         parte_passiva: det.partePassiva,
         cliente: det.cliente,
-        codigo_processo: codigoFromApi.get(n) ?? null,
+        codigo_processo: codigoFromApi.get(n) ?? codigoMap.get(n) ?? null,
         updated_at: new Date().toISOString(),
       };
     });
@@ -789,6 +905,18 @@ async function fetchProcessoDetalhes(
     const { error: cacheErr } = await sb.from("projuris_processo_cache").upsert(upsertsCache, { onConflict: "numero_processo" });
     if (cacheErr) console.warn("Erro ao gravar cache de processos:", cacheErr.message);
   }
+
+  // ── Passo 4: atualiza codigo_processo em entradas de cache que ainda não o têm ──
+  const semCodigo = [...validos].filter(n => !codigoFromApi.has(n) && codigoMap.has(n));
+  for (const n of semCodigo) {
+    try {
+      await sb.from("projuris_processo_cache")
+        .update({ codigo_processo: codigoMap.get(n) })
+        .eq("numero_processo", n)
+        .is("codigo_processo", null);
+    } catch(_) { /* ignora */ }
+  }
+  if (semCodigo.length) console.log(`Cache: ${semCodigo.length} entradas atualizadas com codigo_processo`);
 
   return mapa;
 }
@@ -979,6 +1107,25 @@ Deno.serve(async (req: Request) => {
     return Response.json({ diag: resultado }, { headers: CORS });
   }
 
+  // Lista todos os marcadores do Projuris: GET ?debug-marcadores-lista=1
+  if (url.searchParams.get("debug-marcadores-lista") === "1") {
+    try {
+      await getToken();
+      const sb2 = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+      const { data: cr } = await sb2.from("projuris_processo_cache").select("codigo_processo").not("codigo_processo","is",null).limit(1).single();
+      const rawCod = (cr as Record<string,unknown> | null)?.codigo_processo;
+      const cod = rawCod ? Number(rawCod) : 0;
+      if (!cod) return Response.json({ error: "Sem codigoProcesso no cache" }, { headers: CORS });
+      const resp = await fetch(`${PROJURIS_BASE}/adv-service/marcador/consulta?quan-registros=50&pagina=0&codigo-processo=${cod}`, { method: "GET", headers: authHeaders() });
+      const txt = await resp.text();
+      if (!resp.ok) return Response.json({ status: resp.status, cod, preview: txt.slice(0,300) }, { headers: CORS });
+      const body = JSON.parse(txt) as Record<string, unknown>;
+      const lista = (body.marcadorWs ?? body.content ?? body.data ?? []) as Record<string, unknown>[];
+      const nomes = lista.map(m => `${m.codigoMarcador}:${m.nomeMarcador}`).join(", ");
+      return Response.json({ status: resp.status, total: lista.length, codigoUsado: cod, marcadores: nomes.slice(0, 3000) }, { headers: CORS });
+    } catch(e) { return Response.json({ error: String(e) }, { status: 500, headers: CORS }); }
+  }
+
   // Modo debug de keyset: GET ?debug-keyset=1
   if (url.searchParams.get("debug-keyset") === "1") {
     try {
@@ -1043,7 +1190,7 @@ Deno.serve(async (req: Request) => {
       if (error || !data?.length) return Response.json({ ok:false, error: error?.message ?? "Nenhum registro" }, { headers:CORS });
 
       const numeros = [...new Set((data as {processo:string}[]).map(r => r.processo).filter(Boolean))];
-      const marcadoresMap = await fetchMarcadoresPorProcesso(numeros);
+      const marcadoresMap = await fetchMarcadoresPorProcesso(sb, numeros);
 
       let atualizados = 0;
       for (const row of data as {id:string; processo:string; reclamada:string}[]) {
@@ -1135,15 +1282,16 @@ Deno.serve(async (req: Request) => {
     const saved   = await upsertSupabase(sb, records);
     const idsAtuais = records.map(r => String(r.id));
     const canceladas = await reconciliarCanceladas(sb, idsAtuais, janela.hojeStr, janela.fimStr);
+    const marcadoresSync = await sincronizarMarcadoresProcessos(sb);
     const partesCompletadas = await completarPartesAusentes(sb);
     const classificados = await classificarExistentes(sb);
     await recordSync(sb, saved);
-    console.log(`Salvas: ${saved} | Canceladas: ${canceladas} | Partes completadas: ${partesCompletadas} | Classificadas: ${classificados}${parcial ? " | AVISO: coleta parcial" : ""}`);
+    console.log(`Salvas: ${saved} | Canceladas: ${canceladas} | Marcadores: ${marcadoresSync} | Partes: ${partesCompletadas} | Classificados: ${classificados}${parcial ? " | AVISO: coleta parcial" : ""}`);
     const debugMode = url.searchParams.get("debug") === "1";
     if (debugMode) {
-      return Response.json({ ok:true, message:`${saved} audiencias sincronizadas`, saved, canceladas, partesCompletadas, classificados, parcial, sample: records.slice(0,2), total_found: raw.length }, { headers:CORS });
+      return Response.json({ ok:true, message:`${saved} audiencias sincronizadas`, saved, canceladas, marcadoresSync, partesCompletadas, classificados, parcial, sample: records.slice(0,2), total_found: raw.length }, { headers:CORS });
     }
-    return Response.json({ ok:true, message:`${saved} audiencias sincronizadas`, saved, canceladas, partesCompletadas, classificados, parcial }, { headers:CORS });
+    return Response.json({ ok:true, message:`${saved} audiencias sincronizadas`, saved, canceladas, marcadoresSync, partesCompletadas, classificados, parcial }, { headers:CORS });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Erro:", msg);
