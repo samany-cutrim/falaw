@@ -1281,7 +1281,11 @@ Deno.serve(async (req: Request) => {
     });
     const saved   = await upsertSupabase(sb, records);
     const idsAtuais = records.map(r => String(r.id));
-    const canceladas = await reconciliarCanceladas(sb, idsAtuais, janela.hojeStr, janela.fimStr);
+    // Pula reconciliação se a coleta foi parcial: evita marcar como canceladas
+    // audiências que simplesmente não vieram por falha de paginação
+    const canceladas = parcial
+      ? (console.warn("Reconciliação pulada: coleta parcial — não seria seguro inferir cancelamentos"), 0)
+      : await reconciliarCanceladas(sb, idsAtuais, janela.hojeStr, janela.fimStr);
     const marcadoresSync = await sincronizarMarcadoresProcessos(sb);
     const partesCompletadas = await completarPartesAusentes(sb);
     const classificados = await classificarExistentes(sb);
