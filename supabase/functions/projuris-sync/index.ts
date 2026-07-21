@@ -1004,6 +1004,9 @@ function identificarTipoPorMarcadores(marcadoresOriginais: string[]): string {
     // FRANQUIA ou FRANQUIA/ENTREGO
     if (norm.startsWith("FRANQUIA")) return "FRANQUIA";
 
+    // MARKETPLACE
+    if (norm === "MARKETPLACE") return "MARKETPLACE";
+
     // NUVEM ou NUVEM/ZATTAR — mantém o nome real do Projuris, sem unificar
     if (norm.startsWith("NUVEM")) return nome;
   }
@@ -1204,6 +1207,7 @@ Deno.serve(async (req: Request) => {
         "EX-FOODLOVER":          { codigoMarcador: 1756633, nomeMarcador: "EX-FOODLOVER" },
         "EX-FUNCIONÁRIO(A)":     { codigoMarcador: 1686384, nomeMarcador: "EX-FUNCIONÁRIO(A)" },
         "FRANQUIA":              { codigoMarcador: 1798674, nomeMarcador: "FRANQUIA/ENTREGO" },
+        "MARKETPLACE":           { codigoMarcador: 1798682, nomeMarcador: "Marketplace" },
         "NUVEM":                 { codigoMarcador: 1710723, nomeMarcador: "NUVEM" },
         "NUVEM/ZATTAR":          { codigoMarcador: 1686364, nomeMarcador: "Nuvem/Zattar" },
         "NUVEM - ESTRATÉGICO":   { codigoMarcador: 1710723, nomeMarcador: "NUVEM", extra: { codigoMarcador: 1687122, nomeMarcador: "ESTRATÉGICO" } },
