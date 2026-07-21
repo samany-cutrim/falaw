@@ -10,6 +10,7 @@ const PROJURIS_PASSWORD  = Deno.env.get("PROJURIS_PASSWORD") ?? "";
 const SUPABASE_URL         = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const DIAS_BUSCA           = parseInt(Deno.env.get("DIAS_PAUTA") ?? "365", 10);
+const DIAS_PASSADO         = parseInt(Deno.env.get("DIAS_PASSADO") ?? "180", 10); // quantos dias no passado incluir na busca
 const AUDIENCIA_TIPO_CODIGO = 6125449; // código real do tipo "Audiência" no Projuris ADV
 const BRASILIA_OFFSET_MS = -3 * 60 * 60 * 1000; // UTC-3 fixo (Brasil não tem mais horário de verão)
 const CACHE_TTL_HORAS = 24 * 7; // reaproveita dados de processo (marcadores/partes) por 7 dias
@@ -243,10 +244,13 @@ function brasiliaDiaParaISO(dataStr: string, finalDoDia: boolean): string {
 function janelaBusca(): { hojeStr: string; fimStr: string; iniISO: string; fimISO: string } {
   const hoje = agoraBrasilia();
   const hojeStr = fmtDate(hoje);
+  const ini = new Date(hoje);
+  ini.setUTCDate(ini.getUTCDate() - DIAS_PASSADO); // inclui audiências passadas
+  const iniStr = fmtDate(ini);
   const fim = new Date(hoje);
   fim.setUTCDate(fim.getUTCDate() + DIAS_BUSCA);
   const fimStr = fmtDate(fim);
-  return { hojeStr, fimStr, iniISO: brasiliaDiaParaISO(hojeStr, false), fimISO: brasiliaDiaParaISO(fimStr, true) };
+  return { hojeStr, fimStr, iniISO: brasiliaDiaParaISO(iniStr, false), fimISO: brasiliaDiaParaISO(fimStr, true) };
 }
 
 async function fetchCalendario(ini: string, fim: string): Promise<unknown[]> {
@@ -443,7 +447,7 @@ async function sincronizarMarcadoresProcessos(sb: ReturnType<typeof createClient
     .from("pauta_audiencias")
     .select("processo")
     .neq("reclamada", "")
-    .in("tipo_responsabilidade", ["NUVEM", "OL-SUBSIDIÁRIA", "SUBSIDIÁRIA", "EX-FUNCIONÁRIO"])
+    .in("tipo_responsabilidade", ["NUVEM", "OL-SUBSIDIÁRIA", "SUBSIDIÁRIA"])
     .limit(200);
   if (error || !data?.length) return 0;
 
@@ -465,39 +469,46 @@ async function sincronizarMarcadoresProcessos(sb: ReturnType<typeof createClient
     const codProcesso = rawCod ? Number(rawCod) : 0;
     if (!codProcesso) continue;
 
-    // Só busca se o cache não tem marcadores ainda
+    // Marcadores que justificam OVERRIDE da classificação por posição
+    // NUVEM/SUBSIDIÁRIA/OL-SUBSIDIÁRIA já são tratados pelo calcularResponsabilidade;
+    // só fazemos override quando o marcador indica EX-FOODLOVER ou TERCEIRIZAÇÃO
+    const OVERRIDE_TIPOS = ["EX-FOODLOVER", "TERCEIRIZAÇÃO"];
     const marcadoresCached = (row.marcadores as string[]) ?? [];
-    const TIPOS_VALIDOS = ["EX-FOODLOVER", "NUVEM", "TERCEIRIZAÇÃO", "OL-SUBSIDIÁRIA", "SUBSIDIÁRIA", "EX-FUNCIONÁRIO"];
-    const temTipoConhecido = marcadoresCached.some(m => TIPOS_VALIDOS.includes(m.toUpperCase().trim()));
-    if (temTipoConhecido) {
-      // Aplica tipo já cacheado
-      const tipo = marcadoresCached.find(m => TIPOS_VALIDOS.includes(m.toUpperCase().trim()))?.toUpperCase().trim();
+
+    // Se cache já tem marcadores → tenta aplicar override diretamente (sem chamar API)
+    if (marcadoresCached.length > 0) {
+      const tipo = marcadoresCached.find(m => OVERRIDE_TIPOS.includes(m.toUpperCase().trim()))?.toUpperCase().trim();
       if (tipo) {
-        const { error: upErr } = await sb.from("pauta_audiencias").update({ tipo_responsabilidade: tipo }).eq("processo", num);
-        if (!upErr) atualizados++;
+        const { error: upErr } = await sb.from("pauta_audiencias")
+          .update({ tipo_responsabilidade: tipo })
+          .eq("processo", num)
+          .neq("tipo_responsabilidade", tipo); // só atualiza se mudou
+        if (!upErr) { atualizados++; console.log(`Marcador override (cache): ${num} → ${tipo}`); }
       }
-      continue;
+      continue; // marcadores já verificados, não chama API novamente
     }
 
-    // Busca marcadores individuais via detalhe do processo
+    // Cache sem marcadores → busca via detalhe do processo
     try {
       const r = await fetch(`${PROJURIS_BASE}/adv-service/processo/${codProcesso}`, { method: "GET", headers: authHeaders() });
       if (!r.ok) continue;
       const body = await r.json() as Record<string,unknown>;
       const marcWs = (body.marcadorWs ?? []) as Record<string,unknown>[];
       const marcadores = marcWs.map(m => str(m.nomeMarcador ?? m.nome ?? "").toUpperCase().trim()).filter(Boolean);
-      if (!marcadores.length) continue;
 
-      // Atualiza cache com marcadores reais
+      // Atualiza cache com marcadores reais (mesmo que vazio, para não buscar novamente)
       await sb.from("projuris_processo_cache")
-        .update({ marcadores, updated_at: new Date().toISOString() })
+        .update({ marcadores: marcadores.length ? marcadores : [], updated_at: new Date().toISOString() })
         .eq("numero_processo", num);
 
-      // Aplica tipo_responsabilidade se um marcador é tipo conhecido
-      const tipo = marcadores.find(m => TIPOS_VALIDOS.includes(m));
+      // Aplica override apenas para tipos específicos
+      const tipo = marcadores.find(m => OVERRIDE_TIPOS.includes(m));
       if (tipo) {
-        const { error: upErr } = await sb.from("pauta_audiencias").update({ tipo_responsabilidade: tipo }).eq("processo", num);
-        if (!upErr) { atualizados++; console.log(`Marcador aplicado: ${num} → ${tipo}`); }
+        const { error: upErr } = await sb.from("pauta_audiencias")
+          .update({ tipo_responsabilidade: tipo })
+          .eq("processo", num)
+          .neq("tipo_responsabilidade", tipo);
+        if (!upErr) { atualizados++; console.log(`Marcador override (API): ${num} → ${tipo}`); }
       }
     } catch(_) { /* ignora */ }
   }
