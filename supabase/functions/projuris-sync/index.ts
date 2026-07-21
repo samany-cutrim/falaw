@@ -349,28 +349,45 @@ async function fetchAudiencias(): Promise<unknown[]> {
 
   if (calAudFuturas.length > 0) return calAudFuturas;
 
-  // 2. Paginado DESC — 10 páginas para diagnóstico
+  // 2. Paginado DESC — busca em paralelo para cobrir mais audiências futuras
   console.log("Buscando paginado DESC...");
   const ITEMS_POR_PAG = 100;
+  const MAX_PAGES = 50; // 50 × 100 = 5.000 tasks = cobre bem mais audiências
+  const BATCH_PARALELO = 5; // 5 páginas em paralelo por vez
   const rawItems: unknown[] = [];
+  let totalRegistros = 0;
 
-  for (let pagina = 0; pagina < 10; pagina++) {
-    const params = new URLSearchParams({
-      "quan-registros": String(ITEMS_POR_PAG),
-      pagina: String(pagina),
-      "ordenacao-tipo": "DESC",
-      "ordenacao-chave": "ORDENACAO_DATA_PREVISTA",
-    });
-    const resp = await fetch(`${PROJURIS_BASE}/adv-service/tarefa/consulta-com-paginacao?${params}`, { headers: authHeaders() });
-    if (!resp.ok) { console.warn("Paginado pag " + pagina + " status=" + resp.status); break; }
-    const body = await resp.json();
-    const items = extractItems(body) as Record<string,unknown>[];
-    if (!items.length) break;
-    rawItems.push(...items.filter(isAudiencia));
-    const total = (body as Record<string,unknown>).totalRegistros as number ?? 0;
-    if ((pagina + 1) * ITEMS_POR_PAG >= total) break;
+  // Busca a primeira página para saber o total
+  try {
+    const r0 = await fetch(
+      `${PROJURIS_BASE}/adv-service/tarefa/consulta-com-paginacao?quan-registros=${ITEMS_POR_PAG}&pagina=0&ordenacao-tipo=DESC&ordenacao-chave=ORDENACAO_DATA_PREVISTA`,
+      { headers: authHeaders() }
+    );
+    if (r0.ok) {
+      const b0 = await r0.json();
+      totalRegistros = (b0 as Record<string,unknown>).totalRegistros as number ?? 0;
+      const items0 = extractItems(b0) as Record<string,unknown>[];
+      rawItems.push(...items0.filter(isAudiencia));
+      console.log("Paginado pag 0: " + items0.length + " tasks, " + rawItems.length + " audiências, total=" + totalRegistros);
+    }
+  } catch(e) { console.warn("Paginado pag 0:", e); }
+
+  const pagTotal = Math.min(MAX_PAGES, Math.ceil(totalRegistros / ITEMS_POR_PAG));
+  for (let base = 1; base < pagTotal; base += BATCH_PARALELO) {
+    const pages = Array.from({ length: Math.min(BATCH_PARALELO, pagTotal - base) }, (_, j) => base + j);
+    const results = await Promise.allSettled(pages.map(async pagina => {
+      const resp = await fetch(
+        `${PROJURIS_BASE}/adv-service/tarefa/consulta-com-paginacao?quan-registros=${ITEMS_POR_PAG}&pagina=${pagina}&ordenacao-tipo=DESC&ordenacao-chave=ORDENACAO_DATA_PREVISTA`,
+        { headers: authHeaders() }
+      );
+      if (!resp.ok) return [];
+      return (extractItems(await resp.json()) as Record<string,unknown>[]).filter(isAudiencia);
+    }));
+    for (const r of results) {
+      if (r.status === "fulfilled") rawItems.push(...(r.value as unknown[]));
+    }
+    console.log("Paginado até pag " + (base + BATCH_PARALELO - 1) + ": " + rawItems.length + " audiências acumuladas");
   }
-  console.log("Audiencias brutas paginado: " + rawItems.length);
 
   // Filtra por data >= hoje usando campos de data do Projuris
   const audiencias: unknown[] = [];
@@ -475,7 +492,7 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
     marcadores.push(...(marcadoresRaw as string).toUpperCase().split(",").map(s => s.trim()).filter(Boolean));
   }
 
-  // ── Conta empresas no polo passivo (reclamada) ──────────────────────────────
+  // ── Conta empresas no polo passivo (para calcularResponsabilidade) ──────────
   // Se poloPassivo veio como array, usa o tamanho; senão conta vírgulas na string
   const poloPassivoArr = item.poloPassivo ?? item.polo_passivo;
   let numReclamadas = 0;
@@ -485,21 +502,6 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
     numReclamadas = reclamada.split(",").filter(p => p.trim().length > 2).length;
   }
   if (numReclamadas === 0) numReclamadas = 1;
-
-  // ── Tipo de Responsabilidade automático pelos marcadores e polo ─────────────
-  const isIfood = reclamada.toLowerCase().includes("ifood") ||
-                  str(item.cliente ?? item.nomeCliente ?? "").toLowerCase().includes("ifood");
-  const temExFoodlover = marcadores.some(m =>
-    m.includes("EX-FOODLOVER") || m.includes("EXFOODLOVER") || m.includes("EX_FOODLOVER")
-  );
-  let tipo_responsabilidade = "";
-  if (isIfood) {
-    if (temExFoodlover)     tipo_responsabilidade = "EX-FOODLOVER";
-    else if (numReclamadas > 1) tipo_responsabilidade = "OL-SUBSIDIÁRIA";
-    else                    tipo_responsabilidade = "NUVEM";
-  } else if (reclamada) {
-    tipo_responsabilidade = numReclamadas > 1 ? "SUBSIDIÁRIA" : "EX-FUNCIONÁRIO";
-  }
   const advogado = (() => {
     if (item.usuarioResponsaveis && Array.isArray(item.usuarioResponsaveis)) {
       const u = (item.usuarioResponsaveis as Record<string,unknown>[])[0];
@@ -518,12 +520,12 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
   const tipoRaw = str(item.nomeTarefaTipo ?? item.tipoAudiencia ?? item.tipo_audiencia ?? item.tipoEvento ?? "")
     .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
   let tipo_audiencia = "";
-  if (tipoRaw.includes("instruc") || tipoRaw.includes("instrução")) tipo_audiencia = "INSTRUÇÃO";
+  if (tipoRaw.includes("encerramento") && tipoRaw.includes("instruc")) tipo_audiencia = "ENCERRAMENTO DE INSTRUÇÃO";
+  else if (tipoRaw.includes("instruc") || tipoRaw.includes("instrução")) tipo_audiencia = "INSTRUÇÃO";
   else if (tipoRaw.includes("conciliac") || tipoRaw.includes("conciliação")) tipo_audiencia = "CONCILIAÇÃO";
   else if (tipoRaw.includes("una")) tipo_audiencia = "UNA";
   else if (tipoRaw.includes("inicial")) tipo_audiencia = "INICIAL";
   else if (tipoRaw.includes("peric") || tipoRaw.includes("perícia") || tipoRaw.includes("pericia")) tipo_audiencia = "PERÍCIA";
-  // else deixa vazio — encaixa no CHECK constraint ''
 
   // Modalidade
   const modalRaw = str(item.modalidade ?? item.tipoSessao ?? item.tipo_sessao ?? "")
@@ -536,34 +538,133 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
   // descricao/titulo como comentários
   const comentarios = str(item.descricao ?? item.titulo ?? item.title ?? "");
 
+  // ── Extrai campos faltantes do texto do comentários ──────────────────────────
+  // Formato Projuris: "Audiência de [tipo] designada (DD/MM/YYYY HH:MM [sala/vara])"
+  let dataFinal = data, horaFinal = hora, varaFinal = vara, tipoFinal = tipo_audiencia, modalFinal = modalidade;
+  if (comentarios) {
+    const dNorm = comentarios.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    // Tipo audiência a partir do comentário
+    if (!tipoFinal) {
+      if (dNorm.includes("encerramento") && dNorm.includes("instruc")) tipoFinal = "ENCERRAMENTO DE INSTRUÇÃO";
+      else if (dNorm.includes("instruc")) tipoFinal = "INSTRUÇÃO";
+      else if (dNorm.includes("conciliac")) tipoFinal = "CONCILIAÇÃO";
+      else if (dNorm.includes("pericia") || dNorm.includes("peric")) tipoFinal = "PERÍCIA";
+      else if (dNorm.includes(" una ") || dNorm.startsWith("una ") || dNorm.includes("audiencia una")) tipoFinal = "UNA";
+      else if (dNorm.includes("inicial")) tipoFinal = "INICIAL";
+    }
+    // Modalidade a partir do comentário
+    if (!modalFinal) {
+      if (dNorm.includes("videoconfer") || dNorm.includes("telepresencial") || dNorm.includes("virtual") || dNorm.includes("remot")) modalFinal = "VIRTUAL";
+      else if (dNorm.includes("presencial")) modalFinal = "PRESENCIAL";
+    }
+    // Data, hora e vara — formato: (...DD/MM/YYYY HH:MM sala/vara...)
+    if (!dataFinal || !horaFinal || !varaFinal) {
+      const m = comentarios.match(/\((\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2})\s+([^)]+?)\s*\)/);
+      if (m) {
+        if (!dataFinal) dataFinal = `${m[3]}-${m[2]}-${m[1]}`;
+        if (!horaFinal) horaFinal = m[4];
+        if (!varaFinal) {
+          // Remove sufixos de notas adicionais após " - " que não sejam parte da vara
+          varaFinal = m[5].trim().replace(/\s*-\s*(Facultad|Acesso|Sen|Link|ID|Zoom|Meet|Teams).*/i, "").trim();
+        }
+      }
+    }
+  }
+
   return {
-    id: makeId(processo, data, hora),
+    id: makeId(processo, dataFinal || data, horaFinal || hora),
     processo:              processo   || "",
     reclamante:            reclamante || "",
     reclamada:             reclamada  || "",
-    data_audiencia:        data || new Date().toISOString().slice(0,10),
-    horario:               hora       || "",
-    tipo_audiencia:        tipo_audiencia        || "",
-    modalidade:            modalidade            || "",
-    vara:                  vara                  || "",
+    data_audiencia:        dataFinal  || data || new Date().toISOString().slice(0,10),
+    horario:               horaFinal  || hora || "",
+    tipo_audiencia:        tipoFinal  || "",
+    modalidade:            modalFinal || "",
+    vara:                  varaFinal  || "",
     status:                "agendada",
     origem:                "pje",
     link:                  link                  || "",
     id_senha:              idSenha               || "",
     advogado:              advogado              || "",
-    tipo_responsabilidade: tipo_responsabilidade || "",
+    tipo_responsabilidade: calcularResponsabilidade(reclamada, marcadores.join(",")),
     comentarios:           comentarios           || "",
     updated_at:            new Date().toISOString(),
   };
 }
 
-/** Classifica tipo_responsabilidade pelos marcadores e polo passivo */
-/** Busca marcadores dos processos na API do Projuris — retorna Map<numeroProcesso, marcadores[]> */
-async function fetchMarcadoresPorProcesso(numeros: string[]): Promise<Map<string, string[]>> {
-  const mapa = new Map<string, string[]>();
+/** Busca marcadores + partes dos processos na API do Projuris */
+interface ProcessoDetalhes {
+  marcadores: string[];
+  parteAtiva: string;
+  partePassiva: string;
+  cliente: string;
+}
+
+function _extrairDetalhesDeProc(proc: Record<string,unknown>): ProcessoDetalhes & { codigoProcesso?: number } {
+  // ── Marcadores ────────────────────────────────────────────────────────────
+  const marcRaw = proc.marcadorWs          // campo real no detalhe de processo
+    ?? proc.marcadores ?? proc.etiquetas ?? proc.tags
+    ?? proc.marcadorProcessoWs ?? proc.marcadorProcesso ?? proc.marcadoresProcesso ?? [];
+  const marcadores: string[] = [];
+  if (Array.isArray(marcRaw)) {
+    for (const m of marcRaw as unknown[]) {
+      if (typeof m === "string") marcadores.push(m.toUpperCase().trim());
+      else if (m && typeof m === "object") {
+        const label = str(
+          (m as Record<string,unknown>).nomeMarcador ??  // campo real da API Projuris
+          (m as Record<string,unknown>).descricao ?? (m as Record<string,unknown>).nome ??
+          (m as Record<string,unknown>).label     ?? (m as Record<string,unknown>).name ?? ""
+        );
+        if (label) marcadores.push(label.toUpperCase().trim());
+      }
+    }
+  }
+  // ── Partes ────────────────────────────────────────────────────────────────
+  let parteAtiva = str(proc.parteAtiva ?? proc.poloAtivo ?? proc.polo_ativo ?? proc.autor ?? "");
+  if (!parteAtiva && Array.isArray(proc.partesAtivas))
+    parteAtiva = str((proc.partesAtivas as Record<string,unknown>[])[0]?.nome ?? "");
+  if (!parteAtiva && Array.isArray(proc.envolvidos)) {
+    const autor = (proc.envolvidos as Record<string,unknown>[]).find(e =>
+      str(e.papel ?? e.role ?? "").toUpperCase().match(/AUTOR|RECLAMANTE/)
+    );
+    if (autor) parteAtiva = str(autor.nome ?? autor.name ?? autor.nomeEnvolvido ?? "");
+  }
+
+  let partePassiva = "";
+  if (Array.isArray(proc.partesPassivas)) {
+    partePassiva = (proc.partesPassivas as Record<string,unknown>[])
+      .map(p => str(p.nome ?? p.name ?? p.razaoSocial ?? "")).filter(Boolean).join(",");
+  } else {
+    partePassiva = str(proc.partePassiva ?? proc.poloPassivo ?? proc.polo_passivo ?? proc.reu ?? "");
+  }
+  if (!partePassiva && Array.isArray(proc.envolvidos)) {
+    const reus = (proc.envolvidos as Record<string,unknown>[]).filter(e =>
+      str(e.papel ?? e.role ?? "").toUpperCase().match(/REU|RECLAMAD/)
+    );
+    if (reus.length) partePassiva = reus.map(e => str(e.nome ?? e.name ?? e.nomeEnvolvido ?? "")).filter(Boolean).join(",");
+  }
+
+  const clienteTag = partePassiva.split(",").find(p => p.toUpperCase().includes("(CLIENTE)"));
+  const cliente = clienteTag
+    ? clienteTag.replace(/\s*\(CLIENTE\)\s*/i, "").trim()
+    : str(proc.cliente ?? proc.nomeCliente ?? "");
+
+  const codigoProcesso = typeof proc.codigoProcesso === "number" ? proc.codigoProcesso
+    : typeof proc.codigo === "number" ? proc.codigo : undefined;
+
+  return { marcadores, parteAtiva, partePassiva, cliente, codigoProcesso };
+}
+
+async function fetchProcessoDetalhes(
+  numeros: string[],
+  codigoMap: Map<string, number> = new Map()
+): Promise<Map<string, ProcessoDetalhes>> {
+  const mapa = new Map<string, ProcessoDetalhes>();
+  // Mapa de número CNJ → codigoProcesso vindo da resposta da API (pode ser diferente de modulo.chave)
+  const codigoFromApi = new Map<string, number>();
   if (!numeros.length) return mapa;
 
-  // Tenta endpoint de processo com filtro por número (lotes de 20)
+  // ── Passo 1: busca em lote por número CNJ ─────────────────────────────────
   for (let i = 0; i < numeros.length; i += 20) {
     const batch = numeros.slice(i, i + 20);
     try {
@@ -581,36 +682,85 @@ async function fetchMarcadoresPorProcesso(numeros: string[]): Promise<Map<string
           }),
         }
       );
-      if (!resp.ok) { console.warn("fetchMarcadores lote " + i + " -> " + resp.status); continue; }
-      const body = await resp.json();
-      const items = ((body as Record<string,unknown>).content
-        ?? (body as Record<string,unknown>).data
-        ?? (body as Record<string,unknown>).processoConsultaWs
-        ?? []) as Record<string,unknown>[];
-
+      if (!resp.ok) { console.warn("fetchProcessoDetalhes lote " + i + " -> " + resp.status); continue; }
+      const body = await resp.json() as Record<string,unknown>;
+      const items = ((body.content ?? body.data ?? body.processoConsultaWs ?? []) as Record<string,unknown>[]);
       for (const proc of items) {
         const num = str(proc.numeroProcesso ?? proc.numero_processo ?? proc.processo ?? "");
-        const marcRaw = proc.marcadores ?? proc.etiquetas ?? proc.tags ?? [];
-        const marcadores: string[] = [];
-        if (Array.isArray(marcRaw)) {
-          for (const m of marcRaw as unknown[]) {
-            if (typeof m === "string") marcadores.push(m.toUpperCase().trim());
-            else if (m && typeof m === "object") {
-              const label = str(
-                (m as Record<string,unknown>).descricao ??
-                (m as Record<string,unknown>).nome ??
-                (m as Record<string,unknown>).label ??
-                (m as Record<string,unknown>).name ?? ""
-              );
-              if (label) marcadores.push(label.toUpperCase().trim());
+        if (!num) continue;
+        const det = _extrairDetalhesDeProc(proc);
+        mapa.set(num, det);
+        // Guarda codigoProcesso da API para uso nas tentativas individuais
+        if (det.codigoProcesso) codigoFromApi.set(num, det.codigoProcesso);
+      }
+    } catch(e) { console.warn("fetchProcessoDetalhes lote " + i + ":", e); }
+  }
+
+  // ── Passo 2: busca marcadores via endpoint dedicado para processos sem marcadores ────
+  const semMarcadores = numeros.filter(n => !mapa.get(n)?.marcadores.length
+    && (codigoMap.has(n) || codigoFromApi.has(n)));
+  const alvo = semMarcadores.slice(0, 30);
+  for (let i = 0; i < alvo.length; i += 5) {
+    const lote = alvo.slice(i, i + 5);
+    await Promise.all(lote.map(async num => {
+      // Prefere o codigoProcesso vindo da API (mais confiável), depois modulo.chave
+      const codProcesso = codigoFromApi.get(num) ?? codigoMap.get(num)!;
+      const tentativas = [
+        // Detalhe completo do processo — retorna marcadorWs
+        `${PROJURIS_BASE}/adv-service/processo/${codProcesso}`,
+        `${PROJURIS_BASE}/adv-service/processo/${codProcesso}/marcador`,
+        `${PROJURIS_BASE}/adv-service/marcador?codigoProcesso=${codProcesso}&quan-registros=50&pagina=0`,
+      ];
+      for (const url of tentativas) {
+        try {
+          const r = await fetch(url, { method: "GET", headers: authHeaders() });
+          if (!r.ok) continue;
+          const body = await r.json() as Record<string,unknown>;
+
+          // Tenta extrair marcadores do objeto completo (marcadorWs é o campo real)
+          let marcadores = _extrairDetalhesDeProc(body).marcadores;
+
+          // Fallback: body pode ser array direto de marcadores
+          if (!marcadores.length && Array.isArray(body)) {
+            marcadores = (body as Record<string,unknown>[]).map(m =>
+              str(m.nomeMarcador ?? m.descricao ?? m.nome ?? m.label ?? m.name ?? "").toUpperCase().trim()
+            ).filter(Boolean);
+          }
+          // Fallback: dentro de wrapper marcadorWs/marcadorConsultaWs
+          if (!marcadores.length) {
+            const list = (body.marcadorWs ?? body.marcadorConsultaWs ?? body.content ?? body.data ?? []) as Record<string,unknown>[];
+            if (Array.isArray(list)) {
+              marcadores = list.map(m =>
+                str(m.nomeMarcador ?? m.descricao ?? m.nome ?? "").toUpperCase().trim()
+              ).filter(Boolean);
             }
           }
-        }
-        if (num) mapa.set(num, marcadores);
+
+          if (marcadores.length) {
+            const existing = mapa.get(num);
+            mapa.set(num, {
+              marcadores,
+              parteAtiva:   existing?.parteAtiva   || "",
+              partePassiva: existing?.partePassiva  || "",
+              cliente:      existing?.cliente       || "",
+            });
+            console.log("Marcadores encontrados: " + num + " [cod=" + codProcesso + "] = " + marcadores.join(","));
+            break;
+          }
+        } catch(_) { /* ignora */ }
       }
-    } catch(e) { console.warn("fetchMarcadores erro:", e); }
+    }));
   }
-  console.log("Marcadores carregados para " + mapa.size + " processos");
+
+  console.log("Detalhes de processos carregados para " + mapa.size + " processos (individuais: " + semMarcadores.length + " tentados)");
+  return mapa;
+}
+
+/** Compat: retorna apenas marcadores do fetchProcessoDetalhes */
+async function fetchMarcadoresPorProcesso(numeros: string[]): Promise<Map<string, string[]>> {
+  const detalhes = await fetchProcessoDetalhes(numeros);
+  const mapa = new Map<string, string[]>();
+  detalhes.forEach((v, k) => mapa.set(k, v.marcadores));
   return mapa;
 }
 
@@ -763,10 +913,14 @@ async function upsertSupabase(sb: ReturnType<typeof createClient>, records: Reco
   if (!records.length) return 0;
   let saved = 0;
   for (let i = 0; i < records.length; i += 50) {
-    const { error } = await sb.from(SB_TABLE).upsert(records.slice(i,i+50), { onConflict:"id" });
-    if (error) {
-      console.error("Upsert erro:", error.message, "Detalhes:", error.details, "Hint:", error.hint);
-      throw new Error(`Upsert falhou: ${error.message} | ${error.details ?? ""}`);
+    const lote = records.slice(i, i + 50);
+    // Usa função PostgreSQL que faz COALESCE: não sobrescreve campos preenchidos com string vazia
+    for (const rec of lote) {
+      const { error } = await sb.rpc("upsert_pauta_audiencia", { p: rec });
+      if (error) {
+        console.error("upsert_pauta_audiencia erro:", error.message);
+        throw new Error(`Upsert falhou: ${error.message} | ${error.details ?? ""}`);
+      }
     }
     saved += Math.min(50, records.length - i);
   }
@@ -789,7 +943,36 @@ Deno.serve(async (req: Request) => {
     return Response.json({ diag: resultado }, { headers: CORS });
   }
 
-  // Modo re-classificação total: POST ?reclassify=1
+  // Modo debug de marcadores: GET ?debug-marcadores=1&codigo={codigoProcesso}
+  if (url.searchParams.get("debug-marcadores") === "1") {
+    try {
+      await getToken();
+      const cod = url.searchParams.get("codigo") || "24995302";
+      const resultados: Record<string, string> = {};
+      const tentativas = [
+        `GET /adv-service/processo/${cod}`,
+        `GET /adv-service/processo/${cod}/marcador`,
+        `GET /adv-service/processo/${cod}/marcadores`,
+        `GET /adv-service/marcador?codigoProcesso=${cod}&quan-registros=50&pagina=0`,
+        `GET /adv-service/marcador/consulta?quan-registros=50&pagina=0&codigo-processo=${cod}`,
+        `GET /adv-service/marcador/processo?codigoProcesso=${cod}`,
+        `GET /adv-service/processo/detalhe?codigoProcesso=${cod}`,
+        `POST /adv-service/processo/detalhe`,
+      ];
+      for (const t of tentativas) {
+        const [method, path] = t.split(" ");
+        const fullUrl = `${PROJURIS_BASE}/adv-service${path.replace("/adv-service","").replace("/adv-service","") }`;
+        try {
+          const opts: RequestInit = { method, headers: authHeaders() };
+          if (method === "POST") opts.body = JSON.stringify({ codigoProcesso: parseInt(cod) });
+          const r = await fetch(fullUrl, opts);
+          const body = await r.text();
+          resultados[t] = `${r.status} | ${body.slice(0, 800)}`;
+        } catch(e) { resultados[t] = `ERR: ${e}`; }
+      }
+      return Response.json({ debug: "marcadores", codigo: cod, resultados }, { headers: CORS });
+    } catch(e) { return Response.json({ error: String(e) }, { status: 500, headers: CORS }); }
+  }
   if (url.searchParams.get("reclassify") === "1") {
     try {
       await getToken();
@@ -850,19 +1033,36 @@ Deno.serve(async (req: Request) => {
       await recordSync(sb,0); return Response.json({ ok:true, message:"Nenhuma audiencia encontrada", saved:0 }, { headers:CORS });
     }
 
-    // Busca marcadores dos processos para enriquecer a classificação
+    // Busca detalhes (marcadores + partes) dos processos para enriquecer os tasks
     const numerosProcesso = [...new Set(
       (raw as Record<string,unknown>[])
         .map(r => str(r.numeroProcesso ?? r.numero_processo ?? r.processo ?? ""))
         .filter(Boolean)
     )];
-    const marcadoresMap = await fetchMarcadoresPorProcesso(numerosProcesso);
+    // Mapa de número CNJ → codigoProcesso interno do Projuris (modulo.chave)
+    const codigoMap = new Map<string, number>();
+    (raw as Record<string,unknown>[]).forEach(item => {
+      const num = str(item.numeroProcesso ?? item.numero_processo ?? item.processo ?? "");
+      const cod = (item.modulo as Record<string,unknown>)?.chave;
+      if (num && typeof cod === "number" && cod > 0) codigoMap.set(num, cod);
+    });
+    const processoMap = await fetchProcessoDetalhes(numerosProcesso, codigoMap);
 
-    // Enriquece cada item com os marcadores do processo antes de normalizar
+    // Enriquece cada item com dados do processo (marcadores + partes faltantes)
     const enriched = (raw as Record<string,unknown>[]).map(item => {
       const num = str(item.numeroProcesso ?? item.numero_processo ?? item.processo ?? "");
-      const marcadores = marcadoresMap.get(num) ?? [];
-      return marcadores.length ? { ...item, marcadores } : item;
+      const det = processoMap.get(num);
+      if (!det) return item;
+      const enrichedItem: Record<string,unknown> = { ...item };
+      // Marcadores: usa do processo se o task não trouxer
+      if (det.marcadores.length && !(Array.isArray(item.marcadores) && (item.marcadores as unknown[]).length)) {
+        enrichedItem.marcadores = det.marcadores;
+      }
+      // Partes: usa do processo se o task veio sem parteAtiva/partePassiva
+      if (!str(item.parteAtiva ?? "") && det.parteAtiva)   enrichedItem.parteAtiva   = det.parteAtiva;
+      if (!str(item.partePassiva ?? "") && det.partePassiva) enrichedItem.partePassiva = det.partePassiva;
+      if (!str(item.nomeCliente ?? "") && det.cliente)     enrichedItem.nomeCliente  = det.cliente;
+      return enrichedItem;
     });
 
     const allRecords = enriched.map(normalizar);
