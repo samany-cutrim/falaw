@@ -14264,6 +14264,18 @@ async function saveAudiencia() {
       const sb = supabase.createClient(sbUrl, sbKey);
       const { error } = await sb.from('pauta_audiencias').upsert(row);
       if (error) throw error;
+
+      // Se tipo_responsabilidade foi preenchido e há processo, propaga como marcador no Projuris
+      if (row.tipo_responsabilidade && row.processo) {
+        const fnUrl = sbUrl.replace('https://', 'https://').replace(/\/rest\/v1.*$/, '') + '/functions/v1/projuris-sync?set-marcador=1';
+        fetch(fnUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sbKey },
+          body: JSON.stringify({ processo: row.processo, tipo_responsabilidade: row.tipo_responsabilidade }),
+        }).then(r => r.json()).then(j => {
+          if (!j.ok) console.warn('set-marcador:', j.error || JSON.stringify(j));
+        }).catch(() => {});
+      }
     } catch(e) { showToast('Erro ao salvar: ' + e.message); return; }
   } else {
     const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY)||'[]');

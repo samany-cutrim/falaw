@@ -442,13 +442,12 @@ async function buscarCodigosMarcadores(sb: ReturnType<typeof createClient>): Pro
 /** Atualiza tipo_responsabilidade buscando os marcadores reais de cada processo no Projuris */
 async function sincronizarMarcadoresProcessos(sb: ReturnType<typeof createClient>): Promise<number> {
   // Busca processos que podem ter marcadores de tipo-responsabilidade
-  // (iFood com NUVEM/OL-SUBSIDIÁRIA — podem ser EX-FOODLOVER ou TERCEIRIZAÇÃO na verdade)
   const { data, error } = await sb
     .from("pauta_audiencias")
     .select("processo")
     .neq("reclamada", "")
-    .in("tipo_responsabilidade", ["NUVEM", "OL-SUBSIDIÁRIA", "SUBSIDIÁRIA"])
-    .limit(200);
+    .in("tipo_responsabilidade", ["NUVEM", "OL-SUBSIDIÁRIA", "SUBSIDIÁRIA", ""])
+    .limit(2000);
   if (error || !data?.length) return 0;
 
   // Processos únicos com codigoProcesso no cache
@@ -476,23 +475,20 @@ async function sincronizarMarcadoresProcessos(sb: ReturnType<typeof createClient
     const codProcesso = rawCod ? Number(rawCod) : 0;
     if (!codProcesso) continue;
 
-    // Marcadores que justificam OVERRIDE da classificação por posição
-    // NUVEM/SUBSIDIÁRIA/OL-SUBSIDIÁRIA já são tratados pelo calcularResponsabilidade;
-    // só fazemos override quando o marcador indica EX-FOODLOVER ou TERCEIRIZAÇÃO
-    const OVERRIDE_TIPOS = ["EX-FOODLOVER", "TERCEIRIZAÇÃO"];
     const marcadoresCached = row.marcadores as string[] | null;
 
     // null = ainda não verificado via API
     // [] ou array com valores = já verificado
     if (marcadoresCached !== null) {
-      // Já verificado: aplica override se houver tipo específico no cache
-      const tipo = (marcadoresCached).find(m => OVERRIDE_TIPOS.includes(m.toUpperCase().trim()))?.toUpperCase().trim();
+      // Já verificado: aplica classificação se houver marcador reconhecido no cache
+      const tipo = identificarTipoPorMarcadores(marcadoresCached);
       if (tipo) {
-        const { error: upErr } = await sb.from("pauta_audiencias")
+        const { data: updated, error: upErr } = await sb.from("pauta_audiencias")
           .update({ tipo_responsabilidade: tipo })
           .eq("processo", num)
-          .neq("tipo_responsabilidade", tipo); // só atualiza se mudou
-        if (!upErr) { atualizados++; console.log(`Marcador override (cache): ${num} → ${tipo}`); }
+          .neq("tipo_responsabilidade", tipo) // só atualiza se mudou
+          .select("id");
+        if (!upErr && updated?.length) { atualizados++; console.log(`Marcador override (cache): ${num} → ${tipo}`); }
       }
       continue; // marcadores já verificados, não chama API novamente
     }
@@ -510,14 +506,15 @@ async function sincronizarMarcadoresProcessos(sb: ReturnType<typeof createClient
         .update({ marcadores, updated_at: new Date().toISOString() })
         .eq("numero_processo", num);
 
-      // Aplica override apenas para tipos específicos
-      const tipo = marcadores.find(m => OVERRIDE_TIPOS.includes(m));
+      // Aplica classificação com base nos marcadores reais encontrados
+      const tipo = identificarTipoPorMarcadores(marcadores);
       if (tipo) {
-        const { error: upErr } = await sb.from("pauta_audiencias")
+        const { data: updated, error: upErr } = await sb.from("pauta_audiencias")
           .update({ tipo_responsabilidade: tipo })
           .eq("processo", num)
-          .neq("tipo_responsabilidade", tipo);
-        if (!upErr) { atualizados++; console.log(`Marcador override (API): ${num} → ${tipo}`); }
+          .neq("tipo_responsabilidade", tipo)
+          .select("id");
+        if (!upErr && updated?.length) { atualizados++; console.log(`Marcador override (API): ${num} → ${tipo}`); }
       }
     } catch(_) { /* ignora */ }
   }
@@ -712,7 +709,7 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
     link:                  link       || "",
     id_senha:              idSenha    || "",
     advogado:              advogado,  // sempre "" — preenchido manualmente no site
-    tipo_responsabilidade: calcularResponsabilidade(reclamada, marcadores.join(",")),
+    tipo_responsabilidade: "",  // classificado por sincronizarMarcadoresProcessos via marcadores do processo
     comentarios:           comentarios || "",
     updated_at:            new Date().toISOString(),
   };
@@ -950,26 +947,42 @@ async function fetchMarcadoresPorProcesso(sb: ReturnType<typeof createClient>, n
   return mapa;
 }
 
-function calcularResponsabilidade(reclamada: string, marcadoresStr: string): string {
-  const marcadores = marcadoresStr ? marcadoresStr.toUpperCase().split(",").map(s => s.trim()).filter(Boolean) : [];
+/**
+ * Mapeia os marcadores (etiquetas) reais do processo no Projuris para o tipo_responsabilidade.
+ * Só classifica com base em marcador real do Projuris — sem fallback por posição no polo
+ * passivo ou nome "ifood". Se nada bater, retorna "" (fica em branco p/ preenchimento manual).
+ */
+function identificarTipoPorMarcadores(marcadoresOriginais: string[]): string {
+  const semAcento = (s: string) =>
+    s.toUpperCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-  // Marcadores do Projuris têm prioridade absoluta (mapeamento direto)
-  const TIPOS_VALIDOS = ["EX-FOODLOVER", "NUVEM", "TERCEIRIZAÇÃO", "OL-SUBSIDIÁRIA", "SUBSIDIÁRIA", "EX-FUNCIONÁRIO"];
-  for (const tipo of TIPOS_VALIDOS) {
-    if (marcadores.includes(tipo)) return tipo;
+  for (const original of marcadoresOriginais) {
+    const nome = str(original).toUpperCase().trim();
+    const norm = semAcento(nome);
+
+    // OL SUBS/SOLI, OL SUBSIDIÁRIA ou qualquer marcador que comece com "OL"
+    if (norm.startsWith("OL")) return "OL-SUBSIDIÁRIA";
+
+    // RESPONSABILIDADE SUBSIDIÁRIA ou só SUBSIDIÁRIA
+    if (norm === "RESPONSABILIDADE SUBSIDIARIA" || norm === "SUBSIDIARIA") return "SUBSIDIÁRIA";
+
+    // TERCERIZAÇÃO (grafia como está no Projuris) ou TERCEIRIZAÇÃO
+    if (norm === "TERCEIRIZACAO" || norm === "TERCERIZACAO") return "TERCEIRIZAÇÃO";
+
+    // EX-FUNCIONÁRIO ou EX-FUNCIONÁRIO(A)
+    if (norm === "EX-FUNCIONARIO" || norm === "EX-FUNCIONARIO(A)") return "EX-FUNCIONÁRIO(A)";
+
+    // EX-FOODLOVER / EXFOODLOVER
+    if (norm === "EX-FOODLOVER" || norm === "EXFOODLOVER") return "EX-FOODLOVER";
+
+    // FRANQUIA ou FRANQUIA/ENTREGO
+    if (norm.startsWith("FRANQUIA")) return "FRANQUIA";
+
+    // NUVEM ou NUVEM/ZATTAR — mantém o nome real do Projuris, sem unificar
+    if (norm.startsWith("NUVEM")) return nome;
   }
 
-  // Sem marcadores reconhecidos: fallback por posição no polo passivo
-  if (!reclamada) return "";
-  const partes = reclamada.split(",").map(p => p.trim()).filter(p => p.length > 0);
-  const idxCliente = partes.findIndex(p => p.toUpperCase().includes("(CLIENTE)"));
-  const clienteEhPrimeiro = idxCliente <= 0; // 0 = primeiro; -1 = sem tag, assume primeiro
-
-  const isIfood = reclamada.toLowerCase().includes("ifood");
-  if (isIfood) {
-    return clienteEhPrimeiro ? "NUVEM" : "OL-SUBSIDIÁRIA";
-  }
-  return clienteEhPrimeiro ? "EX-FUNCIONÁRIO" : "SUBSIDIÁRIA";
+  return "";
 }
 
 /** Busca parteAtiva/partePassiva no endpoint de processos do Projuris e preenche registros sem reclamante */
@@ -1041,7 +1054,7 @@ async function completarPartesAusentes(sb: ReturnType<typeof createClient>): Pro
             if (label) marcadores.push(label.toUpperCase().trim());
           }
         }
-        const tipo_responsabilidade = calcularResponsabilidade(reclamada, marcadores.join(","));
+        const tipo_responsabilidade = identificarTipoPorMarcadores(marcadores);
 
         if (reclamante || reclamada) {
           processoMap.set(num, { reclamante, reclamada, cliente, tipo_responsabilidade });
@@ -1085,8 +1098,8 @@ async function classificarExistentes(sb: ReturnType<typeof createClient>): Promi
 
   let atualizados = 0;
   for (const row of data as {id:string; processo:string; reclamada:string}[]) {
-    const marcadores = (marcadoresMap.get(row.processo ?? "") ?? []).join(",");
-    const resp = calcularResponsabilidade(row.reclamada ?? "", marcadores);
+    const marcadores = marcadoresMap.get(row.processo ?? "") ?? [];
+    const resp = identificarTipoPorMarcadores(marcadores);
     if (resp) {
       await sb.from("pauta_audiencias").update({ tipo_responsabilidade: resp }).eq("id", row.id);
       atualizados++;
@@ -1146,6 +1159,69 @@ Deno.serve(async (req: Request) => {
       const nomes = lista.map(m => `${m.codigoMarcador}:${m.nomeMarcador}`).join(", ");
       return Response.json({ status: resp.status, total: lista.length, codigoUsado: cod, marcadores: nomes.slice(0, 3000) }, { headers: CORS });
     } catch(e) { return Response.json({ error: String(e) }, { status: 500, headers: CORS }); }
+  }
+
+  // Endpoint: POST ?set-marcador=1  body: { processo: "...", tipo_responsabilidade: "..." }
+  // Cria/confirma marcador no Projuris correspondente ao tipo_responsabilidade salvo no site
+  if (url.searchParams.get("set-marcador") === "1") {
+    try {
+      await getToken();
+      const sb2 = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+      let body2: Record<string,unknown> = {};
+      try { body2 = await req.json(); } catch { /* sem body */ }
+      const processo = str(body2.processo);
+      const tipo = str(body2.tipo_responsabilidade).trim();
+      if (!processo || !tipo) return Response.json({ ok: false, error: "processo e tipo_responsabilidade são obrigatórios" }, { status: 400, headers: CORS });
+
+      // Mapa tipo_responsabilidade → {codigoMarcador, nomeMarcador} real no Projuris
+      const MAPA_MARCADORES: Record<string, { codigoMarcador: number; nomeMarcador: string }> = {
+        "EX-FOODLOVER":      { codigoMarcador: 1756633, nomeMarcador: "EX-FOODLOVER" },
+        "EX-FUNCIONÁRIO(A)": { codigoMarcador: 1686384, nomeMarcador: "EX-FUNCIONÁRIO(A)" },
+        "FRANQUIA":          { codigoMarcador: 1798674, nomeMarcador: "FRANQUIA/ENTREGO" },
+        "NUVEM":             { codigoMarcador: 1710723, nomeMarcador: "NUVEM" },
+        "NUVEM/ZATTAR":      { codigoMarcador: 1686364, nomeMarcador: "Nuvem/Zattar" },
+        "OL-SUBSIDIÁRIA":    { codigoMarcador: 1686393, nomeMarcador: "OL SUBS/SOLI" },
+        "SUBSIDIÁRIA":       { codigoMarcador: 1710736, nomeMarcador: "RESPONSABILIDADE SUBSIDIÁRIA" },
+        "TERCEIRIZAÇÃO":     { codigoMarcador: 1686410, nomeMarcador: "TERCEIRIZAÇÃO" },
+      };
+
+      const marcadorInfo = MAPA_MARCADORES[tipo.toUpperCase()] ?? MAPA_MARCADORES[tipo];
+      if (!marcadorInfo) return Response.json({ ok: false, error: `Tipo '${tipo}' não mapeado para marcador Projuris`, mapeados: Object.keys(MAPA_MARCADORES) }, { status: 400, headers: CORS });
+
+      // Busca o codigoProcesso no cache
+      const { data: cacheRow } = await sb2.from("projuris_processo_cache")
+        .select("codigo_processo")
+        .eq("numero_processo", processo)
+        .not("codigo_processo", "is", null)
+        .single();
+      if (!cacheRow) return Response.json({ ok: false, error: `Processo ${processo} não encontrado no cache ou sem codigoProcesso` }, { status: 404, headers: CORS });
+      const codProcesso = Number((cacheRow as Record<string,unknown>).codigo_processo);
+
+      // Cria o marcador no Projuris
+      const resp = await fetch(`${PROJURIS_BASE}/adv-service/processo/${codProcesso}/marcador`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ codigoMarcador: marcadorInfo.codigoMarcador, nomeMarcador: marcadorInfo.nomeMarcador }),
+      });
+      const respTxt = await resp.text();
+      if (!resp.ok && resp.status !== 409) { // 409 = já existe, tudo bem
+        return Response.json({ ok: false, error: `Projuris retornou ${resp.status}`, detalhe: respTxt.slice(0, 200) }, { status: 500, headers: CORS });
+      }
+
+      // Atualiza o cache local com o marcador confirmado
+      const { data: cacheAtual } = await sb2.from("projuris_processo_cache")
+        .select("marcadores")
+        .eq("numero_processo", processo)
+        .single();
+      const marcadoresAtuais = ((cacheAtual as Record<string,unknown>)?.marcadores as string[] | null) ?? [];
+      if (!marcadoresAtuais.includes(marcadorInfo.nomeMarcador.toUpperCase())) {
+        await sb2.from("projuris_processo_cache")
+          .update({ marcadores: [...marcadoresAtuais, marcadorInfo.nomeMarcador.toUpperCase()], updated_at: new Date().toISOString() })
+          .eq("numero_processo", processo);
+      }
+
+      return Response.json({ ok: true, processo, tipo, codigoProcesso: codProcesso, marcador: marcadorInfo, projurisStatus: resp.status }, { headers: CORS });
+    } catch(e) { return Response.json({ ok: false, error: String(e) }, { status: 500, headers: CORS }); }
   }
 
   // Modo debug de keyset: GET ?debug-keyset=1
@@ -1216,8 +1292,8 @@ Deno.serve(async (req: Request) => {
 
       let atualizados = 0;
       for (const row of data as {id:string; processo:string; reclamada:string}[]) {
-        const marcadores = (marcadoresMap.get(row.processo ?? "") ?? []).join(",");
-        const resp = calcularResponsabilidade(row.reclamada ?? "", marcadores);
+        const marcadores = marcadoresMap.get(row.processo ?? "") ?? [];
+        const resp = identificarTipoPorMarcadores(marcadores);
         if (resp) {
           await sb.from("pauta_audiencias").update({ tipo_responsabilidade: resp }).eq("id", row.id);
           atualizados++;
