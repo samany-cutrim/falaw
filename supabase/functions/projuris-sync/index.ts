@@ -571,28 +571,31 @@ function str(v: unknown): string { return v == null ? "" : String(v).trim(); }
 function normalizar(item: Record<string,unknown>): Record<string,unknown> {
   const DATAS = ["dataConclusaoPrevista","dataPrevista","data_prevista","dataAudiencia","data_audiencia","dataInicio","dataLimite","data","dtEvento"];
   const HORAS = ["horaLimite","horaPrevista","hora_prevista","horaAudiencia","hora_audiencia","horaInicio","hora","horario"];
-  // dataPrevista e horaLimite em Projuris ADV são timestamps em ms
+  // dataPrevista e horaLimite em Projuris ADV são timestamps ms em UTC, mas representam
+  // horário de Brasília + 3h (ex.: campo cru = 11:50Z para audiência marcada às 08:50 BRT).
+  // É preciso subtrair BRASILIA_OFFSET_MS ANTES de extrair hora/data via getUTC*.
   const dataRawVal = DATAS.map(k=>item[k]).find(v=>v);
   let dataRaw = "";
   if (typeof dataRawVal === "number") {
-    // Timestamp ms → YYYY-MM-DD
-    const d = new Date(dataRawVal);
+    const d = new Date(dataRawVal + BRASILIA_OFFSET_MS);
     dataRaw = d.getUTCFullYear() + "-" + String(d.getUTCMonth()+1).padStart(2,"0") + "-" + String(d.getUTCDate()).padStart(2,"0");
   } else dataRaw = str(dataRawVal);
   const horaRawVal = HORAS.map(k=>item[k]).find(v=>v);
   let horaRaw = "";
   if (typeof horaRawVal === "number") {
-    const d = new Date(horaRawVal);
+    const d = new Date(horaRawVal + BRASILIA_OFFSET_MS);
     horaRaw = String(d.getUTCHours()).padStart(2,"0") + ":" + String(d.getUTCMinutes()).padStart(2,"0");
   } else horaRaw = str(horaRawVal);
   const { data, hora: horaFb } = parseData(dataRaw);
   const hora = horaRaw ? horaRaw.slice(0,5) : horaFb;
 
-  const processo   = str(item.numeroProcesso ?? item.numero_processo ?? item.processo ?? item.nrProcesso);
+  const processo = str(item.numeroProcesso ?? item.numero_processo ?? item.processo ?? item.nrProcesso);
   const reclamante = str(item.parteAtiva ?? item.reclamante ?? item.poloAtivo ?? item.polo_ativo ?? item.autor ?? item.nomeEnvolvido);
-  const reclamada  = str(item.partePassiva ?? item.reclamada ?? item.poloPassivo ?? item.polo_passivo ?? item.reu);
-  const vara       = str(item.vara ?? item.orgaoJulgador ?? item.orgao_julgador ?? item.tribunal);
-  const link       = str(item.linkVideoconferencia ?? item.link_video ?? item.link ?? item.urlVideoconferencia);
+  const reclamada = str(item.partePassiva ?? item.reclamada ?? item.poloPassivo ?? item.polo_passivo ?? item.reu);
+  // "vara" já vem preenchido pelo enriquecimento via processo (campo "Órgão" no Projuris,
+  // buscado em fetchProcessoDetalhes/_extrairDetalhesDeProc). Os demais são fallback teórico.
+  const vara = str(item.vara ?? item.orgaoJulgador ?? item.orgao_julgador ?? item.tribunal);
+  const link = str(item.linkVideoconferencia ?? item.link_video ?? item.link ?? item.urlVideoconferencia);
 
   // Cliente final — Projuris retorna array "clientes"
   const clientesArr = item.clientes;
@@ -620,8 +623,7 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
     marcadores.push(...(marcadoresRaw as string).toUpperCase().split(",").map(s => s.trim()).filter(Boolean));
   }
 
-  // ── Conta empresas no polo passivo (para calcularResponsabilidade) ──────────
-  // Se poloPassivo veio como array, usa o tamanho; senão conta vírgulas na string
+  // ── Conta empresas no polo passivo ─────────────────────────────────────────
   const poloPassivoArr = item.poloPassivo ?? item.polo_passivo;
   let numReclamadas = 0;
   if (Array.isArray(poloPassivoArr)) {
@@ -630,9 +632,8 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
     numReclamadas = reclamada.split(",").filter(p => p.trim().length > 2).length;
   }
   if (numReclamadas === 0) numReclamadas = 1;
-  // Advogado responsável e preposto: NÃO vêm do Projuris — preenchimento manual no site
   const advogado = "";
-  const mid   = str(item.meetingId ?? item.meeting_id ?? item.idReuniao);
+  const mid = str(item.meetingId ?? item.meeting_id ?? item.idReuniao);
   const senha = str(item.senha ?? item.password ?? item.codigoAcesso);
   const idSenha = [mid && `ID: ${mid}`, senha && `Senha: ${senha}`].filter(Boolean).join(" | ");
 
@@ -655,15 +656,20 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
   else if (modalRaw.includes("presencial")) modalidade = "PRESENCIAL";
   else if (modalRaw.includes("hibrida") || modalRaw.includes("misto")) modalidade = "HÍBRIDA";
 
-  // No Projuris ADV, o texto rico fica em "titulo" (o campo "descricao" normalmente vem nulo)
-  const comentarios = str(item.titulo ?? item.descricao ?? item.title ?? "");
+  // O texto com data/hora/vara entre parênteses pode estar em "titulo" OU "descricao" —
+  // depende do tipo de tarefa. Não dá pra assumir sempre o mesmo campo.
+  const textoTitulo = str(item.titulo ?? item.title ?? "");
+  const textoDescricao = str(item.descricao ?? "");
+  const REGEX_PARENTESES = /\((\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2})\s+([^)]+?)\s*\)/;
+  // "comentarios" (salvo/exibido) = o texto que contém o padrão, senão o não-vazio
+  const comentarios = REGEX_PARENTESES.test(textoTitulo) ? textoTitulo
+    : REGEX_PARENTESES.test(textoDescricao) ? textoDescricao
+    : (textoTitulo || textoDescricao);
 
-  // ── Extrai campos faltantes do texto do comentários ──────────────────────────
-  // Formato Projuris: "Audiência de [tipo] designada (DD/MM/YYYY HH:MM [sala/vara])"
+  // ── Extrai campos faltantes do texto ────────────────────────────────────────
   let dataFinal = data, horaFinal = hora, varaFinal = vara, tipoFinal = tipo_audiencia, modalFinal = modalidade;
   if (comentarios) {
     const dNorm = comentarios.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-    // Tipo audiência a partir do comentário
     if (!tipoFinal) {
       if (dNorm.includes("encerramento") && dNorm.includes("instruc")) tipoFinal = "ENCERRAMENTO DE INSTRUÇÃO";
       else if (dNorm.includes("instruc")) tipoFinal = "INSTRUÇÃO";
@@ -672,23 +678,22 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
       else if (dNorm.includes(" una ") || dNorm.startsWith("una ") || dNorm.includes("audiencia una")) tipoFinal = "UNA";
       else if (dNorm.includes("inicial")) tipoFinal = "INICIAL";
     }
-    // Modalidade a partir do comentário
     if (!modalFinal) {
       if (dNorm.includes("videoconfer") || dNorm.includes("telepresencial") || dNorm.includes("virtual") || dNorm.includes("remot")) modalFinal = "VIRTUAL";
       else if (dNorm.includes("presencial")) modalFinal = "PRESENCIAL";
     }
-    // Data, hora e vara — formato: (...DD/MM/YYYY HH:MM sala/vara...)
-    if (!dataFinal || !horaFinal || !varaFinal) {
-      const m = comentarios.match(/\((\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2})\s+([^)]+?)\s*\)/);
-      if (m) {
-        if (!dataFinal) dataFinal = `${m[3]}-${m[2]}-${m[1]}`;
-        if (!horaFinal) horaFinal = m[4];
-        if (!varaFinal) {
-          varaFinal = m[5].trim()
-            .replace(/^-\s*/, "") // remove traço solto no início
-            .replace(/\s*-\s*(Facultad|Acesso|Sen|Link|ID|Zoom|Meet|Teams).*/i, "")
-            .trim();
-        }
+  }
+  // Data, hora e vara — testa o padrão no título E na descrição (o que bater primeiro)
+  if (!dataFinal || !horaFinal || !varaFinal) {
+    const m = textoTitulo.match(REGEX_PARENTESES) ?? textoDescricao.match(REGEX_PARENTESES);
+    if (m) {
+      if (!dataFinal) dataFinal = `${m[3]}-${m[2]}-${m[1]}`;
+      if (!horaFinal) horaFinal = m[4];
+      if (!varaFinal) {
+        varaFinal = m[5].trim()
+          .replace(/^-\s*/, "")
+          .replace(/\s*-\s*(Facultad|Acesso|Sen|Link|ID|Zoom|Meet|Teams).*/i, "")
+          .trim();
       }
     }
   }
@@ -721,6 +726,7 @@ interface ProcessoDetalhes {
   parteAtiva: string;
   partePassiva: string;
   cliente: string;
+  vara: string;
 }
 
 function _extrairDetalhesDeProc(proc: Record<string,unknown>): ProcessoDetalhes & { codigoProcesso?: number } {
@@ -775,7 +781,13 @@ function _extrairDetalhesDeProc(proc: Record<string,unknown>): ProcessoDetalhes 
   const codigoProcesso = typeof proc.codigoProcesso === "number" ? proc.codigoProcesso
     : typeof proc.codigo === "number" ? proc.codigo : undefined;
 
-  return { marcadores, parteAtiva, partePassiva, cliente, codigoProcesso };
+  // ── Vara/Turma — campo "Órgão" na tela do Projuris ──────────────────────────
+  const varaRaw = proc.vara;
+  const vara = varaRaw && typeof varaRaw === "object"
+    ? str((varaRaw as Record<string,unknown>).valor)
+    : str(varaRaw ?? "");
+
+  return { marcadores, parteAtiva, partePassiva, cliente, vara, codigoProcesso };
 }
 
 async function fetchProcessoDetalhes(
@@ -790,7 +802,7 @@ async function fetchProcessoDetalhes(
   // ── Passo 0: reaproveita o que já está em cache e ainda é válido ──────────
   const { data: cacheRows } = await sb
     .from("projuris_processo_cache")
-    .select("numero_processo,marcadores,parte_ativa,parte_passiva,cliente,codigo_processo,updated_at")
+    .select("numero_processo,marcadores,parte_ativa,parte_passiva,cliente,vara,codigo_processo,updated_at")
     .in("numero_processo", numeros);
 
   const agora = Date.now();
@@ -805,6 +817,7 @@ async function fetchProcessoDetalhes(
         parteAtiva: str(row.parte_ativa),
         partePassiva: str(row.parte_passiva),
         cliente: str(row.cliente),
+        vara: str(row.vara),
       });
       validos.add(num);
       if (row.codigo_processo) codigoFromApi.set(num, row.codigo_processo as number);
@@ -846,63 +859,72 @@ async function fetchProcessoDetalhes(
     } catch(e) { console.warn("fetchProcessoDetalhes lote " + i + ":", e); }
   }
 
-  // ── Passo 2: busca marcadores via endpoint dedicado para quem ainda não tem ──────
-  const semMarcadores = faltantes.filter(n => !mapa.get(n)?.marcadores.length
-    && (codigoMap.has(n) || codigoFromApi.has(n)));
-  const alvo = semMarcadores.slice(0, 30);
+  // ── Passo 2: busca individual (marcadores e/ou vara) para quem ainda não tem ──
+  const semDetalhes = faltantes.filter(n => {
+    const atual = mapa.get(n);
+    return (!atual?.marcadores.length || !atual?.vara) && (codigoMap.has(n) || codigoFromApi.has(n));
+  });
+  const alvo = semDetalhes.slice(0, 30);
   for (let i = 0; i < alvo.length; i += 5) {
     const lote = alvo.slice(i, i + 5);
     await Promise.all(lote.map(async num => {
-      // Prefere o codigoProcesso vindo da API (mais confiável), depois modulo.chave
       const codProcesso = codigoFromApi.get(num) ?? codigoMap.get(num)!;
-      const tentativas = [
-        // Detalhe completo do processo — retorna marcadorWs
-        `${PROJURIS_BASE}/adv-service/processo/${codProcesso}`,
-        `${PROJURIS_BASE}/adv-service/processo/${codProcesso}/marcador`,
-        `${PROJURIS_BASE}/adv-service/marcador?codigoProcesso=${codProcesso}&quan-registros=50&pagina=0`,
-      ];
-      for (const url of tentativas) {
-        try {
-          const r = await fetch(url, { method: "GET", headers: authHeaders() });
-          if (!r.ok) continue;
+      const existing = mapa.get(num);
+      let marcadores = existing?.marcadores ?? [];
+      let vara = existing?.vara ?? "";
+
+      // 1ª tentativa: detalhe completo do processo — traz marcadorWs E vara
+      try {
+        const r = await fetch(`${PROJURIS_BASE}/adv-service/processo/${codProcesso}`, { method: "GET", headers: authHeaders() });
+        if (r.ok) {
           const body = await r.json() as Record<string,unknown>;
+          const det = _extrairDetalhesDeProc(body);
+          if (!marcadores.length && det.marcadores.length) marcadores = det.marcadores;
+          if (!vara && det.vara) vara = det.vara;
+        }
+      } catch(_) { /* ignora */ }
 
-          // Tenta extrair marcadores do objeto completo (marcadorWs é o campo real)
-          let marcadores = _extrairDetalhesDeProc(body).marcadores;
-
-          // Fallback: body pode ser array direto de marcadores
-          if (!marcadores.length && Array.isArray(body)) {
-            marcadores = (body as Record<string,unknown>[]).map(m =>
-              str(m.nomeMarcador ?? m.descricao ?? m.nome ?? m.label ?? m.name ?? "").toUpperCase().trim()
-            ).filter(Boolean);
-          }
-          // Fallback: dentro de wrapper marcadorWs/marcadorConsultaWs
-          if (!marcadores.length) {
-            const list = (body.marcadorWs ?? body.marcadorConsultaWs ?? body.content ?? body.data ?? []) as Record<string,unknown>[];
-            if (Array.isArray(list)) {
-              marcadores = list.map(m =>
-                str(m.nomeMarcador ?? m.descricao ?? m.nome ?? "").toUpperCase().trim()
+      // 2ª/3ª tentativas: só para marcadores, se ainda não encontrados
+      if (!marcadores.length) {
+        const tentativasMarcador = [
+          `${PROJURIS_BASE}/adv-service/processo/${codProcesso}/marcador`,
+          `${PROJURIS_BASE}/adv-service/marcador?codigoProcesso=${codProcesso}&quan-registros=50&pagina=0`,
+        ];
+        for (const url of tentativasMarcador) {
+          try {
+            const r = await fetch(url, { method: "GET", headers: authHeaders() });
+            if (!r.ok) continue;
+            const body = await r.json() as Record<string,unknown>;
+            if (Array.isArray(body)) {
+              marcadores = (body as Record<string,unknown>[]).map(m =>
+                str(m.nomeMarcador ?? m.descricao ?? m.nome ?? m.label ?? m.name ?? "").toUpperCase().trim()
               ).filter(Boolean);
             }
-          }
+            if (!marcadores.length) {
+              const list = (body.marcadorWs ?? body.marcadorConsultaWs ?? body.content ?? body.data ?? []) as Record<string,unknown>[];
+              if (Array.isArray(list)) {
+                marcadores = list.map(m => str(m.nomeMarcador ?? m.descricao ?? m.nome ?? "").toUpperCase().trim()).filter(Boolean);
+              }
+            }
+            if (marcadores.length) break;
+          } catch(_) { /* ignora */ }
+        }
+      }
 
-          if (marcadores.length) {
-            const existing = mapa.get(num);
-            mapa.set(num, {
-              marcadores,
-              parteAtiva:   existing?.parteAtiva   || "",
-              partePassiva: existing?.partePassiva  || "",
-              cliente:      existing?.cliente       || "",
-            });
-            console.log("Marcadores encontrados: " + num + " [cod=" + codProcesso + "] = " + marcadores.join(","));
-            break;
-          }
-        } catch(_) { /* ignora */ }
+      if (marcadores.length || vara) {
+        mapa.set(num, {
+          marcadores,
+          parteAtiva:   existing?.parteAtiva   || "",
+          partePassiva: existing?.partePassiva  || "",
+          cliente:      existing?.cliente       || "",
+          vara,
+        });
+        console.log("Detalhes individuais: " + num + " [cod=" + codProcesso + "] marcadores=" + marcadores.join(",") + " vara=" + vara);
       }
     }));
   }
 
-  console.log("Detalhes de processos carregados para " + mapa.size + " processos (individuais: " + semMarcadores.length + " tentados)");
+  console.log("Detalhes de processos carregados para " + mapa.size + " processos (individuais: " + semDetalhes.length + " tentados)");
 
   // ── Passo 3: grava/atualiza o cache com o que acabou de buscar ──────────────────
   // Salva TODOS os faltantes (inclusive sem dados da API) para garantir que
@@ -916,6 +938,7 @@ async function fetchProcessoDetalhes(
         parte_ativa: det?.parteAtiva ?? "",
         parte_passiva: det?.partePassiva ?? "",
         cliente: det?.cliente ?? "",
+        vara: det?.vara ?? "",
         codigo_processo: codigoFromApi.get(n) ?? codigoMap.get(n) ?? null,
         updated_at: new Date().toISOString(),
       };
@@ -1365,6 +1388,7 @@ Deno.serve(async (req: Request) => {
       if (!str(item.parteAtiva ?? "") && det.parteAtiva)   enrichedItem.parteAtiva   = det.parteAtiva;
       if (!str(item.partePassiva ?? "") && det.partePassiva) enrichedItem.partePassiva = det.partePassiva;
       if (!str(item.nomeCliente ?? "") && det.cliente)     enrichedItem.nomeCliente  = det.cliente;
+      if (!str(item.vara ?? "") && det.vara)               enrichedItem.vara         = det.vara;
       return enrichedItem;
     });
 
