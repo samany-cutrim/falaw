@@ -592,9 +592,9 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
   const processo = str(item.numeroProcesso ?? item.numero_processo ?? item.processo ?? item.nrProcesso);
   const reclamante = str(item.parteAtiva ?? item.reclamante ?? item.poloAtivo ?? item.polo_ativo ?? item.autor ?? item.nomeEnvolvido);
   const reclamada = str(item.partePassiva ?? item.reclamada ?? item.poloPassivo ?? item.polo_passivo ?? item.reu);
-  // "vara" já vem preenchido pelo enriquecimento via processo (campo "Órgão" no Projuris,
-  // buscado em fetchProcessoDetalhes/_extrairDetalhesDeProc). Os demais são fallback teórico.
-  const vara = str(item.vara ?? item.orgaoJulgador ?? item.orgao_julgador ?? item.tribunal);
+  // Valor do campo "Órgão julgador" do processo no Projuris (API: vara.valor via
+  // fetchProcessoDetalhes) — usado só como FALLBACK, nunca como prioridade.
+  const varaOrgaoJulgador = str(item.vara ?? item.orgaoJulgador ?? item.orgao_julgador ?? item.tribunal);
   const link = str(item.linkVideoconferencia ?? item.link_video ?? item.link ?? item.urlVideoconferencia);
 
   // Cliente final — Projuris retorna array "clientes"
@@ -661,13 +661,16 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
   const textoTitulo = str(item.titulo ?? item.title ?? "");
   const textoDescricao = str(item.descricao ?? "");
   const REGEX_PARENTESES = /\((\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2})\s+([^)]+?)\s*\)/;
+  // Formato alternativo sem parêntese de abertura:
+  // "designada para dia DD/MM/YYYY às HH:MMh - VARA)"
+  const REGEX_SEM_PAREN  = /\bdia\s+(\d{2})\/(\d{2})\/(\d{4})\D+(\d{2}:\d{2})\w*\s*[-–]\s*([^)\n.]+)/i;
   // "comentarios" (salvo/exibido) = o texto que contém o padrão, senão o não-vazio
   const comentarios = REGEX_PARENTESES.test(textoTitulo) ? textoTitulo
     : REGEX_PARENTESES.test(textoDescricao) ? textoDescricao
     : (textoTitulo || textoDescricao);
 
   // ── Extrai campos faltantes do texto ────────────────────────────────────────
-  let dataFinal = data, horaFinal = hora, varaFinal = vara, tipoFinal = tipo_audiencia, modalFinal = modalidade;
+  let dataFinal = data, horaFinal = hora, varaFinal = "", tipoFinal = tipo_audiencia, modalFinal = modalidade;
   if (comentarios) {
     const dNorm = comentarios.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
     if (!tipoFinal) {
@@ -683,20 +686,20 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
       else if (dNorm.includes("presencial")) modalFinal = "PRESENCIAL";
     }
   }
-  // Data, hora e vara — testa o padrão no título E na descrição (o que bater primeiro)
-  if (!dataFinal || !horaFinal || !varaFinal) {
-    const m = textoTitulo.match(REGEX_PARENTESES) ?? textoDescricao.match(REGEX_PARENTESES);
-    if (m) {
-      if (!dataFinal) dataFinal = `${m[3]}-${m[2]}-${m[1]}`;
-      if (!horaFinal) horaFinal = m[4];
-      if (!varaFinal) {
-        varaFinal = m[5].trim()
-          .replace(/^-\s*/, "")
-          .replace(/\s*-\s*(Facultad|Acesso|Sen|Link|ID|Zoom|Meet|Teams).*/i, "")
-          .trim();
-      }
-    }
+  // 1º) hora e vara do comentário têm prioridade sobre o timestamp (que é prazo da tarefa)
+  const mParen = textoTitulo.match(REGEX_PARENTESES) ?? textoDescricao.match(REGEX_PARENTESES);
+  const mAlt   = mParen ? null : (textoTitulo.match(REGEX_SEM_PAREN) ?? textoDescricao.match(REGEX_SEM_PAREN));
+  const mMatch = mParen ?? mAlt;
+  if (mMatch) {
+    if (!dataFinal) dataFinal = `${mMatch[3]}-${mMatch[2]}-${mMatch[1]}`;
+    horaFinal = mMatch[4];  // sempre usa hora do comentário quando disponível
+    varaFinal = mMatch[5].trim()
+      .replace(/^-\s*/, "")
+      .replace(/\s*-\s*(Facultad|Acesso|Sen|Link|ID|Zoom|Meet|Teams).*/i, "")
+      .trim();
   }
+  // 2º) fallback: Órgão julgador cadastrado no processo (Projuris)
+  if (!varaFinal) varaFinal = varaOrgaoJulgador;
 
   return {
     id: makeId(processo, dataFinal || data, horaFinal || hora),
@@ -1197,15 +1200,16 @@ Deno.serve(async (req: Request) => {
       if (!processo || !tipo) return Response.json({ ok: false, error: "processo e tipo_responsabilidade são obrigatórios" }, { status: 400, headers: CORS });
 
       // Mapa tipo_responsabilidade → {codigoMarcador, nomeMarcador} real no Projuris
-      const MAPA_MARCADORES: Record<string, { codigoMarcador: number; nomeMarcador: string }> = {
-        "EX-FOODLOVER":      { codigoMarcador: 1756633, nomeMarcador: "EX-FOODLOVER" },
-        "EX-FUNCIONÁRIO(A)": { codigoMarcador: 1686384, nomeMarcador: "EX-FUNCIONÁRIO(A)" },
-        "FRANQUIA":          { codigoMarcador: 1798674, nomeMarcador: "FRANQUIA/ENTREGO" },
-        "NUVEM":             { codigoMarcador: 1710723, nomeMarcador: "NUVEM" },
-        "NUVEM/ZATTAR":      { codigoMarcador: 1686364, nomeMarcador: "Nuvem/Zattar" },
-        "OL-SUBSIDIÁRIA":    { codigoMarcador: 1686393, nomeMarcador: "OL SUBS/SOLI" },
-        "SUBSIDIÁRIA":       { codigoMarcador: 1710736, nomeMarcador: "RESPONSABILIDADE SUBSIDIÁRIA" },
-        "TERCEIRIZAÇÃO":     { codigoMarcador: 1686410, nomeMarcador: "TERCEIRIZAÇÃO" },
+      const MAPA_MARCADORES: Record<string, { codigoMarcador: number; nomeMarcador: string; extra?: {codigoMarcador: number; nomeMarcador: string} }> = {
+        "EX-FOODLOVER":          { codigoMarcador: 1756633, nomeMarcador: "EX-FOODLOVER" },
+        "EX-FUNCIONÁRIO(A)":     { codigoMarcador: 1686384, nomeMarcador: "EX-FUNCIONÁRIO(A)" },
+        "FRANQUIA":              { codigoMarcador: 1798674, nomeMarcador: "FRANQUIA/ENTREGO" },
+        "NUVEM":                 { codigoMarcador: 1710723, nomeMarcador: "NUVEM" },
+        "NUVEM/ZATTAR":          { codigoMarcador: 1686364, nomeMarcador: "Nuvem/Zattar" },
+        "NUVEM - ESTRATÉGICO":   { codigoMarcador: 1710723, nomeMarcador: "NUVEM", extra: { codigoMarcador: 1687122, nomeMarcador: "ESTRATÉGICO" } },
+        "OL-SUBSIDIÁRIA":        { codigoMarcador: 1686393, nomeMarcador: "OL SUBS/SOLI" },
+        "SUBSIDIÁRIA":           { codigoMarcador: 1710736, nomeMarcador: "RESPONSABILIDADE SUBSIDIÁRIA" },
+        "TERCEIRIZAÇÃO":         { codigoMarcador: 1686410, nomeMarcador: "TERCEIRIZAÇÃO" },
       };
 
       const marcadorInfo = MAPA_MARCADORES[tipo.toUpperCase()] ?? MAPA_MARCADORES[tipo];
@@ -1220,15 +1224,22 @@ Deno.serve(async (req: Request) => {
       if (!cacheRow) return Response.json({ ok: false, error: `Processo ${processo} não encontrado no cache ou sem codigoProcesso` }, { status: 404, headers: CORS });
       const codProcesso = Number((cacheRow as Record<string,unknown>).codigo_processo);
 
-      // Cria o marcador no Projuris
+      // Cria o(s) marcador(es) no Projuris
       const resp = await fetch(`${PROJURIS_BASE}/adv-service/processo/${codProcesso}/marcador`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ codigoMarcador: marcadorInfo.codigoMarcador, nomeMarcador: marcadorInfo.nomeMarcador }),
       });
       const respTxt = await resp.text();
-      if (!resp.ok && resp.status !== 409) { // 409 = já existe, tudo bem
+      if (!resp.ok && resp.status !== 409) {
         return Response.json({ ok: false, error: `Projuris retornou ${resp.status}`, detalhe: respTxt.slice(0, 200) }, { status: 500, headers: CORS });
+      }
+      // Se houver marcador extra (ex: NUVEM - ESTRATÉGICO), cria também
+      if (marcadorInfo.extra) {
+        await fetch(`${PROJURIS_BASE}/adv-service/processo/${codProcesso}/marcador`, {
+          method: "POST", headers: authHeaders(),
+          body: JSON.stringify({ codigoMarcador: marcadorInfo.extra.codigoMarcador, nomeMarcador: marcadorInfo.extra.nomeMarcador }),
+        });
       }
 
       // Atualiza o cache local com o marcador confirmado

@@ -1744,6 +1744,7 @@
           <button type="button" id="audp-prox"   onclick="_audSetPeriodo('prox')"   style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">Próx. mês</button>
           <button type="button" id="audp-custom" onclick="_audSetPeriodo('custom')" style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">Personalizado</button>
           <button type="button" id="audp-todos"  onclick="_audSetPeriodo('')"       style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid #0D2B5E;border-radius:2px;background:#0D2B5E;color:#fff;cursor:pointer">Futuros</button>
+          <button type="button" id="audp-incompletas" onclick="_audToggleIncompletas()" style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid #E11D48;border-radius:2px;background:#fff;color:#E11D48;cursor:pointer">⚠ Incompletas</button>
         </div>
         <div id="audp-custom-inputs" style="display:none;gap:6px;align-items:center">
           <input id="aud-data-de"  type="date" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:6px 8px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
@@ -1898,7 +1899,18 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
               <div class="form-field">
                 <label>Tipo de Responsabilidade</label>
-                <input id="aud-tipo-resp" type="text" placeholder="SUBSIDIÁRIA, EX-FUNCIONÁRIO…" />
+                <select id="aud-tipo-resp">
+                  <option value="">— Selecione —</option>
+                  <option value="NUVEM - ESTRATÉGICO">NUVEM - ESTRATÉGICO</option>
+                  <option value="NUVEM">NUVEM</option>
+                  <option value="NUVEM/ZATTAR">NUVEM/ZATTAR</option>
+                  <option value="EX-FOODLOVER">EX-FOODLOVER</option>
+                  <option value="SUBSIDIÁRIA">SUBSIDIÁRIA</option>
+                  <option value="EX-FUNCIONÁRIO(A)">EX-FUNCIONÁRIO(A)</option>
+                  <option value="TERCEIRIZAÇÃO">TERCEIRIZAÇÃO</option>
+                  <option value="FRANQUIA">FRANQUIA</option>
+                  <option value="OL-SUBSIDIÁRIA">OL-SUBSIDIÁRIA</option>
+                </select>
               </div>
               <div class="form-field">
                 <label>Advogado Resp. pelo Caso</label>
@@ -13788,6 +13800,7 @@ function _audCard(a) {
   const respColor = AUD_RESP_COLOR[a.tipo_responsabilidade] || '#374151';
   return `<div class="item-card" style="border-left:4px solid ${isCancelPje ? '#D97706' : tipoColor};padding:18px 20px;${isCancelPje ? 'background:#FFFBEB;opacity:.85;' : isCancelada ? 'background:#FFF5F5;' : isHoje ? 'background:#fffef0;' : ''}" data-aud-id="${_escHtml(a.id)}">
     ${isCancelPje ? `<div style="background:#FEF3C7;border:1px solid #FCD34D;border-left:3px solid #D97706;border-radius:2px;padding:8px 12px;margin-bottom:12px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#92400E"><strong>Audiência não encontrada no PJe</strong> — Pode ter sido cancelada. Confirme abaixo ou ignore se for engano do scraper.</div>` : ''}
+    ${(!a.horario || !a.vara) && !isCancelada && !isCancelPje && (a.data_audiencia || '') >= new Date().toISOString().slice(0,10) ? `<div style="background:#FFF1F2;border:1px solid #FECDD3;border-left:3px solid #E11D48;border-radius:2px;padding:8px 12px;margin-bottom:12px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#9F1239;display:flex;align-items:center;gap:8px"><strong>⚠ Dados incompletos</strong>${!a.horario ? ' · horário não encontrado' : ''}${!a.vara ? ' · vara não encontrada' : ''} — preencha para não perder a audiência</div>` : ''}
     <!-- linha topo -->
     <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
       <!-- data/hora bloco -->
@@ -13992,6 +14005,7 @@ async function loadAudiencias() {
   const fAte   = document.getElementById('aud-data-ate')?.value || '';
   const periodo = window._audPeriodo || '';
   const fBusca = (document.getElementById('aud-filter-busca')?.value    || '').toLowerCase().trim();
+  const fIncompletas = window._audSoIncompletas || false;
 
   const filtered = items.filter(a => {
     if (periodo && periodo !== 'todos' && (fDe || fAte)) {
@@ -14011,6 +14025,11 @@ async function loadAudiencias() {
     if (fBusca) {
       const haystack = [a.processo, a.reclamante, a.reclamada, a.vara, a.cliente, a.advogado, a.tipo_responsabilidade].join(' ').toLowerCase();
       if (!haystack.includes(fBusca)) return false;
+    }
+    if (fIncompletas && !(['cancelada','cancelado_pje'].includes(a.status))) {
+      const hoje = new Date().toISOString().slice(0,10);
+      if ((a.data_audiencia||'') < hoje) return false; // só futuras
+      if (a.horario && a.vara) return false; // completas ficam fora
     }
     return true;
   });
@@ -14139,6 +14158,17 @@ function _audSetPeriodo(tipo) {
 
 function audSyncDateFilters() { loadAudiencias(); }
 
+function _audToggleIncompletas() {
+  window._audSoIncompletas = !window._audSoIncompletas;
+  const bi = document.getElementById('audp-incompletas');
+  if (bi) {
+    bi.style.background    = window._audSoIncompletas ? '#E11D48' : '#fff';
+    bi.style.color         = window._audSoIncompletas ? '#fff'    : '#E11D48';
+    bi.style.borderColor   = '#E11D48';
+  }
+  loadAudiencias();
+}
+
 function audLimparFiltros() {
   ['aud-filter-tipo','aud-filter-modalidade','aud-filter-status','aud-filter-mes','aud-filter-dia'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
@@ -14147,8 +14177,10 @@ function audLimparFiltros() {
   const deEl = document.getElementById('aud-data-de');  if (deEl)  deEl.value = '';
   const ateEl = document.getElementById('aud-data-ate'); if (ateEl) ateEl.value = '';
   window._audPeriodo = '';
+  window._audSoIncompletas = false;
   ['semana','mes','prox','custom'].forEach(k=>{ const b=document.getElementById('audp-'+k); if(b){b.style.background='#fff';b.style.color='var(--c-dark)';b.style.borderColor='var(--c-divider)';} });
   const bt=document.getElementById('audp-todos'); if(bt){bt.style.background='#0D2B5E';bt.style.color='#fff';bt.style.borderColor='#0D2B5E';}
+  const bi = document.getElementById('audp-incompletas'); if(bi){bi.style.background='#fff';bi.style.color='#E11D48';bi.style.borderColor='#E11D48';}
   const b = document.getElementById('aud-filter-busca'); if (b) b.value = '';
   loadAudiencias();
 }
