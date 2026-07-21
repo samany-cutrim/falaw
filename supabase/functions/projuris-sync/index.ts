@@ -453,13 +453,20 @@ async function sincronizarMarcadoresProcessos(sb: ReturnType<typeof createClient
 
   // Processos únicos com codigoProcesso no cache
   const processosUnicos = [...new Set((data as {processo:string}[]).map(r => r.processo).filter(Boolean))];
-  const { data: cacheRows } = await sb
+
+  // Busca todos os processos candidatos do cache
+  const { data: todosCache } = await sb
     .from("projuris_processo_cache")
     .select("numero_processo,codigo_processo,marcadores")
     .in("numero_processo", processosUnicos)
     .not("codigo_processo", "is", null);
 
-  if (!cacheRows?.length) return 0;
+  if (!todosCache?.length) return 0;
+
+  // null = ainda não verificado via API; [] = verificado mas sem marcadores relevantes
+  const naoVerificados = (todosCache as Record<string,unknown>[]).filter(r => r.marcadores === null);
+  const verificados    = (todosCache as Record<string,unknown>[]).filter(r => r.marcadores !== null);
+  const cacheRows = [...naoVerificados, ...verificados];
 
   let atualizados = 0;
   // Para cada processo com codigoProcesso, busca os marcadores via GET /processo/{codigoProcesso}
@@ -473,11 +480,13 @@ async function sincronizarMarcadoresProcessos(sb: ReturnType<typeof createClient
     // NUVEM/SUBSIDIÁRIA/OL-SUBSIDIÁRIA já são tratados pelo calcularResponsabilidade;
     // só fazemos override quando o marcador indica EX-FOODLOVER ou TERCEIRIZAÇÃO
     const OVERRIDE_TIPOS = ["EX-FOODLOVER", "TERCEIRIZAÇÃO"];
-    const marcadoresCached = (row.marcadores as string[]) ?? [];
+    const marcadoresCached = row.marcadores as string[] | null;
 
-    // Se cache já tem marcadores → tenta aplicar override diretamente (sem chamar API)
-    if (marcadoresCached.length > 0) {
-      const tipo = marcadoresCached.find(m => OVERRIDE_TIPOS.includes(m.toUpperCase().trim()))?.toUpperCase().trim();
+    // null = ainda não verificado via API
+    // [] ou array com valores = já verificado
+    if (marcadoresCached !== null) {
+      // Já verificado: aplica override se houver tipo específico no cache
+      const tipo = (marcadoresCached).find(m => OVERRIDE_TIPOS.includes(m.toUpperCase().trim()))?.toUpperCase().trim();
       if (tipo) {
         const { error: upErr } = await sb.from("pauta_audiencias")
           .update({ tipo_responsabilidade: tipo })
@@ -496,9 +505,9 @@ async function sincronizarMarcadoresProcessos(sb: ReturnType<typeof createClient
       const marcWs = (body.marcadorWs ?? []) as Record<string,unknown>[];
       const marcadores = marcWs.map(m => str(m.nomeMarcador ?? m.nome ?? "").toUpperCase().trim()).filter(Boolean);
 
-      // Atualiza cache com marcadores reais (mesmo que vazio, para não buscar novamente)
+      // Salva marcadores no cache: [] = verificado sem marcadores relevantes (não null, não buscará novamente)
       await sb.from("projuris_processo_cache")
-        .update({ marcadores: marcadores.length ? marcadores : [], updated_at: new Date().toISOString() })
+        .update({ marcadores, updated_at: new Date().toISOString() })
         .eq("numero_processo", num);
 
       // Aplica override apenas para tipos específicos
@@ -512,8 +521,9 @@ async function sincronizarMarcadoresProcessos(sb: ReturnType<typeof createClient
       }
     } catch(_) { /* ignora */ }
   }
-  console.log(`sincronizarMarcadoresProcessos: ${atualizados} processos atualizados com marcadores reais`);
-  return atualizados;
+  console.log(`sincronizarMarcadoresProcessos: ${atualizados} overrides aplicados, ${naoVerificados.length} não verificados restantes`);
+  // Retorna > 0 enquanto ainda há processos não verificados (para o loop continuar)
+  return atualizados + Math.min(naoVerificados.length, 1);
 }
 
 async function reconciliarCanceladas(
@@ -898,16 +908,17 @@ async function fetchProcessoDetalhes(
   console.log("Detalhes de processos carregados para " + mapa.size + " processos (individuais: " + semMarcadores.length + " tentados)");
 
   // ── Passo 3: grava/atualiza o cache com o que acabou de buscar ──────────────────
-  const upsertsCache = faltantes
-    .filter(n => mapa.has(n))
-    .map(n => {
-      const det = mapa.get(n)!;
+  // Salva TODOS os faltantes (inclusive sem dados da API) para garantir que
+  // codigo_processo (do codigoMap keyset) fique registrado e o sincronizarMarcadoresProcessos
+  // consiga buscá-los individualmente nas próximas rodadas.
+  const upsertsCache = faltantes.map(n => {
+      const det = mapa.get(n);
       return {
         numero_processo: n,
-        marcadores: det.marcadores,
-        parte_ativa: det.parteAtiva,
-        parte_passiva: det.partePassiva,
-        cliente: det.cliente,
+        marcadores: det ? det.marcadores : null,  // null = não verificado pelo sincronizarMarcadoresProcessos ainda
+        parte_ativa: det?.parteAtiva ?? "",
+        parte_passiva: det?.partePassiva ?? "",
+        cliente: det?.cliente ?? "",
         codigo_processo: codigoFromApi.get(n) ?? codigoMap.get(n) ?? null,
         updated_at: new Date().toISOString(),
       };
