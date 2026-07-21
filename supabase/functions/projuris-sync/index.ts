@@ -10,6 +10,9 @@ const PROJURIS_PASSWORD  = Deno.env.get("PROJURIS_PASSWORD") ?? "";
 const SUPABASE_URL         = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const DIAS_BUSCA           = parseInt(Deno.env.get("DIAS_PAUTA") ?? "365", 10);
+const AUDIENCIA_TIPO_CODIGO = 6125449; // código real do tipo "Audiência" no Projuris ADV
+const BRASILIA_OFFSET_MS = -3 * 60 * 60 * 1000; // UTC-3 fixo (Brasil não tem mais horário de verão)
+const CACHE_TTL_HORAS = 24 * 7; // reaproveita dados de processo (marcadores/partes) por 7 dias
 const SB_TABLE   = "pauta_audiencias";
 const SB_SYNCLOG = "sync_log";
 
@@ -224,8 +227,26 @@ function extractItems(body: unknown): unknown[] {
 }
 
 function fmtDate(d: Date): string {
-  const p = (n: number) => String(n).padStart(2,"0");
-  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`;
+}
+
+function agoraBrasilia(): Date {
+  return new Date(Date.now() + BRASILIA_OFFSET_MS);
+}
+
+function brasiliaDiaParaISO(dataStr: string, finalDoDia: boolean): string {
+  // Projuris aceita ISO com Z — usa meia-noite UTC como início/fim do dia
+  return finalDoDia ? `${dataStr}T23:59:59.999Z` : `${dataStr}T00:00:00.000Z`;
+}
+
+function janelaBusca(): { hojeStr: string; fimStr: string; iniISO: string; fimISO: string } {
+  const hoje = agoraBrasilia();
+  const hojeStr = fmtDate(hoje);
+  const fim = new Date(hoje);
+  fim.setUTCDate(fim.getUTCDate() + DIAS_BUSCA);
+  const fimStr = fmtDate(fim);
+  return { hojeStr, fimStr, iniISO: brasiliaDiaParaISO(hojeStr, false), fimISO: brasiliaDiaParaISO(fimStr, true) };
 }
 
 async function fetchCalendario(ini: string, fim: string): Promise<unknown[]> {
@@ -278,154 +299,121 @@ function isAudiencia(item: Record<string,unknown>): boolean {
   return TIPOS_AUD.some(t => tipo.includes(t));
 }
 
-async function fetchAudiencias(): Promise<unknown[]> {
-  await getToken();
-  const hoje = new Date();
-  const hojeStr = fmtDate(hoje);
-  const fim = new Date(hoje); fim.setDate(fim.getDate() + DIAS_BUSCA);
-  const fimStr = fmtDate(fim);
-  const tsIni = new Date(hojeStr + "T00:00:00Z").getTime();
-  const tsFim = new Date(fimStr  + "T23:59:59Z").getTime();
-
-  // 0. Endpoint dedicado /audiencias (PROJURIS_API_URL — mesmo que o Python usava)
-  if (PROJURIS_API_URL) {
-    console.log("Tentando PROJURIS_API_URL/audiencias: " + PROJURIS_API_URL);
-    const allItems: unknown[] = [];
-    let page = 0;
-    const MAX_PAGES = 60;
-    while (page < MAX_PAGES) {
-      try {
-        const params = new URLSearchParams({
-          dataInicio: hojeStr, dataFim: fimStr,
-          tipo: "audiencia", page: String(page), size: "200",
-        });
-        const resp = await fetch(`${PROJURIS_API_URL}/audiencias?${params}`, { headers: authHeaders() });
-        if (!resp.ok) {
-          console.warn("/audiencias status: " + resp.status);
-          break;
-        }
-        const body = await resp.json();
-        const items = Array.isArray(body) ? body
-          : ((body as Record<string,unknown>).content
-          ?? (body as Record<string,unknown>).data
-          ?? (body as Record<string,unknown>).audiencias
-          ?? (body as Record<string,unknown>).items
-          ?? []) as unknown[];
-        if (!items.length) break;
-        allItems.push(...items);
-        console.log("  /audiencias pág " + page + ": " + items.length + " itens (total: " + allItems.length + ")");
-        const totalPages = (body as Record<string,unknown>).totalPages
-          ?? (body as Record<string,unknown>).total_pages;
-        if (typeof totalPages === "number" && page + 1 >= totalPages) break;
-        if ((items as unknown[]).length < 200) break;
-        page++;
-      } catch(e) { console.warn("/audiencias erro pág " + page + ":", e); break; }
-    }
-    if (allItems.length > 0) {
-      console.log("PROJURIS_API_URL total: " + allItems.length);
-      return allItems;
-    }
-  }
-
-  // 1. Calendário — filtra somente audiências FUTURAS (data >= hoje)
-  let calAudFuturas: unknown[] = [];
-  try {
-    const url = `${PROJURIS_BASE}/adv-service/v2/tarefa/calendario/consulta-sem-paginacao`;
-    const resp = await fetch(url, { method:"POST", headers:authHeaders(), body:JSON.stringify({dataInicio:tsIni, dataFim:tsFim}) });    if (resp.ok) {
-      const todos = extractItems(await resp.json()) as Record<string,unknown>[];
-      const audTodos = todos.filter(isAudiencia);
-      // Só retorna itens com data >= hoje (ignora tarefas atrasadas do passado)
-      calAudFuturas = audTodos.filter(item => {
-        // Usa _grupoData (data do grupo do calendário) ou campos padrão de data
-        const DATAS = ["dataPrevista","data_prevista","dataAudiencia","data_audiencia","dataInicio","data","dtEvento","_grupoData"];
-        const rawVal = DATAS.map(k => item[k]).find(v => v != null && v !== "" && v !== 0);
-        if (rawVal == null) return false; // sem data alguma — exclui
-        const d = typeof rawVal === "number" ? new Date(rawVal) : new Date(String(rawVal));
-        return !isNaN(d.getTime()) && fmtDate(d) >= hojeStr;
-      });
-      console.log(`Calendario: ${todos.length} tarefas, ${audTodos.length} audiências, ${calAudFuturas.length} futuras`);
-    }
-  } catch(e) { console.warn("Calendario falhou: " + e); }
-
-  if (calAudFuturas.length > 0) return calAudFuturas;
-
-  // 2. Paginado DESC — busca em paralelo para cobrir mais audiências futuras
-  console.log("Buscando paginado DESC...");
-  const ITEMS_POR_PAG = 100;
-  const MAX_PAGES = 50; // 50 × 100 = 5.000 tasks = cobre bem mais audiências
-  const BATCH_PARALELO = 5; // 5 páginas em paralelo por vez
-  const rawItems: unknown[] = [];
-  let totalRegistros = 0;
-
-  // Busca a primeira página para saber o total
-  try {
-    const r0 = await fetch(
-      `${PROJURIS_BASE}/adv-service/tarefa/consulta-com-paginacao?quan-registros=${ITEMS_POR_PAG}&pagina=0&ordenacao-tipo=DESC&ordenacao-chave=ORDENACAO_DATA_PREVISTA`,
-      { headers: authHeaders() }
-    );
-    if (r0.ok) {
-      const b0 = await r0.json();
-      totalRegistros = (b0 as Record<string,unknown>).totalRegistros as number ?? 0;
-      const items0 = extractItems(b0) as Record<string,unknown>[];
-      rawItems.push(...items0.filter(isAudiencia));
-      console.log("Paginado pag 0: " + items0.length + " tasks, " + rawItems.length + " audiências, total=" + totalRegistros);
-    }
-  } catch(e) { console.warn("Paginado pag 0:", e); }
-
-  const pagTotal = Math.min(MAX_PAGES, Math.ceil(totalRegistros / ITEMS_POR_PAG));
-  for (let base = 1; base < pagTotal; base += BATCH_PARALELO) {
-    const pages = Array.from({ length: Math.min(BATCH_PARALELO, pagTotal - base) }, (_, j) => base + j);
-    const results = await Promise.allSettled(pages.map(async pagina => {
-      const resp = await fetch(
-        `${PROJURIS_BASE}/adv-service/tarefa/consulta-com-paginacao?quan-registros=${ITEMS_POR_PAG}&pagina=${pagina}&ordenacao-tipo=DESC&ordenacao-chave=ORDENACAO_DATA_PREVISTA`,
-        { headers: authHeaders() }
-      );
-      if (!resp.ok) return [];
-      return (extractItems(await resp.json()) as Record<string,unknown>[]).filter(isAudiencia);
-    }));
-    for (const r of results) {
-      if (r.status === "fulfilled") rawItems.push(...(r.value as unknown[]));
-    }
-    console.log("Paginado até pag " + (base + BATCH_PARALELO - 1) + ": " + rawItems.length + " audiências acumuladas");
-  }
-
-  // Filtra por data >= hoje usando campos de data do Projuris
-  const audiencias: unknown[] = [];
-  for (const item of rawItems) {
-    const r = item as Record<string,unknown>;
-    const DATAS = ["dataPrevista","data_prevista","dataAudiencia","data_audiencia","dataInicio","dataLimite","dtEvento","_grupoData"];
-    const rawVal = DATAS.map(k => r[k]).find(v => v != null && v !== "" && v !== 0);
-    if (rawVal == null) continue;
-    const d = typeof rawVal === "number" ? new Date(rawVal) : new Date(String(rawVal));
-    if (!isNaN(d.getTime()) && fmtDate(d) >= hojeStr) audiencias.push(item);
-  }
-  console.log("Audiencias futuras paginado: " + audiencias.length);
-
-  // 3. Endpoint dedicado de audiências (fallback adicional)
-  if (!audiencias.length) {
-    console.log("Tentando endpoint dedicado /audiencia...");
+async function fetchComRetry(url: string, opts: RequestInit, tentativas = 3): Promise<Response> {
+  let ultimoErro: unknown;
+  for (let i = 0; i < tentativas; i++) {
     try {
-      const params = new URLSearchParams({
-        "quan-registros": "200", pagina: "0",
-        "ordenacao-tipo": "ASC", "ordenacao-chave": "ORDENACAO_DATA_PREVISTA",
-      });
-      const resp = await fetch(`${PROJURIS_BASE}/adv-service/audiencia/consulta-com-paginacao?${params}`, { headers: authHeaders() });
-      if (resp.ok) {
-        const items = extractItems(await resp.json()) as Record<string,unknown>[];
-        const futuras = items.filter(item => {
-          const DATAS = ["dataPrevista","dataAudiencia","dataInicio","data"];
-          const rawVal = DATAS.map(k => item[k]).find(v => v);
-          if (!rawVal) return true;
-          const d = typeof rawVal === "number" ? new Date(rawVal) : new Date(String(rawVal));
-          return !isNaN(d.getTime()) && fmtDate(d) >= hojeStr;
-        });
-        console.log("Endpoint /audiencia: " + futuras.length + " futuras");
-        if (futuras.length) return futuras;
-      }
-    } catch(e) { console.warn("/audiencia endpoint falhou:", e); }
+      const resp = await fetch(url, opts);
+      if (resp.ok || (resp.status < 500 && resp.status !== 429)) return resp;
+      ultimoErro = new Error(`HTTP ${resp.status}`);
+    } catch (e) { ultimoErro = e; }
+    if (i < tentativas - 1) {
+      const espera = 500 * Math.pow(2, i);
+      console.warn(`Tentativa ${i + 1}/${tentativas} falhou, aguardando ${espera}ms...`, ultimoErro);
+      await new Promise(r => setTimeout(r, espera));
+    }
   }
+  throw ultimoErro instanceof Error ? ultimoErro : new Error(String(ultimoErro));
+}
 
-  return audiencias;
+async function fetchAudienciasKeyset(iniISO: string, fimISO: string): Promise<{ itens: Record<string, unknown>[]; parcial: boolean }> {
+  const url = `${PROJURIS_BASE}/adv-service/v2/tarefa/consulta-keyset`;
+  const TAM_PAGINA = 50;  // keyset endpoint tem limite máximo menor que o paginado normal
+  const MAX_PAGINAS = 100; // 100 x 200 = 20.000 registros de margem de segurança
+  let cursor: string | undefined;
+  let pagina = 0;
+  let total = 0;
+  let parcial = false;
+  const acumulado: Record<string, unknown>[] = [];
+
+  while (pagina < MAX_PAGINAS) {
+    const params = new URLSearchParams({
+      "quan-registros": String(TAM_PAGINA),
+      pagina: String(pagina),
+      "ordenacao-tipo": "ASC",
+      "ordenacao-chave": "ORDENACAO_DATA_PREVISTA",
+    });
+    if (cursor) params.set("cursor", cursor);
+
+    const body = {
+      filtroGeral: "", tipoFiltroTarefaConsulta: "TODOS", unidadeOrganizacional: null, tituloCompromisso: "",
+      codigosTarefaTipo: [AUDIENCIA_TIPO_CODIGO], usuariosResponsaveis: [], concluidaPor: [], gruposResponsaveis: [],
+      marcadores: [], tarefaTipoData: "DATA_PREVISTA_CONCLUSAO", dataTarefaInicio: iniISO, dataTarefaFim: fimISO,
+      flagDadosCompletosResponsaveis: true, numeroProcesso: null, nomePessoaEnvolvido: null, assuntoVinculo: "",
+      moduloTarefa: null, codigoRegistroVinculo: null, flagVinculoPrincipal: true,
+      tipoInformacaoExclusao: "NAO_EXIBIR_EXCLUIDOS", identificadorAndamento: "", flagCompromisso: false,
+      flagClassificacaoAudiencia: false, flagClassificacaoTarefa: false,
+    };
+
+    let resp: Response;
+    try {
+      resp = await fetch(`${url}?${params}`, { method: "POST", headers: authHeaders(), body: JSON.stringify(body) });
+    } catch (e) {
+      console.error(`Falha na p\u00e1gina ${pagina} \u2014 mantendo ${acumulado.length} j\u00e1 coletados:`, e);
+      parcial = true;
+      break;
+    }
+    if (!resp.ok) {
+      const errTxt = await resp.text();
+      console.error(`consulta-keyset ${resp.status} na página ${pagina}: ${errTxt.slice(0, 300)} — mantendo ${acumulado.length} já coletados`);
+      parcial = true;
+      break;
+    }
+
+    const json = await resp.json() as Record<string, unknown>;
+    total = (json.totalRegistros as number) ?? total;
+    const itens = (json.tarefaConsultaWs as Record<string, unknown>[]) ?? [];
+    acumulado.push(...itens);
+    console.log(`consulta-keyset pág ${pagina}: status=${resp.status} total=${total} itens=${itens.length} acumulado=${acumulado.length} cursor=${String(json.proximoCursor).slice(0,20)}`);
+
+    const proximoCursor = json.proximoCursor as string | undefined;
+    if (!itens.length || !proximoCursor || acumulado.length >= total) break;
+    cursor = proximoCursor;
+    pagina++;
+  }
+  return { itens: acumulado, parcial };
+}
+
+async function fetchAudiencias(janela: { hojeStr: string; fimStr: string; iniISO: string; fimISO: string }): Promise<{ itens: unknown[]; parcial: boolean }> {
+  await getToken();
+  console.log(`Buscando audiências (tipo ${AUDIENCIA_TIPO_CODIGO}) de ${janela.hojeStr} a ${janela.fimStr}...`);
+  const { itens: brutos, parcial } = await fetchAudienciasKeyset(janela.iniISO, janela.fimISO);
+  console.log(`Total bruto retornado pela API: ${brutos.length}${parcial ? " (PARCIAL — houve falha em alguma página)" : ""}`);
+  const pendentes = brutos.filter(raw => {
+    const situacao = str((raw as Record<string, unknown>).situacao).toLowerCase();
+    // Exclui apenas as explicitamente canceladas no Projuris
+    if (situacao.includes("cancelad") || situacao.includes("cancelada")) return false;
+    return true;
+  });
+  console.log(`Audiências pendentes (não canceladas/concluídas): ${pendentes.length}`);
+  return { itens: pendentes, parcial };
+}
+
+async function reconciliarCanceladas(
+  sb: ReturnType<typeof createClient>,
+  idsAtuais: string[],
+  hojeStr: string,
+  fimStr: string
+): Promise<number> {
+  const { data, error } = await sb
+    .from(SB_TABLE)
+    .select("id")
+    .eq("origem", "pje")
+    .eq("status", "agendada")
+    .gte("data_audiencia", hojeStr)
+    .lte("data_audiencia", fimStr);
+  if (error || !data?.length) return 0;
+
+  const setAtuais = new Set(idsAtuais);
+  const orfaos = (data as { id: string }[]).map(r => r.id).filter(id => !setAtuais.has(id));
+  if (!orfaos.length) return 0;
+
+  for (let i = 0; i < orfaos.length; i += 100) {
+    const lote = orfaos.slice(i, i + 100);
+    await sb.from(SB_TABLE).update({ status: "cancelada", updated_at: new Date().toISOString() }).in("id", lote);
+  }
+  console.log(`Reconciliação: ${orfaos.length} audiência(s) marcada(s) como cancelada`);
+  return orfaos.length;
 }
 
 function makeId(p: string, d: string, h: string): string {
@@ -447,8 +435,8 @@ function parseData(raw: string): { data: string; hora: string } {
 function str(v: unknown): string { return v == null ? "" : String(v).trim(); }
 
 function normalizar(item: Record<string,unknown>): Record<string,unknown> {
-  const DATAS = ["dataPrevista","data_prevista","dataAudiencia","data_audiencia","dataInicio","dataLimite","data","dtEvento"];
-  const HORAS = ["horaPrevista","hora_prevista","horaAudiencia","hora_audiencia","horaInicio","horaLimite","hora","horario"];
+  const DATAS = ["dataConclusaoPrevista","dataPrevista","data_prevista","dataAudiencia","data_audiencia","dataInicio","dataLimite","data","dtEvento"];
+  const HORAS = ["horaLimite","horaPrevista","hora_prevista","horaAudiencia","hora_audiencia","horaInicio","hora","horario"];
   // dataPrevista e horaLimite em Projuris ADV são timestamps em ms
   const dataRawVal = DATAS.map(k=>item[k]).find(v=>v);
   let dataRaw = "";
@@ -467,10 +455,16 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
   const hora = horaRaw ? horaRaw.slice(0,5) : horaFb;
 
   const processo   = str(item.numeroProcesso ?? item.numero_processo ?? item.processo ?? item.nrProcesso);
-  const reclamante = str(item.reclamante ?? item.parteAtiva ?? item.poloAtivo ?? item.polo_ativo ?? item.autor ?? item.nomeEnvolvido);
-  const reclamada  = str(item.reclamada  ?? item.partePassiva ?? item.poloPassivo ?? item.polo_passivo ?? item.reu ?? item.nomeCliente);
+  const reclamante = str(item.parteAtiva ?? item.reclamante ?? item.poloAtivo ?? item.polo_ativo ?? item.autor ?? item.nomeEnvolvido);
+  const reclamada  = str(item.partePassiva ?? item.reclamada ?? item.poloPassivo ?? item.polo_passivo ?? item.reu);
   const vara       = str(item.vara ?? item.orgaoJulgador ?? item.orgao_julgador ?? item.tribunal);
   const link       = str(item.linkVideoconferencia ?? item.link_video ?? item.link ?? item.urlVideoconferencia);
+
+  // Cliente final — Projuris retorna array "clientes"
+  const clientesArr = item.clientes;
+  const cliente = Array.isArray(clientesArr) && (clientesArr as unknown[]).length
+    ? (clientesArr as unknown[]).map(c => str(c)).filter(Boolean).join(", ")
+    : str(item.nomeCliente ?? item.cliente ?? "");
 
   // ── Marcadores (etiquetas/tags do Projuris) ─────────────────────────────────
   const marcadoresRaw = item.marcadores ?? item.etiquetas ?? item.tags ?? item.labels ?? [];
@@ -502,16 +496,8 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
     numReclamadas = reclamada.split(",").filter(p => p.trim().length > 2).length;
   }
   if (numReclamadas === 0) numReclamadas = 1;
-  const advogado = (() => {
-    if (item.usuarioResponsaveis && Array.isArray(item.usuarioResponsaveis)) {
-      const u = (item.usuarioResponsaveis as Record<string,unknown>[])[0];
-      if (u && u.nomeUsuario) return str(u.nomeUsuario);
-    }
-    if (item.responsavel && typeof item.responsavel === "object") {
-      return str((item.responsavel as Record<string,unknown>).nome ?? (item.responsavel as Record<string,unknown>).name ?? "");
-    }
-    return str(item.responsavel ?? item.advogadoResponsavel ?? item.advogado ?? "");
-  })();
+  // Advogado responsável e preposto: NÃO vêm do Projuris — preenchimento manual no site
+  const advogado = "";
   const mid   = str(item.meetingId ?? item.meeting_id ?? item.idReuniao);
   const senha = str(item.senha ?? item.password ?? item.codigoAcesso);
   const idSenha = [mid && `ID: ${mid}`, senha && `Senha: ${senha}`].filter(Boolean).join(" | ");
@@ -535,8 +521,8 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
   else if (modalRaw.includes("presencial")) modalidade = "PRESENCIAL";
   else if (modalRaw.includes("hibrida") || modalRaw.includes("misto")) modalidade = "HÍBRIDA";
 
-  // descricao/titulo como comentários
-  const comentarios = str(item.descricao ?? item.titulo ?? item.title ?? "");
+  // No Projuris ADV, o texto rico fica em "titulo" (o campo "descricao" normalmente vem nulo)
+  const comentarios = str(item.titulo ?? item.descricao ?? item.title ?? "");
 
   // ── Extrai campos faltantes do texto do comentários ──────────────────────────
   // Formato Projuris: "Audiência de [tipo] designada (DD/MM/YYYY HH:MM [sala/vara])"
@@ -564,8 +550,10 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
         if (!dataFinal) dataFinal = `${m[3]}-${m[2]}-${m[1]}`;
         if (!horaFinal) horaFinal = m[4];
         if (!varaFinal) {
-          // Remove sufixos de notas adicionais após " - " que não sejam parte da vara
-          varaFinal = m[5].trim().replace(/\s*-\s*(Facultad|Acesso|Sen|Link|ID|Zoom|Meet|Teams).*/i, "").trim();
+          varaFinal = m[5].trim()
+            .replace(/^-\s*/, "") // remove traço solto no início
+            .replace(/\s*-\s*(Facultad|Acesso|Sen|Link|ID|Zoom|Meet|Teams).*/i, "")
+            .trim();
         }
       }
     }
@@ -576,6 +564,7 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
     processo:              processo   || "",
     reclamante:            reclamante || "",
     reclamada:             reclamada  || "",
+    cliente:               cliente    || "",
     data_audiencia:        dataFinal  || data || new Date().toISOString().slice(0,10),
     horario:               horaFinal  || hora || "",
     tipo_audiencia:        tipoFinal  || "",
@@ -583,11 +572,11 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
     vara:                  varaFinal  || "",
     status:                "agendada",
     origem:                "pje",
-    link:                  link                  || "",
-    id_senha:              idSenha               || "",
-    advogado:              advogado              || "",
+    link:                  link       || "",
+    id_senha:              idSenha    || "",
+    advogado:              advogado,  // sempre "" — preenchido manualmente no site
     tipo_responsabilidade: calcularResponsabilidade(reclamada, marcadores.join(",")),
-    comentarios:           comentarios           || "",
+    comentarios:           comentarios || "",
     updated_at:            new Date().toISOString(),
   };
 }
@@ -656,17 +645,44 @@ function _extrairDetalhesDeProc(proc: Record<string,unknown>): ProcessoDetalhes 
 }
 
 async function fetchProcessoDetalhes(
+  sb: ReturnType<typeof createClient>,
   numeros: string[],
   codigoMap: Map<string, number> = new Map()
 ): Promise<Map<string, ProcessoDetalhes>> {
   const mapa = new Map<string, ProcessoDetalhes>();
-  // Mapa de número CNJ → codigoProcesso vindo da resposta da API (pode ser diferente de modulo.chave)
   const codigoFromApi = new Map<string, number>();
   if (!numeros.length) return mapa;
 
-  // ── Passo 1: busca em lote por número CNJ ─────────────────────────────────
-  for (let i = 0; i < numeros.length; i += 20) {
-    const batch = numeros.slice(i, i + 20);
+  // ── Passo 0: reaproveita o que já está em cache e ainda é válido ──────────
+  const { data: cacheRows } = await sb
+    .from("projuris_processo_cache")
+    .select("numero_processo,marcadores,parte_ativa,parte_passiva,cliente,codigo_processo,updated_at")
+    .in("numero_processo", numeros);
+
+  const agora = Date.now();
+  const validos = new Set<string>();
+  for (const row of (cacheRows ?? []) as Record<string, unknown>[]) {
+    const atualizadoEm = new Date(str(row.updated_at)).getTime();
+    const horasDesde = (agora - atualizadoEm) / 3600000;
+    const num = str(row.numero_processo);
+    if (horasDesde <= CACHE_TTL_HORAS) {
+      mapa.set(num, {
+        marcadores: (row.marcadores as string[]) ?? [],
+        parteAtiva: str(row.parte_ativa),
+        partePassiva: str(row.parte_passiva),
+        cliente: str(row.cliente),
+      });
+      validos.add(num);
+      if (row.codigo_processo) codigoFromApi.set(num, row.codigo_processo as number);
+    }
+  }
+  const faltantes = numeros.filter(n => !validos.has(n));
+  console.log(`Cache de processos: ${validos.size} reaproveitados, ${faltantes.length} a buscar na API`);
+  if (!faltantes.length) return mapa;
+
+  // ── Passo 1: busca em lote por número CNJ (só os que faltam) ──────────────
+  for (let i = 0; i < faltantes.length; i += 20) {
+    const batch = faltantes.slice(i, i + 20);
     try {
       const resp = await fetch(
         `${PROJURIS_BASE}/adv-service/processo/consulta-com-paginacao?quan-registros=20&pagina=0`,
@@ -696,8 +712,8 @@ async function fetchProcessoDetalhes(
     } catch(e) { console.warn("fetchProcessoDetalhes lote " + i + ":", e); }
   }
 
-  // ── Passo 2: busca marcadores via endpoint dedicado para processos sem marcadores ────
-  const semMarcadores = numeros.filter(n => !mapa.get(n)?.marcadores.length
+  // ── Passo 2: busca marcadores via endpoint dedicado para quem ainda não tem ──────
+  const semMarcadores = faltantes.filter(n => !mapa.get(n)?.marcadores.length
     && (codigoMap.has(n) || codigoFromApi.has(n)));
   const alvo = semMarcadores.slice(0, 30);
   for (let i = 0; i < alvo.length; i += 5) {
@@ -753,12 +769,32 @@ async function fetchProcessoDetalhes(
   }
 
   console.log("Detalhes de processos carregados para " + mapa.size + " processos (individuais: " + semMarcadores.length + " tentados)");
+
+  // ── Passo 3: grava/atualiza o cache com o que acabou de buscar ──────────────────
+  const upsertsCache = faltantes
+    .filter(n => mapa.has(n))
+    .map(n => {
+      const det = mapa.get(n)!;
+      return {
+        numero_processo: n,
+        marcadores: det.marcadores,
+        parte_ativa: det.parteAtiva,
+        parte_passiva: det.partePassiva,
+        cliente: det.cliente,
+        codigo_processo: codigoFromApi.get(n) ?? null,
+        updated_at: new Date().toISOString(),
+      };
+    });
+  if (upsertsCache.length) {
+    const { error: cacheErr } = await sb.from("projuris_processo_cache").upsert(upsertsCache, { onConflict: "numero_processo" });
+    if (cacheErr) console.warn("Erro ao gravar cache de processos:", cacheErr.message);
+  }
+
   return mapa;
 }
 
-/** Compat: retorna apenas marcadores do fetchProcessoDetalhes */
-async function fetchMarcadoresPorProcesso(numeros: string[]): Promise<Map<string, string[]>> {
-  const detalhes = await fetchProcessoDetalhes(numeros);
+async function fetchMarcadoresPorProcesso(sb: ReturnType<typeof createClient>, numeros: string[]): Promise<Map<string, string[]>> {
+  const detalhes = await fetchProcessoDetalhes(sb, numeros);
   const mapa = new Map<string, string[]>();
   detalhes.forEach((v, k) => mapa.set(k, v.marcadores));
   return mapa;
@@ -895,7 +931,7 @@ async function classificarExistentes(sb: ReturnType<typeof createClient>): Promi
 
   // Busca marcadores dos processos existentes no banco
   const numerosProcesso = [...new Set((data as {processo:string}[]).map(r => r.processo ?? "").filter(Boolean))];
-  const marcadoresMap = await fetchMarcadoresPorProcesso(numerosProcesso);
+  const marcadoresMap = await fetchMarcadoresPorProcesso(sb, numerosProcesso);
 
   let atualizados = 0;
   for (const row of data as {id:string; processo:string; reclamada:string}[]) {
@@ -941,6 +977,27 @@ Deno.serve(async (req: Request) => {
   if (url.searchParams.get("diag") === "1") {
     const resultado = await diagnosticarAuth();
     return Response.json({ diag: resultado }, { headers: CORS });
+  }
+
+  // Modo debug de keyset: GET ?debug-keyset=1
+  if (url.searchParams.get("debug-keyset") === "1") {
+    try {
+      await getToken();
+      const janela = janelaBusca();
+      const kurl = `${PROJURIS_BASE}/adv-service/v2/tarefa/consulta-keyset?quan-registros=200&pagina=0&ordenacao-tipo=ASC&ordenacao-chave=ORDENACAO_DATA_PREVISTA`;
+      const body = {
+        filtroGeral: "", tipoFiltroTarefaConsulta: "TODOS", unidadeOrganizacional: null, tituloCompromisso: "",
+        codigosTarefaTipo: [AUDIENCIA_TIPO_CODIGO], usuariosResponsaveis: [], concluidaPor: [], gruposResponsaveis: [],
+        marcadores: [], tarefaTipoData: "DATA_PREVISTA_CONCLUSAO", dataTarefaInicio: janela.iniISO, dataTarefaFim: janela.fimISO,
+        flagDadosCompletosResponsaveis: true, numeroProcesso: null, nomePessoaEnvolvido: null, assuntoVinculo: "",
+        moduloTarefa: null, codigoRegistroVinculo: null, flagVinculoPrincipal: true,
+        tipoInformacaoExclusao: "NAO_EXIBIR_EXCLUIDOS", identificadorAndamento: "", flagCompromisso: false,
+        flagClassificacaoAudiencia: false, flagClassificacaoTarefa: false,
+      };
+      const r = await fetch(kurl, { method: "POST", headers: authHeaders(), body: JSON.stringify(body) });
+      const txt = await r.text();
+      return Response.json({ status: r.status, janela, body_preview: txt.slice(0, 500) }, { headers: CORS });
+    } catch(e) { return Response.json({ error: String(e) }, { status: 500, headers: CORS }); }
   }
 
   // Modo debug de marcadores: GET ?debug-marcadores=1&codigo={codigoProcesso}
@@ -1016,7 +1073,8 @@ Deno.serve(async (req: Request) => {
     // Reseta cache se credenciais novas chegaram
     if (bodyData.projuris_usuario || bodyData.projuris_senha) _tokenCache = { access_token: "", expires_at: 0 };
 
-    const raw = await fetchAudiencias();
+    const janela = janelaBusca();
+    const { itens: raw, parcial } = await fetchAudiencias(janela);
     console.log("Total: " + raw.length);
     if (!raw.length) {
       // Debug: retorna informação sobre o que foi encontrado
@@ -1046,7 +1104,7 @@ Deno.serve(async (req: Request) => {
       const cod = (item.modulo as Record<string,unknown>)?.chave;
       if (num && typeof cod === "number" && cod > 0) codigoMap.set(num, cod);
     });
-    const processoMap = await fetchProcessoDetalhes(numerosProcesso, codigoMap);
+    const processoMap = await fetchProcessoDetalhes(sb, numerosProcesso, codigoMap);
 
     // Enriquece cada item com dados do processo (marcadores + partes faltantes)
     const enriched = (raw as Record<string,unknown>[]).map(item => {
@@ -1075,15 +1133,17 @@ Deno.serve(async (req: Request) => {
       return true;
     });
     const saved   = await upsertSupabase(sb, records);
+    const idsAtuais = records.map(r => String(r.id));
+    const canceladas = await reconciliarCanceladas(sb, idsAtuais, janela.hojeStr, janela.fimStr);
     const partesCompletadas = await completarPartesAusentes(sb);
     const classificados = await classificarExistentes(sb);
     await recordSync(sb, saved);
-    console.log("Salvas: " + saved + " | Partes completadas: " + partesCompletadas + " | Classificadas: " + classificados);
+    console.log(`Salvas: ${saved} | Canceladas: ${canceladas} | Partes completadas: ${partesCompletadas} | Classificadas: ${classificados}${parcial ? " | AVISO: coleta parcial" : ""}`);
     const debugMode = url.searchParams.get("debug") === "1";
     if (debugMode) {
-      return Response.json({ ok:true, message:`${saved} audiencias sincronizadas`, saved, partesCompletadas, classificados, sample: records.slice(0,2), total_found: raw.length }, { headers:CORS });
+      return Response.json({ ok:true, message:`${saved} audiencias sincronizadas`, saved, canceladas, partesCompletadas, classificados, parcial, sample: records.slice(0,2), total_found: raw.length }, { headers:CORS });
     }
-    return Response.json({ ok:true, message:`${saved} audiencias sincronizadas`, saved, partesCompletadas, classificados }, { headers:CORS });
+    return Response.json({ ok:true, message:`${saved} audiencias sincronizadas`, saved, canceladas, partesCompletadas, classificados, parcial }, { headers:CORS });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Erro:", msg);
