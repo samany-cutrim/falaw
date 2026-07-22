@@ -3166,7 +3166,9 @@ function _escRenderRows(rows, today) {
   const STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62828', cancelada:'#DC2626' };
   const STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#FEE2E2' };
   const RESP_COLOR   = { 'SUBSIDIÁRIA':'#7C3AED','SOLIDÁRIA':'#2563EB','PRINCIPAL':'#DC2626','TOMADOR DE SERVIÇO':'#D97706' };
-  const TIPO_LABEL   = { 'INICIAL':'Inicial','INSTRUÇÃO':'Instrução','CONCILIAÇÃO':'Conciliação','UNA':'Una' };
+  const TIPO_LABEL   = { 'INICIAL':'Inicial','INSTRUÇÃO':'Instrução','CONCILIAÇÃO':'Conciliação','UNA':'Una','SUSTENTAÇÃO ORAL':'Sust. Oral' };
+  const TIPO_BG      = { 'INICIAL':'#EEF2FF','INSTRUÇÃO':'#F5F3FF','CONCILIAÇÃO':'#E8F5EE','UNA':'#fffbeb','SUSTENTAÇÃO ORAL':'#fff7ed' };
+  const TIPO_COLOR   = { 'INICIAL':'#0D2B5E','INSTRUÇÃO':'#6D28D9','CONCILIAÇÃO':'#1B7A4E','UNA':'#92400e','SUSTENTAÇÃO ORAL':'#b45309' };
 
   function fmtDia(iso) {
     if (!iso) return '—';
@@ -3203,10 +3205,11 @@ function _escRenderRows(rows, today) {
       const sent = a.orientacao_enviada !== undefined ? !!a.orientacao_enviada : !!st.sent;
       const obs  = a.orientacao || st.obs || '';
       const isCancelada = a.status === 'cancelada';
+      const isSustOral  = a.tipo_audiencia === 'SUSTENTAÇÃO ORAL';
       const isPast = d < today;
       const op = isPast && !isCancelada ? 'opacity:.72;' : '';
-      const cardBg = isCancelada ? '#FFF5F5' : '#fff';
-      const cardBorder = isCancelada ? '#FECACA' : '#E5E7EB';
+      const cardBg     = isCancelada ? '#FFF5F5' : isSustOral ? '#fff7ed' : '#fff';
+      const cardBorder = isCancelada ? '#FECACA' : isSustOral ? '#fed7aa' : '#E5E7EB';
       const cardShadow = isHojeDate ? '0 2px 12px rgba(13,43,94,.12)' : '0 1px 4px rgba(0,0,0,.05)';
 
       const _mod2     = a.modalidade || 'PRESENCIAL';
@@ -3219,7 +3222,7 @@ function _escRenderRows(rows, today) {
       const prepCorr = a.dados_preposto ? _corrList.find(c => (a.dados_preposto||'').toLowerCase().includes((c.nome||'').toLowerCase())) : null;
 
       const tipoHtml  = a.tipo_audiencia
-        ? `<span style="background:#0D2B5E;color:#fff;font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.03em">${TIPO_LABEL[a.tipo_audiencia]||a.tipo_audiencia}</span>`
+        ? `<span style="background:${TIPO_BG[a.tipo_audiencia]||'#EEF2FF'};color:${TIPO_COLOR[a.tipo_audiencia]||'#0D2B5E'};font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.03em">${TIPO_LABEL[a.tipo_audiencia]||a.tipo_audiencia}</span>`
         : '';
       const modalHtml = `<span style="background:${modalBg};color:${modalCo};font-size:9px;padding:2px 7px;border-radius:3px;font-weight:600">${_mod2}</span>`;
       const testemHtml = a.testemunha_necessaria
@@ -3253,7 +3256,7 @@ function _escRenderRows(rows, today) {
         ? `<span style="font-family:monospace;font-size:10px;color:#6B7280;background:#f3f4f6;padding:1px 6px;border-radius:3px">${a.id_senha}</span>`
         : '';
 
-      html += `<div id="esc-row-${a.id}" style="background:${cardBg};border:1px solid ${cardBorder};border-left:4px solid ${sc};border-radius:8px;padding:14px 16px;box-shadow:${cardShadow};${op}display:flex;flex-direction:column;gap:9px">
+      html += `<div id="esc-row-${a.id}" style="background:${cardBg};border:1px solid ${cardBorder};border-left:4px solid ${isSustOral?'#b45309':sc};border-radius:8px;padding:14px 16px;box-shadow:${cardShadow};${op}display:flex;flex-direction:column;gap:9px">
 
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
           <span style="font-weight:900;font-family:monospace;font-size:20px;color:${isHojeDate?'#0D2B5E':'#111827'};line-height:1">${a.horario||'—'}</span>
@@ -3362,7 +3365,9 @@ function _clientRenderRows(rows) {
   }
   const STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62828', cancelada:'#9CA3AF' };
   const STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#F3F4F6' };
-  const TIPO_LABEL   = { 'INICIAL':'Inicial','INSTRUÇÃO':'Instrução','CONCILIAÇÃO':'Conciliação','UNA':'Una' };
+  const TIPO_LABEL   = { 'INICIAL':'Inicial','INSTRUÇÃO':'Instrução','CONCILIAÇÃO':'Conciliação','UNA':'Una','SUSTENTAÇÃO ORAL':'Sust. Oral' };
+  const TIPO_BG      = { 'INICIAL':'#EEF2FF','INSTRUÇÃO':'#F5F3FF','CONCILIAÇÃO':'#E8F5EE','UNA':'#fffbeb','SUSTENTAÇÃO ORAL':'#fff7ed' };
+  const TIPO_COLOR   = { 'INICIAL':'#0D2B5E','INSTRUÇÃO':'#6D28D9','CONCILIAÇÃO':'#1B7A4E','UNA':'#92400e','SUSTENTAÇÃO ORAL':'#b45309' };
   const MOD_LABEL    = { 'VIRTUAL':'Virtual','PRESENCIAL':'Presencial','HÍBRIDA':'Híbrida' };
   function fmtDia(iso) {
     if (!iso) return '—';
@@ -3386,11 +3391,12 @@ function _clientRenderRows(rows) {
       const sc  = STATUS_COLOR[a.status]||'#374151';
       const sb2 = STATUS_BG[a.status]||'#F9FAFB';
       const cardOp = isPast ? 'opacity:0.55;' : '';
-      const tipo = a.tipo_audiencia ? `<span style="background:#0D2B5E;color:#fff;font-size:9px;padding:2px 6px;border-radius:2px;margin-left:4px">${TIPO_LABEL[a.tipo_audiencia]||a.tipo_audiencia}</span>` : '';
+      const tipo = a.tipo_audiencia ? `<span style="background:${TIPO_BG[a.tipo_audiencia]||'#EEF2FF'};color:${TIPO_COLOR[a.tipo_audiencia]||'#0D2B5E'};font-size:9px;padding:2px 6px;border-radius:2px;margin-left:4px">${TIPO_LABEL[a.tipo_audiencia]||a.tipo_audiencia}</span>` : '';
       const mod  = a.modalidade ? `<span style="background:#e0e7ff;color:#3730a3;font-size:9px;padding:2px 6px;border-radius:2px;margin-left:4px">${MOD_LABEL[a.modalidade]||a.modalidade}</span>` : '';
       const linkHtml  = a.link ? `<a href="${a.link}" target="_blank" rel="noopener" style="font-size:11px;color:#2563EB;text-decoration:none;display:inline-block;margin-top:6px">🔗 Entrar na videoconferência</a>` : '';
       const senhaHtml = a.id_senha ? `<div style="font-size:11px;color:#6B7280;margin-top:3px;font-family:monospace">${a.id_senha}</div>` : '';
-      html += `<div style="background:#fff;border:1px solid #E5E7EB;border-radius:6px;padding:14px 16px;margin-bottom:10px;border-left:4px solid ${sc};${cardOp}">
+      const isSustOral2 = a.tipo_audiencia === 'SUSTENTAÇÃO ORAL';
+      html += `<div style="background:${isSustOral2?'#fff7ed':'#fff'};border:1px solid ${isSustOral2?'#fed7aa':'#E5E7EB'};border-radius:6px;padding:14px 16px;margin-bottom:10px;border-left:4px solid ${isSustOral2?'#b45309':sc};${cardOp}">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           <span style="font-size:13px;font-weight:700;color:#111827">${a.horario||'—'}</span>${tipo}${mod}
           <span style="background:${sb2};color:${sc};font-size:9px;padding:2px 6px;border-radius:10px;font-weight:600;text-transform:uppercase;margin-left:4px">${a.status||''}</span>

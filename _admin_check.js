@@ -8558,9 +8558,9 @@ function _escHtml(str) {
 const AUD_STORE_KEY    = 'falaw_audiencias_v1';
 const PJE_SERVER       = 'http://localhost:7777';
 
-const AUD_TIPO_LABEL   = { INICIAL:'Inicial', 'INSTRUÇÃO':'Instrução', 'CONCILIAÇÃO':'Conciliação', UNA:'Una', 'PERÍCIA':'Perícia', 'ENCERRAMENTO DE INSTRUÇÃO':'Enc. Instrução' };
-const AUD_TIPO_COLOR   = { INICIAL:'#0D2B5E', 'INSTRUÇÃO':'#6D28D9', 'CONCILIAÇÃO':'#1B7A4E', UNA:'#92400e', 'PERÍCIA':'#0e7490' };
-const AUD_TIPO_BG      = { INICIAL:'#EEF2FF', 'INSTRUÇÃO':'#F5F3FF', 'CONCILIAÇÃO':'#E8F5EE', UNA:'#fffbeb', 'PERÍCIA':'#ecfeff' };
+const AUD_TIPO_LABEL   = { INICIAL:'Inicial', 'INSTRUÇÃO':'Instrução', 'CONCILIAÇÃO':'Conciliação', UNA:'Una', 'PERÍCIA':'Perícia', 'ENCERRAMENTO DE INSTRUÇÃO':'Enc. Instrução', 'SUSTENTAÇÃO ORAL':'Sust. Oral' };
+const AUD_TIPO_COLOR   = { INICIAL:'#0D2B5E', 'INSTRUÇÃO':'#6D28D9', 'CONCILIAÇÃO':'#1B7A4E', UNA:'#92400e', 'PERÍCIA':'#0e7490', 'SUSTENTAÇÃO ORAL':'#b45309' };
+const AUD_TIPO_BG      = { INICIAL:'#EEF2FF', 'INSTRUÇÃO':'#F5F3FF', 'CONCILIAÇÃO':'#E8F5EE', UNA:'#fffbeb', 'PERÍCIA':'#ecfeff', 'SUSTENTAÇÃO ORAL':'#fff7ed' };
 const AUD_MOD_LABEL    = { VIRTUAL:'Virtual', PRESENCIAL:'Presencial', 'HÍBRIDA':'Híbrida' };
 const AUD_MOD_ICON     = { VIRTUAL:'', PRESENCIAL:'', 'HÍBRIDA':'' };
 const AUD_STATUS_LABEL = { agendada:'Agendada', realizada:'Realizada', adiada:'Adiada', cancelada:'Cancelada', cancelado_pje:'Cancelada no PJe?' };
@@ -8641,7 +8641,8 @@ function _audCard(a) {
     : '';
 
   const isCancelPje = a.status === 'cancelado_pje';
-  return `<div class="item-card" style="border-left:4px solid ${isCancelPje ? '#D97706' : tipoColor};padding:18px 20px;${isCancelPje ? 'background:#FFFBEB;opacity:.85;' : isHoje ? 'background:#fffef0;' : ''}" data-aud-id="${_escHtml(a.id)}">
+  const isSustOral  = a.tipo_audiencia === 'SUSTENTAÇÃO ORAL';
+  return `<div class="item-card" style="border-left:4px solid ${isCancelPje ? '#D97706' : tipoColor};padding:18px 20px;${isCancelPje ? 'background:#FFFBEB;opacity:.85;' : isSustOral ? 'background:#fff7ed;border-color:#fed7aa;' : isHoje ? 'background:#fffef0;' : ''}" data-aud-id="${_escHtml(a.id)}">
     ${isCancelPje ? `<div style="background:#FEF3C7;border:1px solid #FCD34D;border-left:3px solid #D97706;border-radius:2px;padding:8px 12px;margin-bottom:12px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#92400E"><strong>Audiência não encontrada no PJe</strong> — Pode ter sido cancelada. Confirme abaixo ou ignore se for engano do scraper.</div>` : ''}
     <!-- linha topo -->
     <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">

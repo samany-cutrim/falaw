@@ -313,7 +313,7 @@ import unicodedata
 
 _TIPOS_AUDIENCIA = {
     "audiencia", "hearing", "julgamento", "conciliacao",
-    "instrucao", "sessao", "pauta",
+    "instrucao", "sessao", "pauta", "sustentacao",
 }
 
 
@@ -336,6 +336,8 @@ def _extrair_tipo_audiencia(item: dict) -> str:
     t = _normaliza(texto)
     if re.search(r"\buna\b", t):
         return "UNA"
+    if re.search(r"sustentac", t):
+        return "SUSTENTAÇÃO ORAL"
     if re.search(r"concilia", t):
         return "CONCILIAÇÃO"
     if re.search(r"instruc", t):
