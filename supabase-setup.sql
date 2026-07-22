@@ -163,7 +163,7 @@ CREATE TABLE IF NOT EXISTS pauta_audiencias (
   data_audiencia        DATE NOT NULL,
   horario               TEXT NOT NULL DEFAULT '',
   -- Tipo (ex: "INICIAL - VIRTUAL") — dividido nos dois campos abaixo
-  tipo_audiencia        TEXT NOT NULL DEFAULT '' CHECK (tipo_audiencia IN ('INICIAL','INSTRUÇÃO','CONCILIAÇÃO','UNA','PERÍCIA','ENCERRAMENTO DE INSTRUÇÃO','')),    
+  tipo_audiencia        TEXT NOT NULL DEFAULT '' CHECK (tipo_audiencia IN ('INICIAL','INSTRUÇÃO','CONCILIAÇÃO','UNA','PERÍCIA','ENCERRAMENTO DE INSTRUÇÃO','SUSTENTAÇÃO ORAL','')),    
   modalidade            TEXT NOT NULL DEFAULT '' CHECK (modalidade IN ('VIRTUAL','PRESENCIAL','HÍBRIDA','')),
   -- Acesso
   id_senha              TEXT NOT NULL DEFAULT '',
@@ -439,6 +439,11 @@ ALTER TABLE pauta_audiencias ADD COLUMN IF NOT EXISTS corr_tipo_envio  TEXT DEFA
 ALTER TABLE pauta_audiencias ADD COLUMN IF NOT EXISTS valor_advogado         NUMERIC(10,2) DEFAULT NULL;
 ALTER TABLE pauta_audiencias ADD COLUMN IF NOT EXISTS valor_preposto         NUMERIC(10,2) DEFAULT NULL;
 ALTER TABLE pauta_audiencias ADD COLUMN IF NOT EXISTS whatsapp_notificado_at TIMESTAMPTZ   DEFAULT NULL;
+
+-- Migração: adiciona SUSTENTAÇÃO ORAL ao check constraint de tipo_audiencia
+ALTER TABLE pauta_audiencias DROP CONSTRAINT IF EXISTS pauta_audiencias_tipo_audiencia_check;
+ALTER TABLE pauta_audiencias ADD CONSTRAINT pauta_audiencias_tipo_audiencia_check
+  CHECK (tipo_audiencia IN ('INICIAL','INSTRUÇÃO','CONCILIAÇÃO','UNA','PERÍCIA','ENCERRAMENTO DE INSTRUÇÃO','SUSTENTAÇÃO ORAL',''));
 
 -- EQUIPE INTERNA (advogados do escritório — usado para notificação WhatsApp)
 CREATE TABLE IF NOT EXISTS equipe (
