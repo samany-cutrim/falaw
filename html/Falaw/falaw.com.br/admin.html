@@ -2462,6 +2462,10 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
         </div>
 
         <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap">
+          <select id="inf-idioma" style="font-family:var(--f-mono);font-size:12px;padding:6px 10px;border:1px solid #c8d0e0;border-radius:4px;background:#fff;">
+            <option value="pt">🇧🇷 Português</option>
+            <option value="en">🇺🇸 English</option>
+          </select>
           <button type="button" class="btn btn-primary" onclick="gerarInformativo()" id="inf-btn-gerar">⚡ Gerar Informativo</button>
           <span id="inf-status" style="font-size:12px;color:var(--c-muted)"></span>
         </div>
@@ -2478,6 +2482,8 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
               <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="infCopiarHTML()">📋 Copiar HTML</button>
               <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="infBaixarHTML()">⬇ Baixar HTML</button>
               <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="infEditar()">✏ Editar</button>
+              <button type="button" class="btn btn-ghost" style="font-size:11px;padding:5px 12px" id="inf-btn-traduzir" onclick="infTraduzirParaIngles()">🌐 Traduzir para inglês</button>
+              <span id="inf-translate-status" style="font-size:11px;color:var(--c-muted)"></span>
             </div>
           </div>
           <iframe id="inf-preview-frame"
@@ -7722,9 +7728,12 @@ async function gerarInformativo() {
 
     if (!baseText) { showToast('Informe um tema ou anexe um PDF.'); return; }
 
+    const idioma = document.getElementById('inf-idioma').value || 'pt';
+    const isEn   = idioma === 'en';
+
     status.textContent = 'Consultando IA…';
 
-    const prompt = `Você é um advogado especialista do escritório Falaw Advogados redigindo um INFORMATIVO JURÍDICO — boletim de atualização legislativa e jurisprudencial enviado periodicamente a clientes empresariais. O tom deve ser editorial e analítico (como um briefing de consultoria jurídica), NÃO publicitário. Use linguagem técnica acessível, direta e objetiva. Apresente os fatos, explique os impactos reais e oriente o cliente sobre o que fazer — sem exageros ou linguagem de vendas.
+    const promptPT = `Você é um advogado especialista do escritório Falaw Advogados redigindo um INFORMATIVO JURÍDICO — boletim de atualização legislativa e jurisprudencial enviado periodicamente a clientes empresariais. O tom deve ser editorial e analítico (como um briefing de consultoria jurídica), NÃO publicitário. Use linguagem técnica acessível, direta e objetiva. Apresente os fatos, explique os impactos reais e oriente o cliente sobre o que fazer — sem exageros ou linguagem de vendas.
 
 Com base no texto abaixo, gere o conteúdo do informativo.
 Responda EXCLUSIVAMENTE com JSON válido (sem texto fora do JSON), no seguinte formato:
@@ -7770,8 +7779,57 @@ Texto base:
 ${baseText.slice(0, 6000)}
 """`;
 
+    const promptEN = `You are a legal expert at Falaw Advogados drafting a LEGAL NEWSLETTER — a legislative and jurisprudential update bulletin sent periodically to corporate clients. The tone must be editorial and analytical (like a legal consulting briefing), NOT promotional. Use accessible, direct, and objective technical language. Present the facts, explain real-world impacts, and guide the client on what to do — without exaggeration or sales language.
+
+Based on the text below, generate the newsletter content.
+Respond EXCLUSIVELY with valid JSON (no text outside the JSON), in the following format:
+
+{
+  "subtitulo": "Legal Bulletin · [brief legal area]",
+  "titulo": "Precise title describing the update (max 120 chars)",
+  "previsual": "Short preview sentence summarising what changed (1 line)",
+  "intro": "Introductory paragraph contextualising the decision/rule/event: what happened, when, which body/instance and why it matters for companies (3-4 lines, journalistic-legal tone)",
+  "sig_titulo": "What changes in practice?",
+  "sig_texto": "Direct explanation of immediate practical effects for companies (2-3 lines, avoid excessive jargon)",
+  "cards": [
+    { "titulo": "KEY POINT 1 (UPPERCASE, max 6 words)", "texto": "Factual and objective description in 1-2 lines" },
+    { "titulo": "KEY POINT 2", "texto": "Description" },
+    { "titulo": "KEY POINT 3", "texto": "Description" },
+    { "titulo": "KEY POINT 4", "texto": "Description" }
+  ],
+  "setores_titulo": "Affected segments and industries",
+  "setores_intro": "Brief sentence indicating which company profiles should pay closer attention",
+  "setores": [
+    { "nome": "Sector/industry name", "detalhe": "Specific reason for the impact on this sector" },
+    { "nome": "Sector name", "detalhe": "Reason for the impact" },
+    { "nome": "Sector name", "detalhe": "Reason for the impact" },
+    { "nome": "Sector name", "detalhe": "Reason for the impact" },
+    { "nome": "Sector name", "detalhe": "Reason for the impact" },
+    { "nome": "Sector name", "detalhe": "Reason for the impact" }
+  ],
+  "apoio_titulo": "How Falaw can guide your company",
+  "apoio": [
+    { "num": "01", "titulo": "Impact assessment", "texto": "What Falaw evaluates or verifies for the client in this context (1-2 lines, focus on guidance, not sales)" },
+    { "num": "02", "titulo": "Guidance title", "texto": "Description" },
+    { "num": "03", "titulo": "Guidance title", "texto": "Description" },
+    { "num": "04", "titulo": "Guidance title", "texto": "Description" }
+  ],
+  "cta_titulo": "Have questions about how this affects your company?",
+  "cta_texto": "Our team is available to clarify the specific impacts for your business and advise on the appropriate measures.",
+  "cta_botao": "Speak to a specialist",
+  "imageKeyword": "English keyword to search for a relevant photo for the topic (e.g. 'logistics truck', 'labor law', 'corporate meeting', 'warehouse workers', 'delivery platform')"
+}
+
+Source text:
+"""
+${baseText.slice(0, 6000)}
+"""`;
+
+    const prompt = isEn ? promptEN : promptPT;
     const raw = await callAI([
-      { role: 'system', content: 'Você é advogado especialista em comunicação jurídica corporativa. Redija como um boletim informativo técnico-analítico, não como peça de marketing. Responda SEMPRE em JSON válido, sem texto fora do JSON.' },
+      { role: 'system', content: isEn
+          ? 'You are a legal expert in corporate legal communication. Write as a technical-analytical newsletter, not as a marketing piece. Always respond with valid JSON, no text outside the JSON.'
+          : 'Você é advogado especialista em comunicação jurídica corporativa. Redija como um boletim informativo técnico-analítico, não como peça de marketing. Responda SEMPRE em JSON válido, sem texto fora do JSON.' },
       { role: 'user', content: prompt }
     ], 0.55);
 
@@ -7789,7 +7847,7 @@ ${baseText.slice(0, 6000)}
     try { heroBase64 = await _infBuildHeroBase64(data); } catch(e) { console.warn('Hero image:', e.message); }
 
     status.textContent = 'Montando preview…';
-    _infCurrentHTML = generateInformativoHTML(data, heroBase64);
+    _infCurrentHTML = generateInformativoHTML(data, heroBase64, idioma);
     _infCurrentData = data;
 
     // Atualiza iframe
@@ -7799,7 +7857,7 @@ ${baseText.slice(0, 6000)}
 
     // Preenche assunto
     document.getElementById('inf-email-subject').value =
-      'INFORMATIVO FALAW — ' + (data.titulo || '').toUpperCase().slice(0, 80);
+      (isEn ? 'FALAW LEGAL NEWSLETTER — ' : 'INFORMATIVO FALAW — ') + (data.titulo || '').toUpperCase().slice(0, 80);
 
     // Mostra área de resultado
     document.getElementById('inf-result-area').style.display = '';
@@ -7816,9 +7874,31 @@ ${baseText.slice(0, 6000)}
   }
 }
 
-function generateInformativoHTML(d, heroBase64) {
+function generateInformativoHTML(d, heroBase64, idioma) {
+  const isEn = idioma === 'en';
   const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const logoBranco = 'https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png';
+  const staticLabels = isEn ? {
+    lang: 'en',
+    sig_titulo_default: 'What changes in practice?',
+    setores_titulo_default: 'Directly impacted sectors',
+    apoio_titulo_default: 'How FALAW can support your company',
+    cta_botao_default: 'Speak to a specialist',
+    tagline: 'Corporate law with strategy and purpose.',
+    unsubscribe: 'This newsletter is sent by Falaw Advogados. To unsubscribe, reply to this email.',
+    telefone: 'Phone',
+    whatsapp: 'WhatsApp',
+  } : {
+    lang: 'pt-BR',
+    sig_titulo_default: 'O que isso significa para sua empresa?',
+    setores_titulo_default: 'Setores diretamente impactados',
+    apoio_titulo_default: 'Como a FALAW pode apoiar sua empresa',
+    cta_botao_default: 'Falar com especialista',
+    tagline: 'Direito empresarial com estratégia e propósito.',
+    unsubscribe: 'Este informativo é enviado pela Falaw Advogados. Para deixar de receber, responda este e-mail.',
+    telefone: 'Telefone',
+    whatsapp: 'WhatsApp',
+  };
 
   const cards = (d.cards || []).slice(0,4);
   while (cards.length < 4) cards.push({ titulo: '', texto: '' });
@@ -7848,7 +7928,7 @@ function generateInformativoHTML(d, heroBase64) {
                 </td>`;
 
   return `<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="${staticLabels.lang}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7890,7 +7970,7 @@ function generateInformativoHTML(d, heroBase64) {
               <tr>
                 <td width="6" style="background-color:#a59065; border-radius:20px;"></td>
                 <td style="padding-left:22px;">
-                  <h2 style="margin:0 0 12px 0; color:#3E3E3E; font-size:25px; line-height:1.35;">${esc(d.sig_titulo || 'O que isso significa para sua empresa?')}</h2>
+                  <h2 style="margin:0 0 12px 0; color:#3E3E3E; font-size:25px; line-height:1.35;">${esc(d.sig_titulo || staticLabels.sig_titulo_default)}</h2>
                   <p style="margin:0; color:#333333; font-size:16px; line-height:1.75;">${esc(d.sig_texto || '')}</p>
                 </td>
               </tr>
@@ -7917,7 +7997,7 @@ function generateInformativoHTML(d, heroBase64) {
         <!-- Setores impactados -->
         <tr>
           <td style="background-color:#f4f3f2; padding:40px 48px;">
-            <h2 style="margin:0 0 12px 0; color:#3E3E3E; font-size:26px; line-height:1.35;">${esc(d.setores_titulo || 'Setores diretamente impactados')}</h2>
+            <h2 style="margin:0 0 12px 0; color:#3E3E3E; font-size:26px; line-height:1.35;">${esc(d.setores_titulo || staticLabels.setores_titulo_default)}</h2>
             <p style="margin:0 0 26px 0; color:#333333; font-size:16px; line-height:1.7;">${esc(d.setores_intro || '')}</p>
             <table width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>${setorCell(setores[0])}${setorCell(setores[1])}${setorCell(setores[2])}</tr>
@@ -7931,7 +8011,7 @@ function generateInformativoHTML(d, heroBase64) {
           <td style="background-color:#ffffff; padding:42px 48px;">
             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#B5A07A; border-radius:20px;">
               <tr><td style="padding:36px;">
-                <h2 style="margin:0 0 24px 0; color:#ffffff; font-size:26px; line-height:1.35;">${esc(d.apoio_titulo || 'Como a FALAW pode apoiar sua empresa')}</h2>
+                <h2 style="margin:0 0 24px 0; color:#ffffff; font-size:26px; line-height:1.35;">${esc(d.apoio_titulo || staticLabels.apoio_titulo_default)}</h2>
                 <table width="100%" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     ${apoioCell(apoio[0], 'padding:0 18px 20px 0;')}
@@ -7953,7 +8033,7 @@ function generateInformativoHTML(d, heroBase64) {
             <h2 style="margin:0 0 14px 0; color:#3E3E3E; font-size:28px; line-height:1.35;">${esc(d.cta_titulo || '')}</h2>
             <p style="margin:0 auto 28px auto; max-width:520px; color:#333333; font-size:16px; line-height:1.7;">${esc(d.cta_texto || '')}</p>
             <a href="mailto:ferrazandrade@falaw.com.br" style="display:inline-block; background-color:#550000; color:#ffffff; text-decoration:none; padding:15px 34px; border-radius:30px; font-size:14px; letter-spacing:1px; text-transform:uppercase; font-weight:bold;">
-              ${esc(d.cta_botao || 'Falar com especialista')}
+              ${esc(d.cta_botao || staticLabels.cta_botao_default)}
             </a>
           </td>
         </tr>
@@ -7969,8 +8049,8 @@ function generateInformativoHTML(d, heroBase64) {
                 <td width="62%" valign="middle" style="padding:32px 40px 32px 28px;">
                   <p style="margin:0 0 10px 0; color:#555555; font-size:13px; line-height:1.7;">Av. Francisco Matarazzo, 1752 · Salas 414 e 415<br>Água Branca · São Paulo / SP · CEP 05001-200</p>
                   <p style="margin:0; color:#555555; font-size:13px; line-height:1.85;">
-                    <strong style="color:#2b2b2b;">Telefone:</strong> +55 11 2936-0076<br>
-                    <strong style="color:#2b2b2b;">WhatsApp:</strong> +55 11 91001-1551<br>
+                    <strong style="color:#2b2b2b;">${staticLabels.telefone}:</strong> +55 11 2936-0076<br>
+                    <strong style="color:#2b2b2b;">${staticLabels.whatsapp}:</strong> +55 11 91001-1551<br>
                     <strong style="color:#2b2b2b;">E-mail:</strong> <a href="mailto:ferrazandrade@falaw.com.br" style="color:#550000; text-decoration:none;">ferrazandrade@falaw.com.br</a>
                   </p>
                 </td>
@@ -7982,14 +8062,14 @@ function generateInformativoHTML(d, heroBase64) {
         <!-- Tagline -->
         <tr>
           <td style="background-color:#a59065; padding:16px 42px; text-align:center;">
-            <p style="margin:0; color:#ffffff; font-size:13px; line-height:1.5; letter-spacing:2px; text-transform:uppercase; font-weight:bold;">Direito empresarial com estratégia e propósito.</p>
+            <p style="margin:0; color:#ffffff; font-size:13px; line-height:1.5; letter-spacing:2px; text-transform:uppercase; font-weight:bold;">${staticLabels.tagline}</p>
           </td>
         </tr>
 
         <!-- Descadastro -->
         <tr>
           <td style="background-color:#F5F5F5; padding:14px 42px; text-align:center;">
-            <p style="margin:0; color:#8A8A8A; font-size:11px; line-height:1.6;">Este informativo é enviado pela Falaw Advogados. Para deixar de receber, responda este e-mail.</p>
+            <p style="margin:0; color:#8A8A8A; font-size:11px; line-height:1.6;">${staticLabels.unsubscribe}</p>
           </td>
         </tr>
 
@@ -8099,6 +8179,45 @@ function infAplicarEdicao() {
   document.getElementById('inf-preview-frame').srcdoc = _infCurrentHTML;
   document.getElementById('inf-edit-area').style.display = 'none';
   showToast('✓ Preview atualizado.');
+}
+
+async function infTraduzirParaIngles() {
+  if (!_infCurrentData) { showToast('Gere um informativo primeiro.'); return; }
+  const btn    = document.getElementById('inf-btn-traduzir');
+  const status = document.getElementById('inf-translate-status');
+  btn.disabled = true;
+  status.textContent = 'Traduzindo…';
+
+  try {
+    const source = JSON.stringify(_infCurrentData);
+    const raw = await callAI([
+      { role: 'system', content: 'You are a professional legal translator. Translate JSON values from Brazilian Portuguese to English. Preserve all JSON keys exactly. Return ONLY valid JSON, no text outside the JSON.' },
+      { role: 'user', content: `Translate every string value in the following JSON from Brazilian Portuguese to English. Keep all JSON keys unchanged. Return only the translated JSON.\n\n${source}` }
+    ], 0.3);
+
+    let translated;
+    try {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      translated = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+    } catch(e) {
+      showToast('Erro ao interpretar tradução. Tente novamente.');
+      return;
+    }
+
+    _infCurrentData = translated;
+    _infCurrentHTML = generateInformativoHTML(translated, null, 'en');
+    document.getElementById('inf-preview-frame').srcdoc = _infCurrentHTML;
+    document.getElementById('inf-email-subject').value =
+      'FALAW LEGAL NEWSLETTER — ' + (translated.titulo || '').toUpperCase().slice(0, 80);
+    document.getElementById('inf-idioma').value = 'en';
+    status.textContent = '✓ Traduzido.';
+    showToast('✓ Informativo traduzido para inglês.');
+  } catch(e) {
+    showToast('Erro: ' + e.message);
+    status.textContent = '';
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function infPreencherInscritos() {
