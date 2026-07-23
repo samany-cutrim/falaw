@@ -1408,14 +1408,24 @@ Deno.serve(async (req: Request) => {
     });
 
     const allRecords = enriched.map(normalizar);
-    // Deduplica por ID (mesmo processo+data+hora pode gerar duplicatas no paginado)
-    const seenIds = new Set<string>();
-    const records = allRecords.filter(r => {
-      const id = String(r.id);
-      if (seenIds.has(id)) return false;
-      seenIds.add(id);
-      return true;
-    });
+    // Deduplica por processo+data+hora — a mesma audiência pode aparecer duas vezes
+    // na API do Projuris (ex: tarefa regular + OL-SUBSIDIÁRIA) com campos de hora
+    // vindos de fontes distintas, gerando IDs diferentes mas mesmo conteúdo.
+    // Mantém o registro com mais campos preenchidos (maior string total).
+    const seenNatural = new Map<string, Record<string,unknown>>();
+    for (const rec of allRecords) {
+      const natKey = `${rec.processo}|${rec.data_audiencia}|${rec.horario}`;
+      const existing = seenNatural.get(natKey);
+      if (!existing) {
+        seenNatural.set(natKey, rec);
+      } else {
+        // Prefere o registro com mais conteúdo (tipo_audiencia, vara, etc.)
+        const scoreNew = [rec.tipo_audiencia, rec.vara, rec.modalidade, rec.reclamante, rec.reclamada].filter(Boolean).join("").length;
+        const scoreOld = [existing.tipo_audiencia, existing.vara, existing.modalidade, existing.reclamante, existing.reclamada].filter(Boolean).join("").length;
+        if (scoreNew > scoreOld) seenNatural.set(natKey, rec);
+      }
+    }
+    const records = [...seenNatural.values()];
     const saved   = await upsertSupabase(sb, records);
     const idsAtuais = records.map(r => String(r.id));
     // Pula reconciliação se a coleta foi parcial: evita marcar como canceladas
