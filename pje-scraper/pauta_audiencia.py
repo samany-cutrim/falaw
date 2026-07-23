@@ -480,8 +480,13 @@ def _parse_data_hora(item: dict) -> tuple[str, str]:
 
 
 def _make_id(processo: str, data: str, hora: str) -> str:
+    """FNV-1a 32-bit — idêntico ao makeId() em projuris-sync/index.ts."""
     raw = f"projuris-adv|{processo}|{data}|{hora}".encode()
-    return "adv-" + hashlib.md5(raw).hexdigest()[:12]
+    hh = 0x811c9dc5
+    for b in raw:
+        hh ^= b
+        hh = (hh * 0x01000193) & 0xFFFFFFFF
+    return "adv-" + format(hh, "08x")
 
 
 def _str_parte(v) -> str:

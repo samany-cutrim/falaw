@@ -649,3 +649,45 @@ task: <Task pending name='Task-3' coro=<Connection.run.<locals>.init() running a
 2026-07-22 13:30:05,674 [INFO] ============================================================
 2026-07-22 13:30:05,674 [INFO] Calendario: 2026-07-22 -> 2027-07-22
 2026-07-22 13:30:06,112 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-07-23 13:30:04,037 [INFO] ============================================================
+2026-07-23 13:30:04,038 [INFO] Pauta de Audiencias — 23/07/2026 13:30
+2026-07-23 13:30:04,038 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-07-23 13:30:04,038 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-07-23 13:30:04,038 [INFO] Periodo: 2026-07-23 -> 2027-07-23
+2026-07-23 13:30:04,038 [INFO] ============================================================
+2026-07-23 13:30:04,038 [INFO] Calendario: 2026-07-23 -> 2027-07-23
+2026-07-23 13:30:04,400 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-07-23 13:30:30,130 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-07-23 13:30:30,241 [INFO] Senha preenchida.
+2026-07-23 13:30:30,574 [INFO] Formulário submetido.
+2026-07-23 13:30:32,671 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=63caf410-5826-4e58-acf1-46daf41b0611&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=e763d2b4-0db1-4a06-969a-3cbaa9efa6e0.63caf410-5826-4e58-acf1-46daf41b0611.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-07-23 13:30:33,072 [INFO] Bearer token capturado das requisições de rede.
+2026-07-23 13:30:44,744 [INFO]   Retornou 232 itens
+2026-07-23 13:30:44,744 [INFO] Calendario: 232 tarefas recebidas
+2026-07-23 13:30:50,962 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 232
+2026-07-23 13:30:57,404 [INFO] Reconciliacao: 189 audiencia(s) marcadas como cancelada(s)
+2026-07-23 13:30:58,098 [WARNING] pauta_sync_log 404: {"code":"PGRST205","details":null,"hint":"Perhaps you meant the table 'public.sync_log'","message":"Could not find the table 'public.pauta_sync_log' in the schema cache"}
+2026-07-23 13:30:58,101 [INFO] ============================================================
+2026-07-23 13:30:58,101 [INFO] Sincronizacao concluida.
+2026-07-23 13:30:58,101 [INFO] ============================================================
+2026-07-23 15:22:22,661 [INFO] ============================================================
+2026-07-23 15:22:22,661 [INFO] Pauta de Audiencias — 23/07/2026 15:22
+2026-07-23 15:22:22,665 [INFO] Projuris ADV: https://service.projurisadv.com.br
+2026-07-23 15:22:22,665 [INFO] Supabase: https://yleofidqkimeanpuothv.supabase.co
+2026-07-23 15:22:22,665 [INFO] Periodo: 2026-07-23 -> 2027-07-23
+2026-07-23 15:22:22,666 [INFO] ============================================================
+2026-07-23 15:22:22,666 [INFO] Calendario: 2026-07-23 -> 2027-07-23
+2026-07-23 15:22:23,309 [INFO] Iniciando login Projuris ADV via browser (Playwright)…
+2026-07-23 15:22:56,759 [INFO] Usuário preenchido: controladoria@falaw.com.br
+2026-07-23 15:22:57,688 [INFO] Senha preenchida.
+2026-07-23 15:22:58,176 [INFO] Formulário submetido.
+2026-07-23 15:22:59,633 [INFO] Login OK — URL: https://app.projurisadv.com.br/?session_state=0a7f0751-cb43-4d7f-9dd1-59c4befdfe83&iss=https%3A%2F%2Flogin.projurisadv.com.br%2Frealms%2Fprojurisadv-realm&code=d94344e4-eb3b-4b35-9daa-669778c37a17.0a7f0751-cb43-4d7f-9dd1-59c4befdfe83.4467be42-ba4b-4376-bfca-071a56b6df26
+2026-07-23 15:23:01,209 [INFO] Bearer token capturado das requisições de rede.
+2026-07-23 15:23:12,007 [INFO]   Retornou 234 itens
+2026-07-23 15:23:12,015 [INFO] Calendario: 234 tarefas recebidas
+2026-07-23 15:23:12,987 [INFO] Audiencias filtradas: 228 de 234
+2026-07-23 15:23:19,931 [INFO] Audiencias salvas no Supabase (pauta_audiencias): 228
+2026-07-23 15:23:22,054 [WARNING] pauta_sync_log 404: {"code":"PGRST205","details":null,"hint":"Perhaps you meant the table 'public.sync_log'","message":"Could not find the table 'public.pauta_sync_log' in the schema cache"}
+2026-07-23 15:23:22,057 [INFO] ============================================================
+2026-07-23 15:23:22,057 [INFO] Sincronizacao concluida.
+2026-07-23 15:23:22,058 [INFO] ============================================================
