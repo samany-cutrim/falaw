@@ -10,3 +10,7 @@ verify_jwt = false
 [functions.whatsapp-notify]
 # Agendado via pg_cron — veja supabase-setup.sql
 verify_jwt = false
+
+[functions.pauta-email-notify]
+# Disparado após projuris-sync (pg_cron) e manualmente
+verify_jwt = false
