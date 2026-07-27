@@ -46,7 +46,8 @@ var FALAW_TEAM = [
     "role": "Advogada",
     "status": "active",
     "bio": "Formada em Direito pela Universidade Cruzeiro do Sul com láurea acadêmica. Pós-graduada em Direito Empresarial e Tributário pela UniCidade e em Direito do Trabalho e Previdenciário pelo Mackenzie. Certificada em Labor 4.0. Fluente em inglês e francês.",
-    "email": "polyanna@falaw.com.br"
+    "email": "polyanna@falaw.com.br",
+    "sigla": "PGD"
   },
   {
     "id": "mn1yd8t2fwiw",
