@@ -41,14 +41,6 @@ var FALAW_TEAM = [
     "email": "lilian@falaw.com.br"
   },
   {
-    "id": "mn1yd8t2zj2y",
-    "name": "Natany Valentim",
-    "role": "Advogada",
-    "status": "active",
-    "bio": "Graduada em Direito pela UNICASTELO e pós-graduada em Direito e Processo do Trabalho pela Universidade Legale. Atua na defesa de reclamantes e reclamadas, com experiência em audiências, sustentações orais e gestão de prazos.",
-    "email": "natany@falaw.com.br"
-  },
-  {
     "id": "mn1yd8t2ycfi",
     "name": "Pollyanna Dias",
     "role": "Advogada",
