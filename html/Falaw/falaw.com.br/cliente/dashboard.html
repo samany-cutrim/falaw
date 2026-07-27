@@ -2077,7 +2077,7 @@ async function _escPatchSupabase(id, patch) {
 }
 
 async function _escSaveObs(id, obs) {
-  _escPatchSupabase(id, { orientacao: obs || null });
+  _escPatchSupabase(id, { orientacao: obs || '' });
   // Atualiza cache local
   if (window._escRows) {
     const r = window._escRows.find(x => x.id === id);
@@ -2087,8 +2087,8 @@ async function _escSaveObs(id, obs) {
 
 async function escClearObs(id) {
   if (!confirm('Excluir a orientação desta audiência?')) return;
-  // Limpa Supabase
-  await _escPatchSupabase(id, { orientacao: null, orientacao_enviada: false });
+  // Limpa Supabase (coluna NOT NULL DEFAULT '' — usar '' em vez de null)
+  await _escPatchSupabase(id, { orientacao: '', orientacao_enviada: false });
   // Limpa cache local (localStorage)
   const all = _escGetState();
   if (all[id]) { all[id].obs = ''; all[id].sent = false; }
@@ -2096,7 +2096,7 @@ async function escClearObs(id) {
   // Limpa cache em memória
   if (window._escRows) {
     const r = window._escRows.find(x => x.id === id);
-    if (r) { r.orientacao = null; r.orientacao_enviada = false; }
+    if (r) { r.orientacao = ''; r.orientacao_enviada = false; }
   }
   // Atualiza UI sem recarregar a página
   const row = document.getElementById('esc-row-' + id);
@@ -3238,7 +3238,7 @@ function _escRenderRows(rows, today) {
       const sb2 = STATUS_BG[a.status]   || '#F9FAFB';
       const st  = state[a.id] || {};
       const sent = a.orientacao_enviada !== undefined ? !!a.orientacao_enviada : !!st.sent;
-      const obs  = a.orientacao || st.obs || '';
+      const obs  = (a.orientacao && a.orientacao.trim()) ? a.orientacao : ((st.obs && st.obs.trim()) ? st.obs : '');
       const isCancelada = a.status === 'cancelada';
       const isSustOral  = a.tipo_audiencia === 'SUSTENTAÇÃO ORAL';
       const isPast = d < today;
