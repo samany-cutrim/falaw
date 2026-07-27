@@ -2077,11 +2077,46 @@ async function _escPatchSupabase(id, patch) {
 }
 
 async function _escSaveObs(id, obs) {
-  _escPatchSupabase(id, { orientacao: obs });
+  _escPatchSupabase(id, { orientacao: obs || null });
   // Atualiza cache local
   if (window._escRows) {
     const r = window._escRows.find(x => x.id === id);
-    if (r) r.orientacao = obs;
+    if (r) r.orientacao = obs || null;
+  }
+}
+
+async function escClearObs(id) {
+  if (!confirm('Excluir a orientação desta audiência?')) return;
+  // Limpa Supabase
+  await _escPatchSupabase(id, { orientacao: null, orientacao_enviada: false });
+  // Limpa cache local (localStorage)
+  const all = _escGetState();
+  if (all[id]) { all[id].obs = ''; all[id].sent = false; }
+  localStorage.setItem(_ESC_ACK_KEY, JSON.stringify(all));
+  // Limpa cache em memória
+  if (window._escRows) {
+    const r = window._escRows.find(x => x.id === id);
+    if (r) { r.orientacao = null; r.orientacao_enviada = false; }
+  }
+  // Atualiza UI sem recarregar a página
+  const row = document.getElementById('esc-row-' + id);
+  if (row) {
+    const ta = row.querySelector('#esc-obs-' + id) || row.querySelector('textarea');
+    if (ta) ta.value = '';
+    // Remove a caixa amarela de orientação
+    const obsBox = row.querySelector('div[style*="#fffbeb"]');
+    if (obsBox) obsBox.remove();
+    // Remove o botão de excluir
+    const delBtn = row.querySelector('button[onclick^="escClearObs"]');
+    if (delBtn) delBtn.remove();
+    // Atualiza o label do checkbox
+    const cb = row.querySelector('input[type=checkbox]');
+    if (cb) { cb.checked = false; }
+    const lbl = row.querySelector('label');
+    if (lbl) {
+      lbl.style.color = '#9CA3AF';
+      lbl.childNodes.forEach(n => { if (n.nodeType === 3 && n.textContent.trim()) n.textContent = ' Orientação Pendente'; });
+    }
   }
 }
 
@@ -3294,8 +3329,9 @@ function _escRenderRows(rows, today) {
             <input type="checkbox" onchange="escToggleOrient('${a.id}',this.checked)" ${sent?'checked':''} style="width:14px;height:14px;accent-color:#1B7A4E;cursor:pointer" />
             ${sent?'✓ Orientação Enviada':'Orientação Pendente'}
           </label>
-          <textarea onblur="escSaveObs('${a.id}',this.value)" placeholder="Obs. interna…" rows="2"
+          <textarea id="esc-obs-${a.id}" onblur="escSaveObs('${a.id}',this.value)" placeholder="Obs. interna…" rows="2"
             style="width:100%;font-size:10px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:3px;resize:vertical;font-family:inherit;color:#374151;background:#fff;box-sizing:border-box">${obs}</textarea>
+          ${obs ? `<button onclick="escClearObs('${a.id}')" style="align-self:flex-end;background:none;border:1px solid #FECACA;border-radius:3px;color:#DC2626;font-size:9px;font-family:monospace;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;cursor:pointer;font-weight:700" title="Excluir orientação">🗑 Excluir Orientação</button>` : ''}
         </div>
 
       </div>`;
