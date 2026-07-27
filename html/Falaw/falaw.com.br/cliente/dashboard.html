@@ -3329,9 +3329,12 @@ function _escRenderRows(rows, today) {
             <input type="checkbox" onchange="escToggleOrient('${a.id}',this.checked)" ${sent?'checked':''} style="width:14px;height:14px;accent-color:#1B7A4E;cursor:pointer" />
             ${sent?'✓ Orientação Enviada':'Orientação Pendente'}
           </label>
-          <textarea id="esc-obs-${a.id}" onblur="escSaveObs('${a.id}',this.value)" placeholder="Obs. interna…" rows="2"
+          <textarea id="esc-obs-${a.id}" placeholder="Obs. interna…" rows="2"
             style="width:100%;font-size:10px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:3px;resize:vertical;font-family:inherit;color:#374151;background:#fff;box-sizing:border-box">${obs}</textarea>
-          ${obs ? `<button onclick="escClearObs('${a.id}')" style="align-self:flex-end;background:none;border:1px solid #FECACA;border-radius:3px;color:#DC2626;font-size:9px;font-family:monospace;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;cursor:pointer;font-weight:700" title="Excluir orientação">🗑 Excluir Orientação</button>` : ''}
+          <div style="display:flex;gap:6px;justify-content:flex-end">
+            <button onclick="escSaveObsBtn('${a.id}')" style="background:#0D2B5E;border:none;border-radius:3px;color:#fff;font-size:9px;font-family:monospace;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;cursor:pointer;font-weight:700" title="Salvar orientação">💾 Salvar</button>
+            ${obs ? `<button onclick="escClearObs('${a.id}')" style="background:none;border:1px solid #FECACA;border-radius:3px;color:#DC2626;font-size:9px;font-family:monospace;letter-spacing:.06em;text-transform:uppercase;padding:4px 8px;cursor:pointer;font-weight:700" title="Excluir orientação">🗑 Excluir</button>` : ''}
+          </div>
         </div>
 
       </div>`;
@@ -3370,6 +3373,43 @@ function escSaveObs(id, obs) {
   const sent = cb ? cb.checked : false;
   _escSaveState(id, sent, obs);
   _escSaveObs(id, obs); // persiste no Supabase
+}
+
+async function escSaveObsBtn(id) {
+  const row = document.getElementById('esc-row-' + id);
+  const ta  = row ? row.querySelector('#esc-obs-' + id) : null;
+  if (!ta) return;
+  const obs  = ta.value;
+  const cb   = row.querySelector('input[type=checkbox]');
+  const sent = cb ? cb.checked : false;
+  _escSaveState(id, sent, obs);
+  await _escSaveObs(id, obs);
+  // Feedback visual no botão Salvar
+  const btn = row.querySelector('button[onclick^="escSaveObsBtn"]');
+  if (btn) {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Salvo';
+    btn.style.background = '#1B7A4E';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = '#0D2B5E'; }, 1800);
+  }
+  // Atualiza a caixa amarela de orientação exibida acima
+  const obsBox = row.querySelector('div[style*="#fffbeb"]');
+  if (obs) {
+    const escaped = obs.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    if (obsBox) {
+      obsBox.querySelector('span') ? (obsBox.innerHTML = `<span style="font-family:monospace;font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#92400e;display:block;margin-bottom:3px">Orientação</span>${escaped}`) : null;
+    }
+    // Mostra botão Excluir se ainda não existe
+    const btnDiv = row.querySelector('div[style*="justify-content:flex-end"]');
+    if (btnDiv && !btnDiv.querySelector('button[onclick^="escClearObs"]')) {
+      const delBtn = document.createElement('button');
+      delBtn.setAttribute('onclick', `escClearObs('${id}')`);
+      delBtn.setAttribute('title', 'Excluir orientação');
+      delBtn.style.cssText = 'background:none;border:1px solid #FECACA;border-radius:3px;color:#DC2626;font-size:9px;font-family:monospace;letter-spacing:.06em;text-transform:uppercase;padding:4px 8px;cursor:pointer;font-weight:700';
+      delBtn.textContent = '🗑 Excluir';
+      btnDiv.appendChild(delBtn);
+    }
+  }
 }
 
 /* ─── PAUTA DE AUDIÊNCIAS ────────────────────────────── */
