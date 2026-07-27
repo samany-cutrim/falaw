@@ -2929,6 +2929,7 @@ function escDownloadExcelModal() {
 function escDownloadExcel(rowsOverride) {
   if (typeof XLSX === 'undefined') { alert('Biblioteca Excel não carregada. Verifique sua conexão e tente novamente.'); return; }
 
+  const today = window._escToday || new Date().toISOString().slice(0,10);
   let filtered;
   if (rowsOverride) {
     // Chamado pelo modal — já filtrado por período e clientes
@@ -2936,7 +2937,6 @@ function escDownloadExcel(rowsOverride) {
   } else {
     // Chamado diretamente (compatibilidade) — usa filtros ativos da barra
     const rows = window._escRows || [];
-    const today = window._escToday || new Date().toISOString().slice(0,10);
     const dateVal = window._escCalSel || null;
     const verPass = document.getElementById('pauta-ver-passadas');
     const showOld = verPass ? verPass.checked : false;
