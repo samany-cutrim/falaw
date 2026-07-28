@@ -2366,6 +2366,8 @@ async function loadPautaAdmin() {
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
             <span style="font-size:13px;font-weight:900;font-family:monospace;color:#111">${escHtml(a.horario||'—')}</span>
             <span style="background:${tc};color:#fff;font-size:9px;padding:2px 7px;border-radius:2px;font-weight:700">${tipoLabel(a.corr_tipo_envio)}</span>
+            ${a.tipo_audiencia ? `<span style="background:${TIPO_BG[a.tipo_audiencia]||'#EEF2FF'};color:${TIPO_COLOR[a.tipo_audiencia]||'#0D2B5E'};font-size:9px;padding:2px 6px;border-radius:2px;font-weight:700">${TIPO_LABEL[a.tipo_audiencia]||a.tipo_audiencia}</span>` : ''}
+            ${a.modalidade ? `<span style="background:${a.modalidade==='VIRTUAL'?'#dbeafe':a.modalidade==='PRESENCIAL'?'#dcfce7':'#e0e7ff'};color:${a.modalidade==='VIRTUAL'?'#1e40af':a.modalidade==='PRESENCIAL'?'#166534':'#3730a3'};font-size:9px;padding:2px 6px;border-radius:2px;font-weight:600">${MOD_LABEL[a.modalidade]||a.modalidade}</span>` : ''}
             ${assigned ? '<span style="font-size:9px;color:#1B7A4E;font-weight:700">✓ Atribuído</span>' : '<span style="font-size:9px;color:#F59E0B;font-weight:700">⚠ Pendente</span>'}
           </div>
           <div style="font-size:12px;font-weight:700;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(a.processo||'—')}</div>

@@ -475,3 +475,4 @@ C:\Users\manyc\Falaw\pje-scraper\pauta_audiencia.py:422: DeprecationWarning: dat
 2026-07-23 13:30:58,101 [INFO] Sincronizacao concluida.
 2026-07-23 13:30:58,101 [INFO] ============================================================
 {"ok":false,"error":"Upsert falhou: duplicate key value violates unique constraint \"pauta_audiencias_pkey\" | Key (id)=(adv-4ae8a1d8) already exists."}Sync disparado: 27/07/2026 13:31:10,62 
+{"ok":false,"error":"Upsert falhou: duplicate key value violates unique constraint \"pauta_audiencias_pkey\" | Key (id)=(adv-4ae8a1d8) already exists."}Sync disparado: 27/07/2026 19:31:14,14 
