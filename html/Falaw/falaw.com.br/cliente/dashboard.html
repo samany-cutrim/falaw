@@ -2478,6 +2478,12 @@ async function salvarCorrAdmin(audId, needAdv, needPre) {
   const msg   = document.getElementById('modal-corr-msg');
   const sbUrl = (window.SB_URL || '').trim();
   const sbKey = (window.SB_KEY || '').trim();
+
+  if (!sbUrl || !sbKey || typeof supabase === 'undefined') {
+    if (msg) { msg.style.color = '#DC2626'; msg.textContent = 'Configuração ausente.'; }
+    return;
+  }
+
   const patch = {};
 
   const advNome  = needAdv ? (document.getElementById('modal-adv-nome')?.value  || '').trim() : '';
@@ -2499,31 +2505,21 @@ async function salvarCorrAdmin(audId, needAdv, needPre) {
 
   if (msg) { msg.style.color = '#6B7280'; msg.textContent = 'Salvando…'; }
   try {
-    const r = await fetch(`${sbUrl}/rest/v1/pauta_audiencias?id=eq.${encodeURIComponent(audId)}`, {
-      method: 'PATCH',
-      headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify(patch)
-    });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const sb = supabase.createClient(sbUrl, sbKey);
+
+    const { error: patchErr } = await sb.from('pauta_audiencias').update(patch).eq('id', audId);
+    if (patchErr) throw new Error(patchErr.message || JSON.stringify(patchErr));
 
     if (needAdv && advEmail) {
       const advRec = { id: `corr-adv-${advEmail.replace(/[^a-z0-9]/g,'-')}`, nome: advNome, email: advEmail, celular: advCel, tipo: 'advogado', created_at: new Date().toISOString() };
-      await fetch(`${sbUrl}/rest/v1/correspondentes`, {
-        method: 'POST',
-        headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify(advRec)
-      });
+      await sb.from('correspondentes').upsert(advRec, { onConflict: 'id' });
     }
     if (needPre && preEmail) {
       const preRec = { id: `corr-pre-${preEmail.replace(/[^a-z0-9]/g,'-')}`, nome: preNome, email: preEmail, celular: preCel, tipo: 'preposto', created_at: new Date().toISOString() };
-      await fetch(`${sbUrl}/rest/v1/correspondentes`, {
-        method: 'POST',
-        headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify(preRec)
-      });
+      await sb.from('correspondentes').upsert(preRec, { onConflict: 'id' });
     }
 
-    // Atualiza cache local e card
+    // Atualiza cache local
     const row = (window._adminCorrRows || []).find(x => x.id === audId);
     if (row) {
       if (needAdv) row.advogado = advNome;
@@ -2535,10 +2531,11 @@ async function salvarCorrAdmin(audId, needAdv, needPre) {
     if (msg) { msg.style.color = '#1B7A4E'; msg.textContent = '✓ Salvo!'; }
     setTimeout(() => {
       document.getElementById('modal-corr-admin')?.remove();
-      loadPautaAdmin(); // recarrega a lista
+      loadPautaAdmin();
     }, 700);
   } catch(e) {
-    if (msg) { msg.style.color = '#DC2626'; msg.textContent = 'Erro ao salvar.'; }
+    console.error('salvarCorrAdmin error:', e);
+    if (msg) { msg.style.color = '#DC2626'; msg.textContent = `Erro: ${e.message || 'Tente novamente.'}`; }
   }
 }
 
