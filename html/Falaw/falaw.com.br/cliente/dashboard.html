@@ -2463,6 +2463,9 @@ function abrirModalCorrAdmin(audId) {
         <div style="display:flex;gap:8px">
           <button onclick="document.getElementById('modal-corr-admin').remove()"
             style="background:#F3F4F6;color:#374151;border:none;padding:9px 20px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer">Cancelar</button>
+          <button onclick="limparCorrAdmin('${audId}')"
+            style="background:#FEE2E2;color:#B91C1C;border:1px solid #FECACA;padding:9px 16px;border-radius:4px;font-family:monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-weight:700"
+            title="Remove advogado, preposto e valores atribuídos">🗑 Limpar</button>
           <button onclick="salvarCorrAdmin('${audId}', ${needAdv}, ${needPre})"
             style="background:#0D2B5E;color:#fff;border:none;padding:9px 20px;border-radius:4px;font-family:monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-weight:700">Salvar</button>
         </div>
@@ -2535,6 +2538,29 @@ async function salvarCorrAdmin(audId, needAdv, needPre) {
     }, 700);
   } catch(e) {
     console.error('salvarCorrAdmin error:', e);
+    if (msg) { msg.style.color = '#DC2626'; msg.textContent = `Erro: ${e.message || 'Tente novamente.'}`; }
+  }
+}
+
+async function limparCorrAdmin(audId) {
+  const msg = document.getElementById('modal-corr-msg');
+  const sbUrl = (window.SB_URL || '').trim();
+  const sbKey = (window.SB_KEY || '').trim();
+  if (!sbUrl || !sbKey || typeof supabase === 'undefined') return;
+  if (!confirm('Remover a atribuição de advogado/preposto desta audiência?')) return;
+  if (msg) { msg.style.color = '#6B7280'; msg.textContent = 'Limpando…'; }
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { error } = await sb.from('pauta_audiencias').update({
+      advogado: '', dados_preposto: '', valor_advogado: null, valor_preposto: null
+    }).eq('id', audId);
+    if (error) throw new Error(error.message || JSON.stringify(error));
+    const row = (window._adminCorrRows || []).find(x => x.id === audId);
+    if (row) { row.advogado = ''; row.dados_preposto = ''; row.valor_advogado = null; row.valor_preposto = null; }
+    if (msg) { msg.style.color = '#1B7A4E'; msg.textContent = '✓ Limpo!'; }
+    setTimeout(() => { document.getElementById('modal-corr-admin')?.remove(); loadPautaAdmin(); }, 700);
+  } catch(e) {
+    console.error('limparCorrAdmin error:', e);
     if (msg) { msg.style.color = '#DC2626'; msg.textContent = `Erro: ${e.message || 'Tente novamente.'}`; }
   }
 }
