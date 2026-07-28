@@ -2332,6 +2332,11 @@ async function loadPautaAdmin() {
   // Armazena rows para o modal acessar
   window._adminCorrRows = rows;
 
+  const TIPO_LABEL  = { 'INICIAL':'Inicial','INSTRUÇÃO':'Instrução','CONCILIAÇÃO':'Conciliação','UNA':'Una','SUSTENTAÇÃO ORAL':'Sust. Oral' };
+  const TIPO_BG     = { 'INICIAL':'#EEF2FF','INSTRUÇÃO':'#F5F3FF','CONCILIAÇÃO':'#E8F5EE','UNA':'#fffbeb','SUSTENTAÇÃO ORAL':'#fff7ed' };
+  const TIPO_COLOR  = { 'INICIAL':'#0D2B5E','INSTRUÇÃO':'#6D28D9','CONCILIAÇÃO':'#1B7A4E','UNA':'#92400e','SUSTENTAÇÃO ORAL':'#b45309' };
+  const MOD_LABEL   = { 'VIRTUAL':'Virtual','PRESENCIAL':'Presencial','HÍBRIDA':'Híbrida' };
+
   function tipoLabel(t) {
     return t === 'ambos' ? 'Advogado + Preposto' : t === 'preposto' ? 'Só Preposto' : 'Só Advogado';
   }
