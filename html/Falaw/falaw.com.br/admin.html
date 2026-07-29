@@ -14186,7 +14186,7 @@ async function loadAudiencias() {
     const isHoje = d === today;
     const cnt = byDate[d].length;
     html += `<div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:${isHoje?'#0D2B5E':'var(--c-muted)'};margin:28px 0 12px;padding-bottom:6px;border-bottom:${isHoje?'2px solid #0D2B5E':'1px solid var(--c-divider)'};font-weight:${isHoje?'700':'500'};display:flex;align-items:center;gap:8px">${isHoje?'● HOJE — ':''} ${label}<span style="font-size:9px;background:${isHoje?'#0D2B5E':'#e5e7eb'};color:${isHoje?'#fff':'#6B7280'};padding:1px 7px;border-radius:10px;font-weight:700">${cnt} audiência${cnt!==1?'s':''}</span></div>`;
-    html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;margin-bottom:8px">`;
+    html += `<div style="display:flex;flex-direction:column;gap:12px;margin-bottom:8px">`;
     byDate[d].forEach(a => { html += _audCard(a); });
     html += `</div>`;
   });
