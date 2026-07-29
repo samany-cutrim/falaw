@@ -3261,7 +3261,7 @@ function _escRenderRows(rows, today) {
       <span style="font-size:9px;background:${isHojeDate?'#0D2B5E':'#e5e7eb'};color:${isHojeDate?'#fff':'#6B7280'};padding:1px 7px;border-radius:10px;font-weight:700">${cnt} audiência${cnt!==1?'s':''}</span>
     </div>`;
 
-    html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;margin-bottom:4px">`;
+    html += `<div style="display:flex;flex-direction:column;gap:12px;margin-bottom:4px">`;
 
     byDate[d].forEach(a => {
       const sc  = STATUS_COLOR[a.status] || '#374151';
