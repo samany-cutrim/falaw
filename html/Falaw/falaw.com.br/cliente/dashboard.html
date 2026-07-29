@@ -3321,7 +3321,7 @@ function _escRenderRows(rows, today) {
         ? `<span style="font-family:monospace;font-size:10px;color:#6B7280;background:#f3f4f6;padding:1px 6px;border-radius:3px">${a.id_senha}</span>`
         : '';
 
-      html += `<div id="esc-row-${a.id}" style="background:${cardBg};border:1px solid ${cardBorder};border-left:4px solid ${isSustOral?'#b45309':sc};border-radius:8px;padding:14px 16px;box-shadow:${cardShadow};${op}display:flex;flex-direction:column;gap:9px">
+      html += `<div id="esc-row-${a.id}" style="width:100%;background:${cardBg};border:1px solid ${cardBorder};border-left:4px solid ${isSustOral?'#b45309':sc};border-radius:8px;padding:14px 16px;box-shadow:${cardShadow};${op}display:flex;flex-direction:column;gap:9px">
 
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
           <span style="font-weight:900;font-family:monospace;font-size:20px;color:${isHojeDate?'#0D2B5E':'#111827'};line-height:1">${a.horario||'—'}</span>
