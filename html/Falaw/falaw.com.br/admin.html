@@ -13972,10 +13972,10 @@ function _audCard(a) {
         ${a.orientacao  ? `<div style="margin-top:4px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#0D2B5E;background:#EEF2FF;padding:4px 10px;border-radius:2px;border-left:2px solid #0D2B5E">${_escHtml(a.orientacao)}</div>` : ''}
       </div>
       <!-- ações -->
-      <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;flex-shrink:0;margin-left:auto">
-        ${a.status === 'cancelado_pje' ? `<button class="btn btn-sm" style="background:#D97706;color:#fff;font-weight:700" onclick="confirmarCancelamentoPje('${_escHtml(a.id)}')">✓ Confirmar cancelamento</button>` : `<button class="btn btn-ghost btn-sm" onclick="editAudiencia('${_escHtml(a.id)}')">Editar</button>`}
-        <button class="btn btn-ghost btn-sm" style="color:#C62828" onclick="deleteAudiencia('${_escHtml(a.id)}')">Excluir</button>
-        ${(a.advogado || a.dados_preposto || a.valor_advogado != null || a.valor_preposto != null) ? `<button class="btn btn-ghost btn-sm" style="color:#B45309;border-color:#FDE68A;background:#FFFBEB;font-size:9px" onclick="_audLimparCorr('${_escHtml(a.id)}')" title="Limpar advogado, preposto e valores atribuídos pelo admin de correspondentes">🗑 Limpar Corr.</button>` : ''}
+      <div style="display:flex;flex-direction:column;gap:8px;align-items:stretch;flex-shrink:0;margin-left:auto;min-width:110px">
+        ${a.status === 'cancelado_pje' ? `<button class="btn btn-sm" style="background:#D97706;color:#fff;font-weight:700;justify-content:center" onclick="confirmarCancelamentoPje('${_escHtml(a.id)}')">✓ Confirmar cancelamento</button>` : `<button class="btn btn-ghost btn-sm" style="justify-content:center" onclick="editAudiencia('${_escHtml(a.id)}')">Editar</button>`}
+        <button class="btn btn-ghost btn-sm" style="color:#C62828;justify-content:center" onclick="deleteAudiencia('${_escHtml(a.id)}')">Excluir</button>
+        ${(a.advogado || a.dados_preposto || a.valor_advogado != null || a.valor_preposto != null) ? `<button class="btn btn-ghost btn-sm" style="color:#B45309;border-color:#FDE68A;background:#FFFBEB;font-size:9px;justify-content:center" onclick="_audLimparCorr('${_escHtml(a.id)}')" title="Limpar advogado, preposto e valores atribuídos pelo admin de correspondentes">🗑 Limpar Corr.</button>` : ''}
       </div>
     </div>
   </div>`;
