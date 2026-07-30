@@ -40,7 +40,8 @@ var FALAW_TEAM = [
     "role": "Advogada",
     "status": "active",
     "bio": "Graduada em Direito pela Universidade Presbiteriana Mackenzie e pós-graduada em Direito e Processo do Trabalho pela PUC-RS. Com mais de uma década de experiência na área trabalhista, combina sólida base acadêmica ao domínio técnico das normas e ritos processuais.",
-    "email": "lilian@falaw.com.br"
+    "email": "lilian@falaw.com.br",
+    "sigla": "LMM"
   },
   {
     "id": "mn1yd8t2ycfi",
