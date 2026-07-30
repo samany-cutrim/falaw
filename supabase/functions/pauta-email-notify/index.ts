@@ -21,7 +21,11 @@ const GAS_URL   = Deno.env.get("GAS_EMAIL_URL") ?? "";
 const GAS_TOKEN = Deno.env.get("GAS_EMAIL_TOKEN") ?? "";
 
 const ESCRITORIO_EMAIL = "audiencia@falaw.com.br";
-const JANELA_MIN       = 120; // detecta eventos dos últimos 120 min
+// O cron roda 2x/dia (após cada projuris-sync, ~8h de intervalo); uma janela de só 120min
+// deixava qualquer falha de envio (GAS fora do ar, secret errada) sem chance real de retry
+// — na próxima execução do cron a linha já teria saído da janela. 48h dá margem para vários
+// ciclos de retry sem reprocessar o histórico inteiro na primeira ativação.
+const JANELA_MIN       = 48 * 60;
 
 const CORS = {
   "Access-Control-Allow-Origin":  "*",
@@ -315,6 +319,8 @@ Deno.serve(async (req) => {
     let enviados = 0;
     const agora_iso = agora.toISOString();
 
+    let falhas = 0;
+
     // ── Processa novas ─────────────────────────────────────────────────────
     for (const aud of (novas ?? []) as Record<string,string>[]) {
       const clienteEmail = emailDoCliente(aud, clientes);
@@ -322,23 +328,28 @@ Deno.serve(async (req) => {
       const empresa      = aud.reclamada ?? aud.cliente ?? "processo";
       const subject      = `Audiência agendada — ${empresa} — ${dataLabel}`;
 
-      // E-mail ao cliente (se encontrado)
-      if (clienteEmail) {
-        await enviarEmail(clienteEmail, subject, htmlAgendada(aud, true));
-      }
+      // E-mail ao cliente (se encontrado) — se não encontrado, não é falha, só não se aplica
+      const okCliente = clienteEmail ? await enviarEmail(clienteEmail, subject, htmlAgendada(aud, true)) : true;
 
       // E-mail ao escritório
-      await enviarEmail(
+      const okEscritorio = await enviarEmail(
         ESCRITORIO_EMAIL,
         `[PAUTA] Nova audiência — ${empresa} — ${dataLabel}`,
         htmlAgendada(aud, false)
       );
 
-      await sb.from("pauta_audiencias")
-        .update({ email_agendada_notificado_at: agora_iso })
-        .eq("id", aud.id);
-
-      enviados++;
+      // Só marca como notificado se TODOS os envios esperados deram certo — uma falha
+      // (GAS fora do ar, secret errada) deixa a linha elegível para retry na próxima
+      // execução, em vez de ficar marcada como "enviado" sem ter enviado nada.
+      if (okCliente && okEscritorio) {
+        await sb.from("pauta_audiencias")
+          .update({ email_agendada_notificado_at: agora_iso })
+          .eq("id", aud.id);
+        enviados++;
+      } else {
+        console.error(`Falha ao notificar agendamento de ${aud.id} (cliente=${okCliente} escritorio=${okEscritorio}) — será tentado de novo`);
+        falhas++;
+      }
     }
 
     // ── Processa canceladas ────────────────────────────────────────────────
@@ -348,21 +359,23 @@ Deno.serve(async (req) => {
       const empresa      = aud.reclamada ?? aud.cliente ?? "processo";
       const subject      = `Audiência cancelada — ${empresa} — ${dataLabel}`;
 
-      if (clienteEmail) {
-        await enviarEmail(clienteEmail, subject, htmlCancelada(aud, true));
-      }
+      const okCliente = clienteEmail ? await enviarEmail(clienteEmail, subject, htmlCancelada(aud, true)) : true;
 
-      await enviarEmail(
+      const okEscritorio = await enviarEmail(
         ESCRITORIO_EMAIL,
         `[PAUTA] Audiência cancelada — ${empresa} — ${dataLabel}`,
         htmlCancelada(aud, false)
       );
 
-      await sb.from("pauta_audiencias")
-        .update({ email_cancelada_notificado_at: agora_iso })
-        .eq("id", aud.id);
-
-      enviados++;
+      if (okCliente && okEscritorio) {
+        await sb.from("pauta_audiencias")
+          .update({ email_cancelada_notificado_at: agora_iso })
+          .eq("id", aud.id);
+        enviados++;
+      } else {
+        console.error(`Falha ao notificar cancelamento de ${aud.id} (cliente=${okCliente} escritorio=${okEscritorio}) — será tentado de novo`);
+        falhas++;
+      }
     }
 
     const resumo = {
@@ -370,6 +383,8 @@ Deno.serve(async (req) => {
       novas_agendadas: (novas ?? []).length,
       canceladas:      (canceladas ?? []).length,
       emails_enviados: enviados,
+      falhas,
+      gas_configurado: !!GAS_URL,
     };
     console.log(JSON.stringify(resumo));
     return Response.json(resumo, { headers: CORS });
