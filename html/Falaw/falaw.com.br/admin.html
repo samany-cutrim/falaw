@@ -1690,10 +1690,13 @@
           </label>
           <button type="button" class="btn btn-ghost" onclick="abrirModalExcelAdmin()" title="Baixar pauta como planilha Excel">⬇ Baixar Excel</button>
           <button type="button" class="btn btn-ghost" onclick="openEnviarPautaModal()" title="Enviar e-mail de pauta para clientes selecionados">📧 Enviar Pauta</button>
+          <button type="button" class="btn btn-ghost" id="btn-sync-projuris-edge" onclick="audSyncProjurisEdge()" title="Chama a edge function projuris-sync agora, sem esperar o cron">🔄 Sincronizar Projuris</button>
+          <button type="button" class="btn btn-ghost" id="btn-notify-projuris-edge" onclick="audNotifyProjurisEdge()" title="Chama a edge function pauta-email-notify agora, sem esperar o cron">📨 Notificar agendadas/canceladas</button>
           <button type="button" class="btn btn-ghost" onclick="openAudienciaModal()">+ Manual</button>
         </div>
 
       </div>
+      <div id="aud-edge-result" style="display:none;margin-bottom:16px;background:#0D2B5E;color:#EEF2FF;border-radius:4px;padding:12px 16px;font-family:var(--f-mono);font-size:11px;white-space:pre-wrap;word-break:break-word;max-height:260px;overflow-y:auto"></div>
 
       <!-- Barra de progresso PJe sync -->
       <div id="pje-progress-wrap" style="display:none;background:#EEF2FF;border:1px solid #c7d2fe;border-radius:4px;padding:14px 18px;margin-bottom:16px">
@@ -14287,6 +14290,54 @@ async function _audRenderLastSync(_sbUrl, _sbKey) {
       el.textContent = `✓ Pauta atualizada em ${quando} — ${s.salvas} audiência(s)` + (s.canceladas ? `, ${s.canceladas} cancelada(s)` : '');
     }
   } catch(e) { console.warn('last sync:', e.message); }
+}
+
+// Chama uma edge function do Supabase direto do navegador do admin (que tem acesso normal
+// à internet, ao contrário de ambientes de automação restritos) e mostra o resultado cru
+// na tela — serve tanto para disparar manualmente quanto para diagnosticar por que o cron
+// não fez o que deveria (erro de configuração, secret ausente, etc. aparecem na resposta).
+async function _callEdgeFunction(nome, opts) {
+  const url = sbUrl(), key = sbKey();
+  const resultEl = document.getElementById('aud-edge-result');
+  if (!url || !key) {
+    showToast('Configuração Supabase ausente (URL/Key).');
+    return { ok: false, status: 0, text: '' };
+  }
+  if (resultEl) { resultEl.style.display = 'block'; resultEl.textContent = `Chamando ${nome}…`; }
+  try {
+    const resp = await fetch(`${url}/functions/v1/${nome}${opts?.qs || ''}`, {
+      method: opts?.method || 'GET',
+      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    });
+    const txt = await resp.text();
+    let pretty = txt;
+    try { pretty = JSON.stringify(JSON.parse(txt), null, 2); } catch { /* não é JSON, mostra cru */ }
+    if (resultEl) resultEl.textContent = `${nome} → HTTP ${resp.status}\n${pretty}`;
+    return { ok: resp.ok, status: resp.status, text: txt };
+  } catch(e) {
+    if (resultEl) resultEl.textContent = `${nome} → erro de rede: ${e.message}`;
+    return { ok: false, status: 0, text: '' };
+  }
+}
+
+async function audSyncProjurisEdge() {
+  const btn = document.getElementById('btn-sync-projuris-edge');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '🔄 Sincronizando…';
+  const r = await _callEdgeFunction('projuris-sync', { method: 'POST' });
+  btn.disabled = false; btn.textContent = orig;
+  if (r.ok) { showToast('✓ Sincronização com Projuris concluída — veja o detalhe abaixo do título.'); loadAudiencias(); }
+  else showToast(`⚠ Sincronização falhou (HTTP ${r.status}) — detalhe abaixo do título.`);
+}
+
+async function audNotifyProjurisEdge() {
+  const btn = document.getElementById('btn-notify-projuris-edge');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '📨 Notificando…';
+  const r = await _callEdgeFunction('pauta-email-notify', { method: 'GET' });
+  btn.disabled = false; btn.textContent = orig;
+  if (r.ok) showToast('✓ Notificação processada — veja o detalhe abaixo do título (checar "falhas" e "gas_configurado").');
+  else showToast(`⚠ Notificação falhou (HTTP ${r.status}) — detalhe abaixo do título.`);
 }
 
 // Status do sync automático via Edge Function projuris-sync (cron 2x/dia no Supabase),
