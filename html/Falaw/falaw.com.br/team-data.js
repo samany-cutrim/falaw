@@ -23,7 +23,8 @@ var FALAW_TEAM = [
     "role": "Advogado",
     "status": "active",
     "bio": "Graduado em Direito e pós-graduado em Prática Trabalhista Avançada pelo Damasio Educacional. Advogado Pleno com atuação voltada à defesa de reclamadas. Experiência consolidada em contencioso, consultivo e acompanhamento processual na esfera trabalhista.",
-    "email": "fernando@falaw.com.br"
+    "email": "fernando@falaw.com.br",
+    "sigla": "FAT"
   },
   {
     "id": "mn1yd8t2i1lh",
