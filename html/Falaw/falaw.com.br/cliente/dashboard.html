@@ -2100,14 +2100,41 @@ function _escParseObs(obs) {
   return msgs.filter(m => m.meta || m.text.trim());
 }
 
-function _escThreadHtml(obs) {
-  return _escParseObs(obs).map(m => {
+function _escThreadHtml(obs, id) {
+  return _escParseObs(obs).map((m, i) => {
     const isEsc = /escrit/i.test(m.meta);
     const borda = isEsc ? '#7B1A2E' : '#0D2B5E';
-    return `<div style="background:#fff;border-left:2px solid ${borda};border-radius:3px;padding:5px 8px;margin-top:4px">`
+    return `<div style="background:#fff;border-left:2px solid ${borda};border-radius:3px;padding:5px 8px;margin-top:4px;display:flex;gap:8px;align-items:flex-start">`
+      + `<div style="flex:1;min-width:0">`
       + (m.meta ? `<div style="font-family:monospace;font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:#6B7280;margin-bottom:2px">${escHtml(m.meta)}</div>` : '')
-      + `<div style="font-family:monospace;font-size:10px;letter-spacing:.04em;color:#0D2B5E">${escHtml(m.text.trim()).replace(/\n/g,'<br>')}</div></div>`;
+      + `<div style="font-family:monospace;font-size:10px;letter-spacing:.04em;color:#0D2B5E">${escHtml(m.text.trim()).replace(/\n/g,'<br>')}</div></div>`
+      + (id ? `<button onclick="escDeleteMsg('${id}',${i})" title="Excluir esta mensagem" style="background:none;border:none;color:#9CA3AF;font-size:11px;line-height:1;cursor:pointer;padding:2px 4px;flex-shrink:0" onmouseenter="this.style.color='#DC2626'" onmouseleave="this.style.color='#9CA3AF'">✕</button>` : '')
+      + `</div>`;
   }).join('');
+}
+
+// Remove serialização inversa do parse: reconstrói a coluna orientacao a partir das mensagens
+function _escObsSerialize(msgs) {
+  return msgs.map(m => (m.meta ? `[${m.meta}] ` : '') + m.text.trim()).join('\n');
+}
+
+// Exclui uma única mensagem do histórico (as demais são preservadas)
+async function escDeleteMsg(id, idx) {
+  const msgs = _escParseObs(_escCurrentObs(id));
+  const alvo = msgs[idx];
+  if (!alvo) return;
+  const trecho = alvo.text.trim().slice(0, 80);
+  if (!confirm(`Excluir esta mensagem do histórico?\n\n"${trecho}${alvo.text.trim().length > 80 ? '…' : ''}"`)) return;
+  msgs.splice(idx, 1);
+  const obs = _escObsSerialize(msgs);
+  const row = document.getElementById('esc-row-' + id);
+  const cb  = row ? row.querySelector('input[type=checkbox]') : null;
+  _escSaveState(id, cb ? cb.checked : false, obs);
+  await _escSaveObs(id, obs);
+  const thread = document.getElementById('esc-orient-th-' + id);
+  if (thread) thread.innerHTML = _escThreadHtml(obs, id);
+  const obsBox = document.getElementById('esc-orient-' + id);
+  if (obsBox && !msgs.length) obsBox.style.display = 'none';
 }
 
 function _escObsStamp() {
@@ -3380,7 +3407,7 @@ function _escRenderRows(rows, today) {
             ${sent ? `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:5px;background:#E8F5EE;border:1px solid #A7F3D0;border-radius:10px;padding:2px 10px;font-family:${MONO};font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#1B7A4E;font-weight:700">✓ Orientação enviada</div>` : ''}
             <div id="esc-orient-${a.id}" style="margin-top:6px;background:#EEF2FF;border-radius:4px;padding:6px 8px 8px;${obs ? '' : 'display:none'}">
               <div style="font-family:${MONO};font-size:8px;letter-spacing:.07em;text-transform:uppercase;color:#0D2B5E;font-weight:700">💬 Histórico de orientações</div>
-              <div id="esc-orient-th-${a.id}">${obs ? _escThreadHtml(obs) : ''}</div>
+              <div id="esc-orient-th-${a.id}">${obs ? _escThreadHtml(obs, a.id) : ''}</div>
             </div>
           </div>
         </div>
@@ -3460,7 +3487,7 @@ async function escSaveObsBtn(id) {
   // Atualiza o histórico exibido acima
   const obsBox = document.getElementById('esc-orient-' + id);
   const thread = document.getElementById('esc-orient-th-' + id);
-  if (thread) thread.innerHTML = _escThreadHtml(obs);
+  if (thread) thread.innerHTML = _escThreadHtml(obs, id);
   if (obsBox) obsBox.style.display = '';
   // Mostra botão Excluir se ainda não existe
   const btnDiv = row.querySelector('div[style*="justify-content:flex-end"]');
