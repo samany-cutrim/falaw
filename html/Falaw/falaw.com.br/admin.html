@@ -1961,14 +1961,10 @@
                 </div>
               </div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 120px;gap:12px">
+            <div style="display:grid;grid-template-columns:1fr 120px;gap:12px">
               <div class="form-field">
                 <label>Comentários</label>
                 <input id="aud-comentarios" type="text" placeholder="Observações internas" />
-              </div>
-              <div class="form-field">
-                <label>Orientação</label>
-                <textarea id="aud-orientacao" rows="2" placeholder="Orientação ao advogado" style="width:100%;min-height:42px;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:13px;color:var(--c-dark);background:#fafaf8;outline:none;resize:vertical;box-sizing:border-box"></textarea>
               </div>
               <div class="form-field">
                 <label>Status</label>
@@ -14132,16 +14128,20 @@ function _audCard(a) {
           <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.07em;text-transform:uppercase;color:#0D2B5E;font-weight:700">💬 Histórico de orientações</div>
           <div id="aud-orient-th-${_escHtml(a.id)}">${(a.orientacao||'').trim() ? _audObsThreadHtml(a.orientacao, a.id) : ''}</div>
         </div>
-        <div style="display:flex;gap:6px;margin-top:6px;align-items:flex-start">
-          <textarea id="aud-obs-${_escHtml(a.id)}" rows="1" placeholder="Nova orientação… (as anteriores ficam no histórico)" style="flex:1;font-size:10px;padding:5px 8px;border:1px solid #e5e7eb;border-radius:4px;resize:vertical;font-family:inherit;color:#374151;background:#fff;box-sizing:border-box;min-height:26px"></textarea>
-          <button onclick="audObsSend('${_escHtml(a.id)}')" title="Adicionar mensagem ao histórico sem apagar as anteriores" style="background:#0D2B5E;border:none;border-radius:4px;color:#fff;font-size:9px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:7px 12px;cursor:pointer;font-weight:700;flex-shrink:0">➤ Enviar</button>
-        </div>
       </div>
       <!-- ações -->
       <div style="display:flex;flex-direction:column;gap:8px;align-items:stretch;flex-shrink:0;margin-left:auto;min-width:110px">
         ${a.status === 'cancelado_pje' ? `<button class="btn btn-sm" style="background:#D97706;color:#fff;font-weight:700;justify-content:center" onclick="confirmarCancelamentoPje('${_escHtml(a.id)}')">✓ Confirmar cancelamento</button>` : `<button class="btn btn-ghost btn-sm" style="justify-content:center" onclick="editAudiencia('${_escHtml(a.id)}')">Editar</button>`}
         <button class="btn btn-ghost btn-sm" style="color:#C62828;justify-content:center" onclick="deleteAudiencia('${_escHtml(a.id)}')">Excluir</button>
         ${(a.advogado || a.dados_preposto || a.valor_advogado != null || a.valor_preposto != null) ? `<button class="btn btn-ghost btn-sm" style="color:#B45309;border-color:#FDE68A;background:#FFFBEB;font-size:9px;justify-content:center" onclick="_audLimparCorr('${_escHtml(a.id)}')" title="Limpar advogado, preposto e valores atribuídos pelo admin de correspondentes">🗑 Limpar Corr.</button>` : ''}
+      </div>
+    </div>
+    <!-- controle de orientação -->
+    <div style="border-top:1px solid #f3f4f6;margin-top:12px;padding-top:12px">
+      <textarea id="aud-obs-${_escHtml(a.id)}" placeholder="Nova mensagem… (as anteriores ficam no histórico acima)" rows="2"
+        style="width:100%;font-size:10px;padding:6px 8px;border:1px solid #e5e7eb;border-radius:5px;resize:vertical;font-family:inherit;color:#374151;background:#fff;box-sizing:border-box"></textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px">
+        <button onclick="audObsSend('${_escHtml(a.id)}')" style="background:#0D2B5E;border:none;border-radius:4px;color:#fff;font-size:10px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:7px 14px;cursor:pointer;font-weight:700" title="Adicionar mensagem ao histórico sem apagar as anteriores">➤ Enviar</button>
       </div>
     </div>
   </div>`;
@@ -14477,7 +14477,7 @@ function audLimparFiltros() {
 
 /* ── modal open/close ── */
 function openAudienciaModal() {
-  const fields = ['aud-id','aud-data','aud-horario','aud-tipo','aud-modalidade','aud-processo','aud-vara','aud-link','aud-idsena','aud-reclamante','aud-reclamada','aud-cliente','aud-tipo-resp','aud-responsavel','aud-advogado','aud-preposto-obs','aud-dados-preposto','aud-comentarios','aud-orientacao','aud-testemunhas'];
+  const fields = ['aud-id','aud-data','aud-horario','aud-tipo','aud-modalidade','aud-processo','aud-vara','aud-link','aud-idsena','aud-reclamante','aud-reclamada','aud-cliente','aud-tipo-resp','aud-responsavel','aud-advogado','aud-preposto-obs','aud-dados-preposto','aud-comentarios','aud-testemunhas'];
   fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('aud-status').value = 'agendada';
   document.getElementById('aud-testemunha-check').checked = false;
@@ -14531,7 +14531,6 @@ async function editAudiencia(id) {
   document.getElementById('aud-preposto-obs').value = a.observacoes_preposto || '';
   document.getElementById('aud-dados-preposto').value = a.dados_preposto || '';
   document.getElementById('aud-comentarios').value  = a.comentarios || '';
-  document.getElementById('aud-orientacao').value   = a.orientacao || '';
   document.getElementById('aud-status').value       = a.status || 'agendada';
   const testem = !!(a.testemunha_necessaria);
   document.getElementById('aud-testemunha-check').checked = testem;
@@ -14572,7 +14571,8 @@ async function saveAudiencia() {
     observacoes_preposto:  document.getElementById('aud-preposto-obs').value.trim(),
     dados_preposto:        document.getElementById('aud-dados-preposto').value.trim(),
     comentarios:           document.getElementById('aud-comentarios').value.trim(),
-    orientacao:            document.getElementById('aud-orientacao').value.trim(),
+    // orientacao não entra aqui: é gerenciada só pelo bate-papo do card (audObsSend/audObsDelete),
+    // para não sobrescrever o histórico ao salvar outros campos da audiência
     status:                document.getElementById('aud-status').value,
     testemunha_necessaria: testem,
     testemunhas:           testem ? document.getElementById('aud-testemunhas').value.trim() : '',
@@ -14602,7 +14602,8 @@ async function saveAudiencia() {
   } else {
     const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY)||'[]');
     const idx = local.findIndex(x => x.id === id);
-    if (idx >= 0) local[idx] = row; else local.push(row);
+    // preserva orientacao existente (não faz parte de `row` — ver comentário acima)
+    if (idx >= 0) local[idx] = { ...local[idx], ...row }; else local.push(row);
     localStorage.setItem(AUD_STORE_KEY, JSON.stringify(local));
   }
   closeAudienciaModal();
