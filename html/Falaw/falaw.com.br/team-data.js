@@ -18,6 +18,15 @@ var FALAW_TEAM = [
     "sigla": "CMM"
   },
   {
+    "id": "ms7pd1i3v205",
+    "name": "Cássia Ferreira",
+    "sigla": "COF",
+    "email": "cassia@falaw.com.br",
+    "role": "Advogada",
+    "bio": "Advogada com pós-graduação em Direito e Processo do Trabalho. Atua tanto na área consultiva quanto contenciosa trabalhista, oferecendo suporte estratégico a empresas em todas as etapas da relação de trabalho — da prevenção de riscos e elaboração de pareceres à condução de processos judiciais.",
+    "status": "active"
+  },
+  {
     "id": "mn1yd8t2ttxy",
     "name": "Fernando Trevisan Jr.",
     "role": "Advogado",
