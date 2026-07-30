@@ -56,18 +56,26 @@ async function buscarClientes(sb: ReturnType<typeof createClient>): Promise<Reco
   return (data ?? []) as Record<string,string>[];
 }
 
+// Mesma normalização usada em cliente/dashboard.html (_normalizarNomeCliente/_clienteToken):
+// corta o nome da empresa no primeiro sufixo jurídico/genérico e usa só a marca.
+// Sem isso, tokens como "brasil", "tecnologia" ou "ltda" (todos >3 chars) batem com
+// o nome de QUALQUER empresa que contenha essas palavras, mandando o e-mail errado.
+function clienteToken(company: string): string {
+  let s = company.toUpperCase().trim();
+  s = s.replace(/\s*(\(CLIENTE\)|\(R[ÉE]\)|S\/?A\.?|S\.A\.?|LTDA\.?|EIRELI|ME\b|EPP\b|AG[EÊ]NCIA|COM[EÉ]RCIO|COM\.BR|\.COM|IND[ÚU]STRIA|SERVI[ÇC]OS|DO BRASIL|BRASIL).*$/i, "");
+  s = s.split(/[/|;]/)[0].trim().replace(/[,.]+$/, "").trim();
+  return s.split(/\s+/)[0] ?? "";
+}
+
 // Retorna e-mail de notificação do cliente que melhor casa com a audiência
 function emailDoCliente(
   aud: Record<string, string>,
   clientes: Record<string,string>[]
 ): string {
-  const campos = [aud.cliente ?? "", aud.reclamada ?? ""].join(" ").toLowerCase();
+  const campos = [aud.cliente ?? "", aud.reclamada ?? ""].join(" ").toUpperCase();
   for (const c of clientes) {
-    const nome = (c.company ?? "").toLowerCase();
-    if (!nome) continue;
-    // Tokeniza o nome do cliente e verifica se algum token relevante aparece
-    const tokens = nome.split(/\s+/).filter(t => t.length > 3);
-    if (tokens.some(t => campos.includes(t))) {
+    const token = clienteToken(c.company ?? "");
+    if (token.length > 2 && campos.includes(token)) {
       return (c.notifyEmail || c.email || "").trim();
     }
   }
