@@ -2104,11 +2104,13 @@ function _escThreadHtml(obs, id) {
   return _escParseObs(obs).map((m, i) => {
     const isEsc = /escrit/i.test(m.meta);
     const borda = isEsc ? '#7B1A2E' : '#0D2B5E';
+    // Só mensagens enviadas pelo próprio escritório podem ser editadas por aqui;
+    // as do admin (ou legadas, sem meta) são somente leitura nesta tela.
     return `<div style="background:#fff;border-left:2px solid ${borda};border-radius:3px;padding:5px 8px;margin-top:4px;display:flex;gap:8px;align-items:flex-start">`
       + `<div style="flex:1;min-width:0" id="esc-orient-msg-${id}-${i}">`
       + (m.meta ? `<div style="font-family:monospace;font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:#6B7280;margin-bottom:2px">${escHtml(m.meta)}</div>` : '')
       + `<div style="font-family:monospace;font-size:10px;letter-spacing:.04em;color:#0D2B5E">${escHtml(m.text.trim()).replace(/\n/g,'<br>')}</div></div>`
-      + (id ? `<button onclick="escEditMsgStart('${id}',${i})" title="Editar esta mensagem" style="background:none;border:none;color:#9CA3AF;font-size:11px;line-height:1;cursor:pointer;padding:2px 4px;flex-shrink:0" onmouseenter="this.style.color='#0D2B5E'" onmouseleave="this.style.color='#9CA3AF'">✎</button>` : '')
+      + (id && isEsc ? `<button onclick="escEditMsgStart('${id}',${i})" title="Editar esta mensagem" style="background:none;border:none;color:#9CA3AF;font-size:11px;line-height:1;cursor:pointer;padding:2px 4px;flex-shrink:0" onmouseenter="this.style.color='#0D2B5E'" onmouseleave="this.style.color='#9CA3AF'">✎</button>` : '')
       + `</div>`;
   }).join('');
 }
@@ -2126,11 +2128,12 @@ function escRenderThread(id) {
   if (obsBox) obsBox.style.display = obs.trim() ? '' : 'none';
 }
 
-// Edição de uma mensagem do histórico (no escritório não há exclusão, apenas edição)
+// Edição de uma mensagem do histórico (no escritório não há exclusão, apenas edição,
+// e somente das mensagens que o próprio escritório enviou — não das do admin)
 function escEditMsgStart(id, idx) {
   const box  = document.getElementById(`esc-orient-msg-${id}-${idx}`);
   const msgs = _escParseObs(_escCurrentObs(id));
-  if (!box || !msgs[idx]) return;
+  if (!box || !msgs[idx] || !/escrit/i.test(msgs[idx].meta)) return;
   box.innerHTML = `<textarea id="esc-orient-edit-${id}-${idx}" rows="2" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:10px;padding:4px 6px;border:1px solid #c7d2fe;border-radius:3px;resize:vertical;color:#0D2B5E">${escHtml(msgs[idx].text.trim())}</textarea>
     <div style="display:flex;gap:6px;margin-top:4px">
       <button onclick="escEditMsgSave('${id}',${idx})" style="background:#0D2B5E;border:none;border-radius:3px;color:#fff;font-family:monospace;font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;cursor:pointer;font-weight:700">Salvar</button>
@@ -2142,7 +2145,7 @@ function escEditMsgStart(id, idx) {
 async function escEditMsgSave(id, idx) {
   const ta   = document.getElementById(`esc-orient-edit-${id}-${idx}`);
   const msgs = _escParseObs(_escCurrentObs(id));
-  if (!ta || !msgs[idx]) return;
+  if (!ta || !msgs[idx] || !/escrit/i.test(msgs[idx].meta)) return;
   const txt = ta.value.trim();
   if (!txt) return; // não permite esvaziar — exclusão só pelo admin
   msgs[idx].text = txt;
