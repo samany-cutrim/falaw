@@ -2341,7 +2341,7 @@ async function salvarTestemunhas(audId) {
       // Recarrega o card atualizando a lista
       const sess = JSON.parse(sessionStorage.getItem('falaw_session') || '{}');
       const _comp = (window._clientData && window._clientData.company) || sess.company || sess.name || '';
-      if (_comp) loadPautaCliente(_comp);
+      if (_comp) loadPautaCliente(_comp, (window._clientData && window._clientData.aliases) || []);
     }, 900);
   } catch(e) {
     msg.style.color = '#DC2626';
@@ -3488,6 +3488,35 @@ function _clienteToken(company) {
   return _normalizarNomeCliente(company).split(/\s+/)[0];
 }
 
+/* ── Aliases de cliente (grupos com várias razões sociais / pessoas) ──
+   Mesma lógica usada em admin.html: um cliente pode listar várias empresas
+   e pessoas físicas ligadas a ele (ex. Grupo Dória), para que audiência de
+   qualquer uma delas conte como sua, em vez de depender só de um token. */
+function _audExtractCliente(rec) {
+  if (!rec) return '';
+  const f = rec.split(',').find(p => p.includes('(CLIENTE)'));
+  return f ? f.replace(/\s*\(CLIENTE\)/gi, '').trim() : '';
+}
+function _aliasKey(s) {
+  return (s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/\s*\(CLIENTE\)/gi, '')
+    .replace(/[.,]+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function _audMatchesAliases(a, aliasKeySet) {
+  if (!aliasKeySet || !aliasKeySet.size) return false;
+  const tagKey = _aliasKey(_audExtractCliente(a.reclamada));
+  if (tagKey && aliasKeySet.has(tagKey)) return true;
+  const cliKey = _aliasKey(a.cliente || '');
+  if (cliKey && aliasKeySet.has(cliKey)) return true;
+  const recKey = _aliasKey(a.reclamada || '');
+  for (const ak of aliasKeySet) { if (ak && recKey.includes(ak)) return true; }
+  return false;
+}
+
 // Render client rows into pauta-list (client-specific, simpler than _escRenderRows)
 function _clientRenderRows(rows) {
   const el = document.getElementById('pauta-list');
@@ -3548,7 +3577,7 @@ function _clientRenderRows(rows) {
   el.innerHTML = html;
 }
 
-async function loadPautaCliente(company) {
+async function loadPautaCliente(company, aliases) {
   const el = document.getElementById('pauta-list');
   if (!el) return;
   el.innerHTML = '<p style="color:#888;font-size:13px;padding:20px 0">Carregando audiências…</p>';
@@ -3562,7 +3591,8 @@ async function loadPautaCliente(company) {
   // gerado pelo Python (_extrair_cliente)
   const clienteNorm = _normalizarNomeCliente(company);
   const clienteToken = _clienteToken(company);
-  if (!clienteToken) {
+  const aliasKeys = new Set((aliases || []).map(_aliasKey).filter(Boolean));
+  if (!clienteToken && !aliasKeys.size) {
     document.getElementById('pauta-list').innerHTML =
       '<div style="text-align:center;padding:40px 0;color:#aaa;font-size:13px">Nome do cliente não identificado.</div>';
     return;
@@ -3573,7 +3603,23 @@ async function loadPautaCliente(company) {
       const sb = supabase.createClient(sbUrl, sbKey);
 
       const MIN_DATE = '2026-07-01';
+      const baseSelect = 'id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado,testemunhas';
+
+      // 0ª tentativa: grupo com várias razões sociais/pessoas cadastradas (aliases)
+      // — ex. Grupo Dória tem várias empresas + pessoas físicas ligadas
+      if (aliasKeys.size) {
+        const { data } = await sb.from('pauta_audiencias')
+          .select(baseSelect)
+          .gte('data_audiencia', MIN_DATE)
+          .order('data_audiencia', { ascending: true })
+          .order('horario',        { ascending: true });
+        if (data && data.length) {
+          rows = data.filter(a => _audMatchesAliases(a, aliasKeys));
+        }
+      }
+
       // 1ª tentativa: campo `cliente` exato normalizado (gerado pelo Python)
+      if (!rows.length && clienteToken) {
       let { data } = await sb.from('pauta_audiencias')
         .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,link,id_senha,advogado,testemunhas')
         .gte('data_audiencia', MIN_DATE)
@@ -3608,6 +3654,7 @@ async function loadPautaCliente(company) {
           const tokenRe = new RegExp(`(?<![A-Za-zÀ-ÿ])${clienteToken}(?![A-Za-zÀ-ÿ])`, 'i');
           rows = data.filter(a => tokenRe.test(a.reclamada || '') || tokenRe.test(a.cliente || ''));
         }
+      }
       }
     } catch(e) { console.warn('pauta cliente:', e.message); }
   }
@@ -3730,6 +3777,7 @@ async function init() {
           code: data.code,
           createdAt: data.created_at,
           comparativoEnabled: data.comparativo_enabled || false,
+          aliases: data.aliases || [],
           reports: apiReports.map(rep => {
             const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
             return lr && lr.fileData ? { ...rep, fileData: lr.fileData } : rep;
@@ -3779,7 +3827,7 @@ async function init() {
 
   /* Pauta de Audiências: visível para todos (iFood acessa mas não recebe e-mail) */
   document.getElementById('nav-pauta').style.display = '';
-  loadPautaCliente(client.company || session.company || '');
+  loadPautaCliente(client.company || session.company || '', client.aliases || []);
 
   /* Aba Comparativo: sempre visível */
   const compBtn = document.querySelector('#dashTabBar .tab-btn[data-tab="comparativo"]');

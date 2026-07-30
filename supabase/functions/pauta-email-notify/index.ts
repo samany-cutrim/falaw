@@ -50,10 +50,13 @@ function diaSemana(iso: string): string {
 
 // ── Busca clientes do Supabase ────────────────────────────────────────────────
 
-async function buscarClientes(sb: ReturnType<typeof createClient>): Promise<Record<string,string>[]> {
-  const { data, error } = await sb.from("clients").select("company,email,notifyEmail");
+async function buscarClientes(sb: ReturnType<typeof createClient>): Promise<Record<string, unknown>[]> {
+  // Coluna no banco é "notify_email" (snake_case) e "aliases" é TEXT[] — selecionar
+  // com o nome errado ("notifyEmail") faz o PostgREST retornar erro e a função cair
+  // silenciosamente para [] em todo cliente, deixando de enviar o e-mail ao cliente.
+  const { data, error } = await sb.from("clients").select("company,email,notify_email,aliases");
   if (error) { console.warn("clients:", error.message); return []; }
-  return (data ?? []) as Record<string,string>[];
+  return (data ?? []) as Record<string, unknown>[];
 }
 
 // Mesma normalização usada em cliente/dashboard.html (_normalizarNomeCliente/_clienteToken):
@@ -67,16 +70,53 @@ function clienteToken(company: string): string {
   return s.split(/\s+/)[0] ?? "";
 }
 
+// Aliases de cliente (grupos com várias razões sociais / pessoas — ex. Grupo Dória):
+// mesma lógica usada em admin.html e cliente/dashboard.html (_aliasKey/_audMatchesAliases).
+function extrairClienteTag(rec: string): string {
+  if (!rec) return "";
+  const f = rec.split(",").find(p => p.includes("(CLIENTE)"));
+  return f ? f.replace(/\s*\(CLIENTE\)/gi, "").trim() : "";
+}
+function aliasKey(s: string): string {
+  return (s || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/\s*\(CLIENTE\)/gi, "")
+    .replace(/[.,]+$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+function audMatchesAliases(aud: Record<string,string>, aliasKeys: Set<string>): boolean {
+  if (!aliasKeys.size) return false;
+  const tagKey = aliasKey(extrairClienteTag(aud.reclamada ?? ""));
+  if (tagKey && aliasKeys.has(tagKey)) return true;
+  const cliKey = aliasKey(aud.cliente ?? "");
+  if (cliKey && aliasKeys.has(cliKey)) return true;
+  const recKey = aliasKey(aud.reclamada ?? "");
+  for (const ak of aliasKeys) { if (ak && recKey.includes(ak)) return true; }
+  return false;
+}
+
 // Retorna e-mail de notificação do cliente que melhor casa com a audiência
 function emailDoCliente(
   aud: Record<string, string>,
-  clientes: Record<string,string>[]
+  clientes: Record<string, unknown>[]
 ): string {
+  // 1ª tentativa: grupo com várias razões sociais/pessoas cadastradas (aliases)
+  for (const c of clientes) {
+    const aliases = Array.isArray(c.aliases) ? (c.aliases as string[]) : [];
+    if (!aliases.length) continue;
+    const aliasKeys = new Set(aliases.map(aliasKey).filter(Boolean));
+    if (audMatchesAliases(aud, aliasKeys)) {
+      return String(c.notify_email || c.email || "").trim();
+    }
+  }
+  // 2ª tentativa: token derivado do nome cadastrado
   const campos = [aud.cliente ?? "", aud.reclamada ?? ""].join(" ").toUpperCase();
   for (const c of clientes) {
-    const token = clienteToken(c.company ?? "");
+    const token = clienteToken(String(c.company ?? ""));
     if (token.length > 2 && campos.includes(token)) {
-      return (c.notifyEmail || c.email || "").trim();
+      return String(c.notify_email || c.email || "").trim();
     }
   }
   return "";
