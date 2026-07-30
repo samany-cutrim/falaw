@@ -12,6 +12,19 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const DIAS_BUSCA           = parseInt(Deno.env.get("DIAS_PAUTA") ?? "365", 10);
 const DIAS_PASSADO         = parseInt(Deno.env.get("DIAS_PASSADO") ?? "180", 10); // quantos dias no passado incluir na busca
 const AUDIENCIA_TIPO_CODIGO = 6125449; // código real do tipo "Audiência" no Projuris ADV
+// Código do tipo "Perícia" no Projuris ADV — configurável via secret PERICIA_TIPO_CODIGO
+// (descubra o número rodando GET ?listar-tipos-tarefa=1 nesta função). Sem essa secret
+// configurada, o sync continua buscando só audiências, como antes.
+const PERICIA_TIPO_CODIGO = parseInt(Deno.env.get("PERICIA_TIPO_CODIGO") ?? "", 10) || 0;
+// Outros códigos de tarefa extras, separados por vírgula (ex.: "123,456"), para o caso de
+// mais de um tipo de perícia/tarefa precisar ser sincronizado no futuro sem novo deploy.
+const TIPOS_TAREFA_EXTRAS = (Deno.env.get("TIPOS_TAREFA_EXTRAS") ?? "")
+  .split(",").map(s => parseInt(s.trim(), 10)).filter(n => Number.isFinite(n) && n > 0);
+const TIPOS_TAREFA_CODIGOS = [
+  AUDIENCIA_TIPO_CODIGO,
+  ...(PERICIA_TIPO_CODIGO ? [PERICIA_TIPO_CODIGO] : []),
+  ...TIPOS_TAREFA_EXTRAS,
+];
 const BRASILIA_OFFSET_MS = -3 * 60 * 60 * 1000; // UTC-3 fixo (Brasil não tem mais horário de verão)
 const CACHE_TTL_HORAS = 24 * 7; // reaproveita dados de processo (marcadores/partes) por 7 dias
 const SB_TABLE   = "pauta_audiencias";
@@ -341,7 +354,7 @@ async function fetchAudienciasKeyset(iniISO: string, fimISO: string): Promise<{ 
 
     const body = {
       filtroGeral: "", tipoFiltroTarefaConsulta: "TODOS", unidadeOrganizacional: null, tituloCompromisso: "",
-      codigosTarefaTipo: [AUDIENCIA_TIPO_CODIGO], usuariosResponsaveis: [], concluidaPor: [], gruposResponsaveis: [],
+      codigosTarefaTipo: TIPOS_TAREFA_CODIGOS, usuariosResponsaveis: [], concluidaPor: [], gruposResponsaveis: [],
       marcadores: [], tarefaTipoData: "DATA_PREVISTA_CONCLUSAO", dataTarefaInicio: iniISO, dataTarefaFim: fimISO,
       flagDadosCompletosResponsaveis: true, numeroProcesso: null, nomePessoaEnvolvido: null, assuntoVinculo: "",
       moduloTarefa: null, codigoRegistroVinculo: null, flagVinculoPrincipal: true,
@@ -384,7 +397,7 @@ async function fetchAudienciasKeyset(iniISO: string, fimISO: string): Promise<{ 
 
 async function fetchAudiencias(janela: { hojeStr: string; fimStr: string; iniISO: string; fimISO: string }): Promise<{ itens: unknown[]; parcial: boolean }> {
   await getToken();
-  console.log(`Buscando audiências (tipo ${AUDIENCIA_TIPO_CODIGO}) de ${janela.hojeStr} a ${janela.fimStr}...`);
+  console.log(`Buscando audiências (tipos ${TIPOS_TAREFA_CODIGOS.join(",")}) de ${janela.hojeStr} a ${janela.fimStr}...`);
   const { itens: brutos, parcial } = await fetchAudienciasKeyset(janela.iniISO, janela.fimISO);
   console.log(`Total bruto retornado pela API: ${brutos.length}${parcial ? " (PARCIAL — houve falha em alguma página)" : ""}`);
   const pendentes = brutos.filter(raw => {
@@ -1164,8 +1177,63 @@ const CORS = {
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
 
-  // Modo diagnóstico: GET ?diag=1
+  // Descobre os códigos de tipo de tarefa cadastrados (ex.: para achar o código de
+  // "Perícia" e configurar a secret PERICIA_TIPO_CODIGO): GET ?listar-tipos-tarefa=1
   const url = new URL(req.url);
+  if (url.searchParams.get("listar-tipos-tarefa") === "1") {
+    try {
+      await getToken();
+      const hoje = new Date();
+      const ini = new Date(hoje.getTime() - 60*86400000).toISOString().slice(0,10) + "T00:00:00Z";
+      const fim = new Date(hoje.getTime() + 60*86400000).toISOString().slice(0,10) + "T23:59:59Z";
+      const kurl = `${PROJURIS_BASE}/adv-service/v2/tarefa/consulta-keyset?quan-registros=200&pagina=0&ordenacao-tipo=ASC&ordenacao-chave=ORDENACAO_DATA_PREVISTA`;
+      const body = {
+        filtroGeral: "", tipoFiltroTarefaConsulta: "TODOS", unidadeOrganizacional: null, tituloCompromisso: "",
+        codigosTarefaTipo: [], usuariosResponsaveis: [], concluidaPor: [], gruposResponsaveis: [],
+        marcadores: [], tarefaTipoData: "DATA_PREVISTA_CONCLUSAO", dataTarefaInicio: ini, dataTarefaFim: fim,
+        flagDadosCompletosResponsaveis: true, numeroProcesso: null, nomePessoaEnvolvido: null, assuntoVinculo: "",
+        moduloTarefa: null, codigoRegistroVinculo: null, flagVinculoPrincipal: true,
+        tipoInformacaoExclusao: "NAO_EXIBIR_EXCLUIDOS", identificadorAndamento: "", flagCompromisso: false,
+        flagClassificacaoAudiencia: false, flagClassificacaoTarefa: false,
+      };
+      const r = await fetch(kurl, { method: "POST", headers: authHeaders(), body: JSON.stringify(body) });
+      const txt = await r.text();
+      if (!r.ok) return Response.json({ status: r.status, preview: txt.slice(0, 500) }, { headers: CORS });
+      const json = JSON.parse(txt) as Record<string, unknown>;
+      const itens = (json.tarefaConsultaWs as Record<string, unknown>[]) ?? [];
+      // Agrupa por qualquer campo que pareça identificar o tipo/código da tarefa —
+      // não sabemos de antemão o nome exato do campo numérico, então coletamos os
+      // candidatos mais prováveis lado a lado.
+      interface TipoInfo {
+        nome: string;
+        codigoTarefaTipo: unknown;
+        codigoTipoTarefa: unknown;
+        tarefaTipo: unknown;
+        ocorrencias: number;
+      }
+      const porTipo = new Map<string, TipoInfo>();
+      for (const it of itens) {
+        const nome = String(it.nomeTarefaTipo ?? it.tipoTarefa ?? it.tipo_tarefa ?? "(sem nome)");
+        const atual = porTipo.get(nome) ?? {
+          nome,
+          codigoTarefaTipo: it.codigoTarefaTipo ?? null,
+          codigoTipoTarefa: it.codigoTipoTarefa ?? null,
+          tarefaTipo: it.tarefaTipo ?? null,
+          ocorrencias: 0,
+        };
+        atual.ocorrencias++;
+        porTipo.set(nome, atual);
+      }
+      return Response.json({
+        total: itens.length,
+        janela: { ini, fim },
+        tipos: [...porTipo.values()],
+        amostraCrua: itens[0] ?? null,
+      }, { headers: CORS });
+    } catch(e) { return Response.json({ error: String(e) }, { status: 500, headers: CORS }); }
+  }
+
+  // Modo diagnóstico: GET ?diag=1
   if (url.searchParams.get("diag") === "1") {
     const resultado = await diagnosticarAuth();
     return Response.json({ diag: resultado }, { headers: CORS });
@@ -1270,7 +1338,7 @@ Deno.serve(async (req: Request) => {
       const kurl = `${PROJURIS_BASE}/adv-service/v2/tarefa/consulta-keyset?quan-registros=200&pagina=0&ordenacao-tipo=ASC&ordenacao-chave=ORDENACAO_DATA_PREVISTA`;
       const body = {
         filtroGeral: "", tipoFiltroTarefaConsulta: "TODOS", unidadeOrganizacional: null, tituloCompromisso: "",
-        codigosTarefaTipo: [AUDIENCIA_TIPO_CODIGO], usuariosResponsaveis: [], concluidaPor: [], gruposResponsaveis: [],
+        codigosTarefaTipo: TIPOS_TAREFA_CODIGOS, usuariosResponsaveis: [], concluidaPor: [], gruposResponsaveis: [],
         marcadores: [], tarefaTipoData: "DATA_PREVISTA_CONCLUSAO", dataTarefaInicio: janela.iniISO, dataTarefaFim: janela.fimISO,
         flagDadosCompletosResponsaveis: true, numeroProcesso: null, nomePessoaEnvolvido: null, assuntoVinculo: "",
         moduloTarefa: null, codigoRegistroVinculo: null, flagVinculoPrincipal: true,
