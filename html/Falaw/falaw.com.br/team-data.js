@@ -74,6 +74,7 @@ var FALAW_TEAM = [
     "role": "Advogada",
     "status": "active",
     "bio": "Bacharela em Direito pela Universidade Paulista, pós-graduanda em Direito e Processo do Trabalho e em Legal Ops & Controladoria Jurídica. Responsável pela Controladoria Jurídica do escritório, com atuação em gestão de prazos e monitoramento de indicadores.",
-    "email": "zanilda@falaw.com.br"
+    "email": "zanilda@falaw.com.br",
+    "sigla": "ZMS"
   }
 ];
