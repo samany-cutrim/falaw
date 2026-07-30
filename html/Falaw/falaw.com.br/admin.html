@@ -8580,13 +8580,17 @@ async function sendEnviarPauta() {
   } catch(e) { console.warn('pauta fetch:', e.message); }
 
   const avisarSemAud = !!document.getElementById('pauta-avisar-sem-aud')?.checked;
+  // IDs das audiências efetivamente comunicadas a alguém neste envio — marcadas ao final
+  // como "pauta_manual_enviada_at", para o e-mail automático (pauta-email-notify) não
+  // duplicar o aviso de uma audiência que o destinatário já recebeu por aqui.
+  const idsComunicados = new Set();
 
   let ok = 0, fail = 0, pulados = 0, semAud = 0;
   for (const c of targets) {
     // Verifica se o cliente tem audiências no período
     const nomeCliente = (c.company || c.name || '').toLowerCase();
     const aliasKeys = new Set((c.aliases || []).map(_aliasKey).filter(Boolean));
-    const temAudiencia = pautaRows.some(r => {
+    const audienciasCliente = pautaRows.filter(r => {
       // Grupo com várias razões sociais/pessoas cadastradas (aliases) — casa por igual/contido
       if (_audMatchesAliases(r, aliasKeys)) return true;
       // Guarda contra campo vazio: "x".includes('') é sempre true em JS, o que faria
@@ -8598,22 +8602,38 @@ async function sendEnviarPauta() {
       const primeiraPalavra = nomeCliente.split(' ')[0];
       return primeiraPalavra.length > 3 && recladaR.includes(primeiraPalavra);
     });
-    if (!temAudiencia) {
+    if (!audienciasCliente.length) {
       if (!avisarSemAud) { pulados++; continue; }
       try { await notifySemAudiencias(c.name || c.company || 'Cliente', c.notifyEmail || c.email, periodoDE, periodoATE, true); semAud++; }
       catch(e) { fail++; console.warn('pauta sem-aud email', c.email, e.message); }
       continue;
     }
-    try { await notifyClientPauta(c, periodoDE, periodoATE); ok++; } catch(e) { fail++; console.warn('pauta email', c.email, e.message); }
+    try {
+      await notifyClientPauta(c, periodoDE, periodoATE);
+      audienciasCliente.forEach(r => idsComunicados.add(r.id));
+      ok++;
+    } catch(e) { fail++; console.warn('pauta email', c.email, e.message); }
   }
   for (const c of corrTargets) {
     try {
-      const res = await notifyCorrespondentePauta(c, pautaRows, periodoDE, periodoATE, avisarSemAud);
+      const res = await notifyCorrespondentePauta(c, pautaRows, periodoDE, periodoATE, avisarSemAud, idsComunicados);
       if (res === 'sem') semAud++; else if (res === 'pulado') pulados++; else ok++;
     } catch(e) { fail++; console.warn('pauta corr email', c.email, e.message); }
   }
   if (incluiEscritorio) {
     try { await notifyEscritorioPauta(pautaRows, periodoDE, periodoATE); ok++; } catch(e) { fail++; console.warn('pauta escritorio:', e.message); }
+  }
+
+  if (idsComunicados.size) {
+    try {
+      const { sbUrl, sbKey } = getSbCreds();
+      if (sbUrl && sbKey) {
+        const sb = supabase.createClient(sbUrl, sbKey);
+        await sb.from('pauta_audiencias')
+          .update({ pauta_manual_enviada_at: new Date().toISOString() })
+          .in('id', [...idsComunicados]);
+      }
+    } catch(e) { console.warn('marcar pauta_manual_enviada_at:', e.message); }
   }
 
   btn.disabled = false; btn.textContent = 'Enviar';
@@ -8694,7 +8714,7 @@ function _fmtPeriodo(de, ate) {
   return new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
 }
 
-async function notifyCorrespondentePauta(corr, allRows, periodoDE, periodoATE, avisarSemAud) {
+async function notifyCorrespondentePauta(corr, allRows, periodoDE, periodoATE, avisarSemAud, idsComunicados) {
   if (!_gasUrl()) throw new Error('GAS URL não configurada.');
   const nome = (corr.nome || '').toLowerCase();
   const rows = allRows.filter(r =>
@@ -8773,6 +8793,8 @@ async function notifyCorrespondentePauta(corr, allRows, periodoDE, periodoATE, a
 </td></tr></table>
 </body></html>`;
   await sendViaGAS(subject, html, [corr.email]);
+  // Só marca como comunicado depois do envio confirmado (sendViaGAS lança em caso de falha)
+  if (idsComunicados) rows.forEach(r => idsComunicados.add(r.id));
 }
 
 async function notifyEscritorioPauta(pautaRows, periodoDE, periodoATE) {

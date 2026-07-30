@@ -141,10 +141,21 @@ function emailDoCliente(
 
 // ── Templates de e-mail ───────────────────────────────────────────────────────
 
+// Nome limpo da empresa/cliente para assunto e título do e-mail — nunca o campo
+// "reclamada" cru, que pode trazer várias partes coladas por vírgula com a tag
+// "(CLIENTE)" (ex.: "BUSER BRASIL TECNOLOGIA LTDA. (CLIENTE),JUNDIAI TRANSPORTADORA...").
+function empresaLimpa(aud: Record<string,string>): string {
+  return extrairClienteTag(aud.reclamada ?? "") || aud.cliente || "processo";
+}
+
+function tituloEvento(aud: Record<string,string>, cancelada: boolean): string {
+  const label = cancelada ? "AUDIÊNCIA CANCELADA" : "NOVA AUDIÊNCIA NA PAUTA";
+  const dataLabel = `${fmtData(aud.data_audiencia)} ${fmtHora(aud.horario ?? "")}`.trim();
+  return `${label} — ${empresaLimpa(aud)} — ${dataLabel}`;
+}
+
 function htmlAgendada(aud: Record<string,string>, paraCliente: boolean): string {
-  const titulo = paraCliente
-    ? `Audiência agendada — ${fmtData(aud.data_audiencia)}`
-    : `[PAUTA] Nova audiência — ${aud.reclamada ?? aud.cliente ?? ""} · ${fmtData(aud.data_audiencia)}`;
+  const titulo = tituloEvento(aud, false);
 
   const intro = paraCliente
     ? `Informamos que foi agendada uma audiência em seu processo.`
@@ -185,7 +196,6 @@ function htmlAgendada(aud: Record<string,string>, paraCliente: boolean): string 
       ${aud.vara       ? row("Vara / Local", aud.vara)       : ""}
       ${aud.processo   ? row("Processo",     aud.processo)   : ""}
       ${aud.reclamante ? row("Reclamante",   aud.reclamante) : ""}
-      ${aud.reclamada  ? row("Reclamada",    aud.reclamada)  : ""}
       ${aud.link       ? row("Link",         `<a href="${aud.link}" style="color:#0D2B5E;">${aud.link}</a>`) : ""}
     </table>
 
@@ -206,9 +216,7 @@ function htmlAgendada(aud: Record<string,string>, paraCliente: boolean): string 
 }
 
 function htmlCancelada(aud: Record<string,string>, paraCliente: boolean): string {
-  const titulo = paraCliente
-    ? `Audiência cancelada — ${fmtData(aud.data_audiencia)}`
-    : `[PAUTA] Audiência cancelada — ${aud.reclamada ?? aud.cliente ?? ""} · ${fmtData(aud.data_audiencia)}`;
+  const titulo = tituloEvento(aud, true);
 
   const intro = paraCliente
     ? `Informamos que a audiência abaixo foi <strong>cancelada</strong>.`
@@ -249,7 +257,6 @@ function htmlCancelada(aud: Record<string,string>, paraCliente: boolean): string
       ${aud.vara       ? row("Vara / Local", aud.vara)       : ""}
       ${aud.processo   ? row("Processo",     aud.processo)   : ""}
       ${aud.reclamante ? row("Reclamante",   aud.reclamante) : ""}
-      ${aud.reclamada  ? row("Reclamada",    aud.reclamada)  : ""}
     </table>
 
     <p style="font-family:Georgia,serif;font-size:14px;line-height:1.7;color:#555;margin:0;">
@@ -325,6 +332,9 @@ Deno.serve(async (req) => {
       .select("*")
       .eq("status", "agendada")
       .is("email_agendada_notificado_at", null)
+      // Não duplica aviso de uma audiência que o destinatário já recebeu por um
+      // envio manual de pauta (botão "Enviar Pauta" no admin).
+      .is("pauta_manual_enviada_at", null)
       .gte("data_audiencia", mesInicio)
       .lte("data_audiencia", mesFim)
       .order("data_audiencia", { ascending: true });
@@ -336,6 +346,7 @@ Deno.serve(async (req) => {
       .select("*")
       .eq("status", "cancelada")
       .is("email_cancelada_notificado_at", null)
+      .is("pauta_manual_enviada_at", null)
       .gte("data_audiencia", mesInicio)
       .lte("data_audiencia", mesFim)
       .order("data_audiencia", { ascending: true });
@@ -349,19 +360,13 @@ Deno.serve(async (req) => {
     // ── Processa novas ─────────────────────────────────────────────────────
     for (const aud of (novas ?? []) as Record<string,string>[]) {
       const clienteEmail = emailDoCliente(aud, clientes);
-      const dataLabel    = `${fmtData(aud.data_audiencia)} ${fmtHora(aud.horario ?? "")}`;
-      const empresa      = aud.reclamada ?? aud.cliente ?? "processo";
-      const subject      = `Audiência agendada — ${empresa} — ${dataLabel}`;
+      const subject       = tituloEvento(aud, false);
 
       // E-mail ao cliente (se encontrado) — se não encontrado, não é falha, só não se aplica
       const okCliente = clienteEmail ? await enviarEmail(clienteEmail, subject, htmlAgendada(aud, true)) : true;
 
       // E-mail ao escritório
-      const okEscritorio = await enviarEmail(
-        ESCRITORIO_EMAIL,
-        `[PAUTA] Nova audiência — ${empresa} — ${dataLabel}`,
-        htmlAgendada(aud, false)
-      );
+      const okEscritorio = await enviarEmail(ESCRITORIO_EMAIL, subject, htmlAgendada(aud, false));
 
       // Só marca como notificado se TODOS os envios esperados deram certo — uma falha
       // (GAS fora do ar, secret errada) deixa a linha elegível para retry na próxima
@@ -380,17 +385,11 @@ Deno.serve(async (req) => {
     // ── Processa canceladas ────────────────────────────────────────────────
     for (const aud of (canceladas ?? []) as Record<string,string>[]) {
       const clienteEmail = emailDoCliente(aud, clientes);
-      const dataLabel    = `${fmtData(aud.data_audiencia)} ${fmtHora(aud.horario ?? "")}`;
-      const empresa      = aud.reclamada ?? aud.cliente ?? "processo";
-      const subject      = `Audiência cancelada — ${empresa} — ${dataLabel}`;
+      const subject       = tituloEvento(aud, true);
 
       const okCliente = clienteEmail ? await enviarEmail(clienteEmail, subject, htmlCancelada(aud, true)) : true;
 
-      const okEscritorio = await enviarEmail(
-        ESCRITORIO_EMAIL,
-        `[PAUTA] Audiência cancelada — ${empresa} — ${dataLabel}`,
-        htmlCancelada(aud, false)
-      );
+      const okEscritorio = await enviarEmail(ESCRITORIO_EMAIL, subject, htmlCancelada(aud, false));
 
       if (okCliente && okEscritorio) {
         await sb.from("pauta_audiencias")
