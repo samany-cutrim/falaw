@@ -1789,7 +1789,10 @@
                 <div style="flex:1"><label style="font-family:var(--f-mono);font-size:9px;color:var(--c-muted);display:block;margin-bottom:3px">ATÉ</label>
                   <input id="pauta-periodo-ate" type="date" style="width:100%;box-sizing:border-box;padding:6px 10px;border:1px solid #e5e7eb;border-radius:3px;font-size:12px;font-family:var(--f-mono);outline:none" /></div>
               </div>
-              <p style="font-size:11px;color:var(--c-muted);margin:8px 0 0 0">Clientes sem audiências no período selecionado não receberão e-mail.</p>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;color:var(--c-muted);margin:10px 0 0 0">
+                <input type="checkbox" id="pauta-avisar-sem-aud" checked style="width:13px;height:13px;accent-color:#0D2B5E;flex-shrink:0" />
+                Avisar por e-mail quem <strong>não</strong> tiver audiências no período selecionado
+              </label>
             </div>
 
             <!-- Escritório -->
@@ -8522,7 +8525,9 @@ async function sendEnviarPauta() {
     }
   } catch(e) { console.warn('pauta fetch:', e.message); }
 
-  let ok = 0, fail = 0, pulados = 0;
+  const avisarSemAud = !!document.getElementById('pauta-avisar-sem-aud')?.checked;
+
+  let ok = 0, fail = 0, pulados = 0, semAud = 0;
   for (const c of targets) {
     // Verifica se o cliente tem audiências no período
     const nomeCliente = (c.company || c.name || '').toLowerCase();
@@ -8533,11 +8538,19 @@ async function sendEnviarPauta() {
              nomeCliente.includes(clienteR.replace(/\s*\(cliente\)/gi,'').trim()) ||
              nomeCliente.split(' ')[0].length > 3 && recladaR.includes(nomeCliente.split(' ')[0]);
     });
-    if (!temAudiencia) { pulados++; continue; }
+    if (!temAudiencia) {
+      if (!avisarSemAud) { pulados++; continue; }
+      try { await notifySemAudiencias(c.name || c.company || 'Cliente', c.notifyEmail || c.email, periodoDE, periodoATE, true); semAud++; }
+      catch(e) { fail++; console.warn('pauta sem-aud email', c.email, e.message); }
+      continue;
+    }
     try { await notifyClientPauta(c, periodoDE, periodoATE); ok++; } catch(e) { fail++; console.warn('pauta email', c.email, e.message); }
   }
   for (const c of corrTargets) {
-    try { await notifyCorrespondentePauta(c, pautaRows, periodoDE, periodoATE); ok++; } catch(e) { fail++; console.warn('pauta corr email', c.email, e.message); }
+    try {
+      const res = await notifyCorrespondentePauta(c, pautaRows, periodoDE, periodoATE, avisarSemAud);
+      if (res === 'sem') semAud++; else if (res === 'pulado') pulados++; else ok++;
+    } catch(e) { fail++; console.warn('pauta corr email', c.email, e.message); }
   }
   if (incluiEscritorio) {
     try { await notifyEscritorioPauta(pautaRows, periodoDE, periodoATE); ok++; } catch(e) { fail++; console.warn('pauta escritorio:', e.message); }
@@ -8545,8 +8558,42 @@ async function sendEnviarPauta() {
 
   btn.disabled = false; btn.textContent = 'Enviar';
   closeEnviarPautaModal();
-  const msg = `✓ Pauta enviada: ${ok} sucesso${fail ? `, ${fail} erro(s)` : ''}${pulados ? ` · ${pulados} cliente(s) sem audiência no período (não enviado)` : ''}`;
+  const msg = `✓ Pauta enviada: ${ok} sucesso${fail ? `, ${fail} erro(s)` : ''}${semAud ? ` · ${semAud} aviso(s) de sem audiência no período` : ''}${pulados ? ` · ${pulados} sem audiência no período (não enviado)` : ''}`;
   showToast(msg);
+}
+
+// E-mail avisando que não há audiências no período selecionado (cliente ou correspondente)
+async function notifySemAudiencias(nome, email, periodoDE, periodoATE, ehCliente) {
+  if (!_gasUrl()) throw new Error('GAS URL não configurada.');
+  const periodo = _fmtPeriodo(periodoDE, periodoATE);
+  const subject = 'PAUTA DE AUDIÊNCIAS — SEM AUDIÊNCIAS NO PERÍODO';
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${escHtml(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f4f2ef;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ef;"><tr><td align="center" style="padding:40px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+  <tr><td style="background:#060E1A;padding:32px 40px;border-radius:4px 4px 0 0;">
+    <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png" alt="Falaw Advogados" style="display:block;height:36px;width:auto;margin-bottom:14px;" />
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#4a90d9;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(247,245,242,.4);margin:0;">Pauta de Audiências</p>
+  </td></tr>
+  <tr><td style="background:#ffffff;padding:44px 40px 36px;">
+    <p style="font-family:Georgia,serif;font-size:18px;color:#060E1A;margin:0 0 24px 0;line-height:1.4;">Olá, <strong>${escHtml(nome || '')}</strong>,</p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 12px 0;">
+      Informamos que <strong>não há audiências agendadas</strong>${ehCliente ? ' para a sua carteira' : ' para você'} no período <strong>${periodo}</strong>.
+    </p>
+    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 32px 0;">
+      Nenhuma providência é necessária. Caso novas audiências sejam pautadas, você receberá um novo e-mail com a pauta atualizada.
+    </p>
+    <p style="font-family:monospace;font-size:10px;color:#b0aba5;margin:0;">Em caso de dúvidas, entre em contato conosco respondendo este e-mail.</p>
+  </td></tr>
+  <tr><td style="background:#f7f5f2;padding:24px 40px;border-radius:0 0 4px 4px;border-top:1px solid #e8e4df;">
+    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
+    <p style="font-family:monospace;font-size:9px;color:#b0aba5;margin:0;">Av. Francisco Matarazzo, 1752 &middot; Salas 414 e 415 &middot; São Paulo / SP</p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+  await sendViaGAS(subject, html, [email]);
 }
 
 function _fmtPeriodo(de, ate) {
@@ -8557,14 +8604,18 @@ function _fmtPeriodo(de, ate) {
   return new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
 }
 
-async function notifyCorrespondentePauta(corr, allRows, periodoDE, periodoATE) {
+async function notifyCorrespondentePauta(corr, allRows, periodoDE, periodoATE, avisarSemAud) {
   if (!_gasUrl()) throw new Error('GAS URL não configurada.');
   const nome = (corr.nome || '').toLowerCase();
   const rows = allRows.filter(r =>
     (r.advogado||'').toLowerCase().includes(nome) ||
     (r.dados_preposto||'').toLowerCase().includes(nome)
   );
-  if (!rows.length) return; // sem audiências, não envia
+  if (!rows.length) {
+    if (!avisarSemAud) return 'pulado';
+    await notifySemAudiencias(corr.nome || 'Correspondente', corr.email, periodoDE, periodoATE, false);
+    return 'sem';
+  }
   const subject = `PAUTA DE AUDIÊNCIAS — ${(corr.nome||'CORRESPONDENTE').toUpperCase()}`;
   const periodo = _fmtPeriodo(periodoDE, periodoATE);
   const portalUrl = 'https://falaw.com.br/cliente/index.html';
