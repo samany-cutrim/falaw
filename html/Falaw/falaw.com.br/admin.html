@@ -1677,6 +1677,7 @@
           <h2 style="margin-bottom:2px">Pauta de Audiências</h2>
           <p style="font-size:12px;color:var(--c-muted);margin:0">Sincronize automaticamente via Projuris ADV, importe Excel ou adicione manualmente</p>
           <p id="aud-last-sync" style="font-size:11px;font-family:var(--f-mono);letter-spacing:.04em;margin:4px 0 0;color:var(--c-muted)"></p>
+          <p id="aud-last-sync-projuris" style="font-size:11px;font-family:var(--f-mono);letter-spacing:.04em;margin:2px 0 0;color:var(--c-muted)"></p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <label title="Chrome roda invisível em segundo plano" style="display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--c-muted);cursor:pointer;padding:4px 10px;border:1px solid var(--c-divider);border-radius:2px;user-select:none">
@@ -14288,6 +14289,38 @@ async function _audRenderLastSync(_sbUrl, _sbKey) {
   } catch(e) { console.warn('last sync:', e.message); }
 }
 
+// Status do sync automático via Edge Function projuris-sync (cron 2x/dia no Supabase),
+// independente do scraper local do PJe acima — cada um grava seu próprio log.
+async function _audRenderLastSyncProjuris(_sbUrl, _sbKey) {
+  const el = document.getElementById('aud-last-sync-projuris');
+  if (!el || !_sbUrl || !_sbKey) return;
+  try {
+    const sb = supabase.createClient(_sbUrl, _sbKey);
+    const { data, error } = await sb.from('sync_log')
+      .select('synced_at,count')
+      .eq('source', 'projuris-adv')
+      .order('synced_at', { ascending: false })
+      .limit(1);
+    if (error) { el.textContent = ''; return; }
+    if (!data || !data.length) {
+      el.style.color = '#b45309';
+      el.textContent = '⚠ Projuris (edge function): nenhuma sincronização registrada ainda — verifique se o cron está agendado no Supabase.';
+      return;
+    }
+    const s = data[0];
+    const dt = new Date(s.synced_at);
+    const quando = dt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const horasAtras = (Date.now() - dt.getTime()) / 36e5;
+    if (horasAtras > 20) {
+      el.style.color = '#b45309';
+      el.textContent = `⚠ Projuris (edge function) sem sincronizar desde ${quando} — verifique o cron/logs no Supabase (rodaria a cada 8h).`;
+    } else {
+      el.style.color = 'var(--c-muted)';
+      el.textContent = `✓ Projuris (edge function) sincronizado em ${quando} — ${s.count} audiência(s)`;
+    }
+  } catch(e) { console.warn('last sync projuris:', e.message); }
+}
+
 async function _audRenderCanceladasAlert(_sbUrl, _sbKey) {
   const alertEl = document.getElementById('aud-canceladas-alert');
   if (!alertEl) return;
@@ -14352,6 +14385,7 @@ async function loadAudiencias() {
   // Alerta de canceladas e última sincronização (em paralelo, não bloqueiam a lista)
   _audRenderCanceladasAlert(_sbUrl, _sbKey);
   _audRenderLastSync(_sbUrl, _sbKey);
+  _audRenderLastSyncProjuris(_sbUrl, _sbKey);
 
   let items = [];
   if (_sbUrl && _sbKey) {
