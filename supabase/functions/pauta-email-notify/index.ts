@@ -299,22 +299,27 @@ Deno.serve(async (req) => {
     const clientes = await buscarClientes(sb);
 
     // ── 1. Audiências recém-AGENDADAS não notificadas ──────────────────────
-    const { data: novas } = await sb
+    // Sem checar `error` aqui, uma coluna ausente (migration não rodada) ou
+    // qualquer outro erro de query fica indistinguível de "nada a notificar" —
+    // a função reportava 0 candidatos silenciosamente em vez de sinalizar o problema.
+    const { data: novas, error: errNovas } = await sb
       .from("pauta_audiencias")
       .select("*")
       .eq("status", "agendada")
       .is("email_agendada_notificado_at", null)
       .gte("created_at", janela)
       .order("data_audiencia", { ascending: true });
+    if (errNovas) throw new Error(`Consulta de audiências agendadas falhou: ${errNovas.message}`);
 
     // ── 2. Audiências recém-CANCELADAS não notificadas ─────────────────────
-    const { data: canceladas } = await sb
+    const { data: canceladas, error: errCanceladas } = await sb
       .from("pauta_audiencias")
       .select("*")
       .eq("status", "cancelada")
       .is("email_cancelada_notificado_at", null)
       .gte("updated_at", janela)
       .order("data_audiencia", { ascending: true });
+    if (errCanceladas) throw new Error(`Consulta de audiências canceladas falhou: ${errCanceladas.message}`);
 
     let enviados = 0;
     const agora_iso = agora.toISOString();
