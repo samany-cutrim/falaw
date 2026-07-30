@@ -12,10 +12,11 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const DIAS_BUSCA           = parseInt(Deno.env.get("DIAS_PAUTA") ?? "365", 10);
 const DIAS_PASSADO         = parseInt(Deno.env.get("DIAS_PASSADO") ?? "180", 10); // quantos dias no passado incluir na busca
 const AUDIENCIA_TIPO_CODIGO = 6125449; // código real do tipo "Audiência" no Projuris ADV
-// Código do tipo "Perícia" no Projuris ADV — configurável via secret PERICIA_TIPO_CODIGO
-// (descubra o número rodando GET ?listar-tipos-tarefa=1 nesta função). Sem essa secret
-// configurada, o sync continua buscando só audiências, como antes.
-const PERICIA_TIPO_CODIGO = parseInt(Deno.env.get("PERICIA_TIPO_CODIGO") ?? "", 10) || 0;
+// Código do tipo "Perícia" no Projuris ADV — confirmado via DevTools do Projuris
+// (GET /adv-service/tarefa-tipo/6125450 ao abrir uma tarefa do tipo Perícia; 6125449 é o
+// mesmo endpoint para Audiência, catálogo sequencial de tipos de tarefa, não IDs de
+// instância). Secret PERICIA_TIPO_CODIGO sobrescreve esse padrão se o código mudar.
+const PERICIA_TIPO_CODIGO = parseInt(Deno.env.get("PERICIA_TIPO_CODIGO") ?? "", 10) || 6125450;
 // Outros códigos de tarefa extras, separados por vírgula (ex.: "123,456"), para o caso de
 // mais de um tipo de perícia/tarefa precisar ser sincronizado no futuro sem novo deploy.
 const TIPOS_TAREFA_EXTRAS = (Deno.env.get("TIPOS_TAREFA_EXTRAS") ?? "")
