@@ -1,7 +1,9 @@
 /**
  * pauta-email-notify — Falaw Advogados
  *
- * Detecta audiências recém-agendadas ou canceladas e envia e-mail automático:
+ * Notifica audiências agendadas ou canceladas cuja DATA cai no mês atual ou no
+ * mês seguinte (ex.: em julho, cobre audiências de julho e agosto) e que ainda
+ * não foram notificadas. Envia e-mail automático:
  *   • Para o cliente cujo processo foi afetado (lookup na tabela `clients`)
  *   • Para o escritório (ESCRITORIO_EMAIL)
  *
@@ -21,11 +23,6 @@ const GAS_URL   = Deno.env.get("GAS_EMAIL_URL") ?? "";
 const GAS_TOKEN = Deno.env.get("GAS_EMAIL_TOKEN") ?? "";
 
 const ESCRITORIO_EMAIL = "audiencia@falaw.com.br";
-// O cron roda 2x/dia (após cada projuris-sync, ~8h de intervalo); uma janela de só 120min
-// deixava qualquer falha de envio (GAS fora do ar, secret errada) sem chance real de retry
-// — na próxima execução do cron a linha já teria saído da janela. 48h dá margem para vários
-// ciclos de retry sem reprocessar o histórico inteiro na primeira ativação.
-const JANELA_MIN       = 48 * 60;
 
 const CORS = {
   "Access-Control-Allow-Origin":  "*",
@@ -50,6 +47,22 @@ function diaSemana(iso: string): string {
   const dias = ["domingo","segunda-feira","terça-feira","quarta-feira","quinta-feira","sexta-feira","sábado"];
   const d = new Date(iso + "T12:00:00Z");
   return dias[d.getUTCDay()];
+}
+
+// Intervalo [1º dia do mês atual, último dia do mês seguinte], em horário de Brasília —
+// só audiências com data dentro desse intervalo geram e-mail automático (ex.: em julho,
+// notifica agendamentos/cancelamentos de audiências de julho E agosto; uma audiência
+// sincronizada agora mas marcada para outubro só entra na notificação quando o mês virar).
+function limitesMesAtualEProximo(): { inicio: string; fim: string } {
+  const BRASILIA_OFFSET_MS = -3 * 60 * 60 * 1000;
+  const brasilia = new Date(Date.now() + BRASILIA_OFFSET_MS);
+  const ano = brasilia.getUTCFullYear();
+  const mes = brasilia.getUTCMonth(); // 0-indexado
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  return {
+    inicio: fmt(new Date(Date.UTC(ano, mes, 1))),
+    fim:    fmt(new Date(Date.UTC(ano, mes + 2, 0))), // dia 0 do mês+2 = último dia do mês+1
+  };
 }
 
 // ── Busca clientes do Supabase ────────────────────────────────────────────────
@@ -294,11 +307,16 @@ Deno.serve(async (req) => {
 
     const sb = createClient(SB_URL, SB_KEY);
     const agora = new Date();
-    const janela = new Date(agora.getTime() - JANELA_MIN * 60_000).toISOString();
+    const { inicio: mesInicio, fim: mesFim } = limitesMesAtualEProximo();
 
     const clientes = await buscarClientes(sb);
 
-    // ── 1. Audiências recém-AGENDADAS não notificadas ──────────────────────
+    // ── 1. Audiências AGENDADAS do mês atual/seguinte ainda não notificadas ─
+    // Filtra pela data da própria audiência (não por quando a linha foi criada/
+    // alterada): cobre tanto uma audiência sincronizada agora quanto uma que já
+    // estava no banco há tempo mas nunca tinha sido notificada, desde que caia
+    // dentro do mês atual ou do mês seguinte.
+    //
     // Sem checar `error` aqui, uma coluna ausente (migration não rodada) ou
     // qualquer outro erro de query fica indistinguível de "nada a notificar" —
     // a função reportava 0 candidatos silenciosamente em vez de sinalizar o problema.
@@ -307,17 +325,19 @@ Deno.serve(async (req) => {
       .select("*")
       .eq("status", "agendada")
       .is("email_agendada_notificado_at", null)
-      .gte("created_at", janela)
+      .gte("data_audiencia", mesInicio)
+      .lte("data_audiencia", mesFim)
       .order("data_audiencia", { ascending: true });
     if (errNovas) throw new Error(`Consulta de audiências agendadas falhou: ${errNovas.message}`);
 
-    // ── 2. Audiências recém-CANCELADAS não notificadas ─────────────────────
+    // ── 2. Audiências CANCELADAS do mês atual/seguinte ainda não notificadas ─
     const { data: canceladas, error: errCanceladas } = await sb
       .from("pauta_audiencias")
       .select("*")
       .eq("status", "cancelada")
       .is("email_cancelada_notificado_at", null)
-      .gte("updated_at", janela)
+      .gte("data_audiencia", mesInicio)
+      .lte("data_audiencia", mesFim)
       .order("data_audiencia", { ascending: true });
     if (errCanceladas) throw new Error(`Consulta de audiências canceladas falhou: ${errCanceladas.message}`);
 
@@ -385,6 +405,7 @@ Deno.serve(async (req) => {
 
     const resumo = {
       ok: true,
+      periodo: `${mesInicio} a ${mesFim}`,
       novas_agendadas: (novas ?? []).length,
       canceladas:      (canceladas ?? []).length,
       emails_enviados: enviados,
