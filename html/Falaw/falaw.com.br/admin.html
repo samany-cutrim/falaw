@@ -1341,6 +1341,20 @@
               </div>
               <small style="color:var(--c-muted)">O cliente usará o e-mail + código para acessar o portal.</small>
             </div>
+            <div class="form-field">
+              <label>Outras razões sociais / pessoas do grupo</label>
+              <div id="cli-aliases" class="ms-wrap" data-placeholder="Nenhuma adicional" style="position:relative">
+                <button type="button" onclick="_msToggle('cli-aliases')" style="width:100%;box-sizing:border-box;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:13px;color:var(--c-dark);background:#fafaf8;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px">
+                  <span id="cli-aliases-lbl" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left">Nenhuma adicional</span><span style="color:#9CA3AF;font-size:10px;flex-shrink:0">▾</span>
+                </button>
+                <div id="cli-aliases-drop" class="ms-drop" style="display:none;position:absolute;z-index:200;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;background:#fff;border:1px solid var(--c-divider);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:2px"></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <input id="cli-alias-manual" type="text" placeholder="Nome não listado acima — digite e clique Adicionar" style="flex:1" />
+                <button type="button" class="btn btn-ghost" onclick="cliAliasAddManual()" style="white-space:nowrap;align-self:flex-end">Adicionar</button>
+              </div>
+              <small style="color:var(--c-muted)">Empresas ou pessoas ligadas a este cliente (mesmo grupo). Audiências dessas razões sociais/nomes também aparecem no dashboard, no "Enviar Pauta" e no e-mail automático deste cliente.</small>
+            </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-ghost" onclick="closeClientModal()">Cancelar</button>
@@ -3322,6 +3336,7 @@ async function loadPortalFromSupabase() {
       email: r.email,
       notifyEmail: r.notify_email || '',
       comparativoEnabled: r.comparativo_enabled || false,
+      aliases: r.aliases || [],
       code: r.code,
       createdAt: r.created_at,
       reports: apiReports.map(rep => {
@@ -3336,7 +3351,7 @@ async function loadPortalFromSupabase() {
 async function sbSaveClients(list) {
   const sb = getSB();
   if (!sb) { showToast('⚠️ Supabase não configurado. Configure nas Configurações.'); return false; }
-  const stripped = list.map(c => ({ id: c.id, name: c.name, company: c.company, email: c.email, notify_email: c.notifyEmail || null, comparativo_enabled: c.comparativoEnabled || false, code: c.code, created_at: c.createdAt || new Date().toISOString() }));
+  const stripped = list.map(c => ({ id: c.id, name: c.name, company: c.company, email: c.email, notify_email: c.notifyEmail || null, comparativo_enabled: c.comparativoEnabled || false, aliases: c.aliases || [], code: c.code, created_at: c.createdAt || new Date().toISOString() }));
   const { error } = await sb.from('clients').upsert(stripped);
   if (error) {
     console.warn('SB clients upsert:', error.message);
@@ -7544,8 +7559,9 @@ async function sendCorrEmail() {
   } catch(e) { showToast('Erro ao enviar: ' + e.message); }
 }
 
-function openClientModal(clientId) {
+async function openClientModal(clientId) {
   document.getElementById('clientModal').classList.add('open');
+  await _cliPopulateAliasOptions();
   if (clientId) {
     const c = getClients().find(x => x.id === clientId);
     if (!c) return;
@@ -7555,14 +7571,51 @@ function openClientModal(clientId) {
     document.getElementById('cli-email').value         = c.email;
     document.getElementById('cli-notify-email').value  = c.notifyEmail || '';
     document.getElementById('cli-code').value          = c.code;
+    window._msState['cli-aliases'] = new Set(c.aliases || []);
+    _msPopulate('cli-aliases', window._msState['cli-aliases-options'] || []);
   } else {
     document.getElementById('clientModalTitle').textContent = 'Novo Cliente';
     document.getElementById('cli-id').value             = '';
     document.getElementById('cli-company').value        = '';
     document.getElementById('cli-email').value          = '';
     document.getElementById('cli-notify-email').value   = '';
+    window._msState['cli-aliases'] = new Set();
+    _msPopulate('cli-aliases', window._msState['cli-aliases-options'] || []);
     genCode();
   }
+  const manualInput = document.getElementById('cli-alias-manual');
+  if (manualInput) manualInput.value = '';
+}
+
+// Busca os nomes distintos já usados como "(CLIENTE)" nas reclamadas da pauta,
+// para o admin escolher quais pertencem a este cliente (grupo com várias razões sociais).
+async function _cliPopulateAliasOptions() {
+  const drop = document.getElementById('cli-aliases-drop');
+  if (drop) drop.innerHTML = '<div style="padding:10px;font-size:11px;color:var(--c-muted)">Carregando…</div>';
+  let opts = [];
+  try {
+    const { sbUrl, sbKey } = getSbCreds();
+    if (sbUrl && sbKey) {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { data } = await sb.from('pauta_audiencias').select('reclamada');
+      opts = [...new Set((data || []).map(r => _audExtractCliente(r.reclamada)).filter(Boolean))].sort();
+    }
+  } catch(e) { console.warn('cli aliases options:', e.message); }
+  window._msState['cli-aliases-options'] = opts;
+  _msPopulate('cli-aliases', opts);
+}
+
+// Acrescenta um nome digitado manualmente (não veio da lista de reclamadas conhecidas)
+function cliAliasAddManual() {
+  const input = document.getElementById('cli-alias-manual');
+  const val = (input?.value || '').trim();
+  if (!val) return;
+  if (!window._msState['cli-aliases']) window._msState['cli-aliases'] = new Set();
+  window._msState['cli-aliases'].add(val);
+  const opts = window._msState['cli-aliases-options'] || [];
+  if (!opts.includes(val)) { opts.push(val); opts.sort(); window._msState['cli-aliases-options'] = opts; }
+  _msPopulate('cli-aliases', opts);
+  input.value = '';
 }
 
 function closeClientModal() { document.getElementById('clientModal').classList.remove('open'); }
@@ -7575,6 +7628,7 @@ async function saveClient() {
   const dashType = 'padrao';
   const code        = document.getElementById('cli-code').value.trim();
   const id          = document.getElementById('cli-id').value;
+  const aliases     = _msGetValues('cli-aliases');
 
   if (!company || !email || !code) { alert('Preencha empresa, e-mail e código de acesso.'); return; }
 
@@ -7582,9 +7636,9 @@ async function saveClient() {
 
   if (id) {
     const idx = clients.findIndex(c => c.id === id);
-    if (idx >= 0) clients[idx] = { ...clients[idx], name: company, company, email, notifyEmail, comparativoEnabled, dashType, code };
+    if (idx >= 0) clients[idx] = { ...clients[idx], name: company, company, email, notifyEmail, comparativoEnabled, aliases, dashType, code };
   } else {
-    clients.push({ id: cliUID(), name: company, company, email, notifyEmail, comparativoEnabled, dashType, code, createdAt: new Date().toISOString(), reports: [] });
+    clients.push({ id: cliUID(), name: company, company, email, notifyEmail, comparativoEnabled, aliases, dashType, code, createdAt: new Date().toISOString(), reports: [] });
   }
 
   const ok = await saveClients(clients);
@@ -8413,7 +8467,7 @@ async function openEnviarPautaModal() {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
       const [cliRes, corrRes] = await Promise.all([
-        sb.from('clients').select('id,name,company,email,notify_email,code').order('company', { ascending: true }),
+        sb.from('clients').select('id,name,company,email,notify_email,code,aliases').order('company', { ascending: true }),
         sb.from('correspondentes').select('*').order('nome', { ascending: true })
       ]);
       if (cliRes.data) _pautaDestClients = cliRes.data.map(c => ({ ...c, notifyEmail: c.notify_email || c.email }));
@@ -8527,7 +8581,10 @@ async function sendEnviarPauta() {
   for (const c of targets) {
     // Verifica se o cliente tem audiências no período
     const nomeCliente = (c.company || c.name || '').toLowerCase();
+    const aliasKeys = new Set((c.aliases || []).map(_aliasKey).filter(Boolean));
     const temAudiencia = pautaRows.some(r => {
+      // Grupo com várias razões sociais/pessoas cadastradas (aliases) — casa por igual/contido
+      if (_audMatchesAliases(r, aliasKeys)) return true;
       // Guarda contra campo vazio: "x".includes('') é sempre true em JS, o que faria
       // qualquer audiência sem o campo "cliente" preenchido "casar" com todo cliente.
       const clienteR = (r.cliente || '').toLowerCase().replace(/\s*\(cliente\)/gi,'').trim();
@@ -8593,6 +8650,36 @@ async function notifySemAudiencias(nome, email, periodoDE, periodoATE, ehCliente
 </td></tr></table>
 </body></html>`;
   await sendViaGAS(subject, html, [email]);
+}
+
+/* ── Aliases de cliente (grupos com múltiplas razões sociais / pessoas) ──
+   Ex.: Grupo Dória tem várias empresas e pessoas físicas cadastradas como
+   reclamada em audiências diferentes; um único cliente pode listar todas
+   como "aliases" para que audiência de qualquer uma delas conte como sua,
+   em vez de depender só da primeira palavra do nome cadastrado. */
+function _audExtractCliente(rec) {
+  if (!rec) return '';
+  const f = rec.split(',').find(p => p.includes('(CLIENTE)'));
+  return f ? f.replace(/\s*\(CLIENTE\)/gi, '').trim() : '';
+}
+function _aliasKey(s) {
+  return (s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/\s*\(CLIENTE\)/gi, '')
+    .replace(/[.,]+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function _audMatchesAliases(a, aliasKeySet) {
+  if (!aliasKeySet || !aliasKeySet.size) return false;
+  const tagKey = _aliasKey(_audExtractCliente(a.reclamada));
+  if (tagKey && aliasKeySet.has(tagKey)) return true;
+  const cliKey = _aliasKey(a.cliente || '');
+  if (cliKey && aliasKeySet.has(cliKey)) return true;
+  const recKey = _aliasKey(a.reclamada || '');
+  for (const ak of aliasKeySet) { if (ak && recKey.includes(ak)) return true; }
+  return false;
 }
 
 function _fmtPeriodo(de, ate) {
@@ -8814,7 +8901,7 @@ async function notifyClientsPauta() {
   if (sbUrl && sbKey) {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
-      const { data } = await sb.from('clients').select('id,name,company,email,notify_email,code').order('company', { ascending: true });
+      const { data } = await sb.from('clients').select('id,name,company,email,notify_email,code,aliases').order('company', { ascending: true });
       if (data) clients = data.map(c => ({ ...c, notifyEmail: c.notify_email || c.email }));
     } catch(e) { showToast('Erro ao buscar clientes: ' + e.message); return; }
   } else {
