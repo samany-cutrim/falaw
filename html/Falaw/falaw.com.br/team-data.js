@@ -27,6 +27,15 @@ var FALAW_TEAM = [
     "sigla": "FAT"
   },
   {
+    "id": "ms7pb4nofd40",
+    "name": "Hellen Campos",
+    "sigla": "HFC",
+    "email": "hellen@falaw.com.br",
+    "role": "Assistente Jurídica",
+    "bio": "Profissional de controladoria jurídica, com formação superior em Direito pela Universidade Paulista. Possui grande experiência na leitura de publicações e agendamento de prazos, atuando de forma estratégica na otimização da rotina do escritório, garantindo agilidade no andamento processual, atendimento de excelência aos clientes e suporte técnico à equipe de advogados.",
+    "status": "active"
+  },
+  {
     "id": "mn1yd8t2i1lh",
     "name": "Letícia Silva",
     "role": "Advogada Controller",
