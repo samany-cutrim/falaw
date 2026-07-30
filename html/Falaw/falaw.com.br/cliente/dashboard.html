@@ -2105,10 +2105,10 @@ function _escThreadHtml(obs, id) {
     const isEsc = /escrit/i.test(m.meta);
     const borda = isEsc ? '#7B1A2E' : '#0D2B5E';
     return `<div style="background:#fff;border-left:2px solid ${borda};border-radius:3px;padding:5px 8px;margin-top:4px;display:flex;gap:8px;align-items:flex-start">`
-      + `<div style="flex:1;min-width:0">`
+      + `<div style="flex:1;min-width:0" id="esc-orient-msg-${id}-${i}">`
       + (m.meta ? `<div style="font-family:monospace;font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:#6B7280;margin-bottom:2px">${escHtml(m.meta)}</div>` : '')
       + `<div style="font-family:monospace;font-size:10px;letter-spacing:.04em;color:#0D2B5E">${escHtml(m.text.trim()).replace(/\n/g,'<br>')}</div></div>`
-      + (id ? `<button onclick="escDeleteMsg('${id}',${i})" title="Excluir esta mensagem" style="background:none;border:none;color:#9CA3AF;font-size:11px;line-height:1;cursor:pointer;padding:2px 4px;flex-shrink:0" onmouseenter="this.style.color='#DC2626'" onmouseleave="this.style.color='#9CA3AF'">✕</button>` : '')
+      + (id ? `<button onclick="escEditMsgStart('${id}',${i})" title="Editar esta mensagem" style="background:none;border:none;color:#9CA3AF;font-size:11px;line-height:1;cursor:pointer;padding:2px 4px;flex-shrink:0" onmouseenter="this.style.color='#0D2B5E'" onmouseleave="this.style.color='#9CA3AF'">✎</button>` : '')
       + `</div>`;
   }).join('');
 }
@@ -2118,23 +2118,40 @@ function _escObsSerialize(msgs) {
   return msgs.map(m => (m.meta ? `[${m.meta}] ` : '') + m.text.trim()).join('\n');
 }
 
-// Exclui uma única mensagem do histórico (as demais são preservadas)
-async function escDeleteMsg(id, idx) {
+function escRenderThread(id) {
+  const obs = _escCurrentObs(id);
+  const thread = document.getElementById('esc-orient-th-' + id);
+  if (thread) thread.innerHTML = _escThreadHtml(obs, id);
+  const obsBox = document.getElementById('esc-orient-' + id);
+  if (obsBox) obsBox.style.display = obs.trim() ? '' : 'none';
+}
+
+// Edição de uma mensagem do histórico (no escritório não há exclusão, apenas edição)
+function escEditMsgStart(id, idx) {
+  const box  = document.getElementById(`esc-orient-msg-${id}-${idx}`);
   const msgs = _escParseObs(_escCurrentObs(id));
-  const alvo = msgs[idx];
-  if (!alvo) return;
-  const trecho = alvo.text.trim().slice(0, 80);
-  if (!confirm(`Excluir esta mensagem do histórico?\n\n"${trecho}${alvo.text.trim().length > 80 ? '…' : ''}"`)) return;
-  msgs.splice(idx, 1);
+  if (!box || !msgs[idx]) return;
+  box.innerHTML = `<textarea id="esc-orient-edit-${id}-${idx}" rows="2" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:10px;padding:4px 6px;border:1px solid #c7d2fe;border-radius:3px;resize:vertical;color:#0D2B5E">${escHtml(msgs[idx].text.trim())}</textarea>
+    <div style="display:flex;gap:6px;margin-top:4px">
+      <button onclick="escEditMsgSave('${id}',${idx})" style="background:#0D2B5E;border:none;border-radius:3px;color:#fff;font-family:monospace;font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;cursor:pointer;font-weight:700">Salvar</button>
+      <button onclick="escRenderThread('${id}')" style="background:none;border:1px solid #e5e7eb;border-radius:3px;color:#6B7280;font-family:monospace;font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;cursor:pointer">Cancelar</button>
+    </div>`;
+  document.getElementById(`esc-orient-edit-${id}-${idx}`).focus();
+}
+
+async function escEditMsgSave(id, idx) {
+  const ta   = document.getElementById(`esc-orient-edit-${id}-${idx}`);
+  const msgs = _escParseObs(_escCurrentObs(id));
+  if (!ta || !msgs[idx]) return;
+  const txt = ta.value.trim();
+  if (!txt) return; // não permite esvaziar — exclusão só pelo admin
+  msgs[idx].text = txt;
   const obs = _escObsSerialize(msgs);
   const row = document.getElementById('esc-row-' + id);
   const cb  = row ? row.querySelector('input[type=checkbox]') : null;
   _escSaveState(id, cb ? cb.checked : false, obs);
   await _escSaveObs(id, obs);
-  const thread = document.getElementById('esc-orient-th-' + id);
-  if (thread) thread.innerHTML = _escThreadHtml(obs, id);
-  const obsBox = document.getElementById('esc-orient-' + id);
-  if (obsBox && !msgs.length) obsBox.style.display = 'none';
+  escRenderThread(id);
 }
 
 function _escObsStamp() {
@@ -2148,43 +2165,6 @@ function _escCurrentObs(id) {
   if (r && r.orientacao && r.orientacao.trim()) return r.orientacao;
   const st = _escGetState()[id] || {};
   return (st.obs && st.obs.trim()) ? st.obs : '';
-}
-
-async function escClearObs(id) {
-  if (!confirm('Excluir TODO o histórico de orientações desta audiência?')) return;
-  // Limpa Supabase (coluna NOT NULL DEFAULT '' — usar '' em vez de null)
-  await _escPatchSupabase(id, { orientacao: '', orientacao_enviada: false });
-  // Limpa cache local (localStorage)
-  const all = _escGetState();
-  if (all[id]) { all[id].obs = ''; all[id].sent = false; }
-  localStorage.setItem(_ESC_ACK_KEY, JSON.stringify(all));
-  // Limpa cache em memória
-  if (window._escRows) {
-    const r = window._escRows.find(x => x.id === id);
-    if (r) { r.orientacao = ''; r.orientacao_enviada = false; }
-  }
-  // Atualiza UI sem recarregar a página
-  const row = document.getElementById('esc-row-' + id);
-  if (row) {
-    const ta = row.querySelector('#esc-obs-' + id) || row.querySelector('textarea');
-    if (ta) ta.value = '';
-    // Esconde a caixa do histórico (volta a aparecer na próxima mensagem)
-    const obsBox = document.getElementById('esc-orient-' + id);
-    if (obsBox) obsBox.style.display = 'none';
-    const thread = document.getElementById('esc-orient-th-' + id);
-    if (thread) thread.innerHTML = '';
-    // Remove o botão de excluir
-    const delBtn = row.querySelector('button[onclick^="escClearObs"]');
-    if (delBtn) delBtn.remove();
-    // Atualiza o label do checkbox
-    const cb = row.querySelector('input[type=checkbox]');
-    if (cb) { cb.checked = false; }
-    const lbl = row.querySelector('label');
-    if (lbl) {
-      lbl.style.color = '#9CA3AF';
-      lbl.childNodes.forEach(n => { if (n.nodeType === 3 && n.textContent.trim()) n.textContent = ' Orientação Pendente'; });
-    }
-  }
 }
 
 async function loadPautaCorrespondente(nome, email) {
@@ -3421,7 +3401,6 @@ function _escRenderRows(rows, today) {
             style="width:100%;font-size:10px;padding:6px 8px;border:1px solid #e5e7eb;border-radius:5px;resize:vertical;font-family:inherit;color:#374151;background:#fff;box-sizing:border-box"></textarea>
           <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
             <button onclick="escSaveObsBtn('${a.id}')" style="background:#0D2B5E;border:none;border-radius:4px;color:#fff;font-size:10px;font-family:${MONO};letter-spacing:.06em;text-transform:uppercase;padding:7px 14px;cursor:pointer;font-weight:700" title="Adicionar mensagem ao histórico sem apagar as anteriores">➤ Enviar</button>
-            ${obs ? `<button onclick="escClearObs('${a.id}')" style="background:none;border:1px solid #FECACA;border-radius:4px;color:#DC2626;font-size:10px;font-family:${MONO};letter-spacing:.06em;text-transform:uppercase;padding:7px 12px;cursor:pointer;font-weight:700" title="Excluir todo o histórico de orientações">🗑 Excluir</button>` : ''}
           </div>
         </div>
       </div>`;
@@ -3485,20 +3464,7 @@ async function escSaveObsBtn(id) {
     setTimeout(() => { btn.textContent = orig; btn.style.background = '#0D2B5E'; }, 1800);
   }
   // Atualiza o histórico exibido acima
-  const obsBox = document.getElementById('esc-orient-' + id);
-  const thread = document.getElementById('esc-orient-th-' + id);
-  if (thread) thread.innerHTML = _escThreadHtml(obs, id);
-  if (obsBox) obsBox.style.display = '';
-  // Mostra botão Excluir se ainda não existe
-  const btnDiv = row.querySelector('div[style*="justify-content:flex-end"]');
-  if (btnDiv && !btnDiv.querySelector('button[onclick^="escClearObs"]')) {
-    const delBtn = document.createElement('button');
-    delBtn.setAttribute('onclick', `escClearObs('${id}')`);
-    delBtn.setAttribute('title', 'Excluir todo o histórico de orientações');
-    delBtn.style.cssText = 'background:none;border:1px solid #FECACA;border-radius:3px;color:#DC2626;font-size:9px;font-family:monospace;letter-spacing:.06em;text-transform:uppercase;padding:4px 8px;cursor:pointer;font-weight:700';
-    delBtn.textContent = '🗑 Excluir';
-    btnDiv.appendChild(delBtn);
-  }
+  escRenderThread(id);
 }
 
 /* ─── PAUTA DE AUDIÊNCIAS ────────────────────────────── */

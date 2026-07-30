@@ -13888,6 +13888,113 @@ const AUD_STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62
 const AUD_STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#FEE2E2', cancelado_pje:'#FEF3C7' };
 const AUD_RESP_COLOR   = { 'SUBSIDIÁRIA':'#7C3AED','SOLIDÁRIA':'#2563EB','PRINCIPAL':'#DC2626','TOMADOR DE SERVIÇO':'#D97706' };
 
+/* ── Histórico de orientações estilo bate-papo (mesmo formato do dashboard do escritório):
+   entradas "[dd/mm/aa hh:mm · Autor] texto" separadas por \n na coluna orientacao;
+   linhas sem cabeçalho são continuação (ou mensagem legada, sem meta). ── */
+const _audObsCache = {};
+
+function _audObsParse(obs) {
+  const msgs = [];
+  (obs || '').split('\n').forEach(line => {
+    const m = line.match(/^\[([^\]]+)\]\s?(.*)$/);
+    if (m) msgs.push({ meta: m[1], text: m[2] });
+    else if (msgs.length) msgs[msgs.length - 1].text += '\n' + line;
+    else if (line.trim()) msgs.push({ meta: '', text: line });
+  });
+  return msgs.filter(m => m.meta || m.text.trim());
+}
+
+function _audObsSerialize(msgs) {
+  return msgs.map(m => (m.meta ? `[${m.meta}] ` : '') + m.text.trim()).join('\n');
+}
+
+function _audObsStamp() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${String(d.getFullYear()).slice(2)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function _audObsThreadHtml(obs, id) {
+  return _audObsParse(obs).map((m, i) => {
+    const isEsc = /escrit/i.test(m.meta);
+    const borda = isEsc ? '#7B1A2E' : '#0D2B5E';
+    return `<div style="background:#fff;border-left:2px solid ${borda};border-radius:3px;padding:5px 8px;margin-top:4px;display:flex;gap:6px;align-items:flex-start">`
+      + `<div style="flex:1;min-width:0" id="aud-obs-msg-${id}-${i}">`
+      + (m.meta ? `<div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:#6B7280;margin-bottom:2px">${_escHtml(m.meta)}</div>` : '')
+      + `<div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#0D2B5E">${_escHtml(m.text.trim()).replace(/\n/g,'<br>')}</div></div>`
+      + `<button onclick="audObsEditStart('${id}',${i})" title="Editar esta mensagem" style="background:none;border:none;color:#9CA3AF;font-size:11px;line-height:1;cursor:pointer;padding:2px 3px;flex-shrink:0" onmouseenter="this.style.color='#0D2B5E'" onmouseleave="this.style.color='#9CA3AF'">✎</button>`
+      + `<button onclick="audObsDelete('${id}',${i})" title="Excluir esta mensagem" style="background:none;border:none;color:#9CA3AF;font-size:11px;line-height:1;cursor:pointer;padding:2px 3px;flex-shrink:0" onmouseenter="this.style.color='#DC2626'" onmouseleave="this.style.color='#9CA3AF'">✕</button>`
+      + `</div>`;
+  }).join('');
+}
+
+async function _audObsPersist(id, obs) {
+  _audObsCache[id] = obs;
+  const { sbUrl, sbKey } = getSbCreds();
+  if (sbUrl && sbKey) {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { error } = await sb.from('pauta_audiencias').update({ orientacao: obs, updated_at: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
+  } else {
+    const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]');
+    const idx = local.findIndex(x => x.id === id);
+    if (idx !== -1) { local[idx].orientacao = obs; localStorage.setItem(AUD_STORE_KEY, JSON.stringify(local)); }
+  }
+}
+
+function audObsRenderThread(id) {
+  const obs = _audObsCache[id] || '';
+  const th  = document.getElementById('aud-orient-th-' + id);
+  if (th) th.innerHTML = _audObsThreadHtml(obs, id);
+  const box = document.getElementById('aud-orient-' + id);
+  if (box) box.style.display = obs.trim() ? '' : 'none';
+}
+
+async function audObsSend(id) {
+  const ta = document.getElementById('aud-obs-' + id);
+  if (!ta) return;
+  const msg = ta.value.trim();
+  if (!msg) return;
+  const prev = _audObsCache[id] || '';
+  const obs  = (prev ? prev + '\n' : '') + `[${_audObsStamp()} · Admin] ` + msg;
+  try { await _audObsPersist(id, obs); } catch(e) { showToast('Erro ao salvar orientação: ' + e.message); return; }
+  ta.value = '';
+  audObsRenderThread(id);
+}
+
+async function audObsDelete(id, idx) {
+  const msgs = _audObsParse(_audObsCache[id] || '');
+  const alvo = msgs[idx];
+  if (!alvo) return;
+  const trecho = alvo.text.trim().slice(0, 80);
+  if (!confirm(`Excluir esta mensagem do histórico?\n\n"${trecho}${alvo.text.trim().length > 80 ? '…' : ''}"`)) return;
+  msgs.splice(idx, 1);
+  try { await _audObsPersist(id, _audObsSerialize(msgs)); } catch(e) { showToast('Erro ao excluir: ' + e.message); return; }
+  audObsRenderThread(id);
+}
+
+function audObsEditStart(id, idx) {
+  const box  = document.getElementById(`aud-obs-msg-${id}-${idx}`);
+  const msgs = _audObsParse(_audObsCache[id] || '');
+  if (!box || !msgs[idx]) return;
+  box.innerHTML = `<textarea id="aud-obs-edit-${id}-${idx}" rows="2" style="width:100%;box-sizing:border-box;font-family:var(--f-mono);font-size:10px;padding:4px 6px;border:1px solid #c7d2fe;border-radius:3px;resize:vertical;color:#0D2B5E">${_escHtml(msgs[idx].text.trim())}</textarea>
+    <div style="display:flex;gap:6px;margin-top:4px">
+      <button onclick="audObsEditSave('${id}',${idx})" style="background:#0D2B5E;border:none;border-radius:3px;color:#fff;font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;cursor:pointer;font-weight:700">Salvar</button>
+      <button onclick="audObsRenderThread('${id}')" style="background:none;border:1px solid #e5e7eb;border-radius:3px;color:#6B7280;font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;cursor:pointer">Cancelar</button>
+    </div>`;
+  document.getElementById(`aud-obs-edit-${id}-${idx}`).focus();
+}
+
+async function audObsEditSave(id, idx) {
+  const ta = document.getElementById(`aud-obs-edit-${id}-${idx}`);
+  const msgs = _audObsParse(_audObsCache[id] || '');
+  if (!ta || !msgs[idx]) return;
+  const txt = ta.value.trim();
+  if (!txt) { showToast('A mensagem não pode ficar vazia — use o ✕ para excluir.'); return; }
+  msgs[idx].text = txt;
+  try { await _audObsPersist(id, _audObsSerialize(msgs)); } catch(e) { showToast('Erro ao salvar: ' + e.message); return; }
+  audObsRenderThread(id);
+}
+
 /* helpers */
 function _audParseDate(v) {
   if (!v) return null;
@@ -13947,6 +14054,7 @@ function _audRenderStats(items) {
 
 /* ── render card ── */
 function _audCard(a) {
+  _audObsCache[a.id] = a.orientacao || '';
   const tipoLabel = AUD_TIPO_LABEL[a.tipo_audiencia]  || a.tipo_audiencia || '—';
   const tipoBg    = AUD_TIPO_BG[a.tipo_audiencia]     || '#f3f4f6';
   const tipoColor = AUD_TIPO_COLOR[a.tipo_audiencia]  || '#374151';
@@ -14020,7 +14128,14 @@ function _audCard(a) {
         ${(a.id_senha && a.id_senha !== '-') ? `<div style="margin-top:6px;font-family:var(--f-mono);font-size:10px;color:var(--c-muted);letter-spacing:.04em">${_escHtml(a.id_senha)}</div>` : ''}
         ${a.comentarios ? `<div style="margin-top:4px;font-size:11px;color:var(--c-muted);font-style:italic">${_escHtml(a.comentarios)}</div>` : ''}
         ${a.orientacao_enviada ? `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:5px;background:#E8F5EE;border:1px solid #A7F3D0;border-radius:10px;padding:2px 10px;font-family:var(--f-mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#1B7A4E;font-weight:700">✓ Orientação enviada</div>` : ''}
-        ${a.orientacao  ? `<div style="margin-top:4px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#0D2B5E;background:#EEF2FF;padding:4px 10px;border-radius:2px;border-left:2px solid #0D2B5E">${_escHtml(a.orientacao).replace(/\n/g,'<br>')}</div>` : ''}
+        <div id="aud-orient-${_escHtml(a.id)}" style="margin-top:6px;background:#EEF2FF;border-radius:4px;padding:6px 8px 8px;${(a.orientacao||'').trim() ? '' : 'display:none'}">
+          <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.07em;text-transform:uppercase;color:#0D2B5E;font-weight:700">💬 Histórico de orientações</div>
+          <div id="aud-orient-th-${_escHtml(a.id)}">${(a.orientacao||'').trim() ? _audObsThreadHtml(a.orientacao, a.id) : ''}</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px;align-items:flex-start">
+          <textarea id="aud-obs-${_escHtml(a.id)}" rows="1" placeholder="Nova orientação… (as anteriores ficam no histórico)" style="flex:1;font-size:10px;padding:5px 8px;border:1px solid #e5e7eb;border-radius:4px;resize:vertical;font-family:inherit;color:#374151;background:#fff;box-sizing:border-box;min-height:26px"></textarea>
+          <button onclick="audObsSend('${_escHtml(a.id)}')" title="Adicionar mensagem ao histórico sem apagar as anteriores" style="background:#0D2B5E;border:none;border-radius:4px;color:#fff;font-size:9px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:7px 12px;cursor:pointer;font-weight:700;flex-shrink:0">➤ Enviar</button>
+        </div>
       </div>
       <!-- ações -->
       <div style="display:flex;flex-direction:column;gap:8px;align-items:stretch;flex-shrink:0;margin-left:auto;min-width:110px">
