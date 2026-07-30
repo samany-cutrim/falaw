@@ -14,7 +14,8 @@ var FALAW_TEAM = [
     "role": "Advogada",
     "status": "active",
     "bio": "Graduada em Direito e pós-graduanda em Direito e Processo do Trabalho pela PUC-RS. Atua no contencioso trabalhista com experiência em acompanhamento processual, suporte à litigância e organização de rotinas jurídicas. Integra o Comitê de Inteligência Artificial do escritório.",
-    "email": "camilla@falaw.com.br"
+    "email": "camilla@falaw.com.br",
+    "sigla": "CMM"
   },
   {
     "id": "mn1yd8t2ttxy",
