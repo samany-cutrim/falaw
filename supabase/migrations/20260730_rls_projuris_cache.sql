@@ -1,0 +1,12 @@
+-- Corrige alerta do Security Advisor: "RLS Disabled in Public" em
+-- public.projuris_processo_cache. Sem RLS, a chave anônima (pública, exposta
+-- no HTML do site) tem acesso total de leitura/escrita/exclusão a esse cache
+-- de processos do Projuris.
+--
+-- Essa tabela só é lida/escrita pela edge function projuris-sync, que usa a
+-- SUPABASE_SERVICE_ROLE_KEY (sempre ignora RLS) — nenhuma tela do site
+-- (admin.html, cliente/dashboard.html) acessa essa tabela via chave anônima.
+-- Ativar RLS sem nenhuma policy bloqueia todo acesso anon/authenticated e
+-- não tem nenhum efeito funcional no site; mesmo padrão já usado em todas
+-- as outras tabelas do projeto (ver supabase-setup.sql).
+ALTER TABLE public.projuris_processo_cache ENABLE ROW LEVEL SECURITY;
