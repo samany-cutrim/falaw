@@ -1965,7 +1965,7 @@
               </div>
               <div class="form-field">
                 <label>Orientação</label>
-                <input id="aud-orientacao" type="text" placeholder="Orientação ao advogado" />
+                <textarea id="aud-orientacao" rows="2" placeholder="Orientação ao advogado" style="width:100%;min-height:42px;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:13px;color:var(--c-dark);background:#fafaf8;outline:none;resize:vertical;box-sizing:border-box"></textarea>
               </div>
               <div class="form-field">
                 <label>Status</label>
@@ -13921,7 +13921,7 @@ function _audCard(a) {
     if (_found) _clienteNome = _found.replace(/\s*\(CLIENTE\)/gi,'').replace(/\s*S\.?A\.?$/i,'').trim();
   }
   const respColor = AUD_RESP_COLOR[a.tipo_responsabilidade] || '#374151';
-  return `<div class="item-card" style="border-left:4px solid ${isCancelPje ? '#D97706' : tipoColor};padding:18px 20px;${isCancelPje ? 'background:#FFFBEB;opacity:.85;' : isCancelada ? 'background:#FFF5F5;' : isSustOral ? 'background:#fff7ed;border-color:#fed7aa;' : isHoje ? 'background:#fffef0;' : ''}" data-aud-id="${_escHtml(a.id)}">
+  return `<div class="item-card" style="display:block;border-left:4px solid ${isCancelPje ? '#D97706' : tipoColor};padding:18px 20px;${isCancelPje ? 'background:#FFFBEB;opacity:.85;' : isCancelada ? 'background:#FFF5F5;' : isSustOral ? 'background:#fff7ed;border-color:#fed7aa;' : isHoje ? 'background:#fffef0;' : ''}" data-aud-id="${_escHtml(a.id)}">
     ${isCancelPje ? `<div style="background:#FEF3C7;border:1px solid #FCD34D;border-left:3px solid #D97706;border-radius:2px;padding:8px 12px;margin-bottom:12px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#92400E"><strong>Audiência não encontrada no PJe</strong> — Pode ter sido cancelada. Confirme abaixo ou ignore se for engano do scraper.</div>` : ''}
     ${(!a.horario || !a.vara) && !isCancelada && !isCancelPje && (a.data_audiencia || '') >= new Date().toISOString().slice(0,10) ? `<div style="background:#FFF1F2;border:1px solid #FECDD3;border-left:3px solid #E11D48;border-radius:2px;padding:8px 12px;margin-bottom:12px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#9F1239;display:flex;align-items:center;gap:8px"><strong>⚠ Dados incompletos</strong>${!a.horario ? ' · horário não encontrado' : ''}${!a.vara ? ' · vara não encontrada' : ''} — preencha para não perder a audiência</div>` : ''}
     <!-- linha topo -->
@@ -13969,7 +13969,7 @@ function _audCard(a) {
         ${(a.id_senha && a.id_senha !== '-') ? `<div style="margin-top:6px;font-family:var(--f-mono);font-size:10px;color:var(--c-muted);letter-spacing:.04em">${_escHtml(a.id_senha)}</div>` : ''}
         ${a.comentarios ? `<div style="margin-top:4px;font-size:11px;color:var(--c-muted);font-style:italic">${_escHtml(a.comentarios)}</div>` : ''}
         ${a.orientacao_enviada ? `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:5px;background:#E8F5EE;border:1px solid #A7F3D0;border-radius:10px;padding:2px 10px;font-family:var(--f-mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#1B7A4E;font-weight:700">✓ Orientação enviada</div>` : ''}
-        ${a.orientacao  ? `<div style="margin-top:4px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#0D2B5E;background:#EEF2FF;padding:4px 10px;border-radius:2px;border-left:2px solid #0D2B5E">${_escHtml(a.orientacao)}</div>` : ''}
+        ${a.orientacao  ? `<div style="margin-top:4px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#0D2B5E;background:#EEF2FF;padding:4px 10px;border-radius:2px;border-left:2px solid #0D2B5E">${_escHtml(a.orientacao).replace(/\n/g,'<br>')}</div>` : ''}
       </div>
       <!-- ações -->
       <div style="display:flex;flex-direction:column;gap:8px;align-items:stretch;flex-shrink:0;margin-left:auto;min-width:110px">
@@ -14767,16 +14767,28 @@ async function audImportExcel(inputEl) {
     if (!rows.length) { showToast('Nenhuma audiência futura encontrada na planilha.'); return; }
     showToast(`${rows.length} audiências lidas. Salvando…`);
 
+    // Ao reimportar, preserva o histórico de orientações (bate-papo) já gravado:
+    // mantém o texto existente e só acrescenta o da planilha se for novidade
+    const _mergeOrient = (existente, r) => {
+      if (!existente || !existente.trim()) return;
+      const novo = (r.orientacao || '').trim();
+      r.orientacao = (!novo || existente.includes(novo)) ? existente : existente + '\n' + novo;
+    };
+
     const { sbUrl, sbKey } = getSbCreds();
     if (sbUrl && sbKey) {
       const sb = supabase.createClient(sbUrl, sbKey);
+      try {
+        const { data: exist } = await sb.from('pauta_audiencias').select('id,orientacao').in('id', rows.map(r => r.id));
+        (exist || []).forEach(e => { const r = rows.find(x => x.id === e.id); if (r) _mergeOrient(e.orientacao, r); });
+      } catch(e) { console.warn('merge orientacao:', e.message); }
       const { error } = await sb.from('pauta_audiencias').upsert(rows);
       if (error) { showToast('Erro ao salvar: ' + error.message); return; }
     } else {
       const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY)||'[]');
       rows.forEach(r => {
         const idx2 = local.findIndex(x => x.id === r.id);
-        if (idx2 >= 0) local[idx2] = r; else local.push(r);
+        if (idx2 >= 0) { _mergeOrient(local[idx2].orientacao, r); local[idx2] = r; } else local.push(r);
       });
       localStorage.setItem(AUD_STORE_KEY, JSON.stringify(local));
     }
