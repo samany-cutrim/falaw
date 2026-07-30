@@ -50,7 +50,8 @@ var FALAW_TEAM = [
     "role": "Advogada Controller",
     "status": "active",
     "bio": "Formada em Direito pela Universidade Paulista (UNIP), pós-graduada em Direito Processual do Trabalho pela Universidade Anhembi Morumbi e pós-graduanda em Legal Operations pela PUC-PR. Atua como Controller Jurídica com especialização em gestão de operações jurídicas e indicadores de performance.",
-    "email": "letica@falaw.com.br"
+    "email": "letica@falaw.com.br",
+    "sigla": "LSS"
   },
   {
     "id": "mn1yd8t2wnbp",
