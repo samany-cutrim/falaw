@@ -8528,11 +8528,14 @@ async function sendEnviarPauta() {
     // Verifica se o cliente tem audiências no período
     const nomeCliente = (c.company || c.name || '').toLowerCase();
     const temAudiencia = pautaRows.some(r => {
-      const clienteR = (r.cliente || '').toLowerCase();
-      const recladaR  = (r.reclamada || '').toLowerCase();
-      return clienteR.includes(nomeCliente) || recladaR.includes(nomeCliente) ||
-             nomeCliente.includes(clienteR.replace(/\s*\(cliente\)/gi,'').trim()) ||
-             nomeCliente.split(' ')[0].length > 3 && recladaR.includes(nomeCliente.split(' ')[0]);
+      // Guarda contra campo vazio: "x".includes('') é sempre true em JS, o que faria
+      // qualquer audiência sem o campo "cliente" preenchido "casar" com todo cliente.
+      const clienteR = (r.cliente || '').toLowerCase().replace(/\s*\(cliente\)/gi,'').trim();
+      const recladaR = (r.reclamada || '').toLowerCase();
+      if (clienteR && (clienteR.includes(nomeCliente) || nomeCliente.includes(clienteR))) return true;
+      if (nomeCliente && recladaR.includes(nomeCliente)) return true;
+      const primeiraPalavra = nomeCliente.split(' ')[0];
+      return primeiraPalavra.length > 3 && recladaR.includes(primeiraPalavra);
     });
     if (!temAudiencia) {
       if (!avisarSemAud) { pulados++; continue; }
