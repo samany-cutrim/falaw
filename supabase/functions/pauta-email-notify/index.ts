@@ -1,9 +1,10 @@
 /**
  * pauta-email-notify — Falaw Advogados
  *
- * Notifica audiências agendadas ou canceladas cuja DATA cai no mês atual ou no
- * mês seguinte (ex.: em julho, cobre audiências de julho e agosto) e que ainda
- * não foram notificadas. Envia e-mail automático:
+ * Notifica audiências agendadas ou canceladas cuja DATA cai entre hoje e o
+ * último dia do mês seguinte (ex.: hoje 30/07, cobre até 31/08 — uma audiência
+ * de 01/07, já passada, não entra mesmo sendo "mês atual") e que ainda não
+ * foram notificadas. Envia e-mail automático:
  *   • Para o cliente cujo processo foi afetado (lookup na tabela `clients`)
  *   • Para o escritório (ESCRITORIO_EMAIL)
  *
@@ -49,18 +50,20 @@ function diaSemana(iso: string): string {
   return dias[d.getUTCDay()];
 }
 
-// Intervalo [1º dia do mês atual, último dia do mês seguinte], em horário de Brasília —
-// só audiências com data dentro desse intervalo geram e-mail automático (ex.: em julho,
-// notifica agendamentos/cancelamentos de audiências de julho E agosto; uma audiência
-// sincronizada agora mas marcada para outubro só entra na notificação quando o mês virar).
-function limitesMesAtualEProximo(): { inicio: string; fim: string } {
+// Intervalo [hoje, último dia do mês seguinte], em horário de Brasília — só audiências
+// com data dentro desse intervalo geram e-mail automático (ex.: em 30/07, notifica
+// agendamentos/cancelamentos de audiências de hoje até 31/08; uma audiência de 01 ou
+// 02/07 — já passada, mesmo sendo "mês atual" — NÃO entra, porque já não é mais relevante
+// avisar sobre algo que já aconteceu; e uma audiência marcada para outubro só entra na
+// notificação quando o calendário chegar em setembro).
+function janelaNotificacao(): { inicio: string; fim: string } {
   const BRASILIA_OFFSET_MS = -3 * 60 * 60 * 1000;
   const brasilia = new Date(Date.now() + BRASILIA_OFFSET_MS);
   const ano = brasilia.getUTCFullYear();
   const mes = brasilia.getUTCMonth(); // 0-indexado
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
   return {
-    inicio: fmt(new Date(Date.UTC(ano, mes, 1))),
+    inicio: fmt(brasilia), // hoje (data de Brasília), não o dia 1 do mês
     fim:    fmt(new Date(Date.UTC(ano, mes + 2, 0))), // dia 0 do mês+2 = último dia do mês+1
   };
 }
@@ -314,7 +317,7 @@ Deno.serve(async (req) => {
 
     const sb = createClient(SB_URL, SB_KEY);
     const agora = new Date();
-    const { inicio: mesInicio, fim: mesFim } = limitesMesAtualEProximo();
+    const { inicio: janelaInicio, fim: janelaFim } = janelaNotificacao();
 
     const clientes = await buscarClientes(sb);
 
@@ -335,8 +338,8 @@ Deno.serve(async (req) => {
       // Não duplica aviso de uma audiência que o destinatário já recebeu por um
       // envio manual de pauta (botão "Enviar Pauta" no admin).
       .is("pauta_manual_enviada_at", null)
-      .gte("data_audiencia", mesInicio)
-      .lte("data_audiencia", mesFim)
+      .gte("data_audiencia", janelaInicio)
+      .lte("data_audiencia", janelaFim)
       .order("data_audiencia", { ascending: true });
     if (errNovas) throw new Error(`Consulta de audiências agendadas falhou: ${errNovas.message}`);
 
@@ -347,8 +350,8 @@ Deno.serve(async (req) => {
       .eq("status", "cancelada")
       .is("email_cancelada_notificado_at", null)
       .is("pauta_manual_enviada_at", null)
-      .gte("data_audiencia", mesInicio)
-      .lte("data_audiencia", mesFim)
+      .gte("data_audiencia", janelaInicio)
+      .lte("data_audiencia", janelaFim)
       .order("data_audiencia", { ascending: true });
     if (errCanceladas) throw new Error(`Consulta de audiências canceladas falhou: ${errCanceladas.message}`);
 
@@ -404,7 +407,7 @@ Deno.serve(async (req) => {
 
     const resumo = {
       ok: true,
-      periodo: `${mesInicio} a ${mesFim}`,
+      periodo: `${janelaInicio} a ${janelaFim}`,
       novas_agendadas: (novas ?? []).length,
       canceladas:      (canceladas ?? []).length,
       emails_enviados: enviados,
