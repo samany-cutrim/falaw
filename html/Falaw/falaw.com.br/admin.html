@@ -1710,11 +1710,33 @@
               <div id="mencao-painel-body"></div>
             </div>
           </div>
+          <button type="button" class="btn btn-ghost" onclick="abrirModalEquipe()" title="Gerenciar quem pode ser mencionado (@nome) no bate-papo de orientações">👥 Equipe</button>
           <button type="button" class="btn btn-ghost" onclick="openAudienciaModal()">+ Manual</button>
         </div>
 
       </div>
       <div id="aud-edge-result" style="display:none;margin-bottom:16px;background:#0D2B5E;color:#EEF2FF;border-radius:4px;padding:12px 16px;font-family:var(--f-mono);font-size:11px;white-space:pre-wrap;word-break:break-word;max-height:260px;overflow-y:auto"></div>
+
+      <!-- Modal Equipe do Escritório (mencionáveis @nome) -->
+      <div class="modal-overlay" id="equipeModal" onclick="if(event.target===this)closeEquipeModal()">
+        <div class="modal" style="max-width:420px">
+          <div class="modal-header">
+            <h3>Equipe do Escritório</h3>
+            <button class="modal-close" onclick="closeEquipeModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <p style="font-size:12px;color:var(--c-muted);margin:0 0 12px">Advogados internos e founder — quem aparece no autocomplete de @menções nas observações. Não inclui correspondentes externos.</p>
+            <div style="display:flex;gap:8px;margin-bottom:14px">
+              <input id="equipe-nome-novo" type="text" placeholder="Nome (ex: Tatiana (TGFA))" style="flex:1" onkeydown="if(event.key==='Enter')equipeAdicionar()" />
+              <button type="button" class="btn btn-primary" onclick="equipeAdicionar()">Adicionar</button>
+            </div>
+            <div id="equipe-lista"></div>
+          </div>
+          <div class="modal-footer" style="display:flex;justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="closeEquipeModal()">Fechar</button>
+          </div>
+        </div>
+      </div>
 
       <!-- Barra de progresso PJe sync -->
       <div id="pje-progress-wrap" style="display:none;background:#EEF2FF;border:1px solid #c7d2fe;border-radius:4px;padding:14px 18px;margin-bottom:16px">
@@ -14084,7 +14106,7 @@ function _mencaoOnInput(ta) {
   let drop = document.getElementById(dropId);
   if (!m) { if (drop) drop.style.display = 'none'; return; }
   const q = m[1].toLowerCase();
-  const list = (window._audCorrespondentes || []).filter(c => c.nome && c.nome.toLowerCase().includes(q));
+  const list = (window._audEquipe || []).filter(c => c.nome && c.nome.toLowerCase().includes(q));
   if (!drop) {
     drop = document.createElement('div');
     drop.id = dropId;
@@ -14110,7 +14132,7 @@ function _mencaoPick(taId, nome) {
 
 function _mencaoExtrair(msg) {
   const encontrados = new Set();
-  (window._audCorrespondentes || []).forEach(c => {
+  (window._audEquipe || []).forEach(c => {
     if (!c.nome) return;
     const re = new RegExp('@' + _mencaoEscapeRe(c.nome), 'i');
     if (re.test(msg)) encontrados.add(c.nome);
@@ -14132,7 +14154,7 @@ async function _mencaoRegistrar(audienciaId, msg, autor) {
 
 function _mencaoHighlight(text) {
   let html = _escHtml(text.trim()).replace(/\n/g,'<br>');
-  (window._audCorrespondentes || []).forEach(c => {
+  (window._audEquipe || []).forEach(c => {
     if (!c.nome) return;
     const re = new RegExp('@' + _mencaoEscapeRe(c.nome), 'gi');
     html = html.replace(re, m => `<strong style="color:#7B1A2E">${m}</strong>`);
@@ -14191,6 +14213,72 @@ async function _mencaoMarcarLida(id) {
     if (error) throw error;
   } catch(e) { showToast('Erro: ' + e.message); return; }
   await _mencaoAtualizarBadge();
+}
+
+/* ── Equipe do Escritório (lista de mencionáveis @nome) ── */
+function openEquipeModal() { abrirModalEquipe(); }
+
+function closeEquipeModal() {
+  document.getElementById('equipeModal').classList.remove('open');
+}
+
+async function abrirModalEquipe() {
+  document.getElementById('equipeModal').classList.add('open');
+  document.getElementById('equipe-nome-novo').value = '';
+  await _equipeCarregar();
+  _equipeRenderLista();
+}
+
+async function _equipeCarregar() {
+  const { sbUrl, sbKey } = getSbCreds();
+  if (!sbUrl || !sbKey) { window._audEquipe = window._audEquipe || []; return; }
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { data } = await sb.from('equipe_escritorio').select('*').eq('ativo', true).order('nome', { ascending: true });
+    window._audEquipe = data || [];
+  } catch(e) { console.warn('equipe load:', e.message); }
+}
+
+function _equipeRenderLista() {
+  const el = document.getElementById('equipe-lista');
+  if (!el) return;
+  const list = window._audEquipe || [];
+  if (!list.length) { el.innerHTML = '<p style="color:var(--c-muted);font-size:12px">Ninguém cadastrado ainda.</p>'; return; }
+  el.innerHTML = list.map(c => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--c-divider)">
+      <span style="font-size:13px">${_escHtml(c.nome)}</span>
+      <button type="button" onclick="equipeRemover('${_escHtml(c.id)}')" title="Remover" style="background:none;border:none;color:#C62828;cursor:pointer;font-size:13px;padding:2px 6px">✕</button>
+    </div>`).join('');
+}
+
+async function equipeAdicionar() {
+  const input = document.getElementById('equipe-nome-novo');
+  const nome = (input.value || '').trim();
+  if (!nome) return;
+  const { sbUrl, sbKey } = getSbCreds();
+  if (!sbUrl || !sbKey) { showToast('Configuração Supabase ausente.'); return; }
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { error } = await sb.from('equipe_escritorio').insert({ id: 'equipe-' + Date.now(), nome });
+    if (error) throw error;
+  } catch(e) { showToast('Erro: ' + e.message); return; }
+  input.value = '';
+  await _equipeCarregar();
+  _equipeRenderLista();
+  showToast('Adicionado à equipe.');
+}
+
+async function equipeRemover(id) {
+  if (!confirm('Remover esta pessoa da lista de menções?')) return;
+  const { sbUrl, sbKey } = getSbCreds();
+  if (!sbUrl || !sbKey) return;
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { error } = await sb.from('equipe_escritorio').update({ ativo: false }).eq('id', id);
+    if (error) throw error;
+  } catch(e) { showToast('Erro: ' + e.message); return; }
+  await _equipeCarregar();
+  _equipeRenderLista();
 }
 
 /* ── Histórico de orientações estilo bate-papo (mesmo formato do dashboard do escritório):
@@ -14703,13 +14791,15 @@ async function loadAudiencias() {
         .order('horario',       { ascending: true });
       if (qDe)  q = q.gte('data_audiencia', qDe);
       if (qAte) q = q.lte('data_audiencia', qAte);
-      const [{ data, error }, corrRes] = await Promise.all([
+      const [{ data, error }, corrRes, equipeRes] = await Promise.all([
         q,
         sb.from('correspondentes').select('nome,tipo,cpf,oab,observacoes'),
+        sb.from('equipe_escritorio').select('*').eq('ativo', true).order('nome', { ascending: true }),
       ]);
       if (error) console.warn('audiencias load error:', error.message);
       if (!error && data) items = data;
       window._audCorrespondentes = corrRes.data || [];
+      window._audEquipe = equipeRes.data || [];
     } catch(e) { console.warn('audiencias load:', e.message); }
   }
   if (!items.length) {

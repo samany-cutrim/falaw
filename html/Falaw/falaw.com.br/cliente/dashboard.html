@@ -2109,7 +2109,7 @@ function _mencaoOnInput(ta) {
   let drop = document.getElementById(dropId);
   if (!m) { if (drop) drop.style.display = 'none'; return; }
   const q = m[1].toLowerCase();
-  const list = (window._escCorrespondentes || []).filter(c => c.nome && c.nome.toLowerCase().includes(q));
+  const list = (window._escEquipe || []).filter(c => c.nome && c.nome.toLowerCase().includes(q));
   if (!drop) {
     drop = document.createElement('div');
     drop.id = dropId;
@@ -2135,7 +2135,7 @@ function _mencaoPick(taId, nome) {
 
 function _mencaoExtrair(msg) {
   const encontrados = new Set();
-  (window._escCorrespondentes || []).forEach(c => {
+  (window._escEquipe || []).forEach(c => {
     if (!c.nome) return;
     const re = new RegExp('@' + _mencaoEscapeRe(c.nome), 'i');
     if (re.test(msg)) encontrados.add(c.nome);
@@ -2158,7 +2158,7 @@ async function _mencaoRegistrar(audienciaId, msg, autor) {
 
 function _mencaoHighlight(text) {
   let html = escHtml(text.trim()).replace(/\n/g,'<br>');
-  (window._escCorrespondentes || []).forEach(c => {
+  (window._escEquipe || []).forEach(c => {
     if (!c.nome) return;
     const re = new RegExp('@' + _mencaoEscapeRe(c.nome), 'gi');
     html = html.replace(re, m => `<strong style="color:#7B1A2E">${m}</strong>`);
@@ -3228,12 +3228,14 @@ async function loadPautaEscritorio() {
   if (sbUrl && sbKey && typeof supabase !== 'undefined') {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
-      const [{ data }, { data: cData }] = await Promise.all([
+      const [{ data }, { data: cData }, { data: eData }] = await Promise.all([
         sb.from('pauta_audiencias').select('*').order('data_audiencia', { ascending: true }).order('horario', { ascending: true }).range(0, 9999),
-        sb.from('correspondentes').select('id,nome,email,celular,tipo,cpf,oab,observacoes')
+        sb.from('correspondentes').select('id,nome,email,celular,tipo,cpf,oab,observacoes'),
+        sb.from('equipe_escritorio').select('*').eq('ativo', true).order('nome', { ascending: true }),
       ]);
       if (data) rows = data;
       window._escCorrespondentes = cData || [];
+      window._escEquipe = eData || [];
     } catch(e) { console.warn('pauta escritorio:', e.message); }
   }
 
