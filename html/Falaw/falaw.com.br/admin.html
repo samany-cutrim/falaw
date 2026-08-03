@@ -1684,35 +1684,34 @@
     <section id="tab-audiencias" class="admin-section">
 
       <!-- Topbar da seção -->
-      <div class="section-header" style="flex-wrap:wrap;gap:10px">
+      <div class="section-header" style="flex-wrap:wrap;gap:10px;align-items:flex-start;margin-bottom:16px;padding-bottom:0;border-bottom:none">
         <div>
           <h2 style="margin-bottom:2px">Pauta de Audiências</h2>
           <p style="font-size:12px;color:var(--c-muted);margin:0">Sincronize automaticamente via Projuris ADV, importe Excel ou adicione manualmente</p>
           <p id="aud-last-sync" style="font-size:11px;font-family:var(--f-mono);letter-spacing:.04em;margin:4px 0 0;color:var(--c-muted)"></p>
           <p id="aud-last-sync-projuris" style="font-size:11px;font-family:var(--f-mono);letter-spacing:.04em;margin:2px 0 0;color:var(--c-muted)"></p>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <label title="Chrome roda invisível em segundo plano" style="display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--c-muted);cursor:pointer;padding:4px 10px;border:1px solid var(--c-divider);border-radius:2px;user-select:none">
-            <input type="checkbox" id="pje-modo-oculto" style="width:12px;height:12px;cursor:pointer;accent-color:#0D2B5E">
-            Oculto
-          </label>
-          <label class="btn btn-ghost" style="cursor:pointer" title="Importar planilha Excel (.xlsx)">
-            Importar Excel
-            <input type="file" id="aud-xl-input" accept=".xlsx,.xls" style="display:none" onchange="audImportExcel(this)" />
-          </label>
-          <button type="button" class="btn btn-ghost" onclick="abrirModalExcelAdmin()" title="Baixar pauta como planilha Excel">⬇ Baixar Excel</button>
-          <button type="button" class="btn btn-ghost" onclick="openEnviarPautaModal()" title="Enviar e-mail de pauta para clientes selecionados">📧 Enviar Pauta</button>
-          <button type="button" class="btn btn-ghost" id="btn-sync-projuris-edge" onclick="audSyncProjurisEdge()" title="Chama a edge function projuris-sync agora, sem esperar o cron">🔄 Sincronizar Projuris</button>
-          <button type="button" class="btn btn-ghost" id="btn-notify-projuris-edge" onclick="audNotifyProjurisEdge()" title="Chama a edge function pauta-email-notify agora, sem esperar o cron">📨 Notificar agendadas/canceladas</button>
-          <div style="position:relative">
-            <button type="button" class="btn btn-ghost" onclick="_mencaoTogglePainel()">🔔 Menções <span id="mencao-badge" style="display:none;background:#DC2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span></button>
-            <div id="mencao-painel" style="display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:300;width:340px;max-height:360px;overflow-y:auto;background:#fff;border:1px solid var(--c-divider);border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.15)">
-              <div id="mencao-painel-body"></div>
-            </div>
+        <div style="position:relative">
+          <button type="button" class="btn btn-ghost" onclick="_mencaoTogglePainel()">🔔 Menções <span id="mencao-badge" style="display:none;background:#DC2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span></button>
+          <div id="mencao-painel" style="display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:300;width:340px;max-height:360px;overflow-y:auto;background:#fff;border:1px solid var(--c-divider);border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.15)">
+            <div id="mencao-painel-body"></div>
           </div>
-          <button type="button" class="btn btn-ghost" onclick="openAudienciaModal()">+ Manual</button>
         </div>
-
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--c-divider)">
+        <label title="Chrome roda invisível em segundo plano" style="display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--c-muted);cursor:pointer;padding:4px 10px;border:1px solid var(--c-divider);border-radius:2px;user-select:none">
+          <input type="checkbox" id="pje-modo-oculto" style="width:12px;height:12px;cursor:pointer;accent-color:#0D2B5E">
+          Oculto
+        </label>
+        <label class="btn btn-ghost" style="cursor:pointer" title="Importar planilha Excel (.xlsx)">
+          Importar Excel
+          <input type="file" id="aud-xl-input" accept=".xlsx,.xls" style="display:none" onchange="audImportExcel(this)" />
+        </label>
+        <button type="button" class="btn btn-ghost" onclick="abrirModalExcelAdmin()" title="Baixar pauta como planilha Excel">⬇ Baixar Excel</button>
+        <button type="button" class="btn btn-ghost" onclick="openEnviarPautaModal()" title="Enviar e-mail de pauta para clientes selecionados">📧 Enviar Pauta</button>
+        <button type="button" class="btn btn-ghost" id="btn-sync-projuris-edge" onclick="audSyncProjurisEdge()" title="Chama a edge function projuris-sync agora, sem esperar o cron">🔄 Sincronizar Projuris</button>
+        <button type="button" class="btn btn-ghost" id="btn-notify-projuris-edge" onclick="audNotifyProjurisEdge()" title="Chama a edge function pauta-email-notify agora, sem esperar o cron">📨 Notificar agendadas/canceladas</button>
+        <button type="button" class="btn btn-ghost" onclick="openAudienciaModal()">+ Manual</button>
       </div>
       <div id="aud-edge-result" style="display:none;margin-bottom:16px;background:#0D2B5E;color:#EEF2FF;border-radius:4px;padding:12px 16px;font-family:var(--f-mono);font-size:11px;white-space:pre-wrap;word-break:break-word;max-height:260px;overflow-y:auto"></div>
 
