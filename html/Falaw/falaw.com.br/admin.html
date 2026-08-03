@@ -4524,11 +4524,15 @@ function _liveReloadPreservingScroll(reloadFn) {
 
 let _liveDebounce = {};
 function _liveInit() {
-  if (window._liveChannel) return; // já inicializado nesta sessão
+  if (window._liveChannels) return; // já inicializado nesta sessão
   const sb = getSB();
   if (!sb) return;
-  const channel = sb.channel('admin-live-updates');
+  window._liveChannels = [];
+  let avisouOk = false, tabelasComErro = [];
   Object.keys(LIVE_TABLE_TABS).forEach(table => {
+    // Um canal por tabela: se uma tabela não estiver habilitada no Realtime do
+    // Supabase, só ela falha — as outras continuam funcionando normalmente.
+    const channel = sb.channel('admin-live-' + table);
     channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
       const tabsQueOuvem = LIVE_TABLE_TABS[table];
       if (!tabsQueOuvem.includes(window._liveCurrentTab)) return;
@@ -4538,13 +4542,17 @@ function _liveInit() {
         if (reload) _liveReloadPreservingScroll(reload);
       }, 500);
     });
+    channel.subscribe((status, err) => {
+      console.log(`[ao vivo] ${table}:`, status, err || '');
+      if (status === 'SUBSCRIBED' && !avisouOk) { avisouOk = true; showToast('🟢 Atualização ao vivo conectada.'); }
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (!tabelasComErro.length) showToast('🔴 Ao vivo falhou em pelo menos 1 tabela — veja o console (F12).');
+        tabelasComErro.push(table);
+        console.warn(`[ao vivo] "${table}" não conectou (${status}). Confirme que essa tabela está com Realtime habilitado no Supabase (rode a migration 20260803_realtime_publication.sql e/ou confira em Database → Replication) e que a RLS permite leitura.`);
+      }
+    });
+    window._liveChannels.push(channel);
   });
-  channel.subscribe((status, err) => {
-    console.log('[ao vivo] status da conexão Realtime:', status, err || '');
-    if (status === 'SUBSCRIBED') showToast('🟢 Atualização ao vivo conectada.');
-    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') showToast('🔴 Ao vivo não conectou (' + status + ') — veja o console (F12) para detalhes.');
-  });
-  window._liveChannel = channel;
 }
 
 /* ══════════════════════════════════════

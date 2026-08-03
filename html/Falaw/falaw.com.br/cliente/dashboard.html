@@ -1440,23 +1440,29 @@ function _liveReloadPreservingScroll(reloadFn) {
    (outra sessão/admin), a tela recarrega sozinha, sem precisar apertar F5.
    Exige Realtime habilitado nessas tabelas no Supabase (Database → Replication). */
 function _liveInit(tables, reloadFn) {
-  if (window._liveChannel) return;
+  if (window._liveChannels) return;
   const sbUrl = (window.SB_URL || '').trim();
   const sbKey = (window.SB_KEY || '').trim();
   if (!sbUrl || !sbKey || typeof supabase === 'undefined') return;
   const sb = supabase.createClient(sbUrl, sbKey);
-  const channel = sb.channel('dash-live-updates');
-  let debounce;
+  window._liveChannels = [];
+  // Um canal por tabela: se uma tabela não estiver habilitada no Realtime do
+  // Supabase, só ela falha — as outras continuam funcionando normalmente.
   tables.forEach(table => {
+    const channel = sb.channel('dash-live-' + table);
+    let debounce;
     channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
       clearTimeout(debounce);
       debounce = setTimeout(() => _liveReloadPreservingScroll(reloadFn), 500);
     });
+    channel.subscribe((status, err) => {
+      console.log(`[ao vivo] ${table}:`, status, err || '');
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn(`[ao vivo] "${table}" não conectou (${status}). Confirme que essa tabela está com Realtime habilitado no Supabase (rode a migration 20260803_realtime_publication.sql e/ou confira em Database → Replication) e que a RLS permite leitura.`);
+      }
+    });
+    window._liveChannels.push(channel);
   });
-  channel.subscribe((status, err) => {
-    console.log('[ao vivo] status da conexão Realtime:', status, err || '');
-  });
-  window._liveChannel = channel;
 }
 
 /* ─── CLIENT DASH API ─────────────────────────────── */
