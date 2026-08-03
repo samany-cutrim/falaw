@@ -3766,6 +3766,7 @@ function _resetAdminTimer() {
    role = 'restrito'   → apenas abas Clientes, Pauta de Audiências e Correspondentes
 ───────────────────────────────────────────────────────────── */
 function applyRoleRestrictions() {
+  _liveInit();
   const role = sessionStorage.getItem('fa_admin_role') || 'superadmin';
   if (role !== 'restrito') return; // superadmin: nenhuma restrição
 
@@ -4462,10 +4463,66 @@ function _atualizarBadgeSugestoes() {
   }
 }
 /* ══════════════════════════════════════
+   AO VIVO (Supabase Realtime)
+   Quando alguém (outra sessão, outro admin) muda algo numa tabela relevante,
+   a aba atualmente aberta recarrega sozinha — sem precisar apertar F5.
+   Só cobre tabelas no Supabase (conteúdo que vive no GitHub — Blog, Nossa
+   Equipe pública, Informativos — não tem como ficar "ao vivo" por aqui).
+   Exige Realtime habilitado nessas tabelas no Supabase (Database → Replication).
+══════════════════════════════════════ */
+window._liveCurrentTab = 'blog';
+const LIVE_TABLE_TABS = {
+  pauta_audiencias: ['audiencias'],
+  mencoes:          ['audiencias'],
+  correspondentes:  ['audiencias', 'correspondentes'],
+  equipe:           ['audiencias'],
+  clients:          ['clientes', 'cli-dash'],
+  ClientReport:     ['cli-dash'],
+  newsletter:       ['newsletter'],
+  contato:          ['contato'],
+  curriculos:       ['curriculos'],
+  comments:         ['comentarios'],
+  pesquisas:        ['pesquisas-lista', 'pesquisas-dash'],
+};
+const LIVE_TAB_RELOADERS = {
+  audiencias:        () => loadAudiencias(),
+  correspondentes:   () => loadCorrespondentes(),
+  clientes:          () => loadPortalFromSupabase().then(renderClients),
+  'cli-dash':        () => loadPortalFromSupabase().then(cliDashTabInit),
+  newsletter:        () => loadNewsletterFromSupabase().then(renderNewsletter),
+  contato:           () => loadContatoFromSupabase().then(renderContato),
+  curriculos:        () => loadCurriculosFromSupabase().then(renderCurriculos),
+  comentarios:       () => loadComentariosAdmin(_cmtFilter),
+  'pesquisas-lista': () => pqCarregar(),
+  'pesquisas-dash':  () => pqDashCarregar(),
+};
+let _liveDebounce = {};
+function _liveInit() {
+  if (window._liveChannel) return; // já inicializado nesta sessão
+  const sb = getSB();
+  if (!sb) return;
+  const channel = sb.channel('admin-live-updates');
+  Object.keys(LIVE_TABLE_TABS).forEach(table => {
+    channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+      const tabsQueOuvem = LIVE_TABLE_TABS[table];
+      if (!tabsQueOuvem.includes(window._liveCurrentTab)) return;
+      clearTimeout(_liveDebounce[table]);
+      _liveDebounce[table] = setTimeout(() => {
+        const reload = LIVE_TAB_RELOADERS[window._liveCurrentTab];
+        if (reload) reload();
+      }, 500);
+    });
+  });
+  channel.subscribe();
+  window._liveChannel = channel;
+}
+
+/* ══════════════════════════════════════
    NOTIFICAÇÕES / BADGES
 ══════════════════════════════════════ */
 
 function switchTab(name) {
+  window._liveCurrentTab = name;
   // Update standalone tab active states
   STANDALONE_TABS.forEach(t => {
     const el = document.getElementById('tab-btn-' + t);
