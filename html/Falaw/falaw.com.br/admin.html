@@ -14207,6 +14207,7 @@ async function _mencaoMarcarLida(id) {
     if (error) throw error;
   } catch(e) { showToast('Erro: ' + e.message); return; }
   await _mencaoAtualizarBadge();
+  loadAudiencias();
 }
 
 /* ── Histórico de orientações estilo bate-papo (mesmo formato do dashboard do escritório):
@@ -14395,6 +14396,7 @@ function _audCard(a) {
   const _corrCad = window._audCorrespondentes || [];
   const advCad  = a.advogado       ? _corrCad.find(c => c.tipo === 'advogado' && (a.advogado||'').toLowerCase().includes((c.nome||'').toLowerCase()))       : null;
   const prepCad = a.dados_preposto ? _corrCad.find(c => c.tipo === 'preposto' && (a.dados_preposto||'').toLowerCase().includes((c.nome||'').toLowerCase())) : null;
+  const temMencaoPendente = (window._mencaoPendentes || []).some(m => m.audiencia_id === a.id);
 
   const isCancelPje = a.status === 'cancelado_pje';
   const isCancelada  = a.status === 'cancelada';
@@ -14422,6 +14424,7 @@ function _audCard(a) {
       <div style="flex:1;min-width:200px">
         <!-- tags -->
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+          ${temMencaoPendente ? `<span title="Tem menção pendente nas observações" style="background:#FEE2E2;color:#B91C1C;font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px;border:1px solid #FCA5A5">⚠️ Menção</span>` : ''}
           <span style="background:${tipoBg};color:${tipoColor};font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${tipoLabel}</span>
           <span style="background:${_mod==='VIRTUAL'?'#dbeafe':'#dcfce7'};color:${_mod==='VIRTUAL'?'#1e40af':'#166534'};font-family:var(--f-mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${modIcon} ${modLabel}</span>
           <span style="background:${stBg};color:${stColor};font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${stLabel}</span>
@@ -14678,7 +14681,6 @@ async function loadAudiencias() {
   _audRenderCanceladasAlert(_sbUrl, _sbKey);
   _audRenderLastSync(_sbUrl, _sbKey);
   _audRenderLastSyncProjuris(_sbUrl, _sbKey);
-  _mencaoAtualizarBadge();
 
   const today = new Date().toISOString().slice(0,10);
 
@@ -14719,15 +14721,19 @@ async function loadAudiencias() {
         .order('horario',       { ascending: true });
       if (qDe)  q = q.gte('data_audiencia', qDe);
       if (qAte) q = q.lte('data_audiencia', qAte);
-      const [{ data, error }, corrRes, equipeRes] = await Promise.all([
+      const [{ data, error }, corrRes, equipeRes, mencaoRes] = await Promise.all([
         q,
         sb.from('correspondentes').select('nome,tipo,cpf,oab,observacoes'),
         sb.from('equipe').select('id,nome,sigla').order('nome', { ascending: true }),
+        sb.from('mencoes').select('*').is('lida_at', null).order('created_at', { ascending: false }).limit(200),
       ]);
       if (error) console.warn('audiencias load error:', error.message);
       if (!error && data) items = data;
       window._audCorrespondentes = corrRes.data || [];
       window._audEquipe = equipeRes.data || [];
+      window._mencaoPendentes = mencaoRes.data || [];
+      const badge = document.getElementById('mencao-badge');
+      if (badge) { badge.textContent = window._mencaoPendentes.length; badge.style.display = window._mencaoPendentes.length ? '' : 'none'; }
     } catch(e) { console.warn('audiencias load:', e.message); }
   }
   if (!items.length) {
