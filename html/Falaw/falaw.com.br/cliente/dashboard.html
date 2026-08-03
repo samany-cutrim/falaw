@@ -2541,6 +2541,9 @@ function renderCorrAdminRows(rows) {
       const needPre = a.corr_tipo_envio === 'preposto' || a.corr_tipo_envio === 'ambos';
       const cardOp  = isPast ? 'opacity:0.6;' : '';
       const assigned = _admCorrAssigned(a);
+      const _corrCad = window._corrCadastroList || [];
+      const advCad  = a.advogado       ? _corrCad.find(c => (a.advogado||'').toLowerCase().includes((c.nome||'').toLowerCase()))       : null;
+      const prepCad = a.dados_preposto ? _corrCad.find(c => (a.dados_preposto||'').toLowerCase().includes((c.nome||'').toLowerCase())) : null;
       html += `<div id="admcorr-card-${a.id}" style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:12px 16px;margin-bottom:8px;border-left:4px solid ${tc};${cardOp}display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
@@ -2554,8 +2557,9 @@ function renderCorrAdminRows(rows) {
           ${a.reclamante ? `<div style="font-size:11px;color:#374151;margin-top:1px">👤 ${escHtml(a.reclamante)}</div>` : ''}
           ${a.cliente ? `<div style="font-size:10px;color:#6B7280;margin-top:1px">🏢 ${escHtml(a.cliente)}</div>` : ''}
           ${a.vara ? `<div style="font-size:10px;color:#9CA3AF">${escHtml(a.vara)}</div>` : ''}
-          ${needAdv && a.advogado ? `<div style="font-size:10px;color:#1B7A4E;margin-top:2px">👤 Adv: <b>${escHtml(a.advogado)}</b></div>` : ''}
-          ${needPre && a.dados_preposto ? `<div style="font-size:10px;color:#0D2B5E;margin-top:1px">🏷 Pre: <b>${escHtml(a.dados_preposto)}</b></div>` : ''}
+          ${needAdv && a.advogado ? `<div style="font-size:10px;color:#1B7A4E;margin-top:2px">👤 Adv: <b>${escHtml(a.advogado)}</b>${advCad&&advCad.oab?` · OAB ${escHtml(advCad.oab)}`:''}</div>` : ''}
+          ${needPre && a.dados_preposto ? `<div style="font-size:10px;color:#0D2B5E;margin-top:1px">🏷 Pre: <b>${escHtml(a.dados_preposto)}</b>${prepCad&&prepCad.cpf?` · CPF ${escHtml(prepCad.cpf)}`:''}</div>` : ''}
+          ${(advCad&&advCad.observacoes)||(prepCad&&prepCad.observacoes) ? `<div style="font-size:9px;color:#92400e;margin-top:2px;font-style:italic">${advCad&&advCad.observacoes?'Obs. Adv: '+escHtml(advCad.observacoes):''}${(advCad&&advCad.observacoes)&&(prepCad&&prepCad.observacoes)?' · ':''}${prepCad&&prepCad.observacoes?'Obs. Pre: '+escHtml(prepCad.observacoes):''}</div>` : ''}
         </div>
         <button onclick="abrirModalCorrAdmin('${a.id}')"
           style="background:#0D2B5E;color:#fff;border:none;padding:8px 16px;border-radius:4px;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-weight:700;white-space:nowrap;flex-shrink:0">
@@ -3093,7 +3097,7 @@ async function loadPautaEscritorio() {
       const sb = supabase.createClient(sbUrl, sbKey);
       const [{ data }, { data: cData }] = await Promise.all([
         sb.from('pauta_audiencias').select('*').order('data_audiencia', { ascending: true }).order('horario', { ascending: true }).range(0, 9999),
-        sb.from('correspondentes').select('id,nome,email,celular,tipo')
+        sb.from('correspondentes').select('id,nome,email,celular,tipo,cpf,oab,observacoes')
       ]);
       if (data) rows = data;
       window._escCorrespondentes = cData || [];
@@ -3824,7 +3828,7 @@ function _escRenderRows(rows, today) {
               <span style="background:${_mod==='VIRTUAL'?'#dbeafe':'#dcfce7'};color:${_mod==='VIRTUAL'?'#1e40af':'#166534'};font-family:${MONO};font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${escHtml(modLabel)}</span>
               <span style="background:${stBg};color:${stColor};font-family:${MONO};font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${escHtml(stLabel)}</span>
               ${a.tipo_responsabilidade ? `<span style="background:${respColor}22;color:${respColor};font-family:${MONO};font-size:9px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap">${escHtml(a.tipo_responsabilidade)}</span>` : ''}
-              ${a.advogado ? `<span style="background:#EEF2FF;color:#0D2B5E;font-family:${MONO};font-size:9px;font-weight:700;padding:3px 8px;border-radius:3px;white-space:nowrap">👤 ${escHtml(a.advogado)}${advCorr&&advCorr.email?` · <span style="font-weight:400">${escHtml(advCorr.email)}${advCorr.celular?' · '+escHtml(advCorr.celular):''}</span>`:''}</span>` : ''}
+              ${a.advogado ? `<span style="background:#EEF2FF;color:#0D2B5E;font-family:${MONO};font-size:9px;font-weight:700;padding:3px 8px;border-radius:3px;white-space:nowrap">👤 ${escHtml(a.advogado)}${advCorr&&advCorr.email?` · <span style="font-weight:400">${escHtml(advCorr.email)}${advCorr.celular?' · '+escHtml(advCorr.celular):''}${advCorr.oab?' · OAB '+escHtml(advCorr.oab):''}</span>`:''}</span>` : ''}
               ${a.testemunha_necessaria ? `<span style="background:#fffbeb;color:#92400e;font-family:${MONO};font-size:9px;font-weight:700;padding:3px 8px;border-radius:3px;border:1px solid #fde68a">⚠ Testemunha</span>` : ''}
               ${isHoje ? `<span style="background:#FEF9C3;color:#92400E;font-family:${MONO};font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">● HOJE</span>` : ''}
             </div>
@@ -3838,8 +3842,12 @@ function _escRenderRows(rows, today) {
             </div>
             <!-- preposto e testemunha -->
             ${a.dados_preposto||a.testemunhas ? `<div style="margin-top:4px;font-size:11px;color:${DARK};background:#f9fafb;border-radius:4px;padding:7px 10px;line-height:1.7">
-              ${a.dados_preposto ? `<div><span style="font-family:${MONO};font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:${MUTED}">Preposto</span><br/><strong>${escHtml(a.dados_preposto)}</strong>${prepCorr&&prepCorr.email?`<div style="font-family:${MONO};font-size:9px;color:#6B7280;margin-top:2px">${escHtml(prepCorr.email)}${prepCorr.celular?' · '+escHtml(prepCorr.celular):''}</div>`:''}</div>` : ''}
+              ${a.dados_preposto ? `<div><span style="font-family:${MONO};font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:${MUTED}">Preposto</span><br/><strong>${escHtml(a.dados_preposto)}</strong>${prepCorr&&(prepCorr.email||prepCorr.cpf)?`<div style="font-family:${MONO};font-size:9px;color:#6B7280;margin-top:2px">${escHtml(prepCorr.email||'')}${prepCorr.celular?' · '+escHtml(prepCorr.celular):''}${prepCorr.cpf?' · CPF '+escHtml(prepCorr.cpf):''}</div>`:''}</div>` : ''}
               ${a.testemunhas ? `<div style="margin-top:${a.dados_preposto?'6px':'0'}"><span style="font-family:${MONO};font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#92400e">Testemunha</span><br/><strong>${escHtml(a.testemunhas).replace(/\n/g,'<br>')}</strong></div>` : ''}
+            </div>` : ''}
+            ${(advCorr&&advCorr.observacoes) || (prepCorr&&prepCorr.observacoes) ? `<div style="margin-top:4px;font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:6px 9px;line-height:1.6">
+              ${advCorr&&advCorr.observacoes ? `<div><span style="font-family:${MONO};font-size:8px;text-transform:uppercase;letter-spacing:.07em">Obs. Advogado</span><br/>${escHtml(advCorr.observacoes)}</div>` : ''}
+              ${prepCorr&&prepCorr.observacoes ? `<div style="margin-top:${(advCorr&&advCorr.observacoes)?'4px':'0'}"><span style="font-family:${MONO};font-size:8px;text-transform:uppercase;letter-spacing:.07em">Obs. Preposto</span><br/>${escHtml(prepCorr.observacoes)}</div>` : ''}
             </div>` : ''}
             <!-- link -->
             ${linkHtml}
