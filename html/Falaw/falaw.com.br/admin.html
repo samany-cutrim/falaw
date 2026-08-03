@@ -4539,7 +4539,11 @@ function _liveInit() {
       }, 500);
     });
   });
-  channel.subscribe();
+  channel.subscribe((status, err) => {
+    console.log('[ao vivo] status da conexão Realtime:', status, err || '');
+    if (status === 'SUBSCRIBED') showToast('🟢 Atualização ao vivo conectada.');
+    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') showToast('🔴 Ao vivo não conectou (' + status + ') — veja o console (F12) para detalhes.');
+  });
   window._liveChannel = channel;
 }
 
