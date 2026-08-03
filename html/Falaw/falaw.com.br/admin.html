@@ -14295,8 +14295,8 @@ function _audCard(a) {
         </div>` : ''}
         <!-- valores correspondentes -->
         ${(a.valor_advogado != null || a.valor_preposto != null) ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
-          ${a.valor_advogado != null ? `<span style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:2px 9px;font-size:10px;color:#1B7A4E;font-weight:700;font-family:var(--f-mono)">💰 Adv: R$ ${Number(a.valor_advogado).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>` : ''}
-          ${a.valor_preposto != null ? `<span style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:2px 9px;font-size:10px;color:#0D2B5E;font-weight:700;font-family:var(--f-mono)">💰 Pre: R$ ${Number(a.valor_preposto).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>` : ''}
+          ${a.valor_advogado != null ? `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:2px 6px 2px 9px;font-size:10px;color:#1B7A4E;font-weight:700;font-family:var(--f-mono)">💰 Adv: R$ ${Number(a.valor_advogado).toLocaleString('pt-BR',{minimumFractionDigits:2})}<button type="button" onclick="_audLimparValor('${_escHtml(a.id)}','advogado')" title="Excluir valor do advogado" style="background:none;border:none;padding:0;margin:0;cursor:pointer;color:#1B7A4E;font-weight:900;font-size:11px;line-height:1">×</button></span>` : ''}
+          ${a.valor_preposto != null ? `<span style="display:inline-flex;align-items:center;gap:5px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:2px 6px 2px 9px;font-size:10px;color:#0D2B5E;font-weight:700;font-family:var(--f-mono)">💰 Pre: R$ ${Number(a.valor_preposto).toLocaleString('pt-BR',{minimumFractionDigits:2})}<button type="button" onclick="_audLimparValor('${_escHtml(a.id)}','preposto')" title="Excluir valor do preposto" style="background:none;border:none;padding:0;margin:0;cursor:pointer;color:#0D2B5E;font-weight:900;font-size:11px;line-height:1">×</button></span>` : ''}
         </div>` : ''}
         <!-- link -->
         ${linkHtml}
@@ -14749,6 +14749,7 @@ function openAudienciaModal() {
   document.getElementById('aud-modal-del').style.display = 'none';
   document.getElementById('audienciaModalTitle').textContent = 'Nova Audiência';
   document.getElementById('audienciaModal').style.display = 'flex';
+  window._audEditingOriginal = null;
 }
 
 function closeAudienciaModal() { document.getElementById('audienciaModal').style.display = 'none'; }
@@ -14804,6 +14805,7 @@ async function editAudiencia(id) {
   document.getElementById('aud-modal-del').style.display = '';
   document.getElementById('audienciaModalTitle').textContent = 'Editar Audiência';
   document.getElementById('audienciaModal').style.display = 'flex';
+  window._audEditingOriginal = a;
 }
 
 /* ── save ── */
@@ -14841,6 +14843,19 @@ async function saveAudiencia() {
     origem:                'manual',
     updated_at:            new Date().toISOString(),
   };
+
+  // Se deixou de enviar para correspondente, ou trocou quem vai atender, os valores
+  // atribuídos anteriormente perdem o sentido — limpa para não ficar informação órfã.
+  const _orig = window._audEditingOriginal;
+  if (_orig && _orig.id === id) {
+    if (!row.corr_tipo_envio) {
+      row.valor_advogado = null;
+      row.valor_preposto = null;
+    } else {
+      if ((_orig.advogado || '') !== row.advogado && _orig.valor_advogado != null) row.valor_advogado = null;
+      if ((_orig.dados_preposto || '') !== row.dados_preposto && _orig.valor_preposto != null) row.valor_preposto = null;
+    }
+  }
   const { sbUrl, sbKey } = getSbCreds();
   if (sbUrl && sbKey) {
     try {
@@ -14921,6 +14936,20 @@ async function _audLimparCorr(id) {
     }).eq('id', id);
     if (error) throw error;
     showToast('Dados de correspondente removidos.');
+    loadAudiencias();
+  } catch(e) { showToast('Erro: ' + e.message); }
+}
+
+async function _audLimparValor(id, tipo) {
+  const campo = tipo === 'preposto' ? 'valor_preposto' : 'valor_advogado';
+  if (!confirm(`Excluir o valor do ${tipo} desta audiência?`)) return;
+  const { sbUrl, sbKey } = getSbCreds();
+  if (!sbUrl || !sbKey) { showToast('Configuração Supabase ausente.'); return; }
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { error } = await sb.from('pauta_audiencias').update({ [campo]: null }).eq('id', id);
+    if (error) throw error;
+    showToast('Valor removido.');
     loadAudiencias();
   } catch(e) { showToast('Erro: ' + e.message); }
 }
