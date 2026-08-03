@@ -743,6 +743,7 @@
           <div class="page-label">Área do Cliente · Falaw Advogados</div>
           <h1 class="page-title">Pauta de Audiências</h1>
           <p class="page-subtitle">Próximas audiências agendadas para a sua empresa.</p>
+          <button type="button" id="btn-novo-corr-admin" onclick="abrirModalNovoCorrespondente()" style="display:none;margin-top:12px;background:#0D2B5E;color:#fff;border:none;border-radius:4px;padding:9px 16px;font-family:monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-weight:700">+ Novo Correspondente</button>
         </div>
 
         <!-- Filtro de data (visível apenas para escritório) -->
@@ -2443,6 +2444,177 @@ async function loadPautaAdmin() {
   el.innerHTML = html;
 }
 
+/* ── Cadastro de novo correspondente (mesmos campos do admin.html) ────────── */
+function _corrNormNome2(s) {
+  return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/\b(cpf|rg)\b\s*:?\s*[\d.\-\/]*/gi, '')
+    .replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+function _corrNormEmails2(s) {
+  return (s || '').toLowerCase().split(/[\s,;]+/).map(e => e.trim()).filter(Boolean);
+}
+function _corrNormDoc2(s) {
+  return (s || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+}
+function _corrFindDuplicate2(list, nome, email, cpf, oab) {
+  const nNome   = _corrNormNome2(nome);
+  const nEmails = new Set(_corrNormEmails2(email));
+  const nCpf    = _corrNormDoc2(cpf);
+  const nOab    = _corrNormDoc2(oab);
+  return (list || []).find(c => {
+    if (nCpf && _corrNormDoc2(c.cpf) === nCpf) return true;
+    if (nOab && _corrNormDoc2(c.oab) === nOab) return true;
+    if (nNome && _corrNormNome2(c.nome) === nNome) return true;
+    return _corrNormEmails2(c.email).some(e => nEmails.has(e));
+  });
+}
+
+function corrAdminGenCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#';
+  let code = '';
+  for (let i = 0; i < 12; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  const el = document.getElementById('novocorr-code');
+  if (el) el.value = code;
+}
+
+function corrAdminToggleTipoFields() {
+  const tipo = document.getElementById('novocorr-tipo').value;
+  document.getElementById('novocorr-field-cpf').style.display = tipo === 'preposto' ? '' : 'none';
+  document.getElementById('novocorr-field-oab').style.display = tipo === 'advogado' ? '' : 'none';
+}
+
+function fecharModalNovoCorrespondente() {
+  document.getElementById('modal-novo-corr')?.remove();
+}
+
+function abrirModalNovoCorrespondente() {
+  const existing = document.getElementById('modal-novo-corr');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-novo-corr';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  const fieldStyle = 'border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:8px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+      <div style="padding:20px 24px 16px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="font-size:16px;font-weight:800;color:#111">Novo Correspondente</div>
+        <button onclick="fecharModalNovoCorrespondente()" style="background:none;border:none;font-size:20px;color:#9CA3AF;cursor:pointer;padding:0;line-height:1">×</button>
+      </div>
+      <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Nome completo *</label>
+          <input id="novocorr-nome" type="text" placeholder="Dr. João Silva" style="${fieldStyle}">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">E-mail de Acesso *</label>
+          <input id="novocorr-email" type="email" placeholder="correspondente@email.com" style="${fieldStyle}">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Celular / WhatsApp</label>
+          <input id="novocorr-celular" type="tel" placeholder="(11) 9 9999-0000" style="${fieldStyle}">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Tipo *</label>
+          <select id="novocorr-tipo" onchange="corrAdminToggleTipoFields()" style="${fieldStyle};background:#fff">
+            <option value="advogado">Advogado</option>
+            <option value="preposto">Preposto</option>
+            <option value="admin">Administradora de Correspondentes</option>
+          </select>
+        </div>
+        <div id="novocorr-field-cpf" style="display:none">
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">CPF</label>
+          <input id="novocorr-cpf" type="text" placeholder="000.000.000-00" style="${fieldStyle}">
+        </div>
+        <div id="novocorr-field-oab" style="display:none">
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">OAB</label>
+          <input id="novocorr-oab" type="text" placeholder="OAB/SP 123.456" style="${fieldStyle}">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Observações</label>
+          <textarea id="novocorr-obs" rows="3" placeholder="Observações sobre o correspondente" style="${fieldStyle};resize:vertical"></textarea>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Senha de Acesso *</label>
+          <div style="display:flex;gap:8px">
+            <input id="novocorr-code" type="text" placeholder="Gerada automaticamente" style="${fieldStyle};flex:1">
+            <button type="button" onclick="corrAdminGenCode()" style="white-space:nowrap;background:#F3F4F6;color:#374151;border:none;padding:0 14px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer">Gerar</button>
+          </div>
+          <small style="color:#9CA3AF;font-size:10px">O correspondente usará o e-mail + senha para acessar o portal.</small>
+        </div>
+      </div>
+      <div style="padding:16px 24px;border-top:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <span id="novocorr-msg" style="font-size:11px;color:#6B7280"></span>
+        <div style="display:flex;gap:8px">
+          <button onclick="fecharModalNovoCorrespondente()" style="background:#F3F4F6;color:#374151;border:none;padding:9px 20px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer">Cancelar</button>
+          <button onclick="salvarNovoCorrespondente()" style="background:#0D2B5E;color:#fff;border:none;padding:9px 20px;border-radius:4px;font-family:monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-weight:700">Salvar</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  corrAdminGenCode();
+  setTimeout(() => overlay.querySelector('input')?.focus(), 50);
+}
+
+async function salvarNovoCorrespondente() {
+  const msg = document.getElementById('novocorr-msg');
+  const nome  = document.getElementById('novocorr-nome').value.trim();
+  const email = document.getElementById('novocorr-email').value.trim().toLowerCase();
+  const celular = document.getElementById('novocorr-celular').value.trim();
+  const cpf = document.getElementById('novocorr-cpf').value.trim();
+  const oab = document.getElementById('novocorr-oab').value.trim();
+  const observacoes = document.getElementById('novocorr-obs').value.trim();
+  const code = document.getElementById('novocorr-code').value.trim();
+  const tipo = document.getElementById('novocorr-tipo').value;
+
+  if (!nome || !email || !code) {
+    if (msg) { msg.style.color = '#DC2626'; msg.textContent = 'Preencha nome, e-mail e senha.'; }
+    return;
+  }
+
+  const sbUrl = (window.SB_URL || '').trim();
+  const sbKey = (window.SB_KEY || '').trim();
+  if (!sbUrl || !sbKey || typeof supabase === 'undefined') {
+    if (msg) { msg.style.color = '#DC2626'; msg.textContent = 'Configuração ausente.'; }
+    return;
+  }
+
+  if (msg) { msg.style.color = '#6B7280'; msg.textContent = 'Verificando duplicidade…'; }
+  const sb = supabase.createClient(sbUrl, sbKey);
+  let existentes = [];
+  try {
+    const { data } = await sb.from('correspondentes').select('*');
+    existentes = data || [];
+  } catch(e) { console.warn('load correspondentes:', e.message); }
+
+  const dup = _corrFindDuplicate2(existentes, nome, email, cpf, oab);
+  if (dup) {
+    const seguir = confirm(
+      `Já existe um cadastro parecido:\n\n${dup.nome || '—'} — ${dup.email || '—'}\n\n` +
+      `Clique OK para salvar mesmo assim como um cadastro separado, ou Cancelar para não duplicar.`
+    );
+    if (!seguir) return;
+  }
+
+  const rec = {
+    id: 'corr-' + Date.now(),
+    nome, email, celular, cpf, oab, observacoes, code, tipo,
+    created_at: new Date().toISOString(),
+  };
+
+  if (msg) { msg.style.color = '#6B7280'; msg.textContent = 'Salvando…'; }
+  try {
+    const { error } = await sb.from('correspondentes').upsert(rec);
+    if (error) { if (msg) { msg.style.color = '#DC2626'; msg.textContent = 'Erro: ' + error.message; } return; }
+  } catch(e) {
+    if (msg) { msg.style.color = '#DC2626'; msg.textContent = 'Erro: ' + e.message; }
+    return;
+  }
+  if (msg) { msg.style.color = '#1B7A4E'; msg.textContent = '✓ Correspondente cadastrado!'; }
+  setTimeout(() => fecharModalNovoCorrespondente(), 900);
+}
+
 function abrirModalCorrAdmin(audId) {
   const a = (window._adminCorrRows || []).find(r => r.id === audId);
   if (!a) return;
@@ -3704,6 +3876,7 @@ async function init() {
       document.getElementById('dashTabBar').style.display    = 'none';
       document.getElementById('nav-pauta').style.display     = '';
       document.getElementById('nav-pauta').onclick = function(){ showTab('pauta'); closeSidebar(); };
+      document.getElementById('btn-novo-corr-admin').style.display = '';
       showTab('pauta');
       loadPautaAdmin();
       return;
