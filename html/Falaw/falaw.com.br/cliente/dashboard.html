@@ -2209,13 +2209,36 @@ function _mencaoRenderPainel() {
   if (!body) return;
   if (!pend.length) { body.innerHTML = '<div style="padding:14px;color:#9CA3AF;font-size:12px;text-align:center">Nenhuma menção pendente.</div>'; return; }
   body.innerHTML = pend.map(m => `
-    <div style="padding:8px 12px;border-bottom:1px solid #f3f4f6;display:flex;gap:8px;align-items:flex-start">
+    <div onclick="_mencaoIrPara('${m.audiencia_id}')" style="padding:8px 12px;border-bottom:1px solid #f3f4f6;display:flex;gap:8px;align-items:flex-start;cursor:pointer" onmouseenter="this.style.background='#F9FAFB'" onmouseleave="this.style.background='#fff'">
       <div style="flex:1;min-width:0">
         <div style="font-size:9px;font-family:monospace;text-transform:uppercase;letter-spacing:.06em;color:#7B1A2E;font-weight:700">@${escHtml(m.mencionado)} · ${escHtml(m.autor||'')}</div>
         <div style="font-size:11px;color:#374151;margin-top:2px">${escHtml((m.texto||'').slice(0,140))}</div>
       </div>
-      <button onclick="_mencaoMarcarLida(${m.id})" title="Marcar como visto" style="background:none;border:1px solid #d1d5db;border-radius:3px;padding:2px 7px;font-size:10px;cursor:pointer;color:#1B7A4E;flex-shrink:0">✓</button>
+      <button onclick="event.stopPropagation();_mencaoMarcarLida(${m.id})" title="Marcar como visto" style="background:none;border:1px solid #d1d5db;border-radius:3px;padding:2px 7px;font-size:10px;cursor:pointer;color:#1B7A4E;flex-shrink:0">✓</button>
     </div>`).join('');
+}
+
+function _mencaoHighlightCard(el) {
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const prev = el.style.outline;
+  el.style.outline = '3px solid #DC2626';
+  el.style.outlineOffset = '2px';
+  setTimeout(() => { el.style.outline = prev; }, 2500);
+}
+
+function _mencaoIrPara(audienciaId) {
+  document.getElementById('mencao-painel').style.display = 'none';
+  const existing = document.getElementById('esc-row-' + audienciaId);
+  if (existing) { _mencaoHighlightCard(existing); return; }
+
+  const row = (window._escRows || []).find(r => r.id === audienciaId);
+  if (!row || !row.data_audiencia) { alert('Audiência não encontrada.'); return; }
+  _escLimparBusca();
+  escFiltrarData(row.data_audiencia);
+  setTimeout(() => {
+    const card = document.getElementById('esc-row-' + audienciaId);
+    if (card) _mencaoHighlightCard(card);
+  }, 60);
 }
 
 async function _mencaoMarcarLida(id) {

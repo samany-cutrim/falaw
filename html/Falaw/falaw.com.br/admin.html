@@ -1710,11 +1710,37 @@
               <div id="mencao-painel-body"></div>
             </div>
           </div>
+          <button type="button" class="btn btn-ghost" onclick="abrirModalSiglaMencao()" title="Cadastra alguém só como mencionável (@sigla), sem publicar no site — use para quem já tem presença própria no site (ex: founder)">+ Sigla p/ Menção</button>
           <button type="button" class="btn btn-ghost" onclick="openAudienciaModal()">+ Manual</button>
         </div>
 
       </div>
       <div id="aud-edge-result" style="display:none;margin-bottom:16px;background:#0D2B5E;color:#EEF2FF;border-radius:4px;padding:12px 16px;font-family:var(--f-mono);font-size:11px;white-space:pre-wrap;word-break:break-word;max-height:260px;overflow-y:auto"></div>
+
+      <!-- Modal: cadastrar alguém só como mencionável, sem publicar em "Nossa Equipe" -->
+      <div class="modal-overlay" id="siglaMencaoModal" onclick="if(event.target===this)closeSiglaMencaoModal()">
+        <div class="modal" style="max-width:400px">
+          <div class="modal-header">
+            <h3>Nova sigla para menção</h3>
+            <button class="modal-close" onclick="closeSiglaMencaoModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <p style="font-size:12px;color:var(--c-muted);margin:0 0 12px">Não aparece no site público (não é a mesma coisa que "Nossa Equipe"). Use para quem já tem presença própria no site, como a founder.</p>
+            <div class="form-field">
+              <label>Nome</label>
+              <input id="sigla-mencao-nome" type="text" placeholder="Ex: Tatiana" />
+            </div>
+            <div class="form-field">
+              <label>Sigla (o que vai depois do @)</label>
+              <input id="sigla-mencao-sigla" type="text" placeholder="Ex: TGFA" />
+            </div>
+          </div>
+          <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px">
+            <button class="btn btn-ghost" onclick="closeSiglaMencaoModal()">Cancelar</button>
+            <button class="btn btn-primary" onclick="salvarSiglaMencao()">Salvar</button>
+          </div>
+        </div>
+      </div>
 
       <!-- Barra de progresso PJe sync -->
       <div id="pje-progress-wrap" style="display:none;background:#EEF2FF;border:1px solid #c7d2fe;border-radius:4px;padding:14px 18px;margin-bottom:16px">
@@ -14189,13 +14215,47 @@ function _mencaoRenderPainel() {
   if (!body) return;
   if (!pend.length) { body.innerHTML = '<div style="padding:14px;color:var(--c-muted);font-size:12px;text-align:center">Nenhuma menção pendente.</div>'; return; }
   body.innerHTML = pend.map(m => `
-    <div style="padding:8px 12px;border-bottom:1px solid #f3f4f6;display:flex;gap:8px;align-items:flex-start">
+    <div onclick="_mencaoIrPara('${m.audiencia_id}')" style="padding:8px 12px;border-bottom:1px solid #f3f4f6;display:flex;gap:8px;align-items:flex-start;cursor:pointer" onmouseenter="this.style.background='#F9FAFB'" onmouseleave="this.style.background='#fff'">
       <div style="flex:1;min-width:0">
         <div style="font-size:9px;font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:#7B1A2E;font-weight:700">@${_escHtml(m.mencionado)} · ${_escHtml(m.autor||'')}</div>
         <div style="font-size:11px;color:var(--c-dark);margin-top:2px">${_escHtml((m.texto||'').slice(0,140))}</div>
       </div>
-      <button onclick="_mencaoMarcarLida(${m.id})" title="Marcar como visto" style="background:none;border:1px solid #d1d5db;border-radius:3px;padding:2px 7px;font-size:10px;cursor:pointer;color:#1B7A4E;flex-shrink:0">✓</button>
+      <button onclick="event.stopPropagation();_mencaoMarcarLida(${m.id})" title="Marcar como visto" style="background:none;border:1px solid #d1d5db;border-radius:3px;padding:2px 7px;font-size:10px;cursor:pointer;color:#1B7A4E;flex-shrink:0">✓</button>
     </div>`).join('');
+}
+
+function _mencaoHighlightCard(el) {
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const prev = el.style.outline;
+  el.style.outline = '3px solid #DC2626';
+  el.style.outlineOffset = '2px';
+  setTimeout(() => { el.style.outline = prev; }, 2500);
+}
+
+async function _mencaoIrPara(audienciaId) {
+  document.getElementById('mencao-painel').style.display = 'none';
+  const existing = document.querySelector(`[data-aud-id="${CSS.escape(audienciaId)}"]`);
+  if (existing) { _mencaoHighlightCard(existing); return; }
+
+  const { sbUrl, sbKey } = getSbCreds();
+  if (!sbUrl || !sbKey) return;
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { data } = await sb.from('pauta_audiencias').select('data_audiencia').eq('id', audienciaId).maybeSingle();
+    if (!data || !data.data_audiencia) { showToast('Audiência não encontrada.'); return; }
+    ['aud-filter-tipo','aud-filter-modalidade','aud-filter-status','aud-filter-mes','aud-filter-dia','aud-filter-busca'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    ['aud-ms-resp','aud-ms-recda','aud-filter-tipo'].forEach(id => _msReset(id));
+    window._audSoIncompletas = false;
+    document.getElementById('aud-data-de').value  = data.data_audiencia;
+    document.getElementById('aud-data-ate').value = data.data_audiencia;
+    window._audPeriodo = 'custom';
+    await loadAudiencias();
+    const card = document.querySelector(`[data-aud-id="${CSS.escape(audienciaId)}"]`);
+    if (card) _mencaoHighlightCard(card);
+    else showToast('Audiência encontrada, mas fora dos filtros atuais.');
+  } catch(e) { showToast('Erro: ' + e.message); }
 }
 
 async function _mencaoMarcarLida(id) {
@@ -14207,6 +14267,33 @@ async function _mencaoMarcarLida(id) {
     if (error) throw error;
   } catch(e) { showToast('Erro: ' + e.message); return; }
   await _mencaoAtualizarBadge();
+  loadAudiencias();
+}
+
+/* ── Cadastro rápido de sigla mencionável, sem publicar em "Nossa Equipe" (site público) ── */
+function abrirModalSiglaMencao() {
+  document.getElementById('sigla-mencao-nome').value  = '';
+  document.getElementById('sigla-mencao-sigla').value = '';
+  document.getElementById('siglaMencaoModal').classList.add('open');
+}
+
+function closeSiglaMencaoModal() {
+  document.getElementById('siglaMencaoModal').classList.remove('open');
+}
+
+async function salvarSiglaMencao() {
+  const nome  = document.getElementById('sigla-mencao-nome').value.trim();
+  const sigla = document.getElementById('sigla-mencao-sigla').value.trim();
+  if (!nome || !sigla) { showToast('Preencha nome e sigla.'); return; }
+  const { sbUrl, sbKey } = getSbCreds();
+  if (!sbUrl || !sbKey) { showToast('Configuração Supabase ausente.'); return; }
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { error } = await sb.from('equipe').insert({ id: 'mencao-' + Date.now(), nome, sigla });
+    if (error) throw error;
+  } catch(e) { showToast('Erro: ' + e.message); return; }
+  closeSiglaMencaoModal();
+  showToast('Sigla cadastrada — só para menções, não aparece no site.');
   loadAudiencias();
 }
 
