@@ -1710,37 +1710,11 @@
               <div id="mencao-painel-body"></div>
             </div>
           </div>
-          <button type="button" class="btn btn-ghost" onclick="abrirModalSiglaMencao()" title="Cadastra alguém só como mencionável (@sigla), sem publicar no site — use para quem já tem presença própria no site (ex: founder)">+ Sigla p/ Menção</button>
           <button type="button" class="btn btn-ghost" onclick="openAudienciaModal()">+ Manual</button>
         </div>
 
       </div>
       <div id="aud-edge-result" style="display:none;margin-bottom:16px;background:#0D2B5E;color:#EEF2FF;border-radius:4px;padding:12px 16px;font-family:var(--f-mono);font-size:11px;white-space:pre-wrap;word-break:break-word;max-height:260px;overflow-y:auto"></div>
-
-      <!-- Modal: cadastrar alguém só como mencionável, sem publicar em "Nossa Equipe" -->
-      <div class="modal-overlay" id="siglaMencaoModal" onclick="if(event.target===this)closeSiglaMencaoModal()">
-        <div class="modal" style="max-width:400px">
-          <div class="modal-header">
-            <h3>Nova sigla para menção</h3>
-            <button class="modal-close" onclick="closeSiglaMencaoModal()">×</button>
-          </div>
-          <div class="modal-body">
-            <p style="font-size:12px;color:var(--c-muted);margin:0 0 12px">Não aparece no site público (não é a mesma coisa que "Nossa Equipe"). Use para quem já tem presença própria no site, como a founder.</p>
-            <div class="form-field">
-              <label>Nome</label>
-              <input id="sigla-mencao-nome" type="text" placeholder="Ex: Tatiana" />
-            </div>
-            <div class="form-field">
-              <label>Sigla (o que vai depois do @)</label>
-              <input id="sigla-mencao-sigla" type="text" placeholder="Ex: TGFA" />
-            </div>
-          </div>
-          <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px">
-            <button class="btn btn-ghost" onclick="closeSiglaMencaoModal()">Cancelar</button>
-            <button class="btn btn-primary" onclick="salvarSiglaMencao()">Salvar</button>
-          </div>
-        </div>
-      </div>
 
       <!-- Barra de progresso PJe sync -->
       <div id="pje-progress-wrap" style="display:none;background:#EEF2FF;border:1px solid #c7d2fe;border-radius:4px;padding:14px 18px;margin-bottom:16px">
@@ -3030,6 +3004,13 @@ Ex: 0020123-64.2024.5.04.0382 - JOÃO SILVA (Deserção)"></textarea>
           <option value="active">Ativo</option>
           <option value="memoriam">In Memoriam</option>
         </select>
+      </div>
+      <div class="form-field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="member-oculto" style="width:14px;height:14px;cursor:pointer" />
+          Oculto no site (não publica no team-data.js público)
+        </label>
+        <p class="cfg-hint" style="margin-top:4px;font-size:11px;color:var(--c-muted)">Continua contando pra menções (@sigla) e para o restante do admin — só não aparece na página pública "Nossa Equipe". Use para quem já tem presença própria no site (ex: founder).</p>
       </div>
     </div>
     <div class="modal-footer">
@@ -4860,8 +4841,9 @@ async function pushArticlesToGitHub() {
 
 function generateTeamJS(members) {
   // Campos privados (celular e API key CallMeBot) ficam só no Supabase —
-  // nunca no team-data.js, que é público no site.
-  const publicos = members.map(({ celular, callmebotApikey, ...m }) => m);
+  // nunca no team-data.js, que é público no site. Membros marcados "oculto"
+  // também ficam de fora — continuam no admin e nas @menções, só não publicam.
+  const publicos = members.filter(m => !m.oculto).map(({ celular, callmebotApikey, oculto, ...m }) => m);
   return '/* team-data.js — gerado pelo admin Ferraz Andrade. Não editar manualmente. */\nvar FALAW_TEAM = ' + JSON.stringify(publicos, null, 2) + ';\n';
 }
 
@@ -4873,7 +4855,10 @@ async function loadTeamFromGitHub() {
     const match = r.text.match(/FALAW_TEAM\s*=\s*(\[[\s\S]*?\]);\s*$/m);
     if (!match) return;
     const ghMembers = JSON.parse(match[1]) || [];
-    if (ghMembers.length) save(KEYS.members, ghMembers);
+    // Membros ocultos nunca vão pro GitHub — preserva os que já existem localmente
+    // pra não sumirem do admin quando recarrega a lista pública.
+    const ocultosLocais = (load(KEYS.members) || []).filter(m => m.oculto && !ghMembers.some(g => g.id === m.id));
+    if (ghMembers.length || ocultosLocais.length) save(KEYS.members, [...ghMembers, ...ocultosLocais]);
   } catch { /* formato inválido */ }
 }
 
@@ -5285,6 +5270,7 @@ function renderEquipe() {
           ${escHtml(m.name)}
           <span class="role-badge">${escHtml(m.role)}</span>
           ${m.status === 'memoriam' ? '<span class="post-tag" style="background:#555">In Memoriam</span>' : ''}
+          ${m.oculto ? '<span class="post-tag" title="Não aparece no site público" style="background:#B45309">Oculto no site</span>' : ''}
         </div>
         ${m.email ? `<div class="item-card-meta">${escHtml(m.email)}</div>` : ''}
         <div class="item-card-preview">${escHtml(m.bio)}</div>
@@ -5315,6 +5301,7 @@ function openMemberModal(id) {
       document.getElementById('member-role').value    = m.role;
       document.getElementById('member-bio').value     = m.bio;
       document.getElementById('member-status').value  = m.status;
+      document.getElementById('member-oculto').checked = !!m.oculto;
       // Celular e API key não vão para o team-data.js público — completa
       // a partir do Supabase (tabela equipe), que é a fonte de verdade.
       (async () => {
@@ -5342,6 +5329,7 @@ function openMemberModal(id) {
     document.getElementById('member-role').value    = 'Advogada';
     document.getElementById('member-bio').value     = '';
     document.getElementById('member-status').value  = 'active';
+    document.getElementById('member-oculto').checked = false;
   }
   document.getElementById('member-modal').classList.add('open');
 }
@@ -5361,6 +5349,7 @@ function saveMember() {
   const role    = document.getElementById('member-role').value.trim();
   const bio     = document.getElementById('member-bio').value.trim();
   const status  = document.getElementById('member-status').value;
+  const oculto  = document.getElementById('member-oculto').checked;
 
   if (!name) { alert('Por favor, preencha o nome.'); return; }
 
@@ -5369,9 +5358,9 @@ function saveMember() {
 
   if (id) {
     const idx = members.findIndex(m => m.id === id);
-    if (idx !== -1) members[idx] = { ...members[idx], name, sigla, email, celular, callmebotApikey, role, bio, status };
+    if (idx !== -1) members[idx] = { ...members[idx], name, sigla, email, celular, callmebotApikey, role, bio, status, oculto };
   } else {
-    members.push({ id: uid(), name, sigla, email, celular, callmebotApikey, role, bio, status });
+    members.push({ id: uid(), name, sigla, email, celular, callmebotApikey, role, bio, status, oculto });
   }
 
   members.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
@@ -14267,33 +14256,6 @@ async function _mencaoMarcarLida(id) {
     if (error) throw error;
   } catch(e) { showToast('Erro: ' + e.message); return; }
   await _mencaoAtualizarBadge();
-  loadAudiencias();
-}
-
-/* ── Cadastro rápido de sigla mencionável, sem publicar em "Nossa Equipe" (site público) ── */
-function abrirModalSiglaMencao() {
-  document.getElementById('sigla-mencao-nome').value  = '';
-  document.getElementById('sigla-mencao-sigla').value = '';
-  document.getElementById('siglaMencaoModal').classList.add('open');
-}
-
-function closeSiglaMencaoModal() {
-  document.getElementById('siglaMencaoModal').classList.remove('open');
-}
-
-async function salvarSiglaMencao() {
-  const nome  = document.getElementById('sigla-mencao-nome').value.trim();
-  const sigla = document.getElementById('sigla-mencao-sigla').value.trim();
-  if (!nome || !sigla) { showToast('Preencha nome e sigla.'); return; }
-  const { sbUrl, sbKey } = getSbCreds();
-  if (!sbUrl || !sbKey) { showToast('Configuração Supabase ausente.'); return; }
-  try {
-    const sb = supabase.createClient(sbUrl, sbKey);
-    const { error } = await sb.from('equipe').insert({ id: 'mencao-' + Date.now(), nome, sigla });
-    if (error) throw error;
-  } catch(e) { showToast('Erro: ' + e.message); return; }
-  closeSiglaMencaoModal();
-  showToast('Sigla cadastrada — só para menções, não aparece no site.');
   loadAudiencias();
 }
 
