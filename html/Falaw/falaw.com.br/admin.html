@@ -4496,6 +4496,32 @@ const LIVE_TAB_RELOADERS = {
   'pesquisas-lista': () => pqCarregar(),
   'pesquisas-dash':  () => pqDashCarregar(),
 };
+// Refaz o HTML da tela sem "puxar" a pessoa pro topo nem apagar o que ela
+// estava digitando (ex: uma mensagem no bate-papo ainda não enviada).
+function _liveReloadPreservingScroll(reloadFn) {
+  const scrollX = window.scrollX, scrollY = window.scrollY;
+  const active   = document.activeElement;
+  const activeId = active && active.id;
+  const activeVal = active && 'value' in active ? active.value : null;
+  const activeSel = active && 'selectionStart' in active ? active.selectionStart : null;
+
+  const restore = () => {
+    window.scrollTo(scrollX, scrollY);
+    if (!activeId) return;
+    const el = document.getElementById(activeId);
+    if (!el) return;
+    if (activeVal && 'value' in el && !el.value) el.value = activeVal;
+    el.focus({ preventScroll: true });
+    if (activeSel != null && typeof el.setSelectionRange === 'function') {
+      try { el.setSelectionRange(activeSel, activeSel); } catch(e) {}
+    }
+    window.scrollTo(scrollX, scrollY);
+  };
+  const result = reloadFn();
+  if (result && typeof result.then === 'function') result.then(() => requestAnimationFrame(restore));
+  else requestAnimationFrame(restore);
+}
+
 let _liveDebounce = {};
 function _liveInit() {
   if (window._liveChannel) return; // já inicializado nesta sessão
@@ -4509,7 +4535,7 @@ function _liveInit() {
       clearTimeout(_liveDebounce[table]);
       _liveDebounce[table] = setTimeout(() => {
         const reload = LIVE_TAB_RELOADERS[window._liveCurrentTab];
-        if (reload) reload();
+        if (reload) _liveReloadPreservingScroll(reload);
       }, 500);
     });
   });
