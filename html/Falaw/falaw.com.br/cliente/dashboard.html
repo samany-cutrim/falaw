@@ -744,6 +744,12 @@
           <h1 class="page-title">Pauta de Audiências</h1>
           <p class="page-subtitle">Próximas audiências agendadas para a sua empresa.</p>
           <button type="button" id="btn-novo-corr-admin" onclick="abrirModalNovoCorrespondente()" style="display:none;margin-top:12px;background:#0D2B5E;color:#fff;border:none;border-radius:4px;padding:9px 16px;font-family:monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-weight:700">+ Novo Correspondente</button>
+          <div id="mencao-wrap" style="display:none;position:relative;margin-top:12px">
+            <button type="button" onclick="_mencaoTogglePainel()" style="background:#fff;color:#0D2B5E;border:1px solid #d1d5db;border-radius:4px;padding:9px 16px;font-family:monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-weight:700">🔔 Menções <span id="mencao-badge" style="display:none;background:#DC2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span></button>
+            <div id="mencao-painel" style="display:none;position:absolute;left:0;top:calc(100% + 4px);z-index:300;width:340px;max-height:360px;overflow-y:auto;background:#fff;border:1px solid #e5e7eb;border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.15)">
+              <div id="mencao-painel-body"></div>
+            </div>
+          </div>
         </div>
 
         <!-- Filtros (visível apenas para admin de correspondentes) -->
@@ -2089,6 +2095,132 @@ async function loadPythonStats(reports) {
   }
 }
 
+/* ── Menções (@Nome) no bate-papo de orientações — autocomplete, destaque e notificação ── */
+function _mencaoEscapeRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+}
+
+function _mencaoOnInput(ta) {
+  const val = ta.value;
+  const pos = ta.selectionStart;
+  const before = val.slice(0, pos);
+  const m = before.match(/@([^\s@]{0,30})$/);
+  const dropId = ta.id + '-mention';
+  let drop = document.getElementById(dropId);
+  if (!m) { if (drop) drop.style.display = 'none'; return; }
+  const q = m[1].toLowerCase();
+  const list = (window._escCorrespondentes || []).filter(c => c.nome && c.nome.toLowerCase().includes(q));
+  if (!drop) {
+    drop = document.createElement('div');
+    drop.id = dropId;
+    drop.style.cssText = 'background:#fff;border:1px solid #d1d5db;border-radius:4px;margin-top:2px;max-height:140px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.08)';
+    ta.insertAdjacentElement('afterend', drop);
+  }
+  if (!list.length) { drop.style.display = 'none'; return; }
+  drop.innerHTML = list.slice(0, 8).map(c => `<div onmousedown="event.preventDefault();_mencaoPick('${ta.id}','${c.nome.replace(/'/g,"\\'")}')" style="padding:6px 10px;font-size:12px;cursor:pointer;border-bottom:1px solid #f3f4f6" onmouseenter="this.style.background='#EEF2FF'" onmouseleave="this.style.background='#fff'">👤 ${escHtml(c.nome)}</div>`).join('');
+  drop.style.display = '';
+}
+
+function _mencaoPick(taId, nome) {
+  const ta = document.getElementById(taId);
+  if (!ta) return;
+  const pos = ta.selectionStart;
+  const before = ta.value.slice(0, pos);
+  const after  = ta.value.slice(pos);
+  ta.value = before.replace(/@([^\s@]{0,30})$/, '@' + nome + ' ') + after;
+  const drop = document.getElementById(taId + '-mention');
+  if (drop) drop.style.display = 'none';
+  ta.focus();
+}
+
+function _mencaoExtrair(msg) {
+  const encontrados = new Set();
+  (window._escCorrespondentes || []).forEach(c => {
+    if (!c.nome) return;
+    const re = new RegExp('@' + _mencaoEscapeRe(c.nome), 'i');
+    if (re.test(msg)) encontrados.add(c.nome);
+  });
+  return [...encontrados];
+}
+
+async function _mencaoRegistrar(audienciaId, msg, autor) {
+  const nomes = _mencaoExtrair(msg);
+  if (!nomes.length) return;
+  const sbUrl = (window.SB_URL || '').trim();
+  const sbKey = (window.SB_KEY || '').trim();
+  if (!sbUrl || !sbKey || typeof supabase === 'undefined') return;
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    await sb.from('mencoes').insert(nomes.map(n => ({ audiencia_id: audienciaId, mencionado: n, autor, texto: msg })));
+    _mencaoAtualizarBadge();
+  } catch(e) { console.warn('mencao insert:', e.message); }
+}
+
+function _mencaoHighlight(text) {
+  let html = escHtml(text.trim()).replace(/\n/g,'<br>');
+  (window._escCorrespondentes || []).forEach(c => {
+    if (!c.nome) return;
+    const re = new RegExp('@' + _mencaoEscapeRe(c.nome), 'gi');
+    html = html.replace(re, m => `<strong style="color:#7B1A2E">${m}</strong>`);
+  });
+  return html;
+}
+
+async function _mencaoCarregarPendentes() {
+  const sbUrl = (window.SB_URL || '').trim();
+  const sbKey = (window.SB_KEY || '').trim();
+  if (!sbUrl || !sbKey || typeof supabase === 'undefined') return [];
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { data } = await sb.from('mencoes').select('*').is('lida_at', null).order('created_at', { ascending: false }).limit(50);
+    return data || [];
+  } catch(e) { return []; }
+}
+
+async function _mencaoAtualizarBadge() {
+  const pend = await _mencaoCarregarPendentes();
+  window._mencaoPendentes = pend;
+  const badge = document.getElementById('mencao-badge');
+  if (badge) { badge.textContent = pend.length; badge.style.display = pend.length ? '' : 'none'; }
+  const painel = document.getElementById('mencao-painel');
+  if (painel && painel.style.display !== 'none') _mencaoRenderPainel();
+}
+
+function _mencaoTogglePainel() {
+  const p = document.getElementById('mencao-painel');
+  if (!p) return;
+  const abrir = p.style.display === 'none';
+  p.style.display = abrir ? '' : 'none';
+  if (abrir) _mencaoRenderPainel();
+}
+
+function _mencaoRenderPainel() {
+  const body = document.getElementById('mencao-painel-body');
+  const pend = window._mencaoPendentes || [];
+  if (!body) return;
+  if (!pend.length) { body.innerHTML = '<div style="padding:14px;color:#9CA3AF;font-size:12px;text-align:center">Nenhuma menção pendente.</div>'; return; }
+  body.innerHTML = pend.map(m => `
+    <div style="padding:8px 12px;border-bottom:1px solid #f3f4f6;display:flex;gap:8px;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:9px;font-family:monospace;text-transform:uppercase;letter-spacing:.06em;color:#7B1A2E;font-weight:700">@${escHtml(m.mencionado)} · ${escHtml(m.autor||'')}</div>
+        <div style="font-size:11px;color:#374151;margin-top:2px">${escHtml((m.texto||'').slice(0,140))}</div>
+      </div>
+      <button onclick="_mencaoMarcarLida(${m.id})" title="Marcar como visto" style="background:none;border:1px solid #d1d5db;border-radius:3px;padding:2px 7px;font-size:10px;cursor:pointer;color:#1B7A4E;flex-shrink:0">✓</button>
+    </div>`).join('');
+}
+
+async function _mencaoMarcarLida(id) {
+  const sbUrl = (window.SB_URL || '').trim();
+  const sbKey = (window.SB_KEY || '').trim();
+  if (!sbUrl || !sbKey || typeof supabase === 'undefined') return;
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { error } = await sb.from('mencoes').update({ lida_at: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
+  } catch(e) { alert('Erro: ' + e.message); return; }
+  await _mencaoAtualizarBadge();
+}
+
 /* ─── PAUTA ESCRITÓRIO (visão interna — todos os clientes) ── */
 const _ESC_ACK_KEY  = 'falaw_esc_orient_v1'; // { [id]: { sent: bool, obs: string } }
 
@@ -2144,7 +2276,7 @@ function _escThreadHtml(obs, id) {
     return `<div style="background:#fff;border-left:2px solid ${borda};border-radius:3px;padding:5px 8px;margin-top:4px;display:flex;gap:8px;align-items:flex-start">`
       + `<div style="flex:1;min-width:0" id="esc-orient-msg-${id}-${i}">`
       + (m.meta ? `<div style="font-family:monospace;font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:#6B7280;margin-bottom:2px">${escHtml(m.meta)}</div>` : '')
-      + `<div style="font-family:monospace;font-size:10px;letter-spacing:.04em;color:#0D2B5E">${escHtml(m.text.trim()).replace(/\n/g,'<br>')}</div></div>`
+      + `<div style="font-family:monospace;font-size:10px;letter-spacing:.04em;color:#0D2B5E">${_mencaoHighlight(m.text)}</div></div>`
       + (id && isEsc ? `<button onclick="escEditMsgStart('${id}',${i})" title="Editar esta mensagem" style="background:none;border:none;color:#9CA3AF;font-size:11px;line-height:1;cursor:pointer;padding:2px 4px;flex-shrink:0" onmouseenter="this.style.color='#0D2B5E'" onmouseleave="this.style.color='#9CA3AF'">✎</button>` : '')
       + `</div>`;
   }).join('');
@@ -3086,6 +3218,7 @@ async function loadPautaEscritorio() {
   const el = document.getElementById('pauta-list');
   if (!el) return;
   el.innerHTML = '<p style="color:#888;font-size:13px;padding:20px 0">Carregando pauta completa…</p>';
+  _mencaoAtualizarBadge();
 
   const sbUrl = (window.SB_URL || '').trim();
   const sbKey = (window.SB_KEY || '').trim();
@@ -3867,7 +4000,7 @@ function _escRenderRows(rows, today) {
             <input type="checkbox" onchange="escToggleOrient('${a.id}',this.checked)" ${sent?'checked':''} style="width:14px;height:14px;accent-color:#1B7A4E;cursor:pointer" />
             ${sent?'✓ Orientação Enviada':'Orientação Pendente'}
           </label>
-          <textarea id="esc-obs-${a.id}" placeholder="Nova mensagem… (as anteriores ficam no histórico acima)" rows="2"
+          <textarea id="esc-obs-${a.id}" placeholder="Nova mensagem… (as anteriores ficam no histórico acima; digite @ para mencionar)" rows="2" oninput="_mencaoOnInput(this)"
             style="width:100%;font-size:10px;padding:6px 8px;border:1px solid #e5e7eb;border-radius:5px;resize:vertical;font-family:inherit;color:#374151;background:#fff;box-sizing:border-box"></textarea>
           <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
             <button onclick="escSaveObsBtn('${a.id}')" style="background:#0D2B5E;border:none;border-radius:4px;color:#fff;font-size:10px;font-family:${MONO};letter-spacing:.06em;text-transform:uppercase;padding:7px 14px;cursor:pointer;font-weight:700" title="Adicionar mensagem ao histórico sem apagar as anteriores">➤ Enviar</button>
@@ -3935,6 +4068,7 @@ async function escSaveObsBtn(id) {
   }
   // Atualiza o histórico exibido acima
   escRenderThread(id);
+  _mencaoRegistrar(id, msg, 'Escritório');
 }
 
 /* ─── PAUTA DE AUDIÊNCIAS ────────────────────────────── */
@@ -4204,6 +4338,7 @@ async function init() {
     document.getElementById('nav-pauta').style.display = '';
     document.getElementById('nav-pauta').onclick = function(){ showTab('pauta'); closeSidebar(); };
     document.getElementById('dashTabBar').style.display = 'none';
+    document.getElementById('mencao-wrap').style.display = '';
     showTab('pauta');
     // Carrega pauta completa
     loadPautaEscritorio();
