@@ -1704,6 +1704,12 @@
           <button type="button" class="btn btn-ghost" onclick="openEnviarPautaModal()" title="Enviar e-mail de pauta para clientes selecionados">📧 Enviar Pauta</button>
           <button type="button" class="btn btn-ghost" id="btn-sync-projuris-edge" onclick="audSyncProjurisEdge()" title="Chama a edge function projuris-sync agora, sem esperar o cron">🔄 Sincronizar Projuris</button>
           <button type="button" class="btn btn-ghost" id="btn-notify-projuris-edge" onclick="audNotifyProjurisEdge()" title="Chama a edge function pauta-email-notify agora, sem esperar o cron">📨 Notificar agendadas/canceladas</button>
+          <div style="position:relative">
+            <button type="button" class="btn btn-ghost" onclick="_mencaoTogglePainel()">🔔 Menções <span id="mencao-badge" style="display:none;background:#DC2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span></button>
+            <div id="mencao-painel" style="display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:300;width:340px;max-height:360px;overflow-y:auto;background:#fff;border:1px solid var(--c-divider);border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.15)">
+              <div id="mencao-painel-body"></div>
+            </div>
+          </div>
           <button type="button" class="btn btn-ghost" onclick="openAudienciaModal()">+ Manual</button>
         </div>
 
@@ -14064,6 +14070,129 @@ const AUD_STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62
 const AUD_STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#FEE2E2', cancelado_pje:'#FEF3C7' };
 const AUD_RESP_COLOR   = { 'SUBSIDIÁRIA':'#7C3AED','SOLIDÁRIA':'#2563EB','PRINCIPAL':'#DC2626','TOMADOR DE SERVIÇO':'#D97706' };
 
+/* ── Menções (@Nome) no bate-papo de orientações — autocomplete, destaque e notificação ── */
+function _mencaoEscapeRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+}
+
+function _mencaoOnInput(ta) {
+  const val = ta.value;
+  const pos = ta.selectionStart;
+  const before = val.slice(0, pos);
+  const m = before.match(/@([^\s@]{0,30})$/);
+  const dropId = ta.id + '-mention';
+  let drop = document.getElementById(dropId);
+  if (!m) { if (drop) drop.style.display = 'none'; return; }
+  const q = m[1].toLowerCase();
+  const list = (window._audCorrespondentes || []).filter(c => c.nome && c.nome.toLowerCase().includes(q));
+  if (!drop) {
+    drop = document.createElement('div');
+    drop.id = dropId;
+    drop.style.cssText = 'background:#fff;border:1px solid #d1d5db;border-radius:4px;margin-top:2px;max-height:140px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,.08)';
+    ta.insertAdjacentElement('afterend', drop);
+  }
+  if (!list.length) { drop.style.display = 'none'; return; }
+  drop.innerHTML = list.slice(0, 8).map(c => `<div onmousedown="event.preventDefault();_mencaoPick('${ta.id}','${c.nome.replace(/'/g,"\\'")}')" style="padding:6px 10px;font-size:12px;cursor:pointer;border-bottom:1px solid #f3f4f6" onmouseenter="this.style.background='#EEF2FF'" onmouseleave="this.style.background='#fff'">👤 ${_escHtml(c.nome)}</div>`).join('');
+  drop.style.display = '';
+}
+
+function _mencaoPick(taId, nome) {
+  const ta = document.getElementById(taId);
+  if (!ta) return;
+  const pos = ta.selectionStart;
+  const before = ta.value.slice(0, pos);
+  const after  = ta.value.slice(pos);
+  ta.value = before.replace(/@([^\s@]{0,30})$/, '@' + nome + ' ') + after;
+  const drop = document.getElementById(taId + '-mention');
+  if (drop) drop.style.display = 'none';
+  ta.focus();
+}
+
+function _mencaoExtrair(msg) {
+  const encontrados = new Set();
+  (window._audCorrespondentes || []).forEach(c => {
+    if (!c.nome) return;
+    const re = new RegExp('@' + _mencaoEscapeRe(c.nome), 'i');
+    if (re.test(msg)) encontrados.add(c.nome);
+  });
+  return [...encontrados];
+}
+
+async function _mencaoRegistrar(audienciaId, msg, autor) {
+  const nomes = _mencaoExtrair(msg);
+  if (!nomes.length) return;
+  const { sbUrl, sbKey } = getSbCreds();
+  if (!sbUrl || !sbKey) return;
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    await sb.from('mencoes').insert(nomes.map(n => ({ audiencia_id: audienciaId, mencionado: n, autor, texto: msg })));
+    _mencaoAtualizarBadge();
+  } catch(e) { console.warn('mencao insert:', e.message); }
+}
+
+function _mencaoHighlight(text) {
+  let html = _escHtml(text.trim()).replace(/\n/g,'<br>');
+  (window._audCorrespondentes || []).forEach(c => {
+    if (!c.nome) return;
+    const re = new RegExp('@' + _mencaoEscapeRe(c.nome), 'gi');
+    html = html.replace(re, m => `<strong style="color:#7B1A2E">${m}</strong>`);
+  });
+  return html;
+}
+
+async function _mencaoCarregarPendentes() {
+  const { sbUrl, sbKey } = getSbCreds();
+  if (!sbUrl || !sbKey) return [];
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { data } = await sb.from('mencoes').select('*').is('lida_at', null).order('created_at', { ascending: false }).limit(50);
+    return data || [];
+  } catch(e) { return []; }
+}
+
+async function _mencaoAtualizarBadge() {
+  const pend = await _mencaoCarregarPendentes();
+  window._mencaoPendentes = pend;
+  const badge = document.getElementById('mencao-badge');
+  if (badge) { badge.textContent = pend.length; badge.style.display = pend.length ? '' : 'none'; }
+  const painel = document.getElementById('mencao-painel');
+  if (painel && painel.style.display !== 'none') _mencaoRenderPainel();
+}
+
+function _mencaoTogglePainel() {
+  const p = document.getElementById('mencao-painel');
+  if (!p) return;
+  const abrir = p.style.display === 'none';
+  p.style.display = abrir ? '' : 'none';
+  if (abrir) _mencaoRenderPainel();
+}
+
+function _mencaoRenderPainel() {
+  const body = document.getElementById('mencao-painel-body');
+  const pend = window._mencaoPendentes || [];
+  if (!body) return;
+  if (!pend.length) { body.innerHTML = '<div style="padding:14px;color:var(--c-muted);font-size:12px;text-align:center">Nenhuma menção pendente.</div>'; return; }
+  body.innerHTML = pend.map(m => `
+    <div style="padding:8px 12px;border-bottom:1px solid #f3f4f6;display:flex;gap:8px;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:9px;font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:#7B1A2E;font-weight:700">@${_escHtml(m.mencionado)} · ${_escHtml(m.autor||'')}</div>
+        <div style="font-size:11px;color:var(--c-dark);margin-top:2px">${_escHtml((m.texto||'').slice(0,140))}</div>
+      </div>
+      <button onclick="_mencaoMarcarLida(${m.id})" title="Marcar como visto" style="background:none;border:1px solid #d1d5db;border-radius:3px;padding:2px 7px;font-size:10px;cursor:pointer;color:#1B7A4E;flex-shrink:0">✓</button>
+    </div>`).join('');
+}
+
+async function _mencaoMarcarLida(id) {
+  const { sbUrl, sbKey } = getSbCreds();
+  if (!sbUrl || !sbKey) return;
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { error } = await sb.from('mencoes').update({ lida_at: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
+  } catch(e) { showToast('Erro: ' + e.message); return; }
+  await _mencaoAtualizarBadge();
+}
+
 /* ── Histórico de orientações estilo bate-papo (mesmo formato do dashboard do escritório):
    entradas "[dd/mm/aa hh:mm · Autor] texto" separadas por \n na coluna orientacao;
    linhas sem cabeçalho são continuação (ou mensagem legada, sem meta). ── */
@@ -14096,7 +14225,7 @@ function _audObsThreadHtml(obs, id) {
     return `<div style="background:#fff;border-left:2px solid ${borda};border-radius:3px;padding:5px 8px;margin-top:4px;display:flex;gap:6px;align-items:flex-start">`
       + `<div style="flex:1;min-width:0" id="aud-obs-msg-${id}-${i}">`
       + (m.meta ? `<div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:#6B7280;margin-bottom:2px">${_escHtml(m.meta)}</div>` : '')
-      + `<div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#0D2B5E">${_escHtml(m.text.trim()).replace(/\n/g,'<br>')}</div></div>`
+      + `<div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#0D2B5E">${_mencaoHighlight(m.text)}</div></div>`
       + `<button onclick="audObsEditStart('${id}',${i})" title="Editar esta mensagem" style="background:none;border:none;color:#9CA3AF;font-size:11px;line-height:1;cursor:pointer;padding:2px 3px;flex-shrink:0" onmouseenter="this.style.color='#0D2B5E'" onmouseleave="this.style.color='#9CA3AF'">✎</button>`
       + `<button onclick="audObsDelete('${id}',${i})" title="Excluir esta mensagem" style="background:none;border:none;color:#9CA3AF;font-size:11px;line-height:1;cursor:pointer;padding:2px 3px;flex-shrink:0" onmouseenter="this.style.color='#DC2626'" onmouseleave="this.style.color='#9CA3AF'">✕</button>`
       + `</div>`;
@@ -14135,6 +14264,7 @@ async function audObsSend(id) {
   try { await _audObsPersist(id, obs); } catch(e) { showToast('Erro ao salvar orientação: ' + e.message); return; }
   ta.value = '';
   audObsRenderThread(id);
+  _mencaoRegistrar(id, msg, 'Admin');
 }
 
 async function audObsDelete(id, idx) {
@@ -14327,7 +14457,7 @@ function _audCard(a) {
     </div>
     <!-- controle de orientação -->
     <div style="border-top:1px solid #f3f4f6;margin-top:12px;padding-top:12px">
-      <textarea id="aud-obs-${_escHtml(a.id)}" placeholder="Nova mensagem… (as anteriores ficam no histórico acima)" rows="2"
+      <textarea id="aud-obs-${_escHtml(a.id)}" placeholder="Nova mensagem… (as anteriores ficam no histórico acima; digite @ para mencionar)" rows="2" oninput="_mencaoOnInput(this)"
         style="width:100%;font-size:10px;padding:6px 8px;border:1px solid #e5e7eb;border-radius:5px;resize:vertical;font-family:inherit;color:#374151;background:#fff;box-sizing:border-box"></textarea>
       <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px">
         <button onclick="audObsSend('${_escHtml(a.id)}')" style="background:#0D2B5E;border:none;border-radius:4px;color:#fff;font-size:10px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:7px 14px;cursor:pointer;font-weight:700" title="Adicionar mensagem ao histórico sem apagar as anteriores">➤ Enviar</button>
@@ -14532,6 +14662,7 @@ async function loadAudiencias() {
   _audRenderCanceladasAlert(_sbUrl, _sbKey);
   _audRenderLastSync(_sbUrl, _sbKey);
   _audRenderLastSyncProjuris(_sbUrl, _sbKey);
+  _mencaoAtualizarBadge();
 
   const today = new Date().toISOString().slice(0,10);
 
