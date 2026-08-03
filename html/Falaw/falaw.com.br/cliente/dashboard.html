@@ -2228,6 +2228,7 @@ async function _mencaoMarcarLida(id) {
     if (error) throw error;
   } catch(e) { alert('Erro: ' + e.message); return; }
   await _mencaoAtualizarBadge();
+  if (window._fawSession?.isEscritorio) loadPautaEscritorio();
 }
 
 /* ─── PAUTA ESCRITÓRIO (visão interna — todos os clientes) ── */
@@ -3227,7 +3228,6 @@ async function loadPautaEscritorio() {
   const el = document.getElementById('pauta-list');
   if (!el) return;
   el.innerHTML = '<p style="color:#888;font-size:13px;padding:20px 0">Carregando pauta completa…</p>';
-  _mencaoAtualizarBadge();
 
   const sbUrl = (window.SB_URL || '').trim();
   const sbKey = (window.SB_KEY || '').trim();
@@ -3237,14 +3237,18 @@ async function loadPautaEscritorio() {
   if (sbUrl && sbKey && typeof supabase !== 'undefined') {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
-      const [{ data }, { data: cData }, { data: eData }] = await Promise.all([
+      const [{ data }, { data: cData }, { data: eData }, { data: mData }] = await Promise.all([
         sb.from('pauta_audiencias').select('*').order('data_audiencia', { ascending: true }).order('horario', { ascending: true }).range(0, 9999),
         sb.from('correspondentes').select('id,nome,email,celular,tipo,cpf,oab,observacoes'),
         sb.from('equipe').select('id,nome,sigla').order('nome', { ascending: true }),
+        sb.from('mencoes').select('*').is('lida_at', null).order('created_at', { ascending: false }).limit(200),
       ]);
       if (data) rows = data;
       window._escCorrespondentes = cData || [];
       window._escEquipe = eData || [];
+      window._mencaoPendentes = mData || [];
+      const badge = document.getElementById('mencao-badge');
+      if (badge) { badge.textContent = window._mencaoPendentes.length; badge.style.display = window._mencaoPendentes.length ? '' : 'none'; }
     } catch(e) { console.warn('pauta escritorio:', e.message); }
   }
 
@@ -3938,6 +3942,7 @@ function _escRenderRows(rows, today) {
       const isCancelada  = a.status === 'cancelada';
       const isSustOral   = a.tipo_audiencia === 'SUSTENTAÇÃO ORAL';
       const isPericia    = a.tipo_audiencia === 'PERÍCIA';
+      const temMencaoPendente = (window._mencaoPendentes || []).some(m => m.audiencia_id === a.id);
       const op = isPastDate && !isCancelada ? 'opacity:.72;' : '';
 
       const st   = state[a.id] || {};
@@ -3968,6 +3973,7 @@ function _escRenderRows(rows, today) {
           <div style="flex:1;min-width:200px">
             <!-- tags -->
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+              ${temMencaoPendente ? `<span title="Tem menção pendente nas observações" style="background:#FEE2E2;color:#B91C1C;font-family:${MONO};font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px;border:1px solid #FCA5A5">⚠️ Menção</span>` : ''}
               <span style="background:${tipoBg};color:${tipoColor};font-family:${MONO};font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${escHtml(tipoLabel)}</span>
               <span style="background:${_mod==='VIRTUAL'?'#dbeafe':'#dcfce7'};color:${_mod==='VIRTUAL'?'#1e40af':'#166534'};font-family:${MONO};font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${escHtml(modLabel)}</span>
               <span style="background:${stBg};color:${stColor};font-family:${MONO};font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${escHtml(stLabel)}</span>
