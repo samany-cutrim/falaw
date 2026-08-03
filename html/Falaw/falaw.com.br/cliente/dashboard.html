@@ -2557,6 +2557,7 @@ function abrirModalNovoCorrespondente() {
   document.body.appendChild(overlay);
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   corrAdminGenCode();
+  corrAdminToggleTipoFields();
   setTimeout(() => overlay.querySelector('input')?.focus(), 50);
 }
 
