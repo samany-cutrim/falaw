@@ -1410,6 +1410,27 @@ function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+/* ── Ao vivo (Supabase Realtime): quando algo muda numa tabela relevante
+   (outra sessão/admin), a tela recarrega sozinha, sem precisar apertar F5.
+   Exige Realtime habilitado nessas tabelas no Supabase (Database → Replication). */
+function _liveInit(tables, reloadFn) {
+  if (window._liveChannel) return;
+  const sbUrl = (window.SB_URL || '').trim();
+  const sbKey = (window.SB_KEY || '').trim();
+  if (!sbUrl || !sbKey || typeof supabase === 'undefined') return;
+  const sb = supabase.createClient(sbUrl, sbKey);
+  const channel = sb.channel('dash-live-updates');
+  let debounce;
+  tables.forEach(table => {
+    channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(reloadFn, 500);
+    });
+  });
+  channel.subscribe();
+  window._liveChannel = channel;
+}
+
 /* ─── CLIENT DASH API ─────────────────────────────── */
 function apiBase() {
   const cfg = (localStorage.getItem('fa_backend_api_url') || window.BACKEND_API_URL || '').trim();
@@ -4352,6 +4373,7 @@ async function init() {
       document.getElementById('btn-novo-corr-admin').style.display = '';
       showTab('pauta');
       loadPautaAdmin();
+      _liveInit(['pauta_audiencias','correspondentes','equipe','mencoes'], loadPautaAdmin);
       return;
     }
     const tipoLabel = session.corrTipo === 'preposto' ? 'Preposto' : 'Advogado Correspondente';
@@ -4382,6 +4404,7 @@ async function init() {
     showTab('pauta');
     // Carrega pauta completa
     loadPautaEscritorio();
+    _liveInit(['pauta_audiencias','correspondentes','equipe','mencoes'], loadPautaEscritorio);
     return;
   }
 
