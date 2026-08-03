@@ -1770,6 +1770,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
           <span style="font-family:var(--f-mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--c-muted);white-space:nowrap">Período:</span>
+          <button type="button" id="audp-anterior" onclick="_audSetPeriodo('anterior')" style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">Mês anterior</button>
           <button type="button" id="audp-semana" onclick="_audSetPeriodo('semana')" style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">7 dias</button>
           <button type="button" id="audp-mes"    onclick="_audSetPeriodo('mes')"    style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">Este mês</button>
           <button type="button" id="audp-prox"   onclick="_audSetPeriodo('prox')"   style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">Próx. mês</button>
@@ -14532,31 +14533,9 @@ async function loadAudiencias() {
   _audRenderLastSync(_sbUrl, _sbKey);
   _audRenderLastSyncProjuris(_sbUrl, _sbKey);
 
-  let items = [];
-  if (_sbUrl && _sbKey) {
-    try {
-      const sb = supabase.createClient(_sbUrl, _sbKey);
-      const today = new Date().toISOString().slice(0,10);
-      let q = sb.from('pauta_audiencias').select('*')
-        .gte('data_audiencia', today)
-        .order('data_audiencia', { ascending: true })
-        .order('horario',       { ascending: true });
-      const [{ data, error }, corrRes] = await Promise.all([
-        q,
-        sb.from('correspondentes').select('nome,tipo,cpf,oab,observacoes'),
-      ]);
-      if (error) console.warn('audiencias load error:', error.message);
-      if (!error && data) items = data;
-      window._audCorrespondentes = corrRes.data || [];
-    } catch(e) { console.warn('audiencias load:', e.message); }
-  }
-  if (!items.length) {
-    items = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]');
-  }
-
   const today = new Date().toISOString().slice(0,10);
 
-  // filtros client-side
+  // filtros (lidos antes da consulta, para poder buscar no banco o período certo — inclusive passado)
   const fTipos = _msGetValues('aud-filter-tipo');
   const fMod   = document.getElementById('aud-filter-modalidade')?.value|| '';
   const fSt    = document.getElementById('aud-filter-status')?.value    || '';
@@ -14569,6 +14548,42 @@ async function loadAudiencias() {
   const periodo = window._audPeriodo || '';
   const fBusca = (document.getElementById('aud-filter-busca')?.value    || '').toLowerCase().trim();
   const fIncompletas = window._audSoIncompletas || false;
+
+  // Período efetivo a buscar no banco: por padrão só hoje em diante (evita puxar a tabela
+  // inteira sempre), mas se um filtro de dia/mês/período pedir datas passadas, respeita.
+  let qDe = today, qAte = null;
+  if (fDia) {
+    qDe = fDia; qAte = fDia;
+  } else if (fMes) {
+    const [y, m] = fMes.split('-').map(Number);
+    qDe = `${fMes}-01`;
+    qAte = new Date(y, m, 0).toISOString().slice(0,10);
+  } else if (periodo && periodo !== 'todos' && (fDe || fAte)) {
+    qDe = fDe || null;
+    qAte = fAte || null;
+  }
+
+  let items = [];
+  if (_sbUrl && _sbKey) {
+    try {
+      const sb = supabase.createClient(_sbUrl, _sbKey);
+      let q = sb.from('pauta_audiencias').select('*')
+        .order('data_audiencia', { ascending: true })
+        .order('horario',       { ascending: true });
+      if (qDe)  q = q.gte('data_audiencia', qDe);
+      if (qAte) q = q.lte('data_audiencia', qAte);
+      const [{ data, error }, corrRes] = await Promise.all([
+        q,
+        sb.from('correspondentes').select('nome,tipo,cpf,oab,observacoes'),
+      ]);
+      if (error) console.warn('audiencias load error:', error.message);
+      if (!error && data) items = data;
+      window._audCorrespondentes = corrRes.data || [];
+    } catch(e) { console.warn('audiencias load:', e.message); }
+  }
+  if (!items.length) {
+    items = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]');
+  }
 
   const filtered = items.filter(a => {
     if (periodo && periodo !== 'todos' && (fDe || fAte)) {
@@ -14690,7 +14705,10 @@ function _audSetPeriodo(tipo) {
   const pad = n => String(n).padStart(2,'0');
   const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   let de = '', ate = '', showCustom = false;
-  if (tipo === 'semana') {
+  if (tipo === 'anterior') {
+    de = fmt(new Date(today.getFullYear(), today.getMonth()-1, 1));
+    ate = fmt(new Date(today.getFullYear(), today.getMonth(), 0));
+  } else if (tipo === 'semana') {
     de = fmt(today); const e = new Date(today); e.setDate(e.getDate()+6); ate = fmt(e);
   } else if (tipo === 'mes') {
     de = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -14707,7 +14725,7 @@ function _audSetPeriodo(tipo) {
   if (deEl && !showCustom) deEl.value = de;
   if (ateEl && !showCustom) ateEl.value = ate;
   if (ci) ci.style.display = showCustom ? 'flex' : 'none';
-  ['semana','mes','prox','custom','todos'].forEach(k => {
+  ['anterior','semana','mes','prox','custom','todos'].forEach(k => {
     const b = document.getElementById('audp-'+k);
     if (!b) return;
     const active = k === (tipo||'todos');
@@ -14741,7 +14759,7 @@ function audLimparFiltros() {
   const ateEl = document.getElementById('aud-data-ate'); if (ateEl) ateEl.value = '';
   window._audPeriodo = '';
   window._audSoIncompletas = false;
-  ['semana','mes','prox','custom'].forEach(k=>{ const b=document.getElementById('audp-'+k); if(b){b.style.background='#fff';b.style.color='var(--c-dark)';b.style.borderColor='var(--c-divider)';} });
+  ['anterior','semana','mes','prox','custom'].forEach(k=>{ const b=document.getElementById('audp-'+k); if(b){b.style.background='#fff';b.style.color='var(--c-dark)';b.style.borderColor='var(--c-divider)';} });
   const bt=document.getElementById('audp-todos'); if(bt){bt.style.background='#0D2B5E';bt.style.color='#fff';bt.style.borderColor='#0D2B5E';}
   const bi = document.getElementById('audp-incompletas'); if(bi){bi.style.background='#fff';bi.style.color='#E11D48';bi.style.borderColor='#E11D48';}
   const b = document.getElementById('aud-filter-busca'); if (b) b.value = '';
