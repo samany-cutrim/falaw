@@ -746,6 +746,38 @@
           <button type="button" id="btn-novo-corr-admin" onclick="abrirModalNovoCorrespondente()" style="display:none;margin-top:12px;background:#0D2B5E;color:#fff;border:none;border-radius:4px;padding:9px 16px;font-family:monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-weight:700">+ Novo Correspondente</button>
         </div>
 
+        <!-- Filtros (visível apenas para admin de correspondentes) -->
+        <div id="admcorr-filtros" style="display:none;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:14px 16px;margin-bottom:16px">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+            <div style="flex:1;min-width:180px">
+              <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Buscar</label>
+              <input id="admcorr-busca" type="text" placeholder="processo, reclamante, advogado, preposto…" oninput="_admCorrApplyFilters()"
+                style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none" />
+            </div>
+            <div>
+              <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">De</label>
+              <input id="admcorr-data-de" type="date" onchange="_admCorrApplyFilters()"
+                style="padding:6px 8px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none" />
+            </div>
+            <div>
+              <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Até</label>
+              <input id="admcorr-data-ate" type="date" onchange="_admCorrApplyFilters()"
+                style="padding:6px 8px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none" />
+            </div>
+            <div>
+              <label style="display:block;font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px">Status</label>
+              <select id="admcorr-status" onchange="_admCorrApplyFilters()"
+                style="padding:7px 8px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:monospace;outline:none;background:#fff">
+                <option value="">Todos</option>
+                <option value="atribuido">Atribuído</option>
+                <option value="pendente">Pendente</option>
+              </select>
+            </div>
+            <button onclick="_admCorrLimparFiltros()"
+              style="font-family:monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;color:#6B7280;cursor:pointer;white-space:nowrap">✕ Limpar</button>
+          </div>
+        </div>
+
         <!-- Filtro de data (visível apenas para escritório) -->
         <!-- Calendário de navegação (visível apenas para escritório) -->
         <div id="pauta-cal-bar" style="display:none;margin-bottom:24px">
@@ -2359,7 +2391,6 @@ async function loadPautaAdmin() {
 
   const sbUrl = (window.SB_URL || '').trim();
   const sbKey = (window.SB_KEY || '').trim();
-  const today = new Date().toISOString().slice(0, 10);
   let rows = [];
 
   if (sbUrl && sbKey && typeof supabase !== 'undefined') {
@@ -2379,13 +2410,69 @@ async function loadPautaAdmin() {
     } catch(e) { console.warn('admin corr:', e.message); }
   }
 
+  // Armazena rows para o modal e os filtros acessarem
+  window._adminCorrRows = rows;
+
   if (!rows.length) {
+    document.getElementById('admcorr-filtros').style.display = 'none';
     el.innerHTML = '<div style="text-align:center;padding:40px 0;color:#aaa;font-size:13px">Nenhuma audiência com correspondente atribuído.</div>';
     return;
   }
 
-  // Armazena rows para o modal acessar
-  window._adminCorrRows = rows;
+  document.getElementById('admcorr-filtros').style.display = '';
+  _admCorrApplyFilters();
+}
+
+function _admCorrAssigned(a) {
+  const needAdv = a.corr_tipo_envio === 'advogado' || a.corr_tipo_envio === 'ambos';
+  const needPre = a.corr_tipo_envio === 'preposto' || a.corr_tipo_envio === 'ambos';
+  return (needAdv ? !!a.advogado : true) && (needPre ? !!a.dados_preposto : true);
+}
+
+function _admCorrApplyFilters() {
+  const all    = window._adminCorrRows || [];
+  const busca  = (document.getElementById('admcorr-busca')?.value || '').toLowerCase().trim();
+  const de     = document.getElementById('admcorr-data-de')?.value || '';
+  const ate    = document.getElementById('admcorr-data-ate')?.value || '';
+  const status = document.getElementById('admcorr-status')?.value || '';
+
+  const filtradas = all.filter(a => {
+    if (de  && (a.data_audiencia || '') < de)  return false;
+    if (ate && (a.data_audiencia || '') > ate) return false;
+    if (status === 'atribuido' && !_admCorrAssigned(a)) return false;
+    if (status === 'pendente'  &&  _admCorrAssigned(a)) return false;
+    if (busca) {
+      const hay = [a.processo, a.reclamante, a.cliente, a.advogado, a.dados_preposto, a.vara]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(busca)) return false;
+    }
+    return true;
+  });
+
+  renderCorrAdminRows(filtradas);
+}
+
+function _admCorrLimparFiltros() {
+  const busca = document.getElementById('admcorr-busca');
+  const de    = document.getElementById('admcorr-data-de');
+  const ate   = document.getElementById('admcorr-data-ate');
+  const st    = document.getElementById('admcorr-status');
+  if (busca) busca.value = '';
+  if (de)    de.value    = '';
+  if (ate)   ate.value   = '';
+  if (st)    st.value    = '';
+  _admCorrApplyFilters();
+}
+
+function renderCorrAdminRows(rows) {
+  const el = document.getElementById('pauta-list');
+  if (!el) return;
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (!rows.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px 0;color:#aaa;font-size:13px">Nenhuma audiência encontrada com esses filtros.</div>';
+    return;
+  }
 
   const TIPO_LABEL  = { 'INICIAL':'Inicial','INSTRUÇÃO':'Instrução','CONCILIAÇÃO':'Conciliação','UNA':'Una','SUSTENTAÇÃO ORAL':'Sust. Oral','PERÍCIA':'Perícia' };
   const TIPO_BG     = { 'INICIAL':'#EEF2FF','INSTRUÇÃO':'#F5F3FF','CONCILIAÇÃO':'#E8F5EE','UNA':'#fffbeb','SUSTENTAÇÃO ORAL':'#fff7ed','PERÍCIA':'#FFEBEE' };
@@ -2420,7 +2507,7 @@ async function loadPautaAdmin() {
       const needAdv = a.corr_tipo_envio === 'advogado' || a.corr_tipo_envio === 'ambos';
       const needPre = a.corr_tipo_envio === 'preposto' || a.corr_tipo_envio === 'ambos';
       const cardOp  = isPast ? 'opacity:0.6;' : '';
-      const assigned = (needAdv ? !!a.advogado : true) && (needPre ? !!a.dados_preposto : true);
+      const assigned = _admCorrAssigned(a);
       html += `<div id="admcorr-card-${a.id}" style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:12px 16px;margin-bottom:8px;border-left:4px solid ${tc};${cardOp}display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
