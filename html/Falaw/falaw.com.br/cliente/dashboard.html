@@ -1453,7 +1453,9 @@ function _liveInit(tables, reloadFn) {
       debounce = setTimeout(() => _liveReloadPreservingScroll(reloadFn), 500);
     });
   });
-  channel.subscribe();
+  channel.subscribe((status, err) => {
+    console.log('[ao vivo] status da conexão Realtime:', status, err || '');
+  });
   window._liveChannel = channel;
 }
 
