@@ -2739,18 +2739,26 @@ function abrirModalCorrAdmin(audId) {
       <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
         ${needAdv ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:14px 16px">
           <div style="font-family:monospace;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#1B7A4E;font-weight:700;margin-bottom:10px">Advogado</div>
-          <select id="modal-adv-nome" onchange="corrAdminShowInfo('adv')"
-            style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box;background:#fff">
-            ${_corrOptionsHtml('advogado', a.advogado)}
-          </select>
+          <div style="display:flex;gap:6px">
+            <select id="modal-adv-nome" onchange="corrAdminShowInfo('adv')"
+              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;flex:1;min-width:0;box-sizing:border-box;background:#fff">
+              ${_corrOptionsHtml('advogado', a.advogado)}
+            </select>
+            <button type="button" onclick="_corrAdminEditSelected('adv')" title="Editar cadastro deste correspondente"
+              style="background:#F3F4F6;color:#374151;border:1px solid #d1d5db;border-radius:4px;padding:0 12px;cursor:pointer;font-size:13px;white-space:nowrap">✏️</button>
+          </div>
           <div id="modal-adv-info" style="margin-top:6px;font-size:11px;color:#6B7280"></div>
         </div>` : ''}
         ${needPre ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:14px 16px">
           <div style="font-family:monospace;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#0D2B5E;font-weight:700;margin-bottom:10px">Preposto</div>
-          <select id="modal-pre-nome" onchange="corrAdminShowInfo('pre')"
-            style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box;background:#fff">
-            ${_corrOptionsHtml('preposto', a.dados_preposto)}
-          </select>
+          <div style="display:flex;gap:6px">
+            <select id="modal-pre-nome" onchange="corrAdminShowInfo('pre')"
+              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;flex:1;min-width:0;box-sizing:border-box;background:#fff">
+              ${_corrOptionsHtml('preposto', a.dados_preposto)}
+            </select>
+            <button type="button" onclick="_corrAdminEditSelected('pre')" title="Editar cadastro deste correspondente"
+              style="background:#F3F4F6;color:#374151;border:1px solid #d1d5db;border-radius:4px;padding:0 12px;cursor:pointer;font-size:13px;white-space:nowrap">✏️</button>
+          </div>
           <div id="modal-pre-info" style="margin-top:6px;font-size:11px;color:#6B7280"></div>
         </div>` : ''}
         ${(window._fawSession?.corrTipo === 'admin') ? `<div style="background:#fefce8;border:1px solid #fde68a;border-radius:6px;padding:14px 16px">
@@ -2794,7 +2802,7 @@ function _corrOptionsHtml(tipo, atual) {
   list.forEach(c => {
     const sel = c.nome === atual;
     if (sel) achou = true;
-    html += `<option value="${escHtml(c.nome)}" data-email="${escHtml(c.email||'')}" data-celular="${escHtml(c.celular||'')}" ${sel?'selected':''}>${escHtml(c.nome)}</option>`;
+    html += `<option value="${escHtml(c.nome)}" data-id="${escHtml(c.id)}" data-email="${escHtml(c.email||'')}" data-celular="${escHtml(c.celular||'')}" ${sel?'selected':''}>${escHtml(c.nome)}</option>`;
   });
   if (atual && !achou) {
     html += `<option value="${escHtml(atual)}" selected>${escHtml(atual)} (não cadastrado)</option>`;
@@ -2813,6 +2821,153 @@ function corrAdminShowInfo(prefix) {
   info.textContent = (email || celular)
     ? `${email}${email && celular ? ' · ' : ''}${celular}`
     : 'Sem e-mail/celular no cadastro.';
+}
+
+/* ── Editar correspondente a partir do modal de designação ────────────────── */
+function _corrAdminEditSelected(prefix) {
+  const sel = document.getElementById(`modal-${prefix}-nome`);
+  const opt = sel && sel.options[sel.selectedIndex];
+  const id  = opt && opt.dataset.id;
+  if (!id) { alert('Selecione um correspondente cadastrado para editar.'); return; }
+  abrirModalEditarCorrespondente(id, prefix);
+}
+
+function fecharModalEditarCorrespondente() {
+  document.getElementById('modal-editar-corr')?.remove();
+}
+
+function abrirModalEditarCorrespondente(id, prefix) {
+  const c = (window._corrCadastroList || []).find(x => x.id === id);
+  if (!c) return;
+
+  const existing = document.getElementById('modal-editar-corr');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-editar-corr';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
+  const fieldStyle = 'border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:8px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+      <div style="padding:20px 24px 16px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="font-size:16px;font-weight:800;color:#111">Editar Correspondente</div>
+        <button onclick="fecharModalEditarCorrespondente()" style="background:none;border:none;font-size:20px;color:#9CA3AF;cursor:pointer;padding:0;line-height:1">×</button>
+      </div>
+      <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Nome completo *</label>
+          <input id="editcorr-nome" type="text" value="${escHtml(c.nome||'')}" style="${fieldStyle}">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">E-mail de Acesso *</label>
+          <input id="editcorr-email" type="email" value="${escHtml(c.email||'')}" style="${fieldStyle}">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Celular / WhatsApp</label>
+          <input id="editcorr-celular" type="tel" value="${escHtml(c.celular||'')}" style="${fieldStyle}">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Tipo *</label>
+          <select id="editcorr-tipo" onchange="_editcorrToggleTipoFields()" style="${fieldStyle};background:#fff">
+            <option value="advogado" ${c.tipo==='advogado'?'selected':''}>Advogado</option>
+            <option value="preposto" ${c.tipo==='preposto'?'selected':''}>Preposto</option>
+          </select>
+        </div>
+        <div id="editcorr-field-cpf" style="display:none">
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">CPF</label>
+          <input id="editcorr-cpf" type="text" value="${escHtml(c.cpf||'')}" style="${fieldStyle}">
+        </div>
+        <div id="editcorr-field-oab" style="display:none">
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">OAB</label>
+          <input id="editcorr-oab" type="text" value="${escHtml(c.oab||'')}" style="${fieldStyle}">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Observações</label>
+          <textarea id="editcorr-obs" rows="3" style="${fieldStyle};resize:vertical">${escHtml(c.observacoes||'')}</textarea>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Senha de Acesso *</label>
+          <input id="editcorr-code" type="text" value="${escHtml(c.code||'')}" style="${fieldStyle}">
+          <small style="color:#9CA3AF;font-size:10px">O correspondente usará o e-mail + senha para acessar o portal.</small>
+        </div>
+      </div>
+      <div style="padding:16px 24px;border-top:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <span id="editcorr-msg" style="font-size:11px;color:#6B7280"></span>
+        <div style="display:flex;gap:8px">
+          <button onclick="fecharModalEditarCorrespondente()" style="background:#F3F4F6;color:#374151;border:none;padding:9px 20px;border-radius:4px;font-family:monospace;font-size:10px;cursor:pointer">Cancelar</button>
+          <button onclick="salvarEditarCorrespondente('${id}','${prefix}')" style="background:#0D2B5E;color:#fff;border:none;padding:9px 20px;border-radius:4px;font-family:monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-weight:700">Salvar</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  _editcorrToggleTipoFields();
+  setTimeout(() => overlay.querySelector('input')?.focus(), 50);
+}
+
+function _editcorrToggleTipoFields() {
+  const tipo = document.getElementById('editcorr-tipo').value;
+  document.getElementById('editcorr-field-cpf').style.display = tipo === 'preposto' ? '' : 'none';
+  document.getElementById('editcorr-field-oab').style.display = tipo === 'advogado' ? '' : 'none';
+}
+
+async function salvarEditarCorrespondente(id, prefix) {
+  const msg = document.getElementById('editcorr-msg');
+  const nome  = document.getElementById('editcorr-nome').value.trim();
+  const email = document.getElementById('editcorr-email').value.trim().toLowerCase();
+  const celular = document.getElementById('editcorr-celular').value.trim();
+  const cpf = document.getElementById('editcorr-cpf').value.trim();
+  const oab = document.getElementById('editcorr-oab').value.trim();
+  const observacoes = document.getElementById('editcorr-obs').value.trim();
+  const code = document.getElementById('editcorr-code').value.trim();
+  const tipo = document.getElementById('editcorr-tipo').value;
+
+  if (!nome || !email || !code) {
+    if (msg) { msg.style.color = '#DC2626'; msg.textContent = 'Preencha nome, e-mail e senha.'; }
+    return;
+  }
+
+  const sbUrl = (window.SB_URL || '').trim();
+  const sbKey = (window.SB_KEY || '').trim();
+  if (!sbUrl || !sbKey || typeof supabase === 'undefined') {
+    if (msg) { msg.style.color = '#DC2626'; msg.textContent = 'Configuração ausente.'; }
+    return;
+  }
+
+  const dup = _corrFindDuplicate2((window._corrCadastroList || []).filter(c => c.id !== id), nome, email, cpf, oab);
+  if (dup) {
+    const seguir = confirm(
+      `Já existe um cadastro parecido:\n\n${dup.nome || '—'} — ${dup.email || '—'}\n\n` +
+      `Clique OK para salvar mesmo assim, ou Cancelar para revisar.`
+    );
+    if (!seguir) return;
+  }
+
+  if (msg) { msg.style.color = '#6B7280'; msg.textContent = 'Salvando…'; }
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { error } = await sb.from('correspondentes')
+      .update({ nome, email, celular, cpf, oab, observacoes, code, tipo })
+      .eq('id', id);
+    if (error) { if (msg) { msg.style.color = '#DC2626'; msg.textContent = 'Erro: ' + error.message; } return; }
+  } catch(e) {
+    if (msg) { msg.style.color = '#DC2626'; msg.textContent = 'Erro: ' + e.message; }
+    return;
+  }
+
+  // Atualiza cache local e o seletor do modal de designação, se ainda aberto
+  const cached = (window._corrCadastroList || []).find(x => x.id === id);
+  if (cached) Object.assign(cached, { nome, email, celular, cpf, oab, observacoes, code, tipo });
+
+  const sel = document.getElementById(`modal-${prefix}-nome`);
+  if (sel) {
+    const tipoCampo = prefix === 'adv' ? 'advogado' : 'preposto';
+    sel.innerHTML = _corrOptionsHtml(tipoCampo, nome);
+    corrAdminShowInfo(prefix);
+  }
+
+  if (msg) { msg.style.color = '#1B7A4E'; msg.textContent = '✓ Salvo!'; }
+  setTimeout(() => fecharModalEditarCorrespondente(), 700);
 }
 
 async function salvarCorrAdmin(audId, needAdv, needPre) {
