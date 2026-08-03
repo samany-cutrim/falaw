@@ -2095,9 +2095,14 @@ async function loadPythonStats(reports) {
   }
 }
 
-/* ── Menções (@Nome) no bate-papo de orientações — autocomplete, destaque e notificação ── */
+/* ── Menções (@sigla) no bate-papo de orientações — autocomplete, destaque e notificação.
+   Fonte: tabela `equipe` (mesma da aba "Nossa Equipe" do admin), campo `sigla` como token
+   da menção (ex: @TGFA); sem sigla cadastrada, usa o nome completo como fallback. ── */
 function _mencaoEscapeRe(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+}
+function _mencaoToken(c) {
+  return (c.sigla || c.nome || '').trim();
 }
 
 function _mencaoOnInput(ta) {
@@ -2109,7 +2114,9 @@ function _mencaoOnInput(ta) {
   let drop = document.getElementById(dropId);
   if (!m) { if (drop) drop.style.display = 'none'; return; }
   const q = m[1].toLowerCase();
-  const list = (window._escEquipe || []).filter(c => c.nome && c.nome.toLowerCase().includes(q));
+  const list = (window._escEquipe || []).filter(c => _mencaoToken(c) && (
+    _mencaoToken(c).toLowerCase().includes(q) || (c.nome||'').toLowerCase().includes(q)
+  ));
   if (!drop) {
     drop = document.createElement('div');
     drop.id = dropId;
@@ -2117,17 +2124,17 @@ function _mencaoOnInput(ta) {
     ta.insertAdjacentElement('afterend', drop);
   }
   if (!list.length) { drop.style.display = 'none'; return; }
-  drop.innerHTML = list.slice(0, 8).map(c => `<div onmousedown="event.preventDefault();_mencaoPick('${ta.id}','${c.nome.replace(/'/g,"\\'")}')" style="padding:6px 10px;font-size:12px;cursor:pointer;border-bottom:1px solid #f3f4f6" onmouseenter="this.style.background='#EEF2FF'" onmouseleave="this.style.background='#fff'">👤 ${escHtml(c.nome)}</div>`).join('');
+  drop.innerHTML = list.slice(0, 8).map(c => `<div onmousedown="event.preventDefault();_mencaoPick('${ta.id}','${_mencaoToken(c).replace(/'/g,"\\'")}')" style="padding:6px 10px;font-size:12px;cursor:pointer;border-bottom:1px solid #f3f4f6" onmouseenter="this.style.background='#EEF2FF'" onmouseleave="this.style.background='#fff'">👤 <strong>${escHtml(_mencaoToken(c))}</strong>${c.sigla && c.nome ? ` — ${escHtml(c.nome)}` : ''}</div>`).join('');
   drop.style.display = '';
 }
 
-function _mencaoPick(taId, nome) {
+function _mencaoPick(taId, token) {
   const ta = document.getElementById(taId);
   if (!ta) return;
   const pos = ta.selectionStart;
   const before = ta.value.slice(0, pos);
   const after  = ta.value.slice(pos);
-  ta.value = before.replace(/@([^\s@]{0,30})$/, '@' + nome + ' ') + after;
+  ta.value = before.replace(/@([^\s@]{0,30})$/, '@' + token + ' ') + after;
   const drop = document.getElementById(taId + '-mention');
   if (drop) drop.style.display = 'none';
   ta.focus();
@@ -2136,9 +2143,10 @@ function _mencaoPick(taId, nome) {
 function _mencaoExtrair(msg) {
   const encontrados = new Set();
   (window._escEquipe || []).forEach(c => {
-    if (!c.nome) return;
-    const re = new RegExp('@' + _mencaoEscapeRe(c.nome), 'i');
-    if (re.test(msg)) encontrados.add(c.nome);
+    const token = _mencaoToken(c);
+    if (!token) return;
+    const re = new RegExp('@' + _mencaoEscapeRe(token) + '\\b', 'i');
+    if (re.test(msg)) encontrados.add(token);
   });
   return [...encontrados];
 }
@@ -2159,8 +2167,9 @@ async function _mencaoRegistrar(audienciaId, msg, autor) {
 function _mencaoHighlight(text) {
   let html = escHtml(text.trim()).replace(/\n/g,'<br>');
   (window._escEquipe || []).forEach(c => {
-    if (!c.nome) return;
-    const re = new RegExp('@' + _mencaoEscapeRe(c.nome), 'gi');
+    const token = _mencaoToken(c);
+    if (!token) return;
+    const re = new RegExp('@' + _mencaoEscapeRe(token) + '\\b', 'gi');
     html = html.replace(re, m => `<strong style="color:#7B1A2E">${m}</strong>`);
   });
   return html;
@@ -3231,7 +3240,7 @@ async function loadPautaEscritorio() {
       const [{ data }, { data: cData }, { data: eData }] = await Promise.all([
         sb.from('pauta_audiencias').select('*').order('data_audiencia', { ascending: true }).order('horario', { ascending: true }).range(0, 9999),
         sb.from('correspondentes').select('id,nome,email,celular,tipo,cpf,oab,observacoes'),
-        sb.from('equipe_escritorio').select('*').eq('ativo', true).order('nome', { ascending: true }),
+        sb.from('equipe').select('id,nome,sigla').order('nome', { ascending: true }),
       ]);
       if (data) rows = data;
       window._escCorrespondentes = cData || [];
