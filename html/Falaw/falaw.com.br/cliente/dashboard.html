@@ -2365,13 +2365,17 @@ async function loadPautaAdmin() {
   if (sbUrl && sbKey && typeof supabase !== 'undefined') {
     try {
       const sb = supabase.createClient(sbUrl, sbKey);
-      const { data } = await sb.from('pauta_audiencias')
-        .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,advogado,dados_preposto,corr_tipo_envio,comentarios,valor_advogado,valor_preposto')
-        .not('corr_tipo_envio', 'is', null)
-        .neq('status', 'cancelada')
-        .order('data_audiencia', { ascending: true })
-        .order('horario', { ascending: true });
+      const [{ data }, { data: corrData }] = await Promise.all([
+        sb.from('pauta_audiencias')
+          .select('id,data_audiencia,horario,tipo_audiencia,modalidade,processo,vara,reclamante,reclamada,cliente,status,advogado,dados_preposto,corr_tipo_envio,comentarios,valor_advogado,valor_preposto')
+          .not('corr_tipo_envio', 'is', null)
+          .neq('status', 'cancelada')
+          .order('data_audiencia', { ascending: true })
+          .order('horario', { ascending: true }),
+        sb.from('correspondentes').select('*').order('nome', { ascending: true }),
+      ]);
       if (data) rows = data;
+      window._corrCadastroList = corrData || [];
     } catch(e) { console.warn('admin corr:', e.message); }
   }
 
@@ -2647,25 +2651,19 @@ function abrirModalCorrAdmin(audId) {
       <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
         ${needAdv ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:14px 16px">
           <div style="font-family:monospace;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#1B7A4E;font-weight:700;margin-bottom:10px">Advogado</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <input id="modal-adv-nome" type="text" value="${escHtml(a.advogado||'')}" placeholder="Nome completo"
-              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
-            <input id="modal-adv-email" type="email" placeholder="E-mail (acesso ao portal)"
-              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
-            <input id="modal-adv-cel" type="tel" placeholder="Celular / WhatsApp"
-              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
-          </div>
+          <select id="modal-adv-nome" onchange="corrAdminShowInfo('adv')"
+            style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box;background:#fff">
+            ${_corrOptionsHtml('advogado', a.advogado)}
+          </select>
+          <div id="modal-adv-info" style="margin-top:6px;font-size:11px;color:#6B7280"></div>
         </div>` : ''}
         ${needPre ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:14px 16px">
           <div style="font-family:monospace;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#0D2B5E;font-weight:700;margin-bottom:10px">Preposto</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <input id="modal-pre-nome" type="text" value="${escHtml(a.dados_preposto||'')}" placeholder="Nome completo"
-              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
-            <input id="modal-pre-email" type="email" placeholder="E-mail (acesso ao portal)"
-              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
-            <input id="modal-pre-cel" type="tel" placeholder="Celular / WhatsApp"
-              style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box">
-          </div>
+          <select id="modal-pre-nome" onchange="corrAdminShowInfo('pre')"
+            style="border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;font-size:13px;font-family:inherit;width:100%;box-sizing:border-box;background:#fff">
+            ${_corrOptionsHtml('preposto', a.dados_preposto)}
+          </select>
+          <div id="modal-pre-info" style="margin-top:6px;font-size:11px;color:#6B7280"></div>
         </div>` : ''}
         ${(window._fawSession?.corrTipo === 'admin') ? `<div style="background:#fefce8;border:1px solid #fde68a;border-radius:6px;padding:14px 16px">
           <div style="font-family:monospace;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#92400e;font-weight:700;margin-bottom:10px">Valores (somente admin)</div>
@@ -2694,8 +2692,39 @@ function abrirModalCorrAdmin(audId) {
     </div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-  // Foca no primeiro input
-  setTimeout(() => overlay.querySelector('input')?.focus(), 50);
+  if (needAdv) corrAdminShowInfo('adv');
+  if (needPre) corrAdminShowInfo('pre');
+  setTimeout(() => overlay.querySelector('select,input')?.focus(), 50);
+}
+
+// Monta as opções do <select> a partir do cadastro de correspondentes (tabela `correspondentes`).
+// Se o nome já gravado na audiência não bater com nenhum cadastro (dado legado), mantém como opção extra.
+function _corrOptionsHtml(tipo, atual) {
+  const list = (window._corrCadastroList || []).filter(c => c.tipo === tipo);
+  let html = '<option value="">— Selecione —</option>';
+  let achou = false;
+  list.forEach(c => {
+    const sel = c.nome === atual;
+    if (sel) achou = true;
+    html += `<option value="${escHtml(c.nome)}" data-email="${escHtml(c.email||'')}" data-celular="${escHtml(c.celular||'')}" ${sel?'selected':''}>${escHtml(c.nome)}</option>`;
+  });
+  if (atual && !achou) {
+    html += `<option value="${escHtml(atual)}" selected>${escHtml(atual)} (não cadastrado)</option>`;
+  }
+  return html;
+}
+
+function corrAdminShowInfo(prefix) {
+  const sel  = document.getElementById(`modal-${prefix}-nome`);
+  const info = document.getElementById(`modal-${prefix}-info`);
+  if (!sel || !info) return;
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt || !opt.value) { info.textContent = ''; return; }
+  const email = opt.dataset.email || '';
+  const celular = opt.dataset.celular || '';
+  info.textContent = (email || celular)
+    ? `${email}${email && celular ? ' · ' : ''}${celular}`
+    : 'Sem e-mail/celular no cadastro.';
 }
 
 async function salvarCorrAdmin(audId, needAdv, needPre) {
@@ -2710,12 +2739,8 @@ async function salvarCorrAdmin(audId, needAdv, needPre) {
 
   const patch = {};
 
-  const advNome  = needAdv ? (document.getElementById('modal-adv-nome')?.value  || '').trim() : '';
-  const advEmail = needAdv ? (document.getElementById('modal-adv-email')?.value || '').trim().toLowerCase() : '';
-  const advCel   = needAdv ? (document.getElementById('modal-adv-cel')?.value   || '').trim() : '';
-  const preNome  = needPre ? (document.getElementById('modal-pre-nome')?.value  || '').trim() : '';
-  const preEmail = needPre ? (document.getElementById('modal-pre-email')?.value || '').trim().toLowerCase() : '';
-  const preCel   = needPre ? (document.getElementById('modal-pre-cel')?.value   || '').trim() : '';
+  const advNome = needAdv ? (document.getElementById('modal-adv-nome')?.value || '').trim() : '';
+  const preNome = needPre ? (document.getElementById('modal-pre-nome')?.value || '').trim() : '';
 
   if (needAdv) patch.advogado       = advNome;
   if (needPre) patch.dados_preposto = preNome;
@@ -2733,15 +2758,6 @@ async function salvarCorrAdmin(audId, needAdv, needPre) {
 
     const { error: patchErr } = await sb.from('pauta_audiencias').update(patch).eq('id', audId);
     if (patchErr) throw new Error(patchErr.message || JSON.stringify(patchErr));
-
-    if (needAdv && advEmail) {
-      const advRec = { id: `corr-adv-${advEmail.replace(/[^a-z0-9]/g,'-')}`, nome: advNome, email: advEmail, celular: advCel, tipo: 'advogado', created_at: new Date().toISOString() };
-      await sb.from('correspondentes').upsert(advRec, { onConflict: 'id' });
-    }
-    if (needPre && preEmail) {
-      const preRec = { id: `corr-pre-${preEmail.replace(/[^a-z0-9]/g,'-')}`, nome: preNome, email: preEmail, celular: preCel, tipo: 'preposto', created_at: new Date().toISOString() };
-      await sb.from('correspondentes').upsert(preRec, { onConflict: 'id' });
-    }
 
     // Atualiza cache local
     const row = (window._adminCorrRows || []).find(x => x.id === audId);
