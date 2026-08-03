@@ -739,17 +739,17 @@
       <!-- ═══ PAUTA DE AUDIÊNCIAS TAB ═══ -->
       <div id="tab-pauta" class="tab-section">
 
-        <div class="page-header">
+        <div class="page-header" style="position:relative">
+          <div id="mencao-wrap" style="display:none;position:absolute;top:0;right:0">
+            <button type="button" onclick="_mencaoTogglePainel()" style="background:#fff;color:#0D2B5E;border:1px solid #d1d5db;border-radius:4px;padding:9px 16px;font-family:monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-weight:700">🔔 Menções <span id="mencao-badge" style="display:none;background:#DC2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span></button>
+            <div id="mencao-painel" style="display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:300;width:340px;max-height:360px;overflow-y:auto;background:#fff;border:1px solid #e5e7eb;border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.15)">
+              <div id="mencao-painel-body"></div>
+            </div>
+          </div>
           <div class="page-label">Área do Cliente · Falaw Advogados</div>
           <h1 class="page-title">Pauta de Audiências</h1>
           <p class="page-subtitle">Próximas audiências agendadas para a sua empresa.</p>
           <button type="button" id="btn-novo-corr-admin" onclick="abrirModalNovoCorrespondente()" style="display:none;margin-top:12px;background:#0D2B5E;color:#fff;border:none;border-radius:4px;padding:9px 16px;font-family:monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-weight:700">+ Novo Correspondente</button>
-          <div id="mencao-wrap" style="display:none;position:relative;margin-top:12px">
-            <button type="button" onclick="_mencaoTogglePainel()" style="background:#fff;color:#0D2B5E;border:1px solid #d1d5db;border-radius:4px;padding:9px 16px;font-family:monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-weight:700">🔔 Menções <span id="mencao-badge" style="display:none;background:#DC2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span></button>
-            <div id="mencao-painel" style="display:none;position:absolute;left:0;top:calc(100% + 4px);z-index:300;width:340px;max-height:360px;overflow-y:auto;background:#fff;border:1px solid #e5e7eb;border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.15)">
-              <div id="mencao-painel-body"></div>
-            </div>
-          </div>
         </div>
 
         <!-- Filtros (visível apenas para admin de correspondentes) -->
@@ -3996,7 +3996,7 @@ function _escRenderRows(rows, today) {
           <div style="flex:1;min-width:200px">
             <!-- tags -->
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
-              ${temMencaoPendente ? `<span title="Tem menção pendente nas observações" style="background:#FEE2E2;color:#B91C1C;font-family:${MONO};font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px;border:1px solid #FCA5A5">⚠️ Menção</span>` : ''}
+              ${temMencaoPendente ? `<span title="Tem menção pendente nas observações" style="background:#FEE2E2;color:#B91C1C;font-family:${MONO};font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px;border:1px solid #FCA5A5">⚠️ Atenção</span>` : ''}
               <span style="background:${tipoBg};color:${tipoColor};font-family:${MONO};font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${escHtml(tipoLabel)}</span>
               <span style="background:${_mod==='VIRTUAL'?'#dbeafe':'#dcfce7'};color:${_mod==='VIRTUAL'?'#1e40af':'#166534'};font-family:${MONO};font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${escHtml(modLabel)}</span>
               <span style="background:${stBg};color:${stColor};font-family:${MONO};font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px">${escHtml(stLabel)}</span>
