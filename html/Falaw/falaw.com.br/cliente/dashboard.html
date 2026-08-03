@@ -775,6 +775,8 @@
             </div>
             <button onclick="_admCorrLimparFiltros()"
               style="font-family:monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid #d1d5db;border-radius:4px;padding:8px 12px;color:#6B7280;cursor:pointer;white-space:nowrap">✕ Limpar</button>
+            <button onclick="admCorrDownloadExcel()"
+              style="font-family:monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:#1B7A4E;border:none;border-radius:4px;padding:8px 14px;color:#fff;cursor:pointer;white-space:nowrap">⬇ Excel</button>
           </div>
         </div>
 
@@ -2449,7 +2451,38 @@ function _admCorrApplyFilters() {
     return true;
   });
 
+  window._admCorrFilteredRows = filtradas;
   renderCorrAdminRows(filtradas);
+}
+
+function admCorrDownloadExcel() {
+  if (typeof XLSX === 'undefined') { alert('Biblioteca Excel não carregada. Verifique sua conexão e tente novamente.'); return; }
+  const rows = window._admCorrFilteredRows || window._adminCorrRows || [];
+  if (!rows.length) { alert('Nenhuma audiência para exportar.'); return; }
+
+  const envioLabel = t => t === 'ambos' ? 'Advogado + Preposto' : t === 'preposto' ? 'Só Preposto' : t === 'advogado' ? 'Só Advogado' : '';
+
+  const data = rows.map(a => ({
+    'Data':                 a.data_audiencia || '',
+    'Horário':              a.horario        || '',
+    'Processo':             a.processo       || '',
+    'Cliente':              a.cliente        || '',
+    'Reclamante':           a.reclamante     || '',
+    'Vara':                 a.vara           || '',
+    'Tipo Audiência':       a.tipo_audiencia || '',
+    'Envio':                envioLabel(a.corr_tipo_envio),
+    'Advogado':             a.advogado       || '',
+    'Valor Advogado (R$)':  a.valor_advogado != null ? a.valor_advogado : '',
+    'Preposto':             a.dados_preposto || '',
+    'Valor Preposto (R$)':  a.valor_preposto != null ? a.valor_preposto : '',
+    'Status':               _admCorrAssigned(a) ? 'Atribuído' : 'Pendente',
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Correspondentes');
+  const hoje = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  XLSX.writeFile(wb, `correspondentes_${hoje}.xlsx`);
 }
 
 function _admCorrLimparFiltros() {
