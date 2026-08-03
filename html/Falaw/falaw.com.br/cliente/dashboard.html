@@ -2213,6 +2213,21 @@ async function _mencaoRegistrar(audienciaId, msg, autor) {
   } catch(e) { console.warn('mencao insert:', e.message); }
 }
 
+// Quando a mensagem que originou a menção é excluída ou editada, a notificação
+// correspondente (identificada pelo texto exato daquela mensagem) some junto.
+async function _mencaoRemoverPorTexto(audienciaId, texto) {
+  if (!texto) return;
+  const sbUrl = (window.SB_URL || '').trim();
+  const sbKey = (window.SB_KEY || '').trim();
+  if (!sbUrl || !sbKey || typeof supabase === 'undefined') return;
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { error } = await sb.from('mencoes').delete().eq('audiencia_id', audienciaId).eq('texto', texto);
+    if (error) throw error;
+  } catch(e) { console.warn('mencao delete:', e.message); }
+  _mencaoAtualizarBadge();
+}
+
 function _mencaoHighlight(text) {
   let html = escHtml(text.trim()).replace(/\n/g,'<br>');
   (window._escEquipe || []).forEach(c => {
@@ -2397,6 +2412,7 @@ async function escEditMsgSave(id, idx) {
   if (!ta || !msgs[idx] || !/escrit/i.test(msgs[idx].meta)) return;
   const txt = ta.value.trim();
   if (!txt) return; // não permite esvaziar — exclusão só pelo admin
+  const textoAntigo = msgs[idx].text.trim();
   msgs[idx].text = txt;
   const obs = _escObsSerialize(msgs);
   const row = document.getElementById('esc-row-' + id);
@@ -2404,6 +2420,10 @@ async function escEditMsgSave(id, idx) {
   _escSaveState(id, cb ? cb.checked : false, obs);
   await _escSaveObs(id, obs);
   escRenderThread(id);
+  if (textoAntigo !== txt) {
+    _mencaoRemoverPorTexto(id, textoAntigo);
+    _mencaoRegistrar(id, txt, 'Escritório');
+  }
 }
 
 function _escObsStamp() {

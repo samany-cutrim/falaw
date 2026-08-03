@@ -14246,6 +14246,20 @@ async function _mencaoRegistrar(audienciaId, msg, autor) {
   } catch(e) { console.warn('mencao insert:', e.message); }
 }
 
+// Quando a mensagem que originou a menção é excluída ou editada, a notificação
+// correspondente (identificada pelo texto exato daquela mensagem) some junto.
+async function _mencaoRemoverPorTexto(audienciaId, texto) {
+  if (!texto) return;
+  const { sbUrl, sbKey } = getSbCreds();
+  if (!sbUrl || !sbKey) return;
+  try {
+    const sb = supabase.createClient(sbUrl, sbKey);
+    const { error } = await sb.from('mencoes').delete().eq('audiencia_id', audienciaId).eq('texto', texto);
+    if (error) throw error;
+  } catch(e) { console.warn('mencao delete:', e.message); }
+  _mencaoAtualizarBadge();
+}
+
 function _mencaoHighlight(text) {
   let html = _escHtml(text.trim()).replace(/\n/g,'<br>');
   (window._audEquipe || []).forEach(c => {
@@ -14428,6 +14442,7 @@ async function audObsDelete(id, idx) {
   msgs.splice(idx, 1);
   try { await _audObsPersist(id, _audObsSerialize(msgs)); } catch(e) { showToast('Erro ao excluir: ' + e.message); return; }
   audObsRenderThread(id);
+  _mencaoRemoverPorTexto(id, alvo.text.trim());
 }
 
 function audObsEditStart(id, idx) {
@@ -14448,9 +14463,14 @@ async function audObsEditSave(id, idx) {
   if (!ta || !msgs[idx]) return;
   const txt = ta.value.trim();
   if (!txt) { showToast('A mensagem não pode ficar vazia — use o ✕ para excluir.'); return; }
+  const textoAntigo = msgs[idx].text.trim();
   msgs[idx].text = txt;
   try { await _audObsPersist(id, _audObsSerialize(msgs)); } catch(e) { showToast('Erro ao salvar: ' + e.message); return; }
   audObsRenderThread(id);
+  if (textoAntigo !== txt) {
+    _mencaoRemoverPorTexto(id, textoAntigo);
+    _mencaoRegistrar(id, txt, 'Admin');
+  }
 }
 
 /* helpers */
