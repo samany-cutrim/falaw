@@ -2382,9 +2382,9 @@ async function loadPautaAdmin() {
   // Armazena rows para o modal acessar
   window._adminCorrRows = rows;
 
-  const TIPO_LABEL  = { 'INICIAL':'Inicial','INSTRUÇÃO':'Instrução','CONCILIAÇÃO':'Conciliação','UNA':'Una','SUSTENTAÇÃO ORAL':'Sust. Oral' };
-  const TIPO_BG     = { 'INICIAL':'#EEF2FF','INSTRUÇÃO':'#F5F3FF','CONCILIAÇÃO':'#E8F5EE','UNA':'#fffbeb','SUSTENTAÇÃO ORAL':'#fff7ed' };
-  const TIPO_COLOR  = { 'INICIAL':'#0D2B5E','INSTRUÇÃO':'#6D28D9','CONCILIAÇÃO':'#1B7A4E','UNA':'#92400e','SUSTENTAÇÃO ORAL':'#b45309' };
+  const TIPO_LABEL  = { 'INICIAL':'Inicial','INSTRUÇÃO':'Instrução','CONCILIAÇÃO':'Conciliação','UNA':'Una','SUSTENTAÇÃO ORAL':'Sust. Oral','PERÍCIA':'Perícia' };
+  const TIPO_BG     = { 'INICIAL':'#EEF2FF','INSTRUÇÃO':'#F5F3FF','CONCILIAÇÃO':'#E8F5EE','UNA':'#fffbeb','SUSTENTAÇÃO ORAL':'#fff7ed','PERÍCIA':'#FFEBEE' };
+  const TIPO_COLOR  = { 'INICIAL':'#0D2B5E','INSTRUÇÃO':'#6D28D9','CONCILIAÇÃO':'#1B7A4E','UNA':'#92400e','SUSTENTAÇÃO ORAL':'#b45309','PERÍCIA':'#C62828' };
   const MOD_LABEL   = { 'VIRTUAL':'Virtual','PRESENCIAL':'Presencial','HÍBRIDA':'Híbrida' };
 
   function tipoLabel(t) {
@@ -3326,6 +3326,7 @@ function _escRenderRows(rows, today) {
       const isCancelPje  = a.status === 'cancelado_pje';
       const isCancelada  = a.status === 'cancelada';
       const isSustOral   = a.tipo_audiencia === 'SUSTENTAÇÃO ORAL';
+      const isPericia    = a.tipo_audiencia === 'PERÍCIA';
       const op = isPastDate && !isCancelada ? 'opacity:.72;' : '';
 
       const st   = state[a.id] || {};
@@ -3341,7 +3342,7 @@ function _escRenderRows(rows, today) {
         ? `<a href="${escHtml(a.link)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:#0D2B5E;color:#fff;font-family:${MONO};font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:2px;text-decoration:none;margin-top:4px">Acessar Audiência</a>`
         : '';
 
-      html += `<div id="esc-row-${a.id}" style="background:${isCancelPje?'#FFFBEB':isCancelada?'#FFF5F5':isSustOral?'#fff7ed':isHoje?'#fffef0':'#fff'};border:1px solid ${isSustOral?'#fed7aa':DIVIDER};border-left:4px solid ${isCancelPje?'#D97706':tipoColor};border-radius:4px;padding:18px 20px;${isCancelPje?'opacity:.85;':op}">
+      html += `<div id="esc-row-${a.id}" style="background:${isCancelPje?'#FFFBEB':isCancelada?'#FFF5F5':isSustOral?'#fff7ed':isPericia?'#FFF5F5':isHoje?'#fffef0':'#fff'};border:1px solid ${isSustOral?'#fed7aa':isPericia?'#fecaca':DIVIDER};border-left:4px solid ${isCancelPje?'#D97706':tipoColor};border-radius:4px;padding:18px 20px;${isCancelPje?'opacity:.85;':op}">
         ${isCancelPje ? `<div style="background:#FEF3C7;border:1px solid #FCD34D;border-left:3px solid #D97706;border-radius:2px;padding:8px 12px;margin-bottom:12px;font-family:${MONO};font-size:10px;letter-spacing:.04em;color:#92400E"><strong>Audiência não encontrada no PJe</strong> — Pode ter sido cancelada.</div>` : ''}
         ${(!a.horario || !a.vara) && !isCancelada && !isCancelPje && (a.data_audiencia || '') >= today ? `<div style="background:#FFF1F2;border:1px solid #FECDD3;border-left:3px solid #E11D48;border-radius:2px;padding:8px 12px;margin-bottom:12px;font-family:${MONO};font-size:10px;letter-spacing:.04em;color:#9F1239;display:flex;align-items:center;gap:8px"><strong>⚠ Dados incompletos</strong>${!a.horario ? ' · horário não encontrado' : ''}${!a.vara ? ' · vara não encontrada' : ''}</div>` : ''}
         <!-- linha topo -->
@@ -3528,9 +3529,9 @@ function _clientRenderRows(rows) {
   }
   const STATUS_COLOR = { agendada:'#1B7A4E', realizada:'#0D2B5E', adiada:'#C62828', cancelada:'#9CA3AF' };
   const STATUS_BG    = { agendada:'#E8F5EE', realizada:'#EEF2FF', adiada:'#FFF0F0', cancelada:'#F3F4F6' };
-  const TIPO_LABEL   = { 'INICIAL':'Inicial','INSTRUÇÃO':'Instrução','CONCILIAÇÃO':'Conciliação','UNA':'Una','SUSTENTAÇÃO ORAL':'Sust. Oral' };
-  const TIPO_BG      = { 'INICIAL':'#EEF2FF','INSTRUÇÃO':'#F5F3FF','CONCILIAÇÃO':'#E8F5EE','UNA':'#fffbeb','SUSTENTAÇÃO ORAL':'#fff7ed' };
-  const TIPO_COLOR   = { 'INICIAL':'#0D2B5E','INSTRUÇÃO':'#6D28D9','CONCILIAÇÃO':'#1B7A4E','UNA':'#92400e','SUSTENTAÇÃO ORAL':'#b45309' };
+  const TIPO_LABEL   = { 'INICIAL':'Inicial','INSTRUÇÃO':'Instrução','CONCILIAÇÃO':'Conciliação','UNA':'Una','SUSTENTAÇÃO ORAL':'Sust. Oral','PERÍCIA':'Perícia' };
+  const TIPO_BG      = { 'INICIAL':'#EEF2FF','INSTRUÇÃO':'#F5F3FF','CONCILIAÇÃO':'#E8F5EE','UNA':'#fffbeb','SUSTENTAÇÃO ORAL':'#fff7ed','PERÍCIA':'#FFEBEE' };
+  const TIPO_COLOR   = { 'INICIAL':'#0D2B5E','INSTRUÇÃO':'#6D28D9','CONCILIAÇÃO':'#1B7A4E','UNA':'#92400e','SUSTENTAÇÃO ORAL':'#b45309','PERÍCIA':'#C62828' };
   const MOD_LABEL    = { 'VIRTUAL':'Virtual','PRESENCIAL':'Presencial','HÍBRIDA':'Híbrida' };
   function fmtDia(iso) {
     if (!iso) return '—';
@@ -3559,7 +3560,8 @@ function _clientRenderRows(rows) {
       const linkHtml  = a.link ? `<a href="${a.link}" target="_blank" rel="noopener" style="font-size:11px;color:#2563EB;text-decoration:none;display:inline-block;margin-top:6px">🔗 Entrar na videoconferência</a>` : '';
       const senhaHtml = a.id_senha ? `<div style="font-size:11px;color:#6B7280;margin-top:3px;font-family:monospace">${a.id_senha}</div>` : '';
       const isSustOral2 = a.tipo_audiencia === 'SUSTENTAÇÃO ORAL';
-      html += `<div style="background:${isSustOral2?'#fff7ed':'#fff'};border:1px solid ${isSustOral2?'#fed7aa':'#E5E7EB'};border-radius:6px;padding:14px 16px;margin-bottom:10px;border-left:4px solid ${isSustOral2?'#b45309':sc};${cardOp}">
+      const isPericia2  = a.tipo_audiencia === 'PERÍCIA';
+      html += `<div style="background:${isSustOral2?'#fff7ed':isPericia2?'#FFF5F5':'#fff'};border:1px solid ${isSustOral2?'#fed7aa':isPericia2?'#fecaca':'#E5E7EB'};border-radius:6px;padding:14px 16px;margin-bottom:10px;border-left:4px solid ${isSustOral2?'#b45309':isPericia2?'#C62828':sc};${cardOp}">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           <span style="font-size:13px;font-weight:700;color:#111827">${a.horario||'—'}</span>${tipo}${mod}
           <span style="background:${sb2};color:${sc};font-size:9px;padding:2px 6px;border-radius:10px;font-weight:600;text-transform:uppercase;margin-left:4px">${a.status||''}</span>
