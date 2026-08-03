@@ -1403,11 +1403,23 @@
             </div>
             <div class="form-field">
               <label>Tipo *</label>
-              <select id="corr-tipo" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+              <select id="corr-tipo" onchange="corrToggleTipoFields()" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
                 <option value="advogado">Advogado</option>
                 <option value="preposto">Preposto</option>
                 <option value="admin">Administradora de Correspondentes</option>
               </select>
+            </div>
+            <div class="form-field" id="corr-field-cpf" style="display:none">
+              <label>CPF</label>
+              <input id="corr-cpf" type="text" placeholder="000.000.000-00" />
+            </div>
+            <div class="form-field" id="corr-field-oab" style="display:none">
+              <label>OAB</label>
+              <input id="corr-oab" type="text" placeholder="OAB/SP 123.456" />
+            </div>
+            <div class="form-field">
+              <label>Observações</label>
+              <textarea id="corr-obs" rows="3" placeholder="Observações sobre o correspondente" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;resize:vertical;box-sizing:border-box"></textarea>
             </div>
             <div class="form-field">
               <label>Senha de Acesso *</label>
@@ -7430,12 +7442,21 @@ function renderCorrespondentes(list) {
     </tbody></table>`;
 }
 
+function corrToggleTipoFields() {
+  const tipo = document.getElementById('corr-tipo').value;
+  document.getElementById('corr-field-cpf').style.display = tipo === 'preposto' ? '' : 'none';
+  document.getElementById('corr-field-oab').style.display = tipo === 'advogado' ? '' : 'none';
+}
+
 function openCorrModal(id) {
   document.getElementById('corrModal').classList.add('open');
   document.getElementById('corr-id').value    = id || '';
   document.getElementById('corr-nome').value    = '';
   document.getElementById('corr-email').value   = '';
   document.getElementById('corr-celular').value = '';
+  document.getElementById('corr-cpf').value     = '';
+  document.getElementById('corr-oab').value     = '';
+  document.getElementById('corr-obs').value     = '';
   document.getElementById('corr-code').value    = '';
   document.getElementById('corr-tipo').value    = 'advogado';
   document.getElementById('corr-modal-del').style.display = 'none';
@@ -7448,6 +7469,9 @@ function openCorrModal(id) {
       document.getElementById('corr-nome').value    = c.nome    || '';
       document.getElementById('corr-email').value   = c.email   || '';
       document.getElementById('corr-celular').value = c.celular || '';
+      document.getElementById('corr-cpf').value     = c.cpf     || '';
+      document.getElementById('corr-oab').value     = c.oab     || '';
+      document.getElementById('corr-obs').value     = c.observacoes || '';
       document.getElementById('corr-code').value    = c.code    || '';
       document.getElementById('corr-tipo').value    = c.tipo    || 'advogado';
       document.getElementById('corr-modal-del').style.display = '';
@@ -7456,6 +7480,7 @@ function openCorrModal(id) {
   } else {
     genCorrCode();
   }
+  corrToggleTipoFields();
 }
 
 function closeCorrModal() {
@@ -7472,11 +7497,18 @@ function _corrNormNome(s) {
 function _corrNormEmails(s) {
   return (s || '').toLowerCase().split(/[\s,;]+/).map(e => e.trim()).filter(Boolean);
 }
-function _corrFindDuplicate(nome, email, excludeId) {
-  const nNome   = _corrNormNome(nome);
+function _corrNormDoc(s) {
+  return (s || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+}
+function _corrFindDuplicate(nome, email, cpf, oab, excludeId) {
+  const nNome  = _corrNormNome(nome);
   const nEmails = new Set(_corrNormEmails(email));
+  const nCpf   = _corrNormDoc(cpf);
+  const nOab   = _corrNormDoc(oab);
   return getCorrLocal().find(c => {
     if (c.id === excludeId) return false;
+    if (nCpf && _corrNormDoc(c.cpf) === nCpf) return true;
+    if (nOab && _corrNormDoc(c.oab) === nOab) return true;
     if (nNome && _corrNormNome(c.nome) === nNome) return true;
     return _corrNormEmails(c.email).some(e => nEmails.has(e));
   });
@@ -7487,10 +7519,13 @@ async function saveCorr() {
   const nome    = document.getElementById('corr-nome').value.trim();
   const email   = document.getElementById('corr-email').value.trim().toLowerCase();
   const celular = document.getElementById('corr-celular').value.trim();
+  const cpf     = document.getElementById('corr-cpf').value.trim();
+  const oab     = document.getElementById('corr-oab').value.trim();
+  const observacoes = document.getElementById('corr-obs').value.trim();
   const code    = document.getElementById('corr-code').value.trim();
   const tipo    = document.getElementById('corr-tipo').value;
   if (!nome || !email || !code) { showToast('Preencha nome, e-mail e senha.'); return; }
-  const dup = _corrFindDuplicate(nome, email, id);
+  const dup = _corrFindDuplicate(nome, email, cpf, oab, id);
   if (dup) {
     const seguir = confirm(
       `Já existe um cadastro parecido:\n\n${dup.nome || '—'} — ${dup.email || '—'}\n\n` +
@@ -7498,7 +7533,7 @@ async function saveCorr() {
     );
     if (!seguir) { closeCorrModal(); openCorrModal(dup.id); return; }
   }
-  const rec = { id, nome, email, celular, code, tipo, created_at: new Date().toISOString() };
+  const rec = { id, nome, email, celular, cpf, oab, observacoes, code, tipo, created_at: new Date().toISOString() };
   const { sbUrl, sbKey } = getSbCreds();
   if (sbUrl && sbKey) {
     try {
