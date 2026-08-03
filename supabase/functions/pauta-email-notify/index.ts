@@ -161,26 +161,29 @@ function empresaLimpa(aud: Record<string,string>): string {
   return extrairClienteTag(aud.reclamada ?? "") || aud.cliente || "processo";
 }
 
-function tituloEvento(aud: Record<string,string>, cancelada: boolean): string {
-  const label = cancelada ? "AUDIÊNCIA CANCELADA" : "NOVA AUDIÊNCIA NA PAUTA";
-  const dataLabel = `${fmtData(aud.data_audiencia)} ${fmtHora(aud.horario ?? "")}`.trim();
-  return `${label} — ${empresaLimpa(aud)} — ${dataLabel}`;
+// Assunto/título — uma audiência usa o formato detalhado de sempre; mais de uma (agrupadas
+// para o mesmo destinatário) usa um resumo com a contagem, já que cada uma pode ter uma
+// empresa/data/hora diferente e não cabe tudo numa linha só de assunto.
+function tituloEvento(auds: Record<string,string>[], cancelada: boolean): string {
+  if (auds.length === 1) {
+    const label = cancelada ? "AUDIÊNCIA CANCELADA" : "NOVA AUDIÊNCIA NA PAUTA";
+    const dataLabel = `${fmtData(auds[0].data_audiencia)} ${fmtHora(auds[0].horario ?? "")}`.trim();
+    return `${label} — ${empresaLimpa(auds[0])} — ${dataLabel}`;
+  }
+  const label = cancelada ? "AUDIÊNCIAS CANCELADAS" : "NOVAS AUDIÊNCIAS NA PAUTA";
+  return `${auds.length} ${label}`;
 }
 
-function htmlAgendada(aud: Record<string,string>, paraCliente: boolean): string {
-  const titulo = tituloEvento(aud, false);
-
-  const intro = paraCliente
-    ? `Informamos que foi agendada uma audiência em seu processo.`
-    : `Uma nova audiência foi incluída na pauta.`;
-
+function wrapperEmail(opts: {
+  badgeColor: string; badgeText: string; titulo: string; intro: string; conteudo: string;
+}): string {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#f4f2ef;font-family:Georgia,serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ef;">
 <tr><td align="center" style="padding:40px 16px;">
-<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+<table width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;">
 
   <tr><td style="background:#060E1A;padding:28px 40px;border-radius:4px 4px 0 0;">
     <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png"
@@ -191,26 +194,17 @@ function htmlAgendada(aud: Record<string,string>, paraCliente: boolean): string 
   </td></tr>
 
   <tr><td style="background:#ffffff;padding:40px 40px 32px;">
-    <p style="font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#2e7d32;margin:0 0 16px 0;">
-      ✅ AUDIÊNCIA AGENDADA
+    <p style="font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:${opts.badgeColor};margin:0 0 16px 0;">
+      ${opts.badgeText}
     </p>
     <h1 style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#060E1A;margin:0 0 24px 0;line-height:1.3;">
-      ${titulo}
+      ${opts.titulo}
     </h1>
     <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 28px 0;">
-      ${intro}
+      ${opts.intro}
     </p>
 
-    <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e8e4df;border-radius:3px;margin-bottom:28px;">
-      ${row("Data",       `${fmtData(aud.data_audiencia)} — ${diaSemana(aud.data_audiencia)}`)}
-      ${row("Horário",    fmtHora(aud.horario ?? ""))}
-      ${row("Tipo",       aud.tipo_audiencia ?? "")}
-      ${row("Modalidade", aud.modalidade ?? "")}
-      ${aud.vara       ? row("Vara / Local", aud.vara)       : ""}
-      ${aud.processo   ? row("Processo",     aud.processo)   : ""}
-      ${aud.reclamante ? row("Reclamante",   aud.reclamante) : ""}
-      ${aud.link       ? row("Link",         `<a href="${aud.link}" style="color:#0D2B5E;">${aud.link}</a>`) : ""}
-    </table>
+    ${opts.conteudo}
 
     <p style="font-family:Georgia,serif;font-size:14px;line-height:1.7;color:#555;margin:0;">
       Em caso de dúvidas, entre em contato com o escritório.
@@ -228,41 +222,9 @@ function htmlAgendada(aud: Record<string,string>, paraCliente: boolean): string 
 </body></html>`;
 }
 
-function htmlCancelada(aud: Record<string,string>, paraCliente: boolean): string {
-  const titulo = tituloEvento(aud, true);
-
-  const intro = paraCliente
-    ? `Informamos que a audiência abaixo foi <strong>cancelada</strong>.`
-    : `A audiência abaixo foi removida/cancelada no sistema.`;
-
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#f4f2ef;font-family:Georgia,serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ef;">
-<tr><td align="center" style="padding:40px 16px;">
-<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-
-  <tr><td style="background:#060E1A;padding:28px 40px;border-radius:4px 4px 0 0;">
-    <img src="https://falaw.com.br/assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/fa-logo-branco-1.png"
-         alt="Falaw Advogados" style="display:block;height:32px;width:auto;margin-bottom:10px;" />
-    <p style="font-family:monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#4a90d9;margin:0;">
-      PAUTA DE AUDIÊNCIAS
-    </p>
-  </td></tr>
-
-  <tr><td style="background:#ffffff;padding:40px 40px 32px;">
-    <p style="font-family:monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#C62828;margin:0 0 16px 0;">
-      ❌ AUDIÊNCIA CANCELADA
-    </p>
-    <h1 style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#060E1A;margin:0 0 24px 0;line-height:1.3;">
-      ${titulo}
-    </h1>
-    <p style="font-family:Georgia,serif;font-size:16px;line-height:1.8;color:#1a1a1a;margin:0 0 28px 0;">
-      ${intro}
-    </p>
-
-    <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #fecaca;border-radius:3px;margin-bottom:28px;background:#fff5f5;">
+// Tabela de detalhes (rótulo: valor) — usada quando o e-mail cobre uma única audiência.
+function tabelaUnica(aud: Record<string,string>, corBorda: string, fundo: string, comLink: boolean): string {
+  return `<table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid ${corBorda};border-radius:3px;margin-bottom:28px;background:${fundo};">
       ${row("Data",       `${fmtData(aud.data_audiencia)} — ${diaSemana(aud.data_audiencia)}`)}
       ${row("Horário",    fmtHora(aud.horario ?? ""))}
       ${row("Tipo",       aud.tipo_audiencia ?? "")}
@@ -270,22 +232,70 @@ function htmlCancelada(aud: Record<string,string>, paraCliente: boolean): string
       ${aud.vara       ? row("Vara / Local", aud.vara)       : ""}
       ${aud.processo   ? row("Processo",     aud.processo)   : ""}
       ${aud.reclamante ? row("Reclamante",   aud.reclamante) : ""}
-    </table>
+      ${comLink && aud.link ? row("Link", `<a href="${aud.link}" style="color:#0D2B5E;">${aud.link}</a>`) : ""}
+    </table>`;
+}
 
-    <p style="font-family:Georgia,serif;font-size:14px;line-height:1.7;color:#555;margin:0;">
-      Em caso de dúvidas, entre em contato com o escritório.
-    </p>
-  </td></tr>
+// Tabela em lista (uma linha por audiência) — usada quando o e-mail agrupa mais de uma
+// audiência para o mesmo destinatário, evitando um e-mail por audiência.
+function tabelaMultipla(auds: Record<string,string>[], corBorda: string): string {
+  const linhas = auds.map(aud => `<tr style="border-bottom:1px solid ${corBorda};">
+      <td style="padding:10px 12px;font-family:monospace;font-size:12px;white-space:nowrap;color:#060E1A;">${fmtData(aud.data_audiencia)}</td>
+      <td style="padding:10px 12px;font-family:monospace;font-size:13px;font-weight:700;color:#060E1A;">${fmtHora(aud.horario ?? "")}</td>
+      <td style="padding:10px 12px;font-size:11px;color:#060E1A;">${aud.tipo_audiencia ?? ""}</td>
+      <td style="padding:10px 12px;font-family:monospace;font-size:11px;color:#060E1A;">${aud.processo ?? "—"}</td>
+      <td style="padding:10px 12px;font-size:12px;color:#060E1A;">${empresaLimpa(aud)}</td>
+      <td style="padding:10px 12px;font-size:12px;color:#060E1A;">${aud.reclamante ?? ""}</td>
+    </tr>`).join("");
+  return `<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:28px;font-size:11px;">
+      <thead><tr style="background:#f4f2ef;">
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7A7672;">Data</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7A7672;">Horário</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7A7672;">Tipo</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7A7672;">Processo</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7A7672;">Empresa</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7A7672;">Reclamante</th>
+      </tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>`;
+}
 
-  <tr><td style="background:#f7f5f2;padding:20px 40px;border-radius:0 0 4px 4px;border-top:1px solid #e8e4df;">
-    <p style="font-family:monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7A7672;margin:0 0 4px 0;">FALAW ADVOGADOS</p>
-    <p style="font-family:monospace;font-size:9px;color:#b0aba5;margin:0;">Av. Francisco Matarazzo, 1752 · Salas 414 e 415 · São Paulo / SP</p>
-  </td></tr>
+function htmlAgendada(auds: Record<string,string>[], paraCliente: boolean): string {
+  const titulo = tituloEvento(auds, false);
+  const multipla = auds.length > 1;
 
-</table>
-</td></tr>
-</table>
-</body></html>`;
+  const intro = paraCliente
+    ? (multipla ? `Informamos que foram agendadas ${auds.length} audiências em seus processos.` : `Informamos que foi agendada uma audiência em seu processo.`)
+    : (multipla ? `${auds.length} novas audiências foram incluídas na pauta.` : `Uma nova audiência foi incluída na pauta.`);
+
+  const conteudo = multipla
+    ? tabelaMultipla(auds, "#e8e4df")
+    : tabelaUnica(auds[0], "#e8e4df", "#ffffff", true);
+
+  return wrapperEmail({
+    badgeColor: "#2e7d32",
+    badgeText: multipla ? "✅ AUDIÊNCIAS AGENDADAS" : "✅ AUDIÊNCIA AGENDADA",
+    titulo, intro, conteudo,
+  });
+}
+
+function htmlCancelada(auds: Record<string,string>[], paraCliente: boolean): string {
+  const titulo = tituloEvento(auds, true);
+  const multipla = auds.length > 1;
+
+  const intro = paraCliente
+    ? (multipla ? `Informamos que ${auds.length} audiências abaixo foram <strong>canceladas</strong>.` : `Informamos que a audiência abaixo foi <strong>cancelada</strong>.`)
+    : (multipla ? `As audiências abaixo foram removidas/canceladas no sistema.` : `A audiência abaixo foi removida/cancelada no sistema.`);
+
+  const conteudo = multipla
+    ? tabelaMultipla(auds, "#fecaca")
+    : tabelaUnica(auds[0], "#fecaca", "#fff5f5", false);
+
+  return wrapperEmail({
+    badgeColor: "#C62828",
+    badgeText: multipla ? "❌ AUDIÊNCIAS CANCELADAS" : "❌ AUDIÊNCIA CANCELADA",
+    titulo, intro, conteudo,
+  });
 }
 
 function row(label: string, value: string): string {
@@ -315,6 +325,67 @@ async function enviarEmail(to: string, subject: string, html: string): Promise<b
     console.error("enviarEmail:", e);
     return false;
   }
+}
+
+// ── Envio agrupado ────────────────────────────────────────────────────────────
+
+// Agrupa as audiências de um lote (novas OU canceladas) por destinatário e manda UM
+// e-mail por cliente cobrindo todas as audiências dele, em vez de um e-mail por
+// audiência — e um único e-mail ao escritório cobrindo o lote inteiro. Só marca
+// email_..._notificado_at das audiências cujo(s) envio(s) necessário(s) (o do cliente,
+// quando há match, e o do escritório, sempre) tiverem dado certo — falha em qualquer um
+// deixa aquelas audiências elegíveis para retry na próxima execução.
+async function processarLote(
+  auds: Record<string,string>[],
+  clientes: Record<string,unknown>[],
+  cancelada: boolean,
+  sb: ReturnType<typeof createClient>,
+  campoNotificado: string,
+  agoraIso: string,
+): Promise<{ enviados: number; falhas: number }> {
+  if (!auds.length) return { enviados: 0, falhas: 0 };
+  const htmlFn = cancelada ? htmlCancelada : htmlAgendada;
+
+  const porCliente = new Map<string, Record<string,string>[]>();
+  const semCliente: Record<string,string>[] = [];
+  for (const aud of auds) {
+    const email = emailDoCliente(aud, clientes);
+    if (email) {
+      if (!porCliente.has(email)) porCliente.set(email, []);
+      porCliente.get(email)!.push(aud);
+    } else {
+      semCliente.push(aud);
+    }
+  }
+
+  // Um único e-mail ao escritório cobrindo todo o lote (não um por audiência nem por cliente)
+  const okEscritorio = await enviarEmail(ESCRITORIO_EMAIL, tituloEvento(auds, cancelada), htmlFn(auds, false));
+
+  let enviados = 0, falhas = 0;
+  const idsNotificados: string[] = [];
+
+  for (const [email, grupo] of porCliente) {
+    const okCliente = await enviarEmail(email, tituloEvento(grupo, cancelada), htmlFn(grupo, true));
+    if (okCliente && okEscritorio) {
+      grupo.forEach(a => idsNotificados.push(a.id));
+      enviados += grupo.length;
+    } else {
+      falhas += grupo.length;
+      console.error(`Falha ao notificar grupo de ${email} (${grupo.length} audiência(s), cancelada=${cancelada}) — cliente=${okCliente} escritorio=${okEscritorio}`);
+    }
+  }
+
+  // Audiências sem cliente casado não têm envio próprio — dependem só do escritório
+  if (semCliente.length) {
+    if (okEscritorio) { semCliente.forEach(a => idsNotificados.push(a.id)); enviados += semCliente.length; }
+    else falhas += semCliente.length;
+  }
+
+  if (idsNotificados.length) {
+    await sb.from("pauta_audiencias").update({ [campoNotificado]: agoraIso }).in("id", idsNotificados);
+  }
+
+  return { enviados, falhas };
 }
 
 // ── Handler principal ─────────────────────────────────────────────────────────
@@ -369,55 +440,16 @@ Deno.serve(async (req) => {
       .order("data_audiencia", { ascending: true });
     if (errCanceladas) throw new Error(`Consulta de audiências canceladas falhou: ${errCanceladas.message}`);
 
-    let enviados = 0;
     const agora_iso = agora.toISOString();
 
-    let falhas = 0;
-
-    // ── Processa novas ─────────────────────────────────────────────────────
-    for (const aud of (novas ?? []) as Record<string,string>[]) {
-      const clienteEmail = emailDoCliente(aud, clientes);
-      const subject       = tituloEvento(aud, false);
-
-      // E-mail ao cliente (se encontrado) — se não encontrado, não é falha, só não se aplica
-      const okCliente = clienteEmail ? await enviarEmail(clienteEmail, subject, htmlAgendada(aud, true)) : true;
-
-      // E-mail ao escritório
-      const okEscritorio = await enviarEmail(ESCRITORIO_EMAIL, subject, htmlAgendada(aud, false));
-
-      // Só marca como notificado se TODOS os envios esperados deram certo — uma falha
-      // (GAS fora do ar, secret errada) deixa a linha elegível para retry na próxima
-      // execução, em vez de ficar marcada como "enviado" sem ter enviado nada.
-      if (okCliente && okEscritorio) {
-        await sb.from("pauta_audiencias")
-          .update({ email_agendada_notificado_at: agora_iso })
-          .eq("id", aud.id);
-        enviados++;
-      } else {
-        console.error(`Falha ao notificar agendamento de ${aud.id} (cliente=${okCliente} escritorio=${okEscritorio}) — será tentado de novo`);
-        falhas++;
-      }
-    }
-
-    // ── Processa canceladas ────────────────────────────────────────────────
-    for (const aud of (canceladas ?? []) as Record<string,string>[]) {
-      const clienteEmail = emailDoCliente(aud, clientes);
-      const subject       = tituloEvento(aud, true);
-
-      const okCliente = clienteEmail ? await enviarEmail(clienteEmail, subject, htmlCancelada(aud, true)) : true;
-
-      const okEscritorio = await enviarEmail(ESCRITORIO_EMAIL, subject, htmlCancelada(aud, false));
-
-      if (okCliente && okEscritorio) {
-        await sb.from("pauta_audiencias")
-          .update({ email_cancelada_notificado_at: agora_iso })
-          .eq("id", aud.id);
-        enviados++;
-      } else {
-        console.error(`Falha ao notificar cancelamento de ${aud.id} (cliente=${okCliente} escritorio=${okEscritorio}) — será tentado de novo`);
-        falhas++;
-      }
-    }
+    // Agrupa por cliente — quando um mesmo destinatário tem mais de uma audiência no
+    // lote, vai tudo num e-mail só, em vez de um e-mail por audiência.
+    const [resNovas, resCanceladas] = await Promise.all([
+      processarLote((novas ?? []) as Record<string,string>[], clientes, false, sb, "email_agendada_notificado_at", agora_iso),
+      processarLote((canceladas ?? []) as Record<string,string>[], clientes, true, sb, "email_cancelada_notificado_at", agora_iso),
+    ]);
+    const enviados = resNovas.enviados + resCanceladas.enviados;
+    const falhas   = resNovas.falhas + resCanceladas.falhas;
 
     const resumo = {
       ok: true,
