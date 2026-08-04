@@ -2635,10 +2635,10 @@ async function salvarTestemunhas(audId) {
 }
 
 /* ── Admin de Correspondentes ────────────────────────────────────────────── */
-async function loadPautaAdmin() {
+async function loadPautaAdmin(silent) {
   const el = document.getElementById('pauta-list');
   if (!el) return;
-  el.innerHTML = '<p style="color:#888;font-size:13px;padding:20px 0">Carregando audiências de correspondentes…</p>';
+  if (!silent) el.innerHTML = '<p style="color:#888;font-size:13px;padding:20px 0">Carregando audiências de correspondentes…</p>';
 
   const sbUrl = (window.SB_URL || '').trim();
   const sbKey = (window.SB_KEY || '').trim();
@@ -3331,10 +3331,10 @@ async function limparCorrAdmin(audId) {
   }
 }
 
-async function loadPautaEscritorio() {
+async function loadPautaEscritorio(silent) {
   const el = document.getElementById('pauta-list');
   if (!el) return;
-  el.innerHTML = '<p style="color:#888;font-size:13px;padding:20px 0">Carregando pauta completa…</p>';
+  if (!silent) el.innerHTML = '<p style="color:#888;font-size:13px;padding:20px 0">Carregando pauta completa…</p>';
 
   const sbUrl = (window.SB_URL || '').trim();
   const sbKey = (window.SB_KEY || '').trim();
@@ -4436,7 +4436,7 @@ async function init() {
       document.getElementById('btn-novo-corr-admin').style.display = '';
       showTab('pauta');
       loadPautaAdmin();
-      _liveInit(['pauta_audiencias','correspondentes','equipe','mencoes'], loadPautaAdmin);
+      _liveInit(['pauta_audiencias','correspondentes','equipe','mencoes'], () => loadPautaAdmin(true));
       return;
     }
     const tipoLabel = session.corrTipo === 'preposto' ? 'Preposto' : 'Advogado Correspondente';
@@ -4467,7 +4467,7 @@ async function init() {
     showTab('pauta');
     // Carrega pauta completa
     loadPautaEscritorio();
-    _liveInit(['pauta_audiencias','correspondentes','equipe','mencoes'], loadPautaEscritorio);
+    _liveInit(['pauta_audiencias','correspondentes','equipe','mencoes'], () => loadPautaEscritorio(true));
     return;
   }
 
