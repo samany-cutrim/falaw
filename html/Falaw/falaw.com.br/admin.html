@@ -4540,7 +4540,6 @@ function _liveInit() {
   const sb = getSB();
   if (!sb) return;
   window._liveChannels = [];
-  let avisouOk = false, tabelasComErro = [];
   Object.keys(LIVE_TABLE_TABS).forEach(table => {
     // Um canal por tabela: se uma tabela não estiver habilitada no Realtime do
     // Supabase, só ela falha — as outras continuam funcionando normalmente.
@@ -4556,11 +4555,8 @@ function _liveInit() {
     });
     channel.subscribe((status, err) => {
       console.log(`[ao vivo] ${table}:`, status, err || '');
-      if (status === 'SUBSCRIBED' && !avisouOk) { avisouOk = true; showToast('🟢 Atualização ao vivo conectada.'); }
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        if (!tabelasComErro.length) showToast('🔴 Ao vivo falhou em pelo menos 1 tabela — veja o console (F12).');
-        tabelasComErro.push(table);
-        console.warn(`[ao vivo] "${table}" não conectou (${status}). Confirme que essa tabela está com Realtime habilitado no Supabase (rode a migration 20260803_realtime_publication.sql e/ou confira em Database → Replication) e que a RLS permite leitura.`);
+        console.warn(`[ao vivo] "${table}" não conectou (${status}) — segue funcionando por atualização automática a cada ~25s.`);
       }
     });
     window._liveChannels.push(channel);
