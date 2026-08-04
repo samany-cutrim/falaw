@@ -7548,12 +7548,14 @@ function renderCorrespondentes(list) {
     el.innerHTML = '<div class="empty-state"><p>Nenhum correspondente cadastrado.</p><p>Clique em "+ Novo Correspondente" para adicionar.</p></div>';
     return;
   }
-  el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+  el.innerHTML = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
     <thead><tr style="background:#f9fafb;border-bottom:2px solid var(--c-divider)">
       <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Nome</th>
       <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">E-mail</th>
       <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Celular</th>
       <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Tipo</th>
+      <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">CPF / OAB</th>
+      <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Observações</th>
       <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Senha</th>
       <th style="width:80px"></th>
     </tr></thead>
@@ -7565,12 +7567,14 @@ function renderCorrespondentes(list) {
       <td style="padding:12px 14px">
         <span style="background:${c.tipo==='advogado'?'#dbeafe':'#fef9c3'};color:${c.tipo==='advogado'?'#1e40af':'#92400e'};font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;text-transform:uppercase">${c.tipo||'—'}</span>
       </td>
+      <td style="padding:12px 14px;font-family:var(--f-mono);font-size:12px">${escHtml(c.oab || c.cpf || '—')}</td>
+      <td style="padding:12px 14px;font-size:12px;color:var(--c-muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(c.observacoes||'')}">${escHtml(c.observacoes||'—')}</td>
       <td style="padding:12px 14px;font-family:var(--f-mono);font-size:11px;color:var(--c-muted)">${escHtml(c.code||'—')}</td>
       <td style="padding:12px 14px;text-align:right">
         <button class="btn btn-ghost btn-sm" onclick="openCorrModal('${c.id}')">Editar</button>
       </td>
     </tr>`).join('')}
-    </tbody></table>`;
+    </tbody></table></div>`;
 }
 
 function corrToggleTipoFields() {
