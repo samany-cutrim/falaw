@@ -1234,6 +1234,32 @@ Deno.serve(async (req: Request) => {
     } catch(e) { return Response.json({ error: String(e) }, { status: 500, headers: CORS }); }
   }
 
+    // Varre o catálogo de tipos de tarefa por código sequencial, um a um, via
+  // GET /adv-service/tarefa-tipo/{codigo} — usar quando ?listar-tipos-tarefa=1 falhar
+  // (a consulta-keyset com codigosTarefaTipo:[] pode dar 500 no Projuris).
+  // GET ?listar-tipos-tarefa=2[&de=6125400&ate=6125470]
+  if (url.searchParams.get("listar-tipos-tarefa") === "2") {
+    try {
+      await getToken();
+      const de  = parseInt(url.searchParams.get("de")  ?? "", 10) || (AUDIENCIA_TIPO_CODIGO - 30);
+      const ate = parseInt(url.searchParams.get("ate") ?? "", 10) || (AUDIENCIA_TIPO_CODIGO + 30);
+      const resultados: Record<string, unknown>[] = [];
+      for (let cod = de; cod <= ate; cod++) {
+        try {
+          const r = await fetch(`${PROJURIS_BASE}/adv-service/tarefa-tipo/${cod}`, { headers: authHeaders() });
+          if (!r.ok) { resultados.push({ codigo: cod, status: r.status }); continue; }
+          const txt = await r.text();
+          let dado: unknown;
+          try { dado = JSON.parse(txt); } catch { dado = txt.slice(0, 200); }
+          resultados.push({ codigo: cod, dado });
+        } catch (e) {
+          resultados.push({ codigo: cod, erro: String(e) });
+        }
+      }
+      return Response.json({ intervalo: { de, ate }, resultados }, { headers: CORS });
+    } catch(e) { return Response.json({ error: String(e) }, { status: 500, headers: CORS }); }
+  }
+
   // Modo diagnóstico: GET ?diag=1
   if (url.searchParams.get("diag") === "1") {
     const resultado = await diagnosticarAuth();
