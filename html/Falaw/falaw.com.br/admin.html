@@ -3767,6 +3767,7 @@ function _resetAdminTimer() {
 ───────────────────────────────────────────────────────────── */
 function applyRoleRestrictions() {
   _liveInit();
+  _livePollInit();
   const role = sessionStorage.getItem('fa_admin_role') || 'superadmin';
   if (role !== 'restrito') return; // superadmin: nenhuma restrição
 
@@ -4520,6 +4521,17 @@ function _liveReloadPreservingScroll(reloadFn) {
   const result = reloadFn();
   if (result && typeof result.then === 'function') result.then(() => requestAnimationFrame(restore));
   else requestAnimationFrame(restore);
+}
+
+// Repescagem por tempo: além do Realtime (WebSocket), atualiza a tela ativa a
+// cada ~25s por conta própria. Funciona mesmo se o WebSocket estiver bloqueado
+// pela rede — só um pouco menos instantâneo (até 25s de atraso).
+function _livePollInit() {
+  if (window._livePollTimer) return;
+  window._livePollTimer = setInterval(() => {
+    const reload = LIVE_TAB_RELOADERS[window._liveCurrentTab];
+    if (reload) _liveReloadPreservingScroll(reload);
+  }, 25000);
 }
 
 let _liveDebounce = {};

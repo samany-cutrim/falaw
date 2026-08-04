@@ -1439,7 +1439,16 @@ function _liveReloadPreservingScroll(reloadFn) {
 /* ── Ao vivo (Supabase Realtime): quando algo muda numa tabela relevante
    (outra sessão/admin), a tela recarrega sozinha, sem precisar apertar F5.
    Exige Realtime habilitado nessas tabelas no Supabase (Database → Replication). */
+// Repescagem por tempo: além do Realtime (WebSocket), atualiza a tela a cada
+// ~25s por conta própria. Funciona mesmo se o WebSocket estiver bloqueado pela
+// rede — só um pouco menos instantâneo (até 25s de atraso).
+function _livePollInit(reloadFn) {
+  if (window._livePollTimer) return;
+  window._livePollTimer = setInterval(() => _liveReloadPreservingScroll(reloadFn), 25000);
+}
+
 function _liveInit(tables, reloadFn) {
+  _livePollInit(reloadFn);
   if (window._liveChannels) return;
   const sbUrl = (window.SB_URL || '').trim();
   const sbKey = (window.SB_KEY || '').trim();
