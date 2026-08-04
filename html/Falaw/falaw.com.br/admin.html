@@ -1699,10 +1699,6 @@
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--c-divider)">
-        <label title="Chrome roda invisível em segundo plano" style="display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--c-muted);cursor:pointer;padding:4px 10px;border:1px solid var(--c-divider);border-radius:2px;user-select:none">
-          <input type="checkbox" id="pje-modo-oculto" style="width:12px;height:12px;cursor:pointer;accent-color:#0D2B5E">
-          Oculto
-        </label>
         <label class="btn btn-ghost" style="cursor:pointer" title="Importar planilha Excel (.xlsx)">
           Importar Excel
           <input type="file" id="aud-xl-input" accept=".xlsx,.xls" style="display:none" onchange="audImportExcel(this)" />
@@ -15079,18 +15075,13 @@ function _audToggleIncompletas() {
   loadAudiencias();
 }
 
-// Caso marcado para correspondente ("Enviar para Correspondente?") cujo advogado
-// exigido pelo tipo escolhido ainda não foi preenchido.
+// Campo "Advogado Resp. pelo Caso" do modal (a.advogado) ainda não preenchido.
 function _audPendenteAdvogado(a) {
-  if (!a.corr_tipo_envio) return false;
-  const needAdv = a.corr_tipo_envio === 'advogado' || a.corr_tipo_envio === 'ambos';
-  return needAdv && !a.advogado;
+  return !a.advogado;
 }
-// Idem, para o preposto exigido pelo tipo escolhido.
+// Campo "Dados do Preposto" do modal (a.dados_preposto) ainda não preenchido.
 function _audPendentePreposto(a) {
-  if (!a.corr_tipo_envio) return false;
-  const needPre = a.corr_tipo_envio === 'preposto' || a.corr_tipo_envio === 'ambos';
-  return needPre && !a.dados_preposto;
+  return !a.dados_preposto;
 }
 
 function _audTogglePendenteAdv() {
