@@ -1743,19 +1743,18 @@
           </button>
           <div id="aud-filter-tipo-drop" class="ms-drop" style="display:none;position:absolute;z-index:200;top:100%;left:0;min-width:200px;max-height:260px;overflow-y:auto;background:#fff;border:1px solid var(--c-divider);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:2px"></div>
         </div>
-        <select id="aud-filter-modalidade" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none">
-          <option value="">Todas as modalidades</option>
-          <option value="VIRTUAL">Virtual</option>
-          <option value="PRESENCIAL">Presencial</option>
-          <option value="HÍBRIDA">Híbrida</option>
-        </select>
-        <select id="aud-filter-status" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none">
-          <option value="">Todos os status</option>
-          <option value="agendada">Agendada</option>
-          <option value="realizada">Realizada</option>
-          <option value="adiada">Adiada</option>
-          <option value="cancelada">Cancelada</option>
-        </select>
+        <div id="aud-filter-modalidade" class="ms-wrap" data-placeholder="Todas as modalidades" data-onchange="loadAudiencias" style="position:relative">
+          <button type="button" onclick="_msToggle('aud-filter-modalidade')" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap">
+            <span id="aud-filter-modalidade-lbl">Todas as modalidades</span><span style="color:#9CA3AF;font-size:10px">▾</span>
+          </button>
+          <div id="aud-filter-modalidade-drop" class="ms-drop" style="display:none;position:absolute;z-index:200;top:100%;left:0;min-width:200px;max-height:260px;overflow-y:auto;background:#fff;border:1px solid var(--c-divider);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:2px"></div>
+        </div>
+        <div id="aud-filter-status" class="ms-wrap" data-placeholder="Todos os status" data-onchange="loadAudiencias" style="position:relative">
+          <button type="button" onclick="_msToggle('aud-filter-status')" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap">
+            <span id="aud-filter-status-lbl">Todos os status</span><span style="color:#9CA3AF;font-size:10px">▾</span>
+          </button>
+          <div id="aud-filter-status-drop" class="ms-drop" style="display:none;position:absolute;z-index:200;top:100%;left:0;min-width:200px;max-height:260px;overflow-y:auto;background:#fff;border:1px solid var(--c-divider);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.1);margin-top:2px"></div>
+        </div>
         <select id="aud-filter-resp" onchange="loadAudiencias()" style="display:none"></select>
         <div id="aud-ms-resp" class="ms-wrap" data-placeholder="Todas as responsabilidades" data-onchange="loadAudiencias" style="position:relative">
           <button type="button" onclick="_msToggle('aud-ms-resp')" style="border:1px solid var(--c-divider);border-radius:2px;padding:7px 10px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap">
@@ -1772,13 +1771,12 @@
         <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
           <span style="font-family:var(--f-mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--c-muted);white-space:nowrap">Período:</span>
           <button type="button" id="audp-anterior" onclick="_audSetPeriodo('anterior')" style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">Mês anterior</button>
-          <button type="button" id="audp-semana" onclick="_audSetPeriodo('semana')" style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">7 dias</button>
           <button type="button" id="audp-mes"    onclick="_audSetPeriodo('mes')"    style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">Este mês</button>
           <button type="button" id="audp-prox"   onclick="_audSetPeriodo('prox')"   style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">Próx. mês</button>
           <button type="button" id="audp-custom" onclick="_audSetPeriodo('custom')" style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--c-divider);border-radius:2px;background:#fff;color:var(--c-dark);cursor:pointer">Personalizado</button>
-          <button type="button" id="audp-todos"  onclick="_audSetPeriodo('')"       style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid #0D2B5E;border-radius:2px;background:#0D2B5E;color:#fff;cursor:pointer">Futuros</button>
           <button type="button" id="audp-incompletas" onclick="_audToggleIncompletas()" style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid #E11D48;border-radius:2px;background:#fff;color:#E11D48;cursor:pointer">⚠ Incompletas</button>
-          <button type="button" id="audp-pendente-corr" onclick="_audTogglePendenteCorr()" title="Casos marcados para correspondente que ainda não têm advogado e/ou preposto definidos" style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid #D97706;border-radius:2px;background:#fff;color:#D97706;cursor:pointer">👤 Pendente Adv./Preposto</button>
+          <button type="button" id="audp-pendente-adv" onclick="_audTogglePendenteAdv()" title="Casos marcados para correspondente cujo advogado ainda não foi definido" style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid #D97706;border-radius:2px;background:#fff;color:#D97706;cursor:pointer">👤 Pendente Advogado</button>
+          <button type="button" id="audp-pendente-prep" onclick="_audTogglePendentePrep()" title="Casos marcados para correspondente cujo preposto ainda não foi definido" style="font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border:1px solid #D97706;border-radius:2px;background:#fff;color:#D97706;cursor:pointer">👤 Pendente Preposto</button>
         </div>
         <div id="audp-custom-inputs" style="display:none;gap:6px;align-items:center">
           <input id="aud-data-de"  type="date" onchange="loadAudiencias()" style="border:1px solid var(--c-divider);border-radius:2px;padding:6px 8px;font-family:var(--f-body);font-size:12px;color:var(--c-dark);background:#fff;outline:none" />
@@ -14349,10 +14347,10 @@ async function _mencaoIrPara(audienciaId) {
     const sb = supabase.createClient(sbUrl, sbKey);
     const { data } = await sb.from('pauta_audiencias').select('data_audiencia').eq('id', audienciaId).maybeSingle();
     if (!data || !data.data_audiencia) { showToast('Audiência não encontrada.'); return; }
-    ['aud-filter-tipo','aud-filter-modalidade','aud-filter-status','aud-filter-mes','aud-filter-dia','aud-filter-busca'].forEach(id => {
+    ['aud-filter-mes','aud-filter-dia','aud-filter-busca'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
-    ['aud-ms-resp','aud-ms-recda','aud-filter-tipo'].forEach(id => _msReset(id));
+    ['aud-ms-resp','aud-ms-recda','aud-filter-tipo','aud-filter-modalidade','aud-filter-status'].forEach(id => _msReset(id));
     window._audSoIncompletas = false;
     document.getElementById('aud-data-de').value  = data.data_audiencia;
     document.getElementById('aud-data-ate').value = data.data_audiencia;
@@ -14858,8 +14856,8 @@ async function loadAudiencias() {
 
   // filtros (lidos antes da consulta, para poder buscar no banco o período certo — inclusive passado)
   const fTipos = _msGetValues('aud-filter-tipo');
-  const fMod   = document.getElementById('aud-filter-modalidade')?.value|| '';
-  const fSt    = document.getElementById('aud-filter-status')?.value    || '';
+  const fMod   = _msGetValues('aud-filter-modalidade');
+  const fSt    = _msGetValues('aud-filter-status');
   const fResps = _msGetValues('aud-ms-resp');
   const fRecdas= _msGetValues('aud-ms-recda');
   const fMes   = document.getElementById('aud-filter-mes')?.value       || '';
@@ -14869,7 +14867,8 @@ async function loadAudiencias() {
   const periodo = window._audPeriodo || '';
   const fBusca = (document.getElementById('aud-filter-busca')?.value    || '').toLowerCase().trim();
   const fIncompletas = window._audSoIncompletas || false;
-  const fPendenteCorr = window._audSoPendenteCorr || false;
+  const fPendenteAdv  = window._audSoPendenteAdv  || false;
+  const fPendentePrep = window._audSoPendentePrep || false;
 
   // Período efetivo a buscar no banco: por padrão só hoje em diante (evita puxar a tabela
   // inteira sempre), mas se um filtro de dia/mês/período pedir datas passadas, respeita.
@@ -14924,8 +14923,8 @@ async function loadAudiencias() {
       if (fMes && (!a.data_audiencia || !a.data_audiencia.startsWith(fMes))) return false;
     }
     if (fTipos.length  && !fTipos.includes(a.tipo_audiencia||''))        return false;
-    if (fMod   && a.modalidade           !== fMod)   return false;
-    if (fSt    && a.status               !== fSt)    return false;
+    if (fMod.length    && !fMod.includes(a.modalidade||''))              return false;
+    if (fSt.length     && !fSt.includes(a.status||''))                   return false;
     if (fResps.length  && !fResps.includes(a.tipo_responsabilidade||'')) return false;
     if (fRecdas.length && !fRecdas.some(q=>(a.reclamada||'').includes(q))) return false;
     if (fBusca) {
@@ -14937,11 +14936,14 @@ async function loadAudiencias() {
       if ((a.data_audiencia||'') < hoje) return false; // só futuras
       if (a.horario && a.vara) return false; // completas ficam fora
     }
-    if (fPendenteCorr && !_audPendenteDesignacao(a)) return false;
+    if (fPendenteAdv  && !_audPendenteAdvogado(a)) return false;
+    if (fPendentePrep && !_audPendentePreposto(a)) return false;
     return true;
   });
   function _audExtractCliente(rec) { if (!rec) return ''; const f = rec.split(',').find(p=>p.includes('(CLIENTE)')); return f ? f.replace(/\s*\(CLIENTE\)/gi,'').trim() : ''; }
   _msPopulate('aud-filter-tipo', [...new Set(items.map(r=>r.tipo_audiencia||'').filter(Boolean))].sort());
+  _msPopulate('aud-filter-modalidade', [...new Set(items.map(r=>r.modalidade||'').filter(Boolean))].sort());
+  _msPopulate('aud-filter-status', [...new Set(items.map(r=>r.status||'').filter(Boolean))].sort());
   _msPopulate('aud-ms-resp',  [...new Set(items.map(r=>r.tipo_responsabilidade||'').filter(Boolean))].sort());
   _msPopulate('aud-ms-recda', [...new Set(items.map(r=>_audExtractCliente(r.reclamada)).filter(Boolean))].sort());
 
@@ -15037,8 +15039,6 @@ function _audSetPeriodo(tipo) {
   if (tipo === 'anterior') {
     de = fmt(new Date(today.getFullYear(), today.getMonth()-1, 1));
     ate = fmt(new Date(today.getFullYear(), today.getMonth(), 0));
-  } else if (tipo === 'semana') {
-    de = fmt(today); const e = new Date(today); e.setDate(e.getDate()+6); ate = fmt(e);
   } else if (tipo === 'mes') {
     de = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
     ate = fmt(new Date(today.getFullYear(), today.getMonth()+1, 0));
@@ -15054,10 +15054,10 @@ function _audSetPeriodo(tipo) {
   if (deEl && !showCustom) deEl.value = de;
   if (ateEl && !showCustom) ateEl.value = ate;
   if (ci) ci.style.display = showCustom ? 'flex' : 'none';
-  ['anterior','semana','mes','prox','custom','todos'].forEach(k => {
+  ['anterior','mes','prox','custom'].forEach(k => {
     const b = document.getElementById('audp-'+k);
     if (!b) return;
-    const active = k === (tipo||'todos');
+    const active = k === tipo;
     b.style.background = active ? '#0D2B5E' : '#fff';
     b.style.color = active ? '#fff' : 'var(--c-dark)';
     b.style.borderColor = active ? '#0D2B5E' : 'var(--c-divider)';
@@ -15080,39 +15080,56 @@ function _audToggleIncompletas() {
 }
 
 // Caso marcado para correspondente ("Enviar para Correspondente?") cujo advogado
-// e/ou preposto exigido pelo tipo escolhido ainda não foi preenchido.
-function _audPendenteDesignacao(a) {
+// exigido pelo tipo escolhido ainda não foi preenchido.
+function _audPendenteAdvogado(a) {
   if (!a.corr_tipo_envio) return false;
   const needAdv = a.corr_tipo_envio === 'advogado' || a.corr_tipo_envio === 'ambos';
+  return needAdv && !a.advogado;
+}
+// Idem, para o preposto exigido pelo tipo escolhido.
+function _audPendentePreposto(a) {
+  if (!a.corr_tipo_envio) return false;
   const needPre = a.corr_tipo_envio === 'preposto' || a.corr_tipo_envio === 'ambos';
-  return (needAdv && !a.advogado) || (needPre && !a.dados_preposto);
+  return needPre && !a.dados_preposto;
 }
 
-function _audTogglePendenteCorr() {
-  window._audSoPendenteCorr = !window._audSoPendenteCorr;
-  const bp = document.getElementById('audp-pendente-corr');
-  if (bp) {
-    bp.style.background = window._audSoPendenteCorr ? '#D97706' : '#fff';
-    bp.style.color       = window._audSoPendenteCorr ? '#fff'    : '#D97706';
-    bp.style.borderColor = '#D97706';
+function _audTogglePendenteAdv() {
+  window._audSoPendenteAdv = !window._audSoPendenteAdv;
+  const b = document.getElementById('audp-pendente-adv');
+  if (b) {
+    b.style.background = window._audSoPendenteAdv ? '#D97706' : '#fff';
+    b.style.color       = window._audSoPendenteAdv ? '#fff'    : '#D97706';
+    b.style.borderColor = '#D97706';
+  }
+  loadAudiencias();
+}
+
+function _audTogglePendentePrep() {
+  window._audSoPendentePrep = !window._audSoPendentePrep;
+  const b = document.getElementById('audp-pendente-prep');
+  if (b) {
+    b.style.background = window._audSoPendentePrep ? '#D97706' : '#fff';
+    b.style.color       = window._audSoPendentePrep ? '#fff'    : '#D97706';
+    b.style.borderColor = '#D97706';
   }
   loadAudiencias();
 }
   
 function audLimparFiltros() {
-  ['aud-filter-tipo','aud-filter-modalidade','aud-filter-status','aud-filter-mes','aud-filter-dia'].forEach(id => {
+  ['aud-filter-mes','aud-filter-dia'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  ['aud-ms-resp','aud-ms-recda','aud-filter-tipo'].forEach(id => _msReset(id));
+  ['aud-ms-resp','aud-ms-recda','aud-filter-tipo','aud-filter-modalidade','aud-filter-status'].forEach(id => _msReset(id));
   const deEl = document.getElementById('aud-data-de');  if (deEl)  deEl.value = '';
   const ateEl = document.getElementById('aud-data-ate'); if (ateEl) ateEl.value = '';
   window._audPeriodo = '';
   window._audSoIncompletas = false;
-  window._audSoPendenteCorr = false;
-  ['anterior','semana','mes','prox','custom'].forEach(k=>{ const b=document.getElementById('audp-'+k); if(b){b.style.background='#fff';b.style.color='var(--c-dark)';b.style.borderColor='var(--c-divider)';} });
-  const bt=document.getElementById('audp-todos'); if(bt){bt.style.background='#0D2B5E';bt.style.color='#fff';bt.style.borderColor='#0D2B5E';}
+  window._audSoPendenteAdv = false;
+  window._audSoPendentePrep = false;
+  ['anterior','mes','prox','custom'].forEach(k=>{ const b=document.getElementById('audp-'+k); if(b){b.style.background='#fff';b.style.color='var(--c-dark)';b.style.borderColor='var(--c-divider)';} });
   const bi = document.getElementById('audp-incompletas'); if(bi){bi.style.background='#fff';bi.style.color='#E11D48';bi.style.borderColor='#E11D48';}
-  const bp = document.getElementById('audp-pendente-corr'); if(bp){bp.style.background='#fff';bp.style.color='#D97706';bp.style.borderColor='#D97706';}
+  const bpa = document.getElementById('audp-pendente-adv'); if(bpa){bpa.style.background='#fff';bpa.style.color='#D97706';bpa.style.borderColor='#D97706';}
+  const bpp = document.getElementById('audp-pendente-prep'); if(bpp){bpp.style.background='#fff';bpp.style.color='#D97706';bpp.style.borderColor='#D97706';}
   const b = document.getElementById('aud-filter-busca'); if (b) b.value = '';
   loadAudiencias();
 }
