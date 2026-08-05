@@ -4506,7 +4506,20 @@ function _liveReloadPreservingScroll(reloadFn) {
   const prevMinHeight = document.body.style.minHeight;
   document.body.style.minHeight = document.documentElement.scrollHeight + 'px';
 
+  // Segunda trava, mais direta: enquanto a atualização estiver em andamento,
+  // qualquer scroll que fugir da posição atual (por qualquer motivo — reflow
+  // inesperado, foco mudando de elemento, etc.) é corrigido na hora, antes do
+  // navegador chegar a pintar esse desvio na tela.
+  let locked = true;
+  const lockScroll = () => {
+    if (!locked) return;
+    if (window.scrollX !== scrollX || window.scrollY !== scrollY) window.scrollTo(scrollX, scrollY);
+  };
+  window.addEventListener('scroll', lockScroll, { passive: true });
+
   const restore = () => {
+    locked = false;
+    window.removeEventListener('scroll', lockScroll);
     window.scrollTo(scrollX, scrollY);
     if (activeId) {
       const el = document.getElementById(activeId);
@@ -14889,10 +14902,16 @@ async function loadAudiencias(silent) {
   const _sbUrl = window.SB_URL || sbUrl();
   const _sbKey = window.SB_KEY || sbKey();
 
-  // Alerta de canceladas e última sincronização (em paralelo, não bloqueiam a lista)
-  _audRenderCanceladasAlert(_sbUrl, _sbKey);
-  _audRenderLastSync(_sbUrl, _sbKey);
-  _audRenderLastSyncProjuris(_sbUrl, _sbKey);
+  // Alerta de canceladas e última sincronização (em paralelo, não bloqueiam a
+  // busca/render da lista principal — mas são aguardadas antes do fim da
+  // função, senão elas podem terminar DEPOIS do restore de rolagem do poll/
+  // ao-vivo e mudar a altura da página sem esse restore rodar de novo,
+  // causando um "pulo" visível tardio).
+  const _audSideEffects = Promise.all([
+    _audRenderCanceladasAlert(_sbUrl, _sbKey),
+    _audRenderLastSync(_sbUrl, _sbKey),
+    _audRenderLastSyncProjuris(_sbUrl, _sbKey),
+  ]);
 
   const today = new Date().toISOString().slice(0,10);
 
@@ -14995,6 +15014,7 @@ async function loadAudiencias(silent) {
 
   if (!filtered.length) {
     listEl.innerHTML = '<div class="empty-state"><p>Nenhuma audiência encontrada.</p><p>Importe o Excel, sincronize o PJe ou clique em "+ Manual".</p></div>';
+    await _audSideEffects;
     return;
   }
 
@@ -15018,6 +15038,7 @@ async function loadAudiencias(silent) {
     html += `</div>`;
   });
   listEl.innerHTML = html;
+  await _audSideEffects;
 }
 
 function audSyncDateFilters(changed) {
