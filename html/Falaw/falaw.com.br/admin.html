@@ -14426,7 +14426,7 @@ async function _mencaoMarcarLida(id) {
     if (error) throw error;
   } catch(e) { showToast('Erro: ' + e.message); return; }
   await _mencaoAtualizarBadge();
-  loadAudiencias();
+  _liveReloadPreservingScroll(() => loadAudiencias(true));
 }
 
 /* ── Histórico de orientações estilo bate-papo (mesmo formato do dashboard do escritório):
@@ -15340,7 +15340,7 @@ async function saveAudiencia() {
   }
   closeAudienciaModal();
   showToast('Audiência salva!');
-  loadAudiencias();
+  _liveReloadPreservingScroll(() => loadAudiencias(true));
 }
 
 /* ── delete ── */
@@ -15361,7 +15361,7 @@ async function confirmarCancelamentoPje(id) {
     if (idx !== -1) { local[idx].status = 'cancelada'; localStorage.setItem(AUD_STORE_KEY, JSON.stringify(local)); }
   }
   showToast('Audiência marcada como cancelada.');
-  loadAudiencias();
+  _liveReloadPreservingScroll(() => loadAudiencias(true));
 }
 
 async function deleteAudiencia(id) {
@@ -15378,7 +15378,7 @@ async function deleteAudiencia(id) {
   }
   closeAudienciaModal();
   showToast('Audiência excluída.');
-  loadAudiencias();
+  _liveReloadPreservingScroll(() => loadAudiencias(true));
 }
 
 async function _audLimparCorr(id) {
@@ -15392,7 +15392,7 @@ async function _audLimparCorr(id) {
     }).eq('id', id);
     if (error) throw error;
     showToast('Dados de correspondente removidos.');
-    loadAudiencias();
+    _liveReloadPreservingScroll(() => loadAudiencias(true));
   } catch(e) { showToast('Erro: ' + e.message); }
 }
 
@@ -15406,7 +15406,7 @@ async function _audLimparValor(id, tipo) {
     const { error } = await sb.from('pauta_audiencias').update({ [campo]: null }).eq('id', id);
     if (error) throw error;
     showToast('Valor removido.');
-    loadAudiencias();
+    _liveReloadPreservingScroll(() => loadAudiencias(true));
   } catch(e) { showToast('Erro: ' + e.message); }
 }
 
