@@ -584,33 +584,40 @@ function str(v: unknown): string { return v == null ? "" : String(v).trim(); }
 
 function normalizar(item: Record<string,unknown>): Record<string,unknown> {
   const DATAS = ["dataConclusaoPrevista","dataPrevista","data_prevista","dataAudiencia","data_audiencia","dataInicio","dataLimite","data","dtEvento"];
-  const HORAS = ["horaLimite","horaPrevista","hora_prevista","horaAudiencia","hora_audiencia","horaInicio","hora","horario"];
-  // dataConclusaoPrevista (e demais campos DATAS/HORAS) em Projuris ADV são timestamps ms
-  // em UTC, mas representam horário de Brasília + 3h (ex.: campo cru = 11:50Z para
-  // audiência marcada às 08:50 BRT). É preciso subtrair BRASILIA_OFFSET_MS ANTES de
-  // extrair hora/data via getUTC*.
-  //
-  // "dataConclusaoPrevista" é o campo canônico: um único timestamp que já traz embutidos
-  // o dia E o horário reais em que a perícia/audiência vai acontecer (ex.: "25/08/2026 -
-  // 8:45" na tela do Projuris). Por isso extraímos a hora diretamente dele — não só a
-  // data — em vez de depender só de um campo HORAS separado (horaLimite etc.), que em
-  // vários tipos de tarefa (ex.: Audiência) simplesmente não vem preenchido pela API,
-  // deixando a hora vazia mesmo quando o Projuris mostra o horário certo na tela.
+  // "Hora prevista" é o campo canônico da hora real da perícia/audiência no Projuris —
+  // preenchido junto com "Data prevista" na tela da tarefa — e tem prioridade sobre
+  // qualquer outro campo de hora, como horaLimite (que é a hora da "Data Fatal", o prazo
+  // da tarefa, não o horário do compromisso, e por isso não deve ser usada aqui).
+  const HORAS_PREVISTA = ["horaPrevista","hora_prevista"];
+  const HORAS_OUTRAS = ["horaLimite","horaAudiencia","hora_audiencia","horaInicio","hora","horario"];
+  // Esses campos em Projuris ADV são timestamps ms em UTC, mas representam horário de
+  // Brasília + 3h (ex.: campo cru = 11:50Z para audiência marcada às 08:50 BRT). É preciso
+  // subtrair BRASILIA_OFFSET_MS ANTES de extrair hora/data via getUTC*.
   const dataRawVal = DATAS.map(k=>item[k]).find(v=>v);
   let dataRaw = "", horaFromData = "";
   if (typeof dataRawVal === "number") {
     const d = new Date(dataRawVal + BRASILIA_OFFSET_MS);
     dataRaw = d.getUTCFullYear() + "-" + String(d.getUTCMonth()+1).padStart(2,"0") + "-" + String(d.getUTCDate()).padStart(2,"0");
-    horaFromData = String(d.getUTCHours()).padStart(2,"0") + ":" + String(d.getUTCMinutes()).padStart(2,"0");
+    // "dataConclusaoPrevista" às vezes já traz a hora real embutida (ex.: "25/08/2026 -
+    // 8:45"); em outros casos é só a data com hora zerada (meia-noite em BRT) — por isso
+    // 00:00 é tratado como "sem horário real" para não competir com Hora prevista/texto.
+    const hh = String(d.getUTCHours()).padStart(2,"0") + ":" + String(d.getUTCMinutes()).padStart(2,"0");
+    horaFromData = hh === "00:00" ? "" : hh;
   } else dataRaw = str(dataRawVal);
-  const horaRawVal = HORAS.map(k=>item[k]).find(v=>v);
+  const horaPrevistaVal = HORAS_PREVISTA.map(k=>item[k]).find(v=>v);
+  let horaPrevista = "";
+  if (typeof horaPrevistaVal === "number") {
+    const d = new Date(horaPrevistaVal + BRASILIA_OFFSET_MS);
+    horaPrevista = String(d.getUTCHours()).padStart(2,"0") + ":" + String(d.getUTCMinutes()).padStart(2,"0");
+  } else horaPrevista = str(horaPrevistaVal).slice(0,5);
+  const horaRawVal = HORAS_OUTRAS.map(k=>item[k]).find(v=>v);
   let horaRaw = "";
   if (typeof horaRawVal === "number") {
     const d = new Date(horaRawVal + BRASILIA_OFFSET_MS);
     horaRaw = String(d.getUTCHours()).padStart(2,"0") + ":" + String(d.getUTCMinutes()).padStart(2,"0");
   } else horaRaw = str(horaRawVal);
   const { data, hora: horaFb } = parseData(dataRaw);
-  const hora = horaFromData || (horaRaw ? horaRaw.slice(0,5) : "") || horaFb;
+  const hora = horaPrevista || horaFromData || (horaRaw ? horaRaw.slice(0,5) : "") || horaFb;
 
   const processo = str(item.numeroProcesso ?? item.numero_processo ?? item.processo ?? item.nrProcesso);
   const reclamante = str(item.parteAtiva ?? item.reclamante ?? item.poloAtivo ?? item.polo_ativo ?? item.autor ?? item.nomeEnvolvido);
