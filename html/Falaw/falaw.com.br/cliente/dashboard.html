@@ -1419,17 +1419,42 @@ function _liveReloadPreservingScroll(reloadFn) {
   const activeVal = active && 'value' in active ? active.value : null;
   const activeSel = active && 'selectionStart' in active ? active.selectionStart : null;
 
+  // Trava a altura mínima da página no valor atual ANTES de recarregar: se o
+  // conteúdo novo ficar temporariamente mais curto durante a troca do HTML,
+  // o navegador força a rolagem de volta pro topo sozinho (ela não cabe mais
+  // na página encolhida) — daí o "pulo" visível antes do restore() rodar.
+  // Com a altura mínima travada, a página nunca fica mais curta que a
+  // posição atual, então a rolagem não é mexida pelo navegador.
+  const prevMinHeight = document.body.style.minHeight;
+  document.body.style.minHeight = document.documentElement.scrollHeight + 'px';
+
+  // Segunda trava, mais direta: enquanto a atualização estiver em andamento,
+  // qualquer scroll que fugir da posição atual (por qualquer motivo — reflow
+  // inesperado, foco mudando de elemento, etc.) é corrigido na hora, antes do
+  // navegador chegar a pintar esse desvio na tela.
+  let locked = true;
+  const lockScroll = () => {
+    if (!locked) return;
+    if (window.scrollX !== scrollX || window.scrollY !== scrollY) window.scrollTo(scrollX, scrollY);
+  };
+  window.addEventListener('scroll', lockScroll, { passive: true });
+
   const restore = () => {
+    locked = false;
+    window.removeEventListener('scroll', lockScroll);
     window.scrollTo(scrollX, scrollY);
-    if (!activeId) return;
-    const el = document.getElementById(activeId);
-    if (!el) return;
-    if (activeVal && 'value' in el && !el.value) el.value = activeVal;
-    el.focus({ preventScroll: true });
-    if (activeSel != null && typeof el.setSelectionRange === 'function') {
-      try { el.setSelectionRange(activeSel, activeSel); } catch(e) {}
+    if (activeId) {
+      const el = document.getElementById(activeId);
+      if (el) {
+        if (activeVal && 'value' in el && !el.value) el.value = activeVal;
+        el.focus({ preventScroll: true });
+        if (activeSel != null && typeof el.setSelectionRange === 'function') {
+          try { el.setSelectionRange(activeSel, activeSel); } catch(e) {}
+        }
+      }
     }
     window.scrollTo(scrollX, scrollY);
+    document.body.style.minHeight = prevMinHeight;
   };
   const result = reloadFn();
   if (result && typeof result.then === 'function') result.then(() => requestAnimationFrame(restore));
@@ -1439,16 +1464,52 @@ function _liveReloadPreservingScroll(reloadFn) {
 /* ── Ao vivo (Supabase Realtime): quando algo muda numa tabela relevante
    (outra sessão/admin), a tela recarrega sozinha, sem precisar apertar F5.
    Exige Realtime habilitado nessas tabelas no Supabase (Database → Replication). */
-// Repescagem por tempo: além do Realtime (WebSocket), atualiza a tela a cada
-// ~25s por conta própria. Funciona mesmo se o WebSocket estiver bloqueado pela
-// rede — só um pouco menos instantâneo (até 25s de atraso).
-function _livePollInit(reloadFn) {
+// Assinatura leve das tabelas monitoradas: um recarregamento completo só é
+// disparado pelo poll se algo realmente mudou (nova/editada audiência, nova
+// menção lida/não lida) — evita recarregar a tela sem necessidade a cada
+// ~25s. Usa contagens + a última audiência atualizada, bem mais barato que
+// buscar e re-renderizar a pauta inteira.
+async function _liveSignature(tables) {
+  const sbUrl = (window.SB_URL || '').trim();
+  const sbKey = (window.SB_KEY || '').trim();
+  if (!sbUrl || !sbKey || typeof supabase === 'undefined') return null;
+  const sb = supabase.createClient(sbUrl, sbKey);
+  const parts = [];
+  if (tables.includes('pauta_audiencias')) {
+    const [{ data: lastAud }, { count: audCount }] = await Promise.all([
+      sb.from('pauta_audiencias').select('id,updated_at').order('updated_at', { ascending: false }).limit(1),
+      sb.from('pauta_audiencias').select('id', { count: 'exact', head: true }),
+    ]);
+    const last = (lastAud && lastAud[0]) ? `${lastAud[0].id}|${lastAud[0].updated_at}` : '';
+    parts.push(`aud:${last}|${audCount}`);
+  }
+  if (tables.includes('mencoes')) {
+    const { count: mencaoCount } = await sb.from('mencoes').select('id', { count: 'exact', head: true }).is('lida_at', null);
+    parts.push(`men:${mencaoCount}`);
+  }
+  return parts.length ? parts.join('||') : null;
+}
+let _livePollSig = null;
+// Repescagem por tempo: além do Realtime (WebSocket), verifica a cada ~25s se
+// algo realmente mudou desde a última checagem antes de recarregar a tela.
+// Funciona mesmo se o WebSocket estiver bloqueado pela rede — só um pouco
+// menos instantâneo (até 25s de atraso).
+function _livePollInit(reloadFn, tables) {
   if (window._livePollTimer) return;
-  window._livePollTimer = setInterval(() => _liveReloadPreservingScroll(reloadFn), 25000);
+  window._livePollTimer = setInterval(async () => {
+    if (tables && tables.length) {
+      try {
+        const sig = await _liveSignature(tables);
+        if (sig != null && sig === _livePollSig) return; // nada mudou — não recarrega
+        _livePollSig = sig;
+      } catch(e) { /* checagem falhou: recarrega normalmente, como antes */ }
+    }
+    _liveReloadPreservingScroll(reloadFn);
+  }, 25000);
 }
 
 function _liveInit(tables, reloadFn) {
-  _livePollInit(reloadFn);
+  _livePollInit(reloadFn, tables);
   if (window._liveChannels) return;
   const sbUrl = (window.SB_URL || '').trim();
   const sbKey = (window.SB_KEY || '').trim();

@@ -4477,7 +4477,7 @@ const LIVE_TABLE_TABS = {
   pesquisas:        ['pesquisas-lista', 'pesquisas-dash'],
 };
 const LIVE_TAB_RELOADERS = {
-  audiencias:        () => loadAudiencias(),
+  audiencias:        () => loadAudiencias(true),
   correspondentes:   () => loadCorrespondentes(),
   clientes:          () => loadPortalFromSupabase().then(renderClients),
   'cli-dash':        () => loadPortalFromSupabase().then(cliDashTabInit),
@@ -4497,31 +4497,90 @@ function _liveReloadPreservingScroll(reloadFn) {
   const activeVal = active && 'value' in active ? active.value : null;
   const activeSel = active && 'selectionStart' in active ? active.selectionStart : null;
 
+  // Trava a altura mínima da página no valor atual ANTES de recarregar: se o
+  // conteúdo novo ficar temporariamente mais curto durante a troca do HTML,
+  // o navegador força a rolagem de volta pro topo sozinho (ela não cabe mais
+  // na página encolhida) — daí o "pulo" visível antes do restore() rodar.
+  // Com a altura mínima travada, a página nunca fica mais curta que a
+  // posição atual, então a rolagem não é mexida pelo navegador.
+  const prevMinHeight = document.body.style.minHeight;
+  document.body.style.minHeight = document.documentElement.scrollHeight + 'px';
+
+  // Segunda trava, mais direta: enquanto a atualização estiver em andamento,
+  // qualquer scroll que fugir da posição atual (por qualquer motivo — reflow
+  // inesperado, foco mudando de elemento, etc.) é corrigido na hora, antes do
+  // navegador chegar a pintar esse desvio na tela.
+  let locked = true;
+  const lockScroll = () => {
+    if (!locked) return;
+    if (window.scrollX !== scrollX || window.scrollY !== scrollY) window.scrollTo(scrollX, scrollY);
+  };
+  window.addEventListener('scroll', lockScroll, { passive: true });
+
   const restore = () => {
+    locked = false;
+    window.removeEventListener('scroll', lockScroll);
     window.scrollTo(scrollX, scrollY);
-    if (!activeId) return;
-    const el = document.getElementById(activeId);
-    if (!el) return;
-    if (activeVal && 'value' in el && !el.value) el.value = activeVal;
-    el.focus({ preventScroll: true });
-    if (activeSel != null && typeof el.setSelectionRange === 'function') {
-      try { el.setSelectionRange(activeSel, activeSel); } catch(e) {}
+    if (activeId) {
+      const el = document.getElementById(activeId);
+      if (el) {
+        if (activeVal && 'value' in el && !el.value) el.value = activeVal;
+        el.focus({ preventScroll: true });
+        if (activeSel != null && typeof el.setSelectionRange === 'function') {
+          try { el.setSelectionRange(activeSel, activeSel); } catch(e) {}
+        }
+      }
     }
     window.scrollTo(scrollX, scrollY);
+    document.body.style.minHeight = prevMinHeight;
   };
   const result = reloadFn();
   if (result && typeof result.then === 'function') result.then(() => requestAnimationFrame(restore));
   else requestAnimationFrame(restore);
 }
 
-// Repescagem por tempo: além do Realtime (WebSocket), atualiza a tela ativa a
-// cada ~25s por conta própria. Funciona mesmo se o WebSocket estiver bloqueado
-// pela rede — só um pouco menos instantâneo (até 25s de atraso).
+// Assinatura leve da aba "audiencias": um recarregamento completo só é
+// disparado pelo poll se algo realmente mudou (nova/editada audiência, nova
+// menção lida/não lida) — evita recarregar a tela sem necessidade a cada
+// ~25s. Usa contagens + a última audiência atualizada, bem mais barato que
+// buscar e re-renderizar a pauta inteira.
+async function _liveAudSignature() {
+  const sb = getSB();
+  if (!sb) return null;
+  const [{ data: lastAud }, { count: audCount }, { count: mencaoCount }] = await Promise.all([
+    sb.from('pauta_audiencias').select('id,updated_at').order('updated_at', { ascending: false }).limit(1),
+    sb.from('pauta_audiencias').select('id', { count: 'exact', head: true }),
+    sb.from('mencoes').select('id', { count: 'exact', head: true }).is('lida_at', null),
+  ]);
+  const last = (lastAud && lastAud[0]) ? `${lastAud[0].id}|${lastAud[0].updated_at}` : '';
+  return `${last}|${audCount}|${mencaoCount}`;
+}
+const LIVE_TAB_SIGNATURES = {
+  audiencias: _liveAudSignature,
+};
+let _livePollSig = {};
+// Repescagem por tempo: além do Realtime (WebSocket), verifica a cada ~25s se
+// a tela ativa realmente mudou desde a última checagem. Funciona mesmo se o
+// WebSocket estiver bloqueado pela rede — só um pouco menos instantâneo (até
+// 25s de atraso). Quando existe uma assinatura leve para a aba (LIVE_TAB_
+// SIGNATURES), o recarregamento completo (com re-render visível na tela) só
+// roda se a assinatura mudou; nas demais abas, mantém o comportamento
+// anterior de recarregar sempre.
 function _livePollInit() {
   if (window._livePollTimer) return;
-  window._livePollTimer = setInterval(() => {
-    const reload = LIVE_TAB_RELOADERS[window._liveCurrentTab];
-    if (reload) _liveReloadPreservingScroll(reload);
+  window._livePollTimer = setInterval(async () => {
+    const tab = window._liveCurrentTab;
+    const reload = LIVE_TAB_RELOADERS[tab];
+    if (!reload) return;
+    const sigFn = LIVE_TAB_SIGNATURES[tab];
+    if (sigFn) {
+      try {
+        const sig = await sigFn();
+        if (sig != null && sig === _livePollSig[tab]) return; // nada mudou — não recarrega
+        _livePollSig[tab] = sig;
+      } catch(e) { /* checagem falhou: recarrega normalmente, como antes */ }
+    }
+    _liveReloadPreservingScroll(reload);
   }, 25000);
 }
 
@@ -14834,19 +14893,25 @@ async function _audRenderCanceladasAlert(_sbUrl, _sbKey) {
     </div>`;
 }
 
-async function loadAudiencias() {
+async function loadAudiencias(silent) {
   const listEl = document.getElementById('audiencias-list');
   if (!listEl) return;
-  listEl.innerHTML = '<p style="color:var(--c-muted);font-size:13px;padding:20px 0">Carregando…</p>';
+  if (!silent) listEl.innerHTML = '<p style="color:var(--c-muted);font-size:13px;padding:20px 0">Carregando…</p>';
   // Usa sempre window.SB_URL/SB_KEY (service_role, definido no sb-config.js)
   // para garantir leitura mesmo sem configuração manual no localStorage
   const _sbUrl = window.SB_URL || sbUrl();
   const _sbKey = window.SB_KEY || sbKey();
 
-  // Alerta de canceladas e última sincronização (em paralelo, não bloqueiam a lista)
-  _audRenderCanceladasAlert(_sbUrl, _sbKey);
-  _audRenderLastSync(_sbUrl, _sbKey);
-  _audRenderLastSyncProjuris(_sbUrl, _sbKey);
+  // Alerta de canceladas e última sincronização (em paralelo, não bloqueiam a
+  // busca/render da lista principal — mas são aguardadas antes do fim da
+  // função, senão elas podem terminar DEPOIS do restore de rolagem do poll/
+  // ao-vivo e mudar a altura da página sem esse restore rodar de novo,
+  // causando um "pulo" visível tardio).
+  const _audSideEffects = Promise.all([
+    _audRenderCanceladasAlert(_sbUrl, _sbKey),
+    _audRenderLastSync(_sbUrl, _sbKey),
+    _audRenderLastSyncProjuris(_sbUrl, _sbKey),
+  ]);
 
   const today = new Date().toISOString().slice(0,10);
 
@@ -14949,6 +15014,7 @@ async function loadAudiencias() {
 
   if (!filtered.length) {
     listEl.innerHTML = '<div class="empty-state"><p>Nenhuma audiência encontrada.</p><p>Importe o Excel, sincronize o PJe ou clique em "+ Manual".</p></div>';
+    await _audSideEffects;
     return;
   }
 
@@ -14972,6 +15038,7 @@ async function loadAudiencias() {
     html += `</div>`;
   });
   listEl.innerHTML = html;
+  await _audSideEffects;
 }
 
 function audSyncDateFilters(changed) {
