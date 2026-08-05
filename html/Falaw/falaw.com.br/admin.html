@@ -4490,12 +4490,20 @@ const LIVE_TAB_RELOADERS = {
 };
 // Refaz o HTML da tela sem "puxar" a pessoa pro topo nem apagar o que ela
 // estava digitando (ex: uma mensagem no bate-papo ainda não enviada).
-function _liveReloadPreservingScroll(reloadFn) {
-  const scrollX = window.scrollX, scrollY = window.scrollY;
+// `presetScroll`, se informado ({x,y}), é usado no lugar da posição atual —
+// necessário quando quem chama já fechou um modal/tirou o foco de um campo
+// ANTES de chamar esta função (isso já pode ter mexido na rolagem; capturar
+// a posição de antes, no início da própria ação, evita travar na posição
+// errada).
+function _liveReloadPreservingScroll(reloadFn, presetScroll) {
+  const scrollX = presetScroll ? presetScroll.x : window.scrollX;
+  const scrollY = presetScroll ? presetScroll.y : window.scrollY;
   const active   = document.activeElement;
   const activeId = active && active.id;
   const activeVal = active && 'value' in active ? active.value : null;
   const activeSel = active && 'selectionStart' in active ? active.selectionStart : null;
+  // DIAGNÓSTICO TEMPORÁRIO — remover depois de identificar a causa do pulo.
+  console.log('[scroll-debug] início', { alvo: { x: scrollX, y: scrollY }, agora: { x: window.scrollX, y: window.scrollY }, preset: !!presetScroll, scrollHeight: document.documentElement.scrollHeight });
 
   // Trava a altura mínima da página no valor atual ANTES de recarregar: se o
   // conteúdo novo ficar temporariamente mais curto durante a troca do HTML,
@@ -4508,18 +4516,26 @@ function _liveReloadPreservingScroll(reloadFn) {
 
   // Segunda trava, mais direta: enquanto a atualização estiver em andamento,
   // qualquer scroll que fugir da posição atual (por qualquer motivo — reflow
-  // inesperado, foco mudando de elemento, etc.) é corrigido na hora, antes do
-  // navegador chegar a pintar esse desvio na tela.
+  // inesperado, mudança de foco, teclado do celular fechando, etc.) é
+  // corrigido na hora, antes do navegador chegar a pintar esse desvio.
   let locked = true;
   const lockScroll = () => {
     if (!locked) return;
-    if (window.scrollX !== scrollX || window.scrollY !== scrollY) window.scrollTo(scrollX, scrollY);
+    if (window.scrollX !== scrollX || window.scrollY !== scrollY) {
+      console.log('[scroll-debug] lockScroll corrigiu desvio', { de: { x: window.scrollX, y: window.scrollY }, para: { x: scrollX, y: scrollY } });
+      window.scrollTo(scrollX, scrollY);
+    }
   };
   window.addEventListener('scroll', lockScroll, { passive: true });
-
-  const restore = () => {
+  const unlock = () => {
     locked = false;
     window.removeEventListener('scroll', lockScroll);
+    document.body.style.minHeight = prevMinHeight;
+    console.log('[scroll-debug] destravado, posição final', { x: window.scrollX, y: window.scrollY });
+  };
+
+  const restore = () => {
+    console.log('[scroll-debug] restore() chamado', { antesDoScrollTo: { x: window.scrollX, y: window.scrollY }, alvo: { x: scrollX, y: scrollY }, activeId });
     window.scrollTo(scrollX, scrollY);
     if (activeId) {
       const el = document.getElementById(activeId);
@@ -4532,10 +4548,22 @@ function _liveReloadPreservingScroll(reloadFn) {
       }
     }
     window.scrollTo(scrollX, scrollY);
-    document.body.style.minHeight = prevMinHeight;
+    console.log('[scroll-debug] restore() terminou', { depoisDoScrollTo: { x: window.scrollX, y: window.scrollY } });
+    // Mantém a trava por mais um instante: no celular, fechar um modal com o
+    // teclado aberto dispara uma animação de redimensionamento da viewport
+    // que continua mexendo na rolagem por centenas de ms DEPOIS do reload já
+    // ter terminado — sem essa janela extra, o pulo aconteceria um pouco
+    // mais tarde, fora do que já corrigíamos.
+    [50, 150, 300, 500, 800].forEach(ms => setTimeout(() => {
+      if (locked) {
+        if (window.scrollX !== scrollX || window.scrollY !== scrollY) console.log(`[scroll-debug] correção tardia (+${ms}ms)`, { de: { x: window.scrollX, y: window.scrollY }, para: { x: scrollX, y: scrollY } });
+        window.scrollTo(scrollX, scrollY);
+      }
+    }, ms));
+    setTimeout(unlock, 900);
   };
   const result = reloadFn();
-  if (result && typeof result.then === 'function') result.then(() => requestAnimationFrame(restore));
+  if (result && typeof result.then === 'function') result.then(() => { console.log('[scroll-debug] reloadFn terminou, agendando restore via rAF', { agora: { x: window.scrollX, y: window.scrollY } }); requestAnimationFrame(restore); });
   else requestAnimationFrame(restore);
 }
 
@@ -14418,6 +14446,7 @@ async function _mencaoIrPara(audienciaId) {
 }
 
 async function _mencaoMarcarLida(id) {
+  const _preScroll = { x: window.scrollX, y: window.scrollY };
   const { sbUrl, sbKey } = getSbCreds();
   if (!sbUrl || !sbKey) return;
   try {
@@ -14426,7 +14455,7 @@ async function _mencaoMarcarLida(id) {
     if (error) throw error;
   } catch(e) { showToast('Erro: ' + e.message); return; }
   await _mencaoAtualizarBadge();
-  loadAudiencias();
+  _liveReloadPreservingScroll(() => loadAudiencias(true), _preScroll);
 }
 
 /* ── Histórico de orientações estilo bate-papo (mesmo formato do dashboard do escritório):
@@ -15266,6 +15295,10 @@ async function editAudiencia(id) {
 
 /* ── save ── */
 async function saveAudiencia() {
+  // Captura a posição de rolagem ANTES de fechar o modal/tirar o foco do
+  // campo (no celular, isso fecha o teclado e já pode mexer na tela) — se
+  // capturássemos só depois, poderíamos travar numa posição já deslocada.
+  const _preScroll = { x: window.scrollX, y: window.scrollY };
   const data = document.getElementById('aud-data').value;
   const proc = document.getElementById('aud-processo').value.trim();
   if (!data || !proc) { showToast('Preencha Data e Nº do Processo.'); return; }
@@ -15340,11 +15373,12 @@ async function saveAudiencia() {
   }
   closeAudienciaModal();
   showToast('Audiência salva!');
-  loadAudiencias();
+  _liveReloadPreservingScroll(() => loadAudiencias(true), _preScroll);
 }
 
 /* ── delete ── */
 async function confirmarCancelamentoPje(id) {
+  const _preScroll = { x: window.scrollX, y: window.scrollY };
   if (!confirm('Confirmar cancelamento desta audiência?\n\nEla será marcada como "Cancelada" no painel.')) return;
   const { sbUrl, sbKey } = getSbCreds();
   if (sbUrl && sbKey) {
@@ -15361,10 +15395,11 @@ async function confirmarCancelamentoPje(id) {
     if (idx !== -1) { local[idx].status = 'cancelada'; localStorage.setItem(AUD_STORE_KEY, JSON.stringify(local)); }
   }
   showToast('Audiência marcada como cancelada.');
-  loadAudiencias();
+  _liveReloadPreservingScroll(() => loadAudiencias(true), _preScroll);
 }
 
 async function deleteAudiencia(id) {
+  const _preScroll = { x: window.scrollX, y: window.scrollY };
   if (!confirm('Excluir esta audiência?')) return;
   const { sbUrl, sbKey } = getSbCreds();
   if (sbUrl && sbKey) {
@@ -15378,10 +15413,11 @@ async function deleteAudiencia(id) {
   }
   closeAudienciaModal();
   showToast('Audiência excluída.');
-  loadAudiencias();
+  _liveReloadPreservingScroll(() => loadAudiencias(true), _preScroll);
 }
 
 async function _audLimparCorr(id) {
+  const _preScroll = { x: window.scrollX, y: window.scrollY };
   if (!confirm('Limpar os dados de correspondente atribuídos (advogado, preposto e valores)?')) return;
   const { sbUrl, sbKey } = getSbCreds();
   if (!sbUrl || !sbKey) { showToast('Configuração Supabase ausente.'); return; }
@@ -15392,11 +15428,12 @@ async function _audLimparCorr(id) {
     }).eq('id', id);
     if (error) throw error;
     showToast('Dados de correspondente removidos.');
-    loadAudiencias();
+    _liveReloadPreservingScroll(() => loadAudiencias(true), _preScroll);
   } catch(e) { showToast('Erro: ' + e.message); }
 }
 
 async function _audLimparValor(id, tipo) {
+  const _preScroll = { x: window.scrollX, y: window.scrollY };
   const campo = tipo === 'preposto' ? 'valor_preposto' : 'valor_advogado';
   if (!confirm(`Excluir o valor do ${tipo} desta audiência?`)) return;
   const { sbUrl, sbKey } = getSbCreds();
@@ -15406,7 +15443,7 @@ async function _audLimparValor(id, tipo) {
     const { error } = await sb.from('pauta_audiencias').update({ [campo]: null }).eq('id', id);
     if (error) throw error;
     showToast('Valor removido.');
-    loadAudiencias();
+    _liveReloadPreservingScroll(() => loadAudiencias(true), _preScroll);
   } catch(e) { showToast('Erro: ' + e.message); }
 }
 
