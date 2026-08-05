@@ -4502,6 +4502,8 @@ function _liveReloadPreservingScroll(reloadFn, presetScroll) {
   const activeId = active && active.id;
   const activeVal = active && 'value' in active ? active.value : null;
   const activeSel = active && 'selectionStart' in active ? active.selectionStart : null;
+  // DIAGNÓSTICO TEMPORÁRIO — remover depois de identificar a causa do pulo.
+  console.log('[scroll-debug] início', { alvo: { x: scrollX, y: scrollY }, agora: { x: window.scrollX, y: window.scrollY }, preset: !!presetScroll, scrollHeight: document.documentElement.scrollHeight });
 
   // Trava a altura mínima da página no valor atual ANTES de recarregar: se o
   // conteúdo novo ficar temporariamente mais curto durante a troca do HTML,
@@ -4519,16 +4521,21 @@ function _liveReloadPreservingScroll(reloadFn, presetScroll) {
   let locked = true;
   const lockScroll = () => {
     if (!locked) return;
-    if (window.scrollX !== scrollX || window.scrollY !== scrollY) window.scrollTo(scrollX, scrollY);
+    if (window.scrollX !== scrollX || window.scrollY !== scrollY) {
+      console.log('[scroll-debug] lockScroll corrigiu desvio', { de: { x: window.scrollX, y: window.scrollY }, para: { x: scrollX, y: scrollY } });
+      window.scrollTo(scrollX, scrollY);
+    }
   };
   window.addEventListener('scroll', lockScroll, { passive: true });
   const unlock = () => {
     locked = false;
     window.removeEventListener('scroll', lockScroll);
     document.body.style.minHeight = prevMinHeight;
+    console.log('[scroll-debug] destravado, posição final', { x: window.scrollX, y: window.scrollY });
   };
 
   const restore = () => {
+    console.log('[scroll-debug] restore() chamado', { antesDoScrollTo: { x: window.scrollX, y: window.scrollY }, alvo: { x: scrollX, y: scrollY }, activeId });
     window.scrollTo(scrollX, scrollY);
     if (activeId) {
       const el = document.getElementById(activeId);
@@ -4541,16 +4548,22 @@ function _liveReloadPreservingScroll(reloadFn, presetScroll) {
       }
     }
     window.scrollTo(scrollX, scrollY);
+    console.log('[scroll-debug] restore() terminou', { depoisDoScrollTo: { x: window.scrollX, y: window.scrollY } });
     // Mantém a trava por mais um instante: no celular, fechar um modal com o
     // teclado aberto dispara uma animação de redimensionamento da viewport
     // que continua mexendo na rolagem por centenas de ms DEPOIS do reload já
     // ter terminado — sem essa janela extra, o pulo aconteceria um pouco
     // mais tarde, fora do que já corrigíamos.
-    [50, 150, 300, 500, 800].forEach(ms => setTimeout(() => { if (locked) window.scrollTo(scrollX, scrollY); }, ms));
+    [50, 150, 300, 500, 800].forEach(ms => setTimeout(() => {
+      if (locked) {
+        if (window.scrollX !== scrollX || window.scrollY !== scrollY) console.log(`[scroll-debug] correção tardia (+${ms}ms)`, { de: { x: window.scrollX, y: window.scrollY }, para: { x: scrollX, y: scrollY } });
+        window.scrollTo(scrollX, scrollY);
+      }
+    }, ms));
     setTimeout(unlock, 900);
   };
   const result = reloadFn();
-  if (result && typeof result.then === 'function') result.then(() => requestAnimationFrame(restore));
+  if (result && typeof result.then === 'function') result.then(() => { console.log('[scroll-debug] reloadFn terminou, agendando restore via rAF', { agora: { x: window.scrollX, y: window.scrollY } }); requestAnimationFrame(restore); });
   else requestAnimationFrame(restore);
 }
 
