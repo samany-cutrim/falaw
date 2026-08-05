@@ -1428,7 +1428,20 @@ function _liveReloadPreservingScroll(reloadFn) {
   const prevMinHeight = document.body.style.minHeight;
   document.body.style.minHeight = document.documentElement.scrollHeight + 'px';
 
+  // Segunda trava, mais direta: enquanto a atualização estiver em andamento,
+  // qualquer scroll que fugir da posição atual (por qualquer motivo — reflow
+  // inesperado, foco mudando de elemento, etc.) é corrigido na hora, antes do
+  // navegador chegar a pintar esse desvio na tela.
+  let locked = true;
+  const lockScroll = () => {
+    if (!locked) return;
+    if (window.scrollX !== scrollX || window.scrollY !== scrollY) window.scrollTo(scrollX, scrollY);
+  };
+  window.addEventListener('scroll', lockScroll, { passive: true });
+
   const restore = () => {
+    locked = false;
+    window.removeEventListener('scroll', lockScroll);
     window.scrollTo(scrollX, scrollY);
     if (activeId) {
       const el = document.getElementById(activeId);
