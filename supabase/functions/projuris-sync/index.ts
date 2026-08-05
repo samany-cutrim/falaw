@@ -585,14 +585,23 @@ function str(v: unknown): string { return v == null ? "" : String(v).trim(); }
 function normalizar(item: Record<string,unknown>): Record<string,unknown> {
   const DATAS = ["dataConclusaoPrevista","dataPrevista","data_prevista","dataAudiencia","data_audiencia","dataInicio","dataLimite","data","dtEvento"];
   const HORAS = ["horaLimite","horaPrevista","hora_prevista","horaAudiencia","hora_audiencia","horaInicio","hora","horario"];
-  // dataPrevista e horaLimite em Projuris ADV são timestamps ms em UTC, mas representam
-  // horário de Brasília + 3h (ex.: campo cru = 11:50Z para audiência marcada às 08:50 BRT).
-  // É preciso subtrair BRASILIA_OFFSET_MS ANTES de extrair hora/data via getUTC*.
+  // dataConclusaoPrevista (e demais campos DATAS/HORAS) em Projuris ADV são timestamps ms
+  // em UTC, mas representam horário de Brasília + 3h (ex.: campo cru = 11:50Z para
+  // audiência marcada às 08:50 BRT). É preciso subtrair BRASILIA_OFFSET_MS ANTES de
+  // extrair hora/data via getUTC*.
+  //
+  // "dataConclusaoPrevista" é o campo canônico: um único timestamp que já traz embutidos
+  // o dia E o horário reais em que a perícia/audiência vai acontecer (ex.: "25/08/2026 -
+  // 8:45" na tela do Projuris). Por isso extraímos a hora diretamente dele — não só a
+  // data — em vez de depender só de um campo HORAS separado (horaLimite etc.), que em
+  // vários tipos de tarefa (ex.: Audiência) simplesmente não vem preenchido pela API,
+  // deixando a hora vazia mesmo quando o Projuris mostra o horário certo na tela.
   const dataRawVal = DATAS.map(k=>item[k]).find(v=>v);
-  let dataRaw = "";
+  let dataRaw = "", horaFromData = "";
   if (typeof dataRawVal === "number") {
     const d = new Date(dataRawVal + BRASILIA_OFFSET_MS);
     dataRaw = d.getUTCFullYear() + "-" + String(d.getUTCMonth()+1).padStart(2,"0") + "-" + String(d.getUTCDate()).padStart(2,"0");
+    horaFromData = String(d.getUTCHours()).padStart(2,"0") + ":" + String(d.getUTCMinutes()).padStart(2,"0");
   } else dataRaw = str(dataRawVal);
   const horaRawVal = HORAS.map(k=>item[k]).find(v=>v);
   let horaRaw = "";
@@ -601,7 +610,7 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
     horaRaw = String(d.getUTCHours()).padStart(2,"0") + ":" + String(d.getUTCMinutes()).padStart(2,"0");
   } else horaRaw = str(horaRawVal);
   const { data, hora: horaFb } = parseData(dataRaw);
-  const hora = horaRaw ? horaRaw.slice(0,5) : horaFb;
+  const hora = horaFromData || (horaRaw ? horaRaw.slice(0,5) : "") || horaFb;
 
   const processo = str(item.numeroProcesso ?? item.numero_processo ?? item.processo ?? item.nrProcesso);
   const reclamante = str(item.parteAtiva ?? item.reclamante ?? item.poloAtivo ?? item.polo_ativo ?? item.autor ?? item.nomeEnvolvido);
