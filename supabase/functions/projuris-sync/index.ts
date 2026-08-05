@@ -584,24 +584,42 @@ function str(v: unknown): string { return v == null ? "" : String(v).trim(); }
 
 function normalizar(item: Record<string,unknown>): Record<string,unknown> {
   const DATAS = ["dataConclusaoPrevista","dataPrevista","data_prevista","dataAudiencia","data_audiencia","dataInicio","dataLimite","data","dtEvento"];
-  const HORAS = ["horaLimite","horaPrevista","hora_prevista","horaAudiencia","hora_audiencia","horaInicio","hora","horario"];
-  // dataPrevista e horaLimite em Projuris ADV são timestamps ms em UTC, mas representam
-  // horário de Brasília + 3h (ex.: campo cru = 11:50Z para audiência marcada às 08:50 BRT).
-  // É preciso subtrair BRASILIA_OFFSET_MS ANTES de extrair hora/data via getUTC*.
+  // Campo confirmado via interceptação da API real do Projuris (payload de uma tarefa com
+  // "Hora prevista: 08:45" na tela): "horaConclusao" é um timestamp ms cujo componente de
+  // HORA (HH:mm, em Brasília) é o horário real do compromisso — mas o componente de DATA
+  // desse mesmo timestamp não é confiável (reflete a data em que o registro foi gravado,
+  // não a data do compromisso), então só a hora é aproveitada daqui; a data continua vindo
+  // de DATAS (dataConclusaoPrevista etc.). horaLimite/horaPrevista ficam como fallback caso
+  // outros tipos de tarefa usem campos diferentes.
+  const HORAS_OUTRAS = ["horaLimite","horaPrevista","hora_prevista","horaAudiencia","hora_audiencia","horaInicio","hora","horario"];
+  // Esses campos em Projuris ADV são timestamps ms em UTC, mas representam horário de
+  // Brasília + 3h (ex.: campo cru = 11:50Z para audiência marcada às 08:50 BRT). É preciso
+  // subtrair BRASILIA_OFFSET_MS ANTES de extrair hora/data via getUTC*.
   const dataRawVal = DATAS.map(k=>item[k]).find(v=>v);
-  let dataRaw = "";
+  let dataRaw = "", horaFromData = "";
   if (typeof dataRawVal === "number") {
     const d = new Date(dataRawVal + BRASILIA_OFFSET_MS);
     dataRaw = d.getUTCFullYear() + "-" + String(d.getUTCMonth()+1).padStart(2,"0") + "-" + String(d.getUTCDate()).padStart(2,"0");
+    // "dataConclusaoPrevista" às vezes já traz a hora real embutida (ex.: "25/08/2026 -
+    // 8:45"); em outros casos é só a data com hora zerada (meia-noite em BRT) — por isso
+    // 00:00 é tratado como "sem horário real" para não competir com horaConclusao/texto.
+    const hh = String(d.getUTCHours()).padStart(2,"0") + ":" + String(d.getUTCMinutes()).padStart(2,"0");
+    horaFromData = hh === "00:00" ? "" : hh;
   } else dataRaw = str(dataRawVal);
-  const horaRawVal = HORAS.map(k=>item[k]).find(v=>v);
+  const horaConclusaoVal = item.horaConclusao;
+  let horaConclusao = "";
+  if (typeof horaConclusaoVal === "number") {
+    const d = new Date(horaConclusaoVal + BRASILIA_OFFSET_MS);
+    horaConclusao = String(d.getUTCHours()).padStart(2,"0") + ":" + String(d.getUTCMinutes()).padStart(2,"0");
+  }
+  const horaRawVal = HORAS_OUTRAS.map(k=>item[k]).find(v=>v);
   let horaRaw = "";
   if (typeof horaRawVal === "number") {
     const d = new Date(horaRawVal + BRASILIA_OFFSET_MS);
     horaRaw = String(d.getUTCHours()).padStart(2,"0") + ":" + String(d.getUTCMinutes()).padStart(2,"0");
   } else horaRaw = str(horaRawVal);
   const { data, hora: horaFb } = parseData(dataRaw);
-  const hora = horaRaw ? horaRaw.slice(0,5) : horaFb;
+  const hora = horaConclusao || horaFromData || (horaRaw ? horaRaw.slice(0,5) : "") || horaFb;
 
   const processo = str(item.numeroProcesso ?? item.numero_processo ?? item.processo ?? item.nrProcesso);
   const reclamante = str(item.parteAtiva ?? item.reclamante ?? item.poloAtivo ?? item.polo_ativo ?? item.autor ?? item.nomeEnvolvido);
@@ -700,13 +718,20 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
       else if (dNorm.includes("presencial")) modalFinal = "PRESENCIAL";
     }
   }
-  // 1º) hora e vara do comentário têm prioridade sobre o timestamp (que é prazo da tarefa)
+  // 1º) a hora vem do timestamp "Data de conclusão prevista" da tarefa (campo canônico
+  // com o dia e horário em que a perícia/audiência efetivamente acontecerá). O texto do
+  // comentário só é usado como FALLBACK quando o timestamp não trouxe horário — nunca
+  // sobrescreve um horário já obtido do timestamp, pois esse texto é editável no Projuris
+  // e uma mudança de redação (sem mudar o horário real) mudava horaFinal, e por tabela o
+  // id (hash de processo+data+hora), fazendo o sync tratar a linha como cancelada e criar
+  // uma linha nova vazia, perdendo dados já preenchidos no admin (preposto, testemunhas etc).
+  // A vara sempre vem do comentário/descrição, pois não há campo de vara na tarefa.
   const mParen = textoTitulo.match(REGEX_PARENTESES) ?? textoDescricao.match(REGEX_PARENTESES);
   const mAlt   = mParen ? null : (textoTitulo.match(REGEX_SEM_PAREN) ?? textoDescricao.match(REGEX_SEM_PAREN));
   const mMatch = mParen ?? mAlt;
   if (mMatch) {
     if (!dataFinal) dataFinal = `${mMatch[3]}-${mMatch[2]}-${mMatch[1]}`;
-    horaFinal = mMatch[4];  // sempre usa hora do comentário quando disponível
+    if (!horaFinal) horaFinal = mMatch[4];  // só usa hora do comentário se o timestamp não tiver
     varaFinal = mMatch[5].trim()
       .replace(/^-\s*/, "")
       .replace(/\s*-\s*(Facultad|Acesso|Sen|Link|ID|Zoom|Meet|Teams).*/i, "")
