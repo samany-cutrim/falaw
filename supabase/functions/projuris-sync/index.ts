@@ -700,13 +700,20 @@ function normalizar(item: Record<string,unknown>): Record<string,unknown> {
       else if (dNorm.includes("presencial")) modalFinal = "PRESENCIAL";
     }
   }
-  // 1º) hora e vara do comentário têm prioridade sobre o timestamp (que é prazo da tarefa)
+  // 1º) a hora vem do timestamp "Data de conclusão prevista" da tarefa (campo canônico
+  // com o dia e horário em que a perícia/audiência efetivamente acontecerá). O texto do
+  // comentário só é usado como FALLBACK quando o timestamp não trouxe horário — nunca
+  // sobrescreve um horário já obtido do timestamp, pois esse texto é editável no Projuris
+  // e uma mudança de redação (sem mudar o horário real) mudava horaFinal, e por tabela o
+  // id (hash de processo+data+hora), fazendo o sync tratar a linha como cancelada e criar
+  // uma linha nova vazia, perdendo dados já preenchidos no admin (preposto, testemunhas etc).
+  // A vara sempre vem do comentário/descrição, pois não há campo de vara na tarefa.
   const mParen = textoTitulo.match(REGEX_PARENTESES) ?? textoDescricao.match(REGEX_PARENTESES);
   const mAlt   = mParen ? null : (textoTitulo.match(REGEX_SEM_PAREN) ?? textoDescricao.match(REGEX_SEM_PAREN));
   const mMatch = mParen ?? mAlt;
   if (mMatch) {
     if (!dataFinal) dataFinal = `${mMatch[3]}-${mMatch[2]}-${mMatch[1]}`;
-    horaFinal = mMatch[4];  // sempre usa hora do comentário quando disponível
+    if (!horaFinal) horaFinal = mMatch[4];  // só usa hora do comentário se o timestamp não tiver
     varaFinal = mMatch[5].trim()
       .replace(/^-\s*/, "")
       .replace(/\s*-\s*(Facultad|Acesso|Sen|Link|ID|Zoom|Meet|Teams).*/i, "")
