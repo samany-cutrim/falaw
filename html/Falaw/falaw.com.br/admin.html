@@ -3368,13 +3368,34 @@ async function loadPortalFromSupabase() {
   localStorage.setItem(CLI_KEY, JSON.stringify(clients));
 }
 
+function _stripClientForSb(c) {
+  return { id: c.id, name: c.name, company: c.company, email: c.email, notify_email: c.notifyEmail || null, comparativo_enabled: c.comparativoEnabled || false, aliases: c.aliases || [], code: c.code, created_at: c.createdAt || new Date().toISOString() };
+}
+
 async function sbSaveClients(list) {
   const sb = getSB();
   if (!sb) { showToast('⚠️ Supabase não configurado. Configure nas Configurações.'); return false; }
-  const stripped = list.map(c => ({ id: c.id, name: c.name, company: c.company, email: c.email, notify_email: c.notifyEmail || null, comparativo_enabled: c.comparativoEnabled || false, aliases: c.aliases || [], code: c.code, created_at: c.createdAt || new Date().toISOString() }));
+  const stripped = list.map(_stripClientForSb);
   const { error } = await sb.from('clients').upsert(stripped);
   if (error) {
     console.warn('SB clients upsert:', error.message);
+    showToast('⚠️ Erro ao salvar no Supabase: ' + error.message);
+    return false;
+  }
+  return true;
+}
+
+// Salva só UM cliente (ex.: editar o e-mail de notificação de um) — nunca a lista inteira.
+// sbSaveClients(list) reescreve TODAS as linhas com o que está no array em memória; se esse
+// array veio de um localStorage desatualizado (aba antiga, sync que falhou, etc.), o upsert
+// da lista inteira sobrescreve notify_email de todo mundo com o valor velho/vazio do cache —
+// foi assim que os e-mails de notificação já cadastrados sumiram do Supabase.
+async function sbSaveClient(client) {
+  const sb = getSB();
+  if (!sb) { showToast('⚠️ Supabase não configurado. Configure nas Configurações.'); return false; }
+  const { error } = await sb.from('clients').upsert([_stripClientForSb(client)]);
+  if (error) {
+    console.warn('SB client upsert:', error.message);
     showToast('⚠️ Erro ao salvar no Supabase: ' + error.message);
     return false;
   }
@@ -7562,10 +7583,6 @@ function sendEmailViaMailto() {
 const CLI_KEY = 'falaw_portal';
 
 function getClients()           { try { return JSON.parse(localStorage.getItem(CLI_KEY)) || []; } catch { return []; } }
-async function saveClients(list) {
-  localStorage.setItem(CLI_KEY, JSON.stringify(list)); // cache local imediato
-  return sbSaveClients(list);                          // salva no Supabase (aguarda)
-}
 function cliUID()           { return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
 
 function genCode() {
@@ -7913,15 +7930,21 @@ async function saveClient() {
   if (!company || !email || !code) { alert('Preencha empresa, e-mail e código de acesso.'); return; }
 
   const clients = getClients();
+  let editedClient;
 
   if (id) {
     const idx = clients.findIndex(c => c.id === id);
     if (idx >= 0) clients[idx] = { ...clients[idx], name: company, company, email, notifyEmail, comparativoEnabled, aliases, dashType, code };
+    editedClient = clients[idx];
   } else {
-    clients.push({ id: cliUID(), name: company, company, email, notifyEmail, comparativoEnabled, aliases, dashType, code, createdAt: new Date().toISOString(), reports: [] });
+    editedClient = { id: cliUID(), name: company, company, email, notifyEmail, comparativoEnabled, aliases, dashType, code, createdAt: new Date().toISOString(), reports: [] };
+    clients.push(editedClient);
   }
 
-  const ok = await saveClients(clients);
+  // Salva só o cliente editado no Supabase (não a lista inteira — ver comentário em
+  // sbSaveClient), mas mantém o cache local completo pra tela atualizar na hora.
+  localStorage.setItem(CLI_KEY, JSON.stringify(clients));
+  const ok = await sbSaveClient(editedClient);
   if (ok) {
     closeClientModal();
     renderClients();
@@ -9364,7 +9387,8 @@ function saveReport() {
       uploadedAt: report.uploadedAt,
       stats: report.stats || null
     });
-    const ok = await saveClients(clients);
+    localStorage.setItem(CLI_KEY, JSON.stringify(clients));
+    const ok = await sbSaveClient(clients[idx]);
 
     // Notificação por email ao cliente
     const notifyAddr = clients[idx].notifyEmail || clients[idx].email;
@@ -9750,7 +9774,8 @@ function deleteReport(clientId, reportId) {
   if (report && report.fileUrl) sbDeleteReport(report.fileUrl); // async em background
   apiDeleteReportMeta(reportId);
   clients[idx].reports = (clients[idx].reports || []).filter(r => r.id !== reportId);
-  saveClients(clients);
+  localStorage.setItem(CLI_KEY, JSON.stringify(clients));
+  sbSaveClient(clients[idx]);
   renderClients();
 }
 
