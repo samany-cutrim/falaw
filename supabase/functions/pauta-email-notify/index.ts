@@ -428,12 +428,16 @@ Deno.serve(async (req) => {
     if (errNovas) throw new Error(`Consulta de audiências agendadas falhou: ${errNovas.message}`);
 
     // ── 2. Audiências CANCELADAS agora (reconciliação), com data relevante ─────
+    // Nota: NÃO filtra por pauta_manual_enviada_at aqui — esse campo marca que o
+    // destinatário já foi avisado do AGENDAMENTO por um envio manual de pauta, o
+    // que nada diz sobre o CANCELAMENTO (que acontece depois). Filtrar por ele
+    // bloquearia o e-mail de cancelamento de quase toda audiência, já que qualquer
+    // uma incluída em algum envio manual de pauta ganha esse timestamp.
     const { data: canceladas, error: errCanceladas } = await sb
       .from("pauta_audiencias")
       .select("*")
       .eq("status", "cancelada")
       .is("email_cancelada_notificado_at", null)
-      .is("pauta_manual_enviada_at", null)
       .gte("updated_at", deteccaoDesde)
       .gte("data_audiencia", janelaInicio)
       .lte("data_audiencia", janelaFim)
