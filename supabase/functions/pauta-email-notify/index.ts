@@ -29,7 +29,7 @@ const SB_KEY    = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const GAS_URL   = Deno.env.get("GAS_EMAIL_URL") ?? "";
 const GAS_TOKEN = Deno.env.get("GAS_EMAIL_TOKEN") ?? "";
 
-const ESCRITORIO_EMAIL = "audiencia@falaw.com.br";
+const ESCRITORIO_EMAIL = "contencioso@falaw.com.br";
 // projuris-sync re-sincroniza TODAS as audiências em aberto a cada execução (não só as
 // que mudaram), então "updated_at" de uma linha ainda agendada é sempre ~agora — não serve
 // como sinal de "isso é novo". "created_at" só é setado no INSERT (primeira vez que aquele
