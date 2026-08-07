@@ -4,9 +4,13 @@
  * Notifica audiências AGENDADAS que acabaram de entrar na pauta (created_at
  * recente) ou CANCELADAS que acabaram de ser reconciliadas (updated_at
  * recente) — nunca o histórico já existente — cuja DATA cai entre hoje e o
- * último dia do mês seguinte (ex.: hoje 30/07, cobre até 31/08 — uma audiência
- * de 01/07, já passada, não entra mesmo sendo "mês atual"). Envia e-mail
- * automático:
+ * último dia do mês atual (ex.: hoje 07/08, cobre até 31/08 — uma audiência
+ * de 01/08, já passada, não entra mesmo sendo "mês atual"). Uma REMARCAÇÃO
+ * (a mesma audiência do processo, mesmo tipo, com nova data) é detectada
+ * cruzando cada cancelamento com uma possível substituta agendada e gera um
+ * único e-mail de "remarcada" (data antiga → nova data) em vez de um aviso de
+ * cancelamento avulso — mesmo que a nova data caia fora da janela do mês.
+ * Envia e-mail automático:
  *   • Para o cliente cujo processo foi afetado (lookup na tabela `clients`)
  *   • Para o escritório (ESCRITORIO_EMAIL)
  *
@@ -60,11 +64,11 @@ function diaSemana(iso: string): string {
   return dias[d.getUTCDay()];
 }
 
-// Intervalo [hoje, último dia do mês seguinte], em horário de Brasília — só audiências
-// com data dentro desse intervalo geram e-mail automático (ex.: em 30/07, notifica
+// Intervalo [hoje, último dia do mês atual], em horário de Brasília — só audiências
+// com data dentro desse intervalo geram e-mail automático (ex.: em 07/08, notifica
 // agendamentos/cancelamentos de audiências de hoje até 31/08; uma audiência de 01 ou
-// 02/07 — já passada, mesmo sendo "mês atual" — NÃO entra, porque já não é mais relevante
-// avisar sobre algo que já aconteceu; e uma audiência marcada para outubro só entra na
+// 02/08 — já passada, mesmo sendo "mês atual" — NÃO entra, porque já não é mais relevante
+// avisar sobre algo que já aconteceu; e uma audiência marcada para setembro só entra na
 // notificação quando o calendário chegar em setembro).
 function janelaNotificacao(): { inicio: string; fim: string } {
   const BRASILIA_OFFSET_MS = -3 * 60 * 60 * 1000;
@@ -74,7 +78,7 @@ function janelaNotificacao(): { inicio: string; fim: string } {
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
   return {
     inicio: fmt(brasilia), // hoje (data de Brasília), não o dia 1 do mês
-    fim:    fmt(new Date(Date.UTC(ano, mes + 2, 0))), // dia 0 do mês+2 = último dia do mês+1
+    fim:    fmt(new Date(Date.UTC(ano, mes + 1, 0))), // dia 0 do mês+1 = último dia do mês atual
   };
 }
 
@@ -298,6 +302,74 @@ function htmlCancelada(auds: Record<string,string>[], paraCliente: boolean): str
   });
 }
 
+// ── Remarcação (cancelada + substituta agendada) ──────────────────────────────
+
+type Remarcacao = { velha: Record<string,string>; nova: Record<string,string> };
+
+function tituloRemarcada(pares: Remarcacao[]): string {
+  if (pares.length === 1) {
+    const { nova } = pares[0];
+    const dataLabel = `${fmtData(nova.data_audiencia)} ${fmtHora(nova.horario ?? "")}`.trim();
+    return `AUDIÊNCIA REMARCADA — ${empresaLimpa(nova)} — ${dataLabel}`;
+  }
+  return `${pares.length} AUDIÊNCIAS REMARCADAS`;
+}
+
+function tabelaRemarcadaUnica(par: Remarcacao, corBorda: string, fundo: string): string {
+  const { velha, nova } = par;
+  return `<table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid ${corBorda};border-radius:3px;margin-bottom:28px;background:${fundo};">
+      ${row("Data anterior (cancelada)", `${fmtData(velha.data_audiencia)} ${fmtHora(velha.horario ?? "")}`.trim())}
+      ${row("Nova data",     `${fmtData(nova.data_audiencia)} — ${diaSemana(nova.data_audiencia)} ${fmtHora(nova.horario ?? "")}`.trim())}
+      ${row("Tipo",       nova.tipo_audiencia ?? "")}
+      ${row("Modalidade", nova.modalidade ?? "")}
+      ${nova.vara       ? row("Vara / Local", nova.vara)       : ""}
+      ${nova.processo   ? row("Processo",     nova.processo)   : ""}
+      ${nova.reclamante ? row("Reclamante",   nova.reclamante) : ""}
+      ${nova.link ? row("Link", `<a href="${nova.link}" style="color:#0D2B5E;">${nova.link}</a>`) : ""}
+    </table>`;
+}
+
+function tabelaRemarcadaMultipla(pares: Remarcacao[], corBorda: string): string {
+  const linhas = pares.map(({ velha, nova }) => `<tr style="border-bottom:1px solid ${corBorda};">
+      <td style="padding:10px 12px;font-family:monospace;font-size:11px;white-space:nowrap;color:#060E1A;">${fmtData(velha.data_audiencia)} → ${fmtData(nova.data_audiencia)}</td>
+      <td style="padding:10px 12px;font-family:monospace;font-size:13px;font-weight:700;color:#060E1A;">${fmtHora(nova.horario ?? "")}</td>
+      <td style="padding:10px 12px;font-size:11px;color:#060E1A;">${nova.tipo_audiencia ?? ""}</td>
+      <td style="padding:10px 12px;font-family:monospace;font-size:11px;color:#060E1A;">${nova.processo ?? "—"}</td>
+      <td style="padding:10px 12px;font-size:12px;color:#060E1A;">${empresaLimpa(nova)}</td>
+      <td style="padding:10px 12px;font-size:12px;color:#060E1A;">${nova.reclamante ?? ""}</td>
+    </tr>`).join("");
+  return `<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:28px;font-size:11px;">
+      <thead><tr style="background:#f4f2ef;">
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7A7672;">Data (antiga → nova)</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7A7672;">Horário</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7A7672;">Tipo</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7A7672;">Processo</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7A7672;">Empresa</th>
+        <th style="padding:8px 12px;text-align:left;font-family:monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#7A7672;">Reclamante</th>
+      </tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>`;
+}
+
+function htmlRemarcada(pares: Remarcacao[], paraCliente: boolean): string {
+  const titulo = tituloRemarcada(pares);
+  const multipla = pares.length > 1;
+
+  const intro = paraCliente
+    ? (multipla ? `Informamos que ${pares.length} audiências abaixo foram <strong>canceladas e remarcadas</strong> para nova data.` : `Informamos que a audiência abaixo foi <strong>cancelada e remarcada</strong> para nova data.`)
+    : (multipla ? `As audiências abaixo foram canceladas e remarcadas para nova data no sistema.` : `A audiência abaixo foi cancelada e remarcada para nova data no sistema.`);
+
+  const conteudo = multipla
+    ? tabelaRemarcadaMultipla(pares, "#fde68a")
+    : tabelaRemarcadaUnica(pares[0], "#fde68a", "#fffbeb");
+
+  return wrapperEmail({
+    badgeColor: "#B45309",
+    badgeText: multipla ? "🔄 AUDIÊNCIAS REMARCADAS" : "🔄 AUDIÊNCIA REMARCADA",
+    titulo, intro, conteudo,
+  });
+}
+
 function row(label: string, value: string): string {
   if (!value || value === "—") return "";
   return `<tr>
@@ -388,6 +460,60 @@ async function processarLote(
   return { enviados, falhas };
 }
 
+// Mesmo padrão de agrupamento por cliente do processarLote, mas para pares
+// {velha, nova} de remarcação — marca email_cancelada_notificado_at na linha
+// antiga e email_agendada_notificado_at na nova, só quando o envio (cliente,
+// quando há match, e escritório, sempre) tiver dado certo.
+async function processarRemarcadas(
+  pares: Remarcacao[],
+  clientes: Record<string,unknown>[],
+  sb: ReturnType<typeof createClient>,
+  agoraIso: string,
+): Promise<{ enviados: number; falhas: number }> {
+  if (!pares.length) return { enviados: 0, falhas: 0 };
+
+  const porCliente = new Map<string, Remarcacao[]>();
+  const semCliente: Remarcacao[] = [];
+  for (const par of pares) {
+    const email = emailDoCliente(par.nova, clientes);
+    if (email) {
+      if (!porCliente.has(email)) porCliente.set(email, []);
+      porCliente.get(email)!.push(par);
+    } else {
+      semCliente.push(par);
+    }
+  }
+
+  const okEscritorio = await enviarEmail(ESCRITORIO_EMAIL, tituloRemarcada(pares), htmlRemarcada(pares, false));
+
+  let enviados = 0, falhas = 0;
+  const idsVelhas: string[] = [];
+  const idsNovas: string[] = [];
+
+  for (const [email, grupo] of porCliente) {
+    const okCliente = await enviarEmail(email, tituloRemarcada(grupo), htmlRemarcada(grupo, true));
+    if (okCliente && okEscritorio) {
+      grupo.forEach(p => { idsVelhas.push(p.velha.id); idsNovas.push(p.nova.id); });
+      enviados += grupo.length;
+    } else {
+      falhas += grupo.length;
+      console.error(`Falha ao notificar remarcação de ${email} (${grupo.length}) — cliente=${okCliente} escritorio=${okEscritorio}`);
+    }
+  }
+
+  if (semCliente.length) {
+    if (okEscritorio) {
+      semCliente.forEach(p => { idsVelhas.push(p.velha.id); idsNovas.push(p.nova.id); });
+      enviados += semCliente.length;
+    } else falhas += semCliente.length;
+  }
+
+  if (idsVelhas.length) await sb.from("pauta_audiencias").update({ email_cancelada_notificado_at: agoraIso }).in("id", idsVelhas);
+  if (idsNovas.length)  await sb.from("pauta_audiencias").update({ email_agendada_notificado_at: agoraIso }).in("id", idsNovas);
+
+  return { enviados, falhas };
+}
+
 // ── Handler principal ─────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -440,22 +566,49 @@ Deno.serve(async (req) => {
       .order("data_audiencia", { ascending: true });
     if (errCanceladas) throw new Error(`Consulta de audiências canceladas falhou: ${errCanceladas.message}`);
 
+    // ── 3. Separa REMARCAÇÕES: para cada cancelada, busca uma substituta (mesmo
+    // processo + mesmo tipo, ainda agendada, ainda não notificada) — sem limitar por
+    // data, porque a remarcação pode empurrar a audiência pra fora da janela do mês
+    // (é justamente quando mais precisa avisar, senão o cliente só vê "cancelada" e
+    // nunca fica sabendo que foi remarcada em vez de simplesmente sumir da pauta).
+    const remarcadas: Remarcacao[] = [];
+    const canceladasPuras: Record<string,string>[] = [];
+    for (const c of (canceladas ?? []) as Record<string,string>[]) {
+      const { data: substitutas } = await sb
+        .from("pauta_audiencias")
+        .select("*")
+        .eq("processo", c.processo)
+        .eq("tipo_audiencia", c.tipo_audiencia)
+        .eq("status", "agendada")
+        .is("email_agendada_notificado_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const nova = (substitutas ?? [])[0] as Record<string,string> | undefined;
+      if (nova) remarcadas.push({ velha: c, nova });
+      else canceladasPuras.push(c);
+    }
+    // Quem já vai sair no e-mail de remarcação não sai de novo como "nova audiência"
+    const idsCobertosPorRemarcacao = new Set(remarcadas.map(r => r.nova.id));
+    const novasFiltradas = ((novas ?? []) as Record<string,string>[]).filter(n => !idsCobertosPorRemarcacao.has(n.id));
+
     const agora_iso = agora.toISOString();
 
     // Agrupa por cliente — quando um mesmo destinatário tem mais de uma audiência no
     // lote, vai tudo num e-mail só, em vez de um e-mail por audiência.
-    const [resNovas, resCanceladas] = await Promise.all([
-      processarLote((novas ?? []) as Record<string,string>[], clientes, false, sb, "email_agendada_notificado_at", agora_iso),
-      processarLote((canceladas ?? []) as Record<string,string>[], clientes, true, sb, "email_cancelada_notificado_at", agora_iso),
+    const [resNovas, resCanceladas, resRemarcadas] = await Promise.all([
+      processarLote(novasFiltradas, clientes, false, sb, "email_agendada_notificado_at", agora_iso),
+      processarLote(canceladasPuras, clientes, true, sb, "email_cancelada_notificado_at", agora_iso),
+      processarRemarcadas(remarcadas, clientes, sb, agora_iso),
     ]);
-    const enviados = resNovas.enviados + resCanceladas.enviados;
-    const falhas   = resNovas.falhas + resCanceladas.falhas;
+    const enviados = resNovas.enviados + resCanceladas.enviados + resRemarcadas.enviados;
+    const falhas   = resNovas.falhas + resCanceladas.falhas + resRemarcadas.falhas;
 
     const resumo = {
       ok: true,
       periodo: `${janelaInicio} a ${janelaFim}`,
-      novas_agendadas: (novas ?? []).length,
-      canceladas:      (canceladas ?? []).length,
+      novas_agendadas: novasFiltradas.length,
+      canceladas:      canceladasPuras.length,
+      remarcadas:      remarcadas.length,
       emails_enviados: enviados,
       falhas,
       gas_configurado: !!GAS_URL,
