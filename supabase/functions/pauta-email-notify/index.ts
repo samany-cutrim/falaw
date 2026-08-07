@@ -1,12 +1,14 @@
 /**
  * pauta-email-notify — Falaw Advogados
  *
- * Notifica audiências AGENDADAS que acabaram de entrar na pauta (created_at
- * recente) ou CANCELADAS que acabaram de ser reconciliadas (updated_at
- * recente) — nunca o histórico já existente — cuja DATA cai entre hoje e o
+ * Notifica audiências AGENDADAS ou CANCELADAS cuja DATA cai entre hoje e o
  * último dia do mês seguinte (ex.: hoje 30/07, cobre até 31/08 — uma audiência
- * de 01/07, já passada, não entra mesmo sendo "mês atual"). Envia e-mail
- * automático:
+ * de 01/07, já passada, não entra mesmo sendo "mês atual") e que ainda não
+ * foram notificadas (email_..._notificado_at IS NULL é a única trava contra
+ * duplicidade — não depende de created_at/updated_at estarem "recentes", para
+ * não deixar preso para sempre um item que a função deixou de rodar a tempo
+ * de pegar, seja por falha de cron, deploy quebrado ou qualquer outro motivo).
+ * Envia e-mail automático:
  *   • Para o cliente cujo processo foi afetado (lookup na tabela `clients`)
  *   • Para o escritório (ESCRITORIO_EMAIL)
  *
@@ -26,14 +28,6 @@ const GAS_URL   = Deno.env.get("GAS_EMAIL_URL") ?? "";
 const GAS_TOKEN = Deno.env.get("GAS_EMAIL_TOKEN") ?? "";
 
 const ESCRITORIO_EMAIL = "audiencia@falaw.com.br";
-// projuris-sync re-sincroniza TODAS as audiências em aberto a cada execução (não só as
-// que mudaram), então "updated_at" de uma linha ainda agendada é sempre ~agora — não serve
-// como sinal de "isso é novo". "created_at" só é setado no INSERT (primeira vez que aquele
-// id aparece no banco), esse sim reflete "entrou na pauta agora". Para canceladas, quem
-// bate status→'cancelada' é só a reconciliação (audiência que sumiu do Projuris), então
-// updated_at ali É confiável como "acabou de ser cancelada". 48h dá margem para vários
-// ciclos de retry (cron roda a cada ~8h) sem deixar a janela de detecção fechar cedo demais.
-const JANELA_DETECCAO_MIN = 48 * 60;
 
 const CORS = {
   "Access-Control-Allow-Origin":  "*",
@@ -399,16 +393,14 @@ Deno.serve(async (req) => {
     const sb = createClient(SB_URL, SB_KEY);
     const agora = new Date();
     const { inicio: janelaInicio, fim: janelaFim } = janelaNotificacao();
-    const deteccaoDesde = new Date(agora.getTime() - JANELA_DETECCAO_MIN * 60_000).toISOString();
 
     const clientes = await buscarClientes(sb);
 
-    // ── 1. Audiências AGENDADAS que entraram na pauta agora, e cuja data é relevante ─
-    // Duas condições, as duas precisam valer: (a) a linha foi CRIADA recentemente
-    // (created_at — sinal confiável de "isso é novo", diferente de updated_at que muda
-    // toda vez que o sync roda mesmo sem nada ter mudado); (b) a data da audiência cai
-    // entre hoje e o fim do mês seguinte (não notifica algo que já passou nem algo tão
-    // distante que ainda não é relevante).
+    // ── 1. Audiências AGENDADAS do mês atual/seguinte ainda não notificadas ─
+    // Filtra pela data da própria audiência (não por quando a linha foi criada/
+    // alterada): cobre tanto uma audiência sincronizada agora quanto uma que já
+    // estava no banco há tempo mas nunca tinha sido notificada, desde que caia
+    // dentro do mês atual ou do mês seguinte.
     //
     // Sem checar `error` aqui, uma coluna ausente (migration não rodada) ou
     // qualquer outro erro de query fica indistinguível de "nada a notificar" —
@@ -421,13 +413,12 @@ Deno.serve(async (req) => {
       // Não duplica aviso de uma audiência que o destinatário já recebeu por um
       // envio manual de pauta (botão "Enviar Pauta" no admin).
       .is("pauta_manual_enviada_at", null)
-      .gte("created_at", deteccaoDesde)
       .gte("data_audiencia", janelaInicio)
       .lte("data_audiencia", janelaFim)
       .order("data_audiencia", { ascending: true });
     if (errNovas) throw new Error(`Consulta de audiências agendadas falhou: ${errNovas.message}`);
 
-    // ── 2. Audiências CANCELADAS agora (reconciliação), com data relevante ─────
+    // ── 2. Audiências CANCELADAS do mês atual/seguinte ainda não notificadas ─
     // Nota: NÃO filtra por pauta_manual_enviada_at aqui — esse campo marca que o
     // destinatário já foi avisado do AGENDAMENTO por um envio manual de pauta, o
     // que nada diz sobre o CANCELAMENTO (que acontece depois). Filtrar por ele
@@ -438,7 +429,6 @@ Deno.serve(async (req) => {
       .select("*")
       .eq("status", "cancelada")
       .is("email_cancelada_notificado_at", null)
-      .gte("updated_at", deteccaoDesde)
       .gte("data_audiencia", janelaInicio)
       .lte("data_audiencia", janelaFim)
       .order("data_audiencia", { ascending: true });
