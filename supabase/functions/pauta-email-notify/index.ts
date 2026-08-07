@@ -27,7 +27,7 @@ const SB_KEY    = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const GAS_URL   = Deno.env.get("GAS_EMAIL_URL") ?? "";
 const GAS_TOKEN = Deno.env.get("GAS_EMAIL_TOKEN") ?? "";
 
-const ESCRITORIO_EMAIL = "audiencia@falaw.com.br";
+const ESCRITORIO_EMAIL = "contencioso@falaw.com.br";
 
 const CORS = {
   "Access-Control-Allow-Origin":  "*",
