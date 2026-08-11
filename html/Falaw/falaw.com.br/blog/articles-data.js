@@ -1,5 +1,17 @@
 var FALAW_ARTICLES = [
   {
+    "id": "dia-do-advogado-11-agosto-2026",
+    "title": "11 de Agosto — Dia do Advogado: uma homenagem a quem sustenta a Justiça",
+    "category": "Institucional",
+    "excerpt": "Hoje, 11 de agosto, é o Dia do Advogado no Brasil. Contamos a origem da data — que remonta à criação dos primeiros cursos jurídicos do país, em 1827 — e deixamos aqui os nossos parabéns a toda a equipe Falaw e a todos os advogados e advogadas do Brasil.",
+    "date": "Agosto de 2026",
+    "readTime": "5 min",
+    "url": "blog/dia-do-advogado-11-agosto-2026.html",
+    "published": true,
+    "photo": "",
+    "content": ""
+  },
+  {
     "id": "portaria-mte-1316-2026-comercio-feriados-cct-artigo",
     "title": "Portaria MTE nº 1.316/2026: comércio em feriados passa a exigir CCT — o que muda com vigência imediata",
     "category": "Direito do Trabalho",
