@@ -742,8 +742,11 @@
         <div class="page-header" style="position:relative">
           <div id="mencao-wrap" style="display:none;position:absolute;top:0;right:0">
             <button type="button" onclick="_mencaoTogglePainel()" style="background:#fff;color:#0D2B5E;border:1px solid #d1d5db;border-radius:4px;padding:9px 16px;font-family:monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-weight:700">🔔 Menções <span id="mencao-badge" style="display:none;background:#DC2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span></button>
-            <div id="mencao-painel" style="display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:300;width:340px;max-height:360px;overflow-y:auto;background:#fff;border:1px solid #e5e7eb;border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.15)">
-              <div id="mencao-painel-body"></div>
+            <div id="mencao-painel" style="display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:300;width:480px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.15)">
+              <div style="display:flex;align-items:stretch">
+                <div id="mencao-roster" style="width:180px;flex-shrink:0;border-right:1px solid #e5e7eb;max-height:360px;overflow-y:auto"></div>
+                <div id="mencao-painel-body" style="flex:1;min-width:0;max-height:360px;overflow-y:auto"></div>
+              </div>
             </div>
           </div>
           <div class="page-label">Área do Cliente · Falaw Advogados</div>
@@ -2355,18 +2358,61 @@ function _mencaoTogglePainel() {
   if (!p) return;
   const abrir = p.style.display === 'none';
   p.style.display = abrir ? '' : 'none';
-  if (abrir) _mencaoRenderPainel();
+  if (abrir) { window._mencaoAtivo = null; _mencaoRenderPainel(); }
+}
+
+// Painel em duas colunas: lista da equipe (com contagem de pendentes de cada um)
+// à esquerda; ao clicar num nome, as menções pendentes só daquela pessoa aparecem à direita.
+function _mencaoIniciais(nome) {
+  return (nome || '').trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase();
+}
+
+function _mencaoContarPendentes(token) {
+  return (window._mencaoPendentes || []).filter(m => (m.mencionado || '').toLowerCase() === (token || '').toLowerCase()).length;
 }
 
 function _mencaoRenderPainel() {
+  _mencaoRenderRoster();
+  _mencaoRenderPessoa(window._mencaoAtivo);
+}
+
+function _mencaoRenderRoster() {
+  const el = document.getElementById('mencao-roster');
+  if (!el) return;
+  const equipe = window._escEquipe || [];
+  if (!equipe.length) { el.innerHTML = '<div style="padding:14px 10px;color:#9CA3AF;font-size:11px;text-align:center">Equipe não carregada.</div>'; return; }
+  el.innerHTML = equipe.map(c => {
+    const token = _mencaoToken(c);
+    if (!token) return '';
+    const n = _mencaoContarPendentes(token);
+    const ativo = window._mencaoAtivo === token;
+    return `<div onclick="_mencaoSelecionarPessoa('${token.replace(/'/g,"\\'")}')" style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-bottom:1px solid #f3f4f6;background:${ativo ? '#EEF2FF' : '#fff'}" onmouseenter="this.style.background='#F9FAFB'" onmouseleave="this.style.background='${ativo ? '#EEF2FF' : '#fff'}'">
+      <div style="width:24px;height:24px;border-radius:50%;background:#0D2B5E;color:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;font-family:monospace">${escHtml(_mencaoIniciais(c.nome))}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:600;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(c.nome || token)}</div>
+        <div style="font-size:9px;font-family:monospace;color:#9CA3AF">@${escHtml(token)}</div>
+      </div>
+      ${n ? `<span style="background:#FEE2E2;color:#B91C1C;border-radius:9px;min-width:16px;height:16px;padding:0 5px;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:monospace;flex-shrink:0">${n}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function _mencaoSelecionarPessoa(token) {
+  window._mencaoAtivo = token;
+  _mencaoRenderRoster();
+  _mencaoRenderPessoa(token);
+}
+
+function _mencaoRenderPessoa(token) {
   const body = document.getElementById('mencao-painel-body');
-  const pend = window._mencaoPendentes || [];
   if (!body) return;
-  if (!pend.length) { body.innerHTML = '<div style="padding:14px;color:#9CA3AF;font-size:12px;text-align:center">Nenhuma menção pendente.</div>'; return; }
+  if (!token) { body.innerHTML = '<div style="padding:20px 14px;color:#9CA3AF;font-size:11px;text-align:center;line-height:1.6">← Clique numa pessoa para ver as menções dela.</div>'; return; }
+  const pend = (window._mencaoPendentes || []).filter(m => (m.mencionado || '').toLowerCase() === token.toLowerCase());
+  if (!pend.length) { body.innerHTML = `<div style="padding:20px 14px;color:#9CA3AF;font-size:11px;text-align:center">Nenhuma menção pendente para @${escHtml(token)}.</div>`; return; }
   body.innerHTML = pend.map(m => `
     <div onclick="_mencaoIrPara('${m.audiencia_id}')" style="padding:8px 12px;border-bottom:1px solid #f3f4f6;display:flex;gap:8px;align-items:flex-start;cursor:pointer" onmouseenter="this.style.background='#F9FAFB'" onmouseleave="this.style.background='#fff'">
       <div style="flex:1;min-width:0">
-        <div style="font-size:9px;font-family:monospace;text-transform:uppercase;letter-spacing:.06em;color:#7B1A2E;font-weight:700">@${escHtml(m.mencionado)} · ${escHtml(m.autor||'')}</div>
+        <div style="font-size:9px;font-family:monospace;text-transform:uppercase;letter-spacing:.06em;color:#7B1A2E;font-weight:700">${escHtml(m.autor||'')}</div>
         <div style="font-size:11px;color:#374151;margin-top:2px">${escHtml((m.texto||'').slice(0,140))}</div>
       </div>
       <button onclick="event.stopPropagation();_mencaoMarcarLida(${m.id})" title="Marcar como visto" style="background:none;border:1px solid #d1d5db;border-radius:3px;padding:2px 7px;font-size:10px;cursor:pointer;color:#1B7A4E;flex-shrink:0">✓</button>
