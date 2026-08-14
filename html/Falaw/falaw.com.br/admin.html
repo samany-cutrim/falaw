@@ -1481,6 +1481,28 @@
       </div>
 
       <div id="cli-dash-panel" style="display:none">
+        <!-- Abas visíveis para o cliente no dashboard -->
+        <div style="margin-bottom:24px;padding:16px 20px;background:#f7f5f2;border:1px solid var(--c-divider);border-radius:4px">
+          <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:12px">Abas do Dashboard — ocultar para este cliente</div>
+          <div id="cli-dash-hidden-tabs" style="display:flex;flex-wrap:wrap;gap:16px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="checkbox" class="cli-dash-tab-chk" value="visao-geral" onchange="cliDashSaveHiddenTabs()" /> Visão Geral
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="checkbox" class="cli-dash-tab-chk" value="ex_empregados" onchange="cliDashSaveHiddenTabs()" /> Ex-empregados
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="checkbox" class="cli-dash-tab-chk" value="terceirizacao" onchange="cliDashSaveHiddenTabs()" /> Subsidiária
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="checkbox" class="cli-dash-tab-chk" value="destaques" onchange="cliDashSaveHiddenTabs()" /> Destaques do Mês
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="checkbox" class="cli-dash-tab-chk" value="comparativo" onchange="cliDashSaveHiddenTabs()" /> Comparativo
+            </label>
+          </div>
+        </div>
+
         <!-- Sub-nav -->
         <div style="display:flex;gap:4px;margin-bottom:28px;flex-wrap:wrap" id="cliDashSubNav">
           <div class="ifood-sub-tab active" onclick="cliDashSubTab('periods')">📅 Períodos</div>
@@ -10500,11 +10522,34 @@ async function cliDashSelectClient(clientId) {
   panel.style.display = 'block';
   if (btn) btn.style.display = 'inline-flex';
   if (upBtn) upBtn.style.display = 'inline-flex';
+  cliDashPopulateHiddenTabs(clientId);
   const { data, error } = await cliDashApi(`/api/client-dash/${encodeURIComponent(clientId)}/periods`);
   _cliDashPeriods = error ? [] : (data || []);
   cliDashRenderPeriods();
   cliDashPopulateSelects();
   cliDashSubTab('periods');
+}
+
+// Marca os checkboxes de "ocultar aba" conforme o cliente selecionado
+function cliDashPopulateHiddenTabs(clientId) {
+  const c = getClients().find(x => x.id === clientId);
+  const hiddenTabs = new Set((c && c.hiddenTabs) || []);
+  document.querySelectorAll('#cli-dash-hidden-tabs .cli-dash-tab-chk').forEach(chk => {
+    chk.checked = hiddenTabs.has(chk.value);
+  });
+}
+
+// Salva as abas ocultas do cliente selecionado (marcadas = ocultas para o cliente)
+async function cliDashSaveHiddenTabs() {
+  if (!_cliDashClientId) return;
+  const hiddenTabs = Array.from(document.querySelectorAll('#cli-dash-hidden-tabs .cli-dash-tab-chk:checked')).map(chk => chk.value);
+  const clients = getClients();
+  const idx = clients.findIndex(c => c.id === _cliDashClientId);
+  if (idx < 0) return;
+  clients[idx] = { ...clients[idx], hiddenTabs };
+  localStorage.setItem(CLI_KEY, JSON.stringify(clients));
+  const ok = await sbSaveClient(clients[idx]);
+  if (ok) showToast('✓ Abas do dashboard atualizadas.');
 }
 
 function cliDashSubTab(name) {
