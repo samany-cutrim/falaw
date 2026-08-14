@@ -257,16 +257,19 @@
     .chart-card-title { font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700; margin-bottom: 3px; }
     .chart-card-sub { font-size: 11px; color: var(--muted); margin-bottom: 20px; }
     .chart-wrap { position: relative; height: 210px; }
-    .chart-card.wide { grid-column: 1 / -1; }
+    .chart-card.full-width { grid-column: 1 / -1; }
 
     /* Tabelas de dados dentro de um chart-card (kpis com chart_data.type === 'table') */
-    .dash-table-wrap { overflow-x: auto; margin-top: 12px; }
+    .dash-table-wrap { overflow-x: auto; margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; }
     .dash-data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .dash-data-table th { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; font-weight: 400; white-space: nowrap; }
-    .dash-data-table td { padding: 11px 14px; border-bottom: 1px solid rgba(0,0,0,0.04); vertical-align: top; }
+    .dash-data-table thead tr { background: #0D2B5E; }
+    .dash-data-table th { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,0.85); padding: 12px 16px; text-align: left; font-weight: 600; white-space: nowrap; }
+    .dash-data-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .dash-data-table tbody tr:nth-child(even) { background: rgba(13,43,94,0.03); }
     .dash-data-table tbody tr:last-child td { border-bottom: none; }
-    .dash-data-table tbody tr:hover td { background: rgba(0,0,0,0.02); }
+    .dash-data-table tbody tr:hover td { background: rgba(13,43,94,0.06); }
     .dash-table-footnote { font-size: 11px; color: var(--muted); margin-top: 12px; line-height: 1.5; }
+    .dash-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
 
     /* Donut */
     .donut-layout { display: flex; align-items: center; gap: 24px; }
@@ -1787,14 +1790,24 @@ function _buildKpiGrid(kpis, kpisEl, chartsEl, tabKey) {
     if (cfg.type === 'table') {
       const cols = Array.isArray(cfg.columns) ? cfg.columns : [];
       const dataRows = Array.isArray(cfg.rows) ? cfg.rows : [];
+      const badgeCol = typeof cfg.badgeColumn === 'number' ? cfg.badgeColumn : -1;
+      const badgeColors = cfg.badgeColors || {};
+      const renderCell = (v, ci) => {
+        const val = String(v ?? '—');
+        if (ci === badgeCol && badgeColors[val]) {
+          const color = badgeColors[val];
+          return `<td><span class="dash-badge" style="color:${color};background:${color}1a">${escHtml(val)}</span></td>`;
+        }
+        return `<td>${escHtml(val)}</td>`;
+      };
       const tableHtml = dataRows.length
         ? `<table class="dash-data-table">
             <thead><tr>${cols.map(c => `<th>${escHtml(String(c))}</th>`).join('')}</tr></thead>
-            <tbody>${dataRows.map(row => `<tr>${row.map(v => `<td>${escHtml(String(v ?? '—'))}</td>`).join('')}</tr>`).join('')}</tbody>
+            <tbody>${dataRows.map(row => `<tr>${row.map(renderCell).join('')}</tr>`).join('')}</tbody>
           </table>`
         : `<div style="padding:20px 0;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted-l)">Nenhum registro para este período.</div>`;
       chartsEl.insertAdjacentHTML('beforeend', `
-        <div class="chart-card wide">
+        <div class="chart-card full-width">
           <div class="chart-card-title">${escHtml(k.chart_title || k.label || '')}</div>
           <div class="dash-table-wrap">${tableHtml}</div>
           ${cfg.footnote ? `<div class="dash-table-footnote">${escHtml(cfg.footnote)}</div>` : ''}
@@ -1839,7 +1852,7 @@ function _buildKpiGrid(kpis, kpisEl, chartsEl, tabKey) {
       : 280;
 
     // Wide if horizontal bar (rankings tend to be tall)
-    const wide = (cfg._wide || (isHorizontal && (cfg.data?.labels?.length || 0) > 6)) ? ' wide' : '';
+    const wide = isHorizontal && (cfg.data?.labels?.length || 0) > 6 ? ' wide' : '';
     const uid  = 'dashchart_' + tabKey + '_' + i;
 
     chartsEl.insertAdjacentHTML('beforeend', `
