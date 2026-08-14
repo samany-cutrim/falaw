@@ -1831,6 +1831,19 @@ function _buildKpiGrid(kpis, kpisEl, chartsEl, tabKey) {
       };
     }
 
+    // Deixa claro no tooltip que o valor é o acumulado até aquele mês, não a quantidade
+    // isolada do mês (evita ler "Encerrados: 10" em Agosto como "10 casos em agosto")
+    if (cfg._cumulativeLabel) {
+      cfg.options = cfg.options || {};
+      cfg.options.plugins = cfg.options.plugins || {};
+      cfg.options.plugins.tooltip = cfg.options.plugins.tooltip || {};
+      cfg.options.plugins.tooltip.callbacks = cfg.options.plugins.tooltip.callbacks || {};
+      cfg.options.plugins.tooltip.callbacks.label = ctx => {
+        const label = (ctx.dataset.label || '').replace(/\s*\(acum\.\)\s*$/, '');
+        return `${label}: ${ctx.parsed.y} acumulado(s) até ${ctx.label}`;
+      };
+    }
+
     // Restore tooltip title with judge location (_judge_locs array saved by admin)
     if (Array.isArray(cfg._judge_locs)) {
       const locs = cfg._judge_locs;
@@ -1858,6 +1871,7 @@ function _buildKpiGrid(kpis, kpisEl, chartsEl, tabKey) {
     chartsEl.insertAdjacentHTML('beforeend', `
       <div class="chart-card${wide}">
         <div class="chart-card-title">${escHtml(k.chart_title || k.label || '')}</div>
+        ${cfg.subtitle ? `<div class="chart-card-sub">${escHtml(cfg.subtitle)}</div>` : ''}
         <div class="chart-wrap" style="height:${height}px"><canvas id="${uid}"></canvas></div>
       </div>`);
 
