@@ -1582,8 +1582,8 @@
         <!-- Sub: Destaques -->
         <!-- Sub: Upload Excel -->
         <div id="cli-dash-sub-excel" style="display:none">
-          <p style="font-size:13px;color:var(--c-muted);margin-bottom:20px;">Faça upload da planilha Excel do cliente. Os dados serão extraídos e armazenados. O arquivo <strong>não ficará acessível</strong> para o cliente — apenas os dados processados aparecem no dashboard.</p>
-          <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;">
+          <p style="font-size:13px;color:var(--c-muted);margin-bottom:20px;">Faça upload da(s) planilha(s) Excel do cliente. Os dados serão extraídos e armazenados. O arquivo <strong>não ficará acessível</strong> para o cliente — apenas os dados processados aparecem no dashboard.</p>
+          <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap;">
             <div class="form-field" style="margin:0;flex:1;min-width:200px">
               <label>Período *</label>
               <select id="cli-xl-period" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none;">
@@ -1591,8 +1591,15 @@
               </select>
             </div>
             <div class="form-field" style="margin:0;flex:1;min-width:200px">
-              <label>Arquivo Excel (.xlsx / .xls) *</label>
-              <input type="file" id="cli-xl-file" accept=".xlsx,.xls" onchange="cliDashPreviewExcel(this)" style="padding:10px 14px;border:1px solid var(--c-divider);border-radius:2px;width:100%;background:#fafaf8;" />
+              <label>Planilha principal (.xlsx / .xls) *</label>
+              <input type="file" id="cli-xl-file" accept=".xlsx,.xls" onchange="cliDashPreviewExcel()" style="padding:10px 14px;border:1px solid var(--c-divider);border-radius:2px;width:100%;background:#fafaf8;" />
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;">
+            <div class="form-field" style="margin:0;flex:1;min-width:200px">
+              <label>Planilha detalhada — Ativos / Encerrados (opcional)</label>
+              <input type="file" id="cli-xl-file2" accept=".xlsx,.xls" onchange="cliDashPreviewExcel()" style="padding:10px 14px;border:1px solid var(--c-divider);border-radius:2px;width:100%;background:#fafaf8;" />
+              <small style="color:var(--c-muted)">Planilha com abas "Ativos"/"Encerrados" contendo Valor do Risco, Fase e Motivo do Encerramento. Usada para as tabelas de execução, DSR, casos recebidos no ano e gráficos de encerramento — some às informações da planilha principal.</small>
             </div>
           </div>
           <!-- Resumo de extração (aparece ao selecionar arquivo) -->
@@ -10633,23 +10640,24 @@ async function admRenderComparativo() {
 // ── CLIENT EXCEL UPLOAD ───────────────────────────────────────────
 let _cliExcelData = null;
 
-async function cliDashPreviewExcel(input) {
-  const file = input.files && input.files[0];
-  if (!file) return;
+async function cliDashPreviewExcel() {
+  const file  = document.getElementById('cli-xl-file').files[0]  || null;
+  const file2 = document.getElementById('cli-xl-file2').files[0] || null;
+  if (!file && !file2) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS não carregado.'); return; }
   const st  = document.getElementById('cli-xl-status');
   const sum = document.getElementById('cli-xl-summary');
-  st.style.display  = 'block'; st.textContent  = 'Lendo e analisando arquivo…';
+  st.style.display  = 'block'; st.textContent  = 'Lendo e analisando arquivo(s)…';
   sum.style.display = 'none';
   try {
-    const buf = await file.arrayBuffer();
-    const wb  = XLSX.read(buf, { type: 'array' });
+    const wb  = file  ? XLSX.read(await file.arrayBuffer(),  { type: 'array' }) : null;
+    const wb2 = file2 ? XLSX.read(await file2.arrayBuffer(), { type: 'array' }) : null;
 
     // Parse imediatamente para mostrar resumo
-    const parsed = _xlParseClientReport(wb);
-    _cliExcelData = { filename: file.name, wb, file, parsed };
+    const parsed = _xlParseClientReportDual(wb, wb2);
+    _cliExcelData = { filename: file ? file.name : (file2 ? file2.name : ''), filename2: file2 ? file2.name : '', wb, wb2, file, file2, parsed };
 
-    const { dashKpis, records } = parsed;
+    const { dashKpis, records, encerrados } = parsed;
     const fmtN = n => (n != null ? Number(n).toLocaleString('pt-BR') : '—');
     const fmtPct = v => {
       if (v == null) return '—';
@@ -10671,9 +10679,14 @@ async function cliDashPreviewExcel(input) {
       </div>`
     ).join('');
     const kpiCount = _xlBuildClientDashKpis('__preview__', parsed).length;
+    const sheetsInfo = [
+      file  ? `📄 <strong>${escHtml(file.name)}</strong> (${wb.SheetNames.length} aba(s): ${wb.SheetNames.map(n => escHtml(n)).join(', ')})` : '',
+      file2 ? `📄 <strong>${escHtml(file2.name)}</strong> (${wb2.SheetNames.length} aba(s): ${wb2.SheetNames.map(n => escHtml(n)).join(', ')}) — ${(encerrados||[]).length} encerrado(s) detectado(s)` : '',
+    ].filter(Boolean).join('<br>');
     document.getElementById('cli-xl-sheets').innerHTML =
-      `📄 <strong>${escHtml(file.name)}</strong> &nbsp;·&nbsp; ${wb.SheetNames.length} aba(s): ${wb.SheetNames.map(n => escHtml(n)).join(', ')}<br>` +
-      `<span style="color:#1B7A4E">✓ ${kpiCount} KPIs serão gerados. Selecione o período e clique em "Salvar dados no Cockroach".</span>`;
+      sheetsInfo + '<br>' +
+      `<span style="color:#1B7A4E">✓ ${kpiCount} KPIs serão gerados. Selecione o período e clique em "Salvar dados no Supabase".</span>` +
+      (!file2 ? `<br><span style="color:#B7791F">⚠ Sem a planilha detalhada, as tabelas de execução, DSR, casos recebidos no ano e o gráfico de motivos de encerramento não serão gerados.</span>` : '');
     sum.style.display = 'block';
     st.style.display  = 'none';
   } catch(e) {
@@ -10692,10 +10705,10 @@ async function cliDashSaveExcel() {
   const setStatus = msg => { st.style.display = 'block'; st.textContent = msg; };
 
   try {
-    const { wb, filename, parsed: _cachedParsed } = _cliExcelData;
+    const { wb, wb2, filename, parsed: _cachedParsed } = _cliExcelData;
 
     setStatus('Processando dados extraídos…');
-    const parsedData = _cachedParsed || _xlParseClientReport(wb);
+    const parsedData = _cachedParsed || _xlParseClientReportDual(wb, wb2);
     setStatus(`Computando KPIs… (${parsedData.records.length} processos encontrados)`);
     const cliKpiRows = _xlBuildClientDashKpis(periodId, parsedData);
 
@@ -10797,7 +10810,7 @@ async function cliDashSaveExcel() {
             id: cliUID(),
             title: `Dashboard ${repPeriodLabel}`,
             period: repPeriodLabel,
-            description: `Publicado automaticamente via upload de Excel (${filename})`,
+            description: `Publicado automaticamente via upload de Excel (${filename}${_cliExcelData.filename2 ? ' + ' + _cliExcelData.filename2 : ''})`,
             fileName: _cliExcelData.file.name,
             fileData: repFileData,
             fileUrl: repFileUrl,
@@ -10870,6 +10883,9 @@ async function cliDashSaveExcel() {
 
 /** Normalise string: strip diacritics, trim, uppercase */
 const _xlN = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+
+/** Normaliza um número de processo para comparação (remove tudo que não for dígito/ponto/traço) */
+const _xlNormProc = p => String(p || '').replace(/\s+/g, '');
 
 /**
  * Parse a client monthly Excel report (APDATA / BUSER / CUIDAR.ME / FRETE style).
@@ -10954,6 +10970,262 @@ function _xlParseClientReport(wb) {
 }
 
 /**
+ * Combina a planilha principal (DASHBOARD / ATIVOS / ENCERRADOS / _ChartData) com uma
+ * planilha detalhada opcional (abas "Ativos"/"Encerrados" com Valor do Risco, Fase textual
+ * e Motivo do Encerramento). A planilha detalhada enriquece os registros da principal
+ * (casando por número de processo) e é a fonte dos processos encerrados completos
+ * (usados nas tabelas/gráficos de execução, DSR, casos recebidos no ano e encerramentos).
+ * Returns { dashKpis, records, chartData, encerrados }
+ */
+function _xlParseClientReportDual(wbPrimary, wbSecondary) {
+  const primary = wbPrimary
+    ? _xlParseClientReport(wbPrimary)
+    : { dashKpis: { ativos: null, exposicao: null, encerrados: null, taxaExito: null, periodo: '' }, records: [], chartData: null };
+  const records = primary.records;
+  let encerrados = [];
+
+  const detailWb = wbSecondary || null;
+  if (detailWb) {
+    const activeSh = detailWb.SheetNames.find(n => _xlN(n).includes('ATIVO'));
+    if (activeSh) {
+      const rawRows = XLSX.utils.sheet_to_json(detailWb.Sheets[activeSh], { header: 1, defval: '' });
+      const detailed = _xlParseDetailedActive(rawRows);
+      const byProc = new Map(records.map(r => [_xlNormProc(r.num_processo), r]));
+      detailed.forEach(d => {
+        const key = _xlNormProc(d.num_processo);
+        const existing = byProc.get(key);
+        if (existing) {
+          if (d.valor_risco != null) existing.valor_risco = d.valor_risco;
+          if (d.valor_causa != null && existing.valor_causa == null) existing.valor_causa = d.valor_causa;
+          if (d.execucao_tipo) existing.execucao_tipo = d.execucao_tipo;
+          if (!existing.data_distrib && d.data_distrib) existing.data_distrib = d.data_distrib;
+          if (!existing.reclamante && d.reclamante) existing.reclamante = d.reclamante;
+          if (!existing.fase && d.fase) existing.fase = d.fase;
+          existing.texto_sentenca  = existing.texto_sentenca  || d.texto_sentenca;
+          existing.texto_acordao   = existing.texto_acordao   || d.texto_acordao;
+          existing.texto_andamento = existing.texto_andamento || d.texto_andamento;
+          existing.texto_pedidos   = existing.texto_pedidos   || d.texto_pedidos;
+        } else {
+          records.push(d);
+          byProc.set(key, d);
+        }
+      });
+    }
+    const encSh = detailWb.SheetNames.find(n => _xlN(n).includes('ENCERRADO'));
+    if (encSh) {
+      encerrados = _xlParseEncerradosDetalhado(XLSX.utils.sheet_to_json(detailWb.Sheets[encSh], { header: 1, defval: '' }));
+    }
+  }
+
+  // Sem planilha detalhada: tenta aproveitar a aba de Encerrados da planilha principal.
+  if (!encerrados.length && wbPrimary) {
+    const encShP = wbPrimary.SheetNames.find(n => { const nl = _xlN(n); return nl.includes('ENCERRADO') || nl.includes('ARQUIVADO'); });
+    if (encShP) {
+      encerrados = _xlParseEncerradosDetalhado(XLSX.utils.sheet_to_json(wbPrimary.Sheets[encShP], { header: 1, defval: '' }));
+    }
+  }
+
+  return { dashKpis: primary.dashKpis, records, chartData: primary.chartData, encerrados };
+}
+
+/**
+ * Parser da aba "Ativos" detalhada (estilo FRETE: ProcessoCNJ, Empresa Responsável,
+ * Polo Ativo/Passivo, Fase, Risco, Valor do Risco, Andamento, OBF/Verbas de Sentença e Acórdão).
+ * Retorna registros no mesmo formato usado por _xlParseClientActive, para poder ser
+ * mesclado com ela por número de processo.
+ */
+function _xlParseDetailedActive(rawRows) {
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
+    const row = rawRows[i]; if (!row) continue;
+    const norms = row.map(v => _xlN(v));
+    if (norms.some(v => v.includes('PROCESSOCNJ') || v.includes('NUMERO DO PROCESSO') || v.includes('PROCESSO'))) { headerIdx = i; break; }
+  }
+  if (headerIdx < 0) return [];
+
+  const header = rawRows[headerIdx].map(v => _xlN(v));
+  // Prioriza correspondência EXATA do cabeçalho antes de cair para substring — evita que uma
+  // coluna tipo "TESTEMUNHA DA RECLAMADA" roube o índice de um padrão genérico como 'RECLAMADA'
+  // quando a coluna certa (ex.: "PARTE PRINCIPAL") só seria encontrada por um padrão posterior.
+  const fi = (...pats) => {
+    for (const p of pats) { const k = _xlN(p); const i = header.findIndex(h => h === k); if (i >= 0) return i; }
+    for (const p of pats) { const k = _xlN(p); const i = header.findIndex(h => h.includes(k)); if (i >= 0) return i; }
+    return -1;
+  };
+  const idx = {
+    proc:            fi('PROCESSOCNJ', 'NUMERO DO PROCESSO', 'PROCESSO'),
+    empresa:         fi('EMPRESA RESPONSAVEL'),
+    reclamante:      fi('POLO ATIVO', 'RECLAMANTE', 'PARTE CONTRARIA'),
+    reclamada:       fi('POLO PASSIVO', 'PARTE PRINCIPAL', 'RECLAMADA'),
+    data:            fi('DATA DISTRIBUICAO', 'DATA DA DISTRIBUICAO'),
+    valor_causa:     fi('VALOR DA CAUSA'),
+    fase:            fi('FASE'),
+    risco:           fi('RISCO'),
+    valor_risco:     fi('VALOR DO RISCO'),
+    andamento:       fi('ANDAMENTO'),
+    obs:             fi('OBSERVACOES'),
+    obf_sentenca:    fi('OBF (SENTENCA)', 'OBF SENTENCA', 'RESUMO DA SENTENCA'),
+    verbas_sentenca: fi('VERBAS TRABALHISTAS / RESCISORIAS / REMUNERATORIAS (SENTENCA)'),
+    obf_acordao:     fi('OBF (ACORDAO)', 'OBF ACORDAO', 'RESUMO DO ACORDAO'),
+    verbas_acordao:  fi('VERBAS TRABALHISTAS / RESCISORIAS / REMUNERATORIAS (ACORDAO)'),
+    pedidos:         fi('PEDIDOS E VALOR', 'PEDIDOS'),
+  };
+
+  const c = (r, i) => (i < 0 ? '' : String(r[i] ?? '').trim());
+  const cNum = (r, i) => {
+    if (i < 0) return null;
+    const v = r[i];
+    if (typeof v === 'number') return v;
+    if (v == null || v === '') return null;
+    const s = String(v).replace(/[R$\s.]/g, '').replace(',', '.');
+    const n = parseFloat(s); return isNaN(n) ? null : n;
+  };
+  const parseDate = v => {
+    if (!v) return null;
+    if (v instanceof Date) return v;
+    if (typeof v === 'number') { const d = new Date(Math.round((v - 25569) * 86400 * 1000)); return isNaN(d) ? null : d; }
+    return null;
+  };
+
+  const out = [];
+  for (let i = headerIdx + 1; i < rawRows.length; i++) {
+    const r = rawRows[i]; if (!Array.isArray(r)) continue;
+    const proc = c(r, idx.proc);
+    if (!proc || !/\d{7,}/.test(proc)) continue;
+    const fase = c(r, idx.fase);
+    const texto_andamento = c(r, idx.andamento);
+    const texto_obs       = c(r, idx.obs);
+    const texto_sentenca  = [c(r, idx.obf_sentenca), c(r, idx.verbas_sentenca)].filter(Boolean).join(' — ');
+    const texto_acordao   = [c(r, idx.obf_acordao), c(r, idx.verbas_acordao)].filter(Boolean).join(' — ');
+    const rec = {
+      num_processo: proc,
+      empresa_resp: c(r, idx.empresa),
+      reclamante: c(r, idx.reclamante),
+      reclamada: c(r, idx.reclamada),
+      data_distrib: parseDate(r[idx.data]),
+      valor_causa: cNum(r, idx.valor_causa),
+      fase,
+      risco: c(r, idx.risco),
+      valor_risco: cNum(r, idx.valor_risco),
+      texto_andamento, texto_obs, texto_sentenca, texto_acordao,
+      texto_pedidos: c(r, idx.pedidos),
+    };
+    rec.execucao_tipo = /EXECU|CUMPRIMENTO/.test(_xlN(fase))
+      ? _xlDetectExecucaoTipo([texto_andamento, texto_sentenca, texto_acordao, texto_obs].join(' '))
+      : null;
+    out.push(rec);
+  }
+  return out;
+}
+
+/**
+ * Parser da aba "Encerrados" detalhada (TRT, Número do Processo, Parte Contrária,
+ * Parte Principal, Data da Distribuição/Encerramento, Motivo do Encerramento, Valores Pagos).
+ */
+function _xlParseEncerradosDetalhado(rawRows) {
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(rawRows.length, 6); i++) {
+    const row = rawRows[i]; if (!row) continue;
+    const norms = row.map(v => _xlN(v));
+    if (norms.some(v => v.includes('NUMERO DO PROCESSO')) && norms.some(v => v.includes('MOTIVO'))) { headerIdx = i; break; }
+  }
+  if (headerIdx < 0) return [];
+
+  const header = rawRows[headerIdx].map(v => _xlN(v));
+  // Prioriza correspondência EXATA do cabeçalho antes de cair para substring — evita que uma
+  // coluna tipo "TESTEMUNHA DA RECLAMADA" roube o índice de um padrão genérico como 'RECLAMADA'
+  // quando a coluna certa (ex.: "PARTE PRINCIPAL") só seria encontrada por um padrão posterior.
+  const fi = (...pats) => {
+    for (const p of pats) { const k = _xlN(p); const i = header.findIndex(h => h === k); if (i >= 0) return i; }
+    for (const p of pats) { const k = _xlN(p); const i = header.findIndex(h => h.includes(k)); if (i >= 0) return i; }
+    return -1;
+  };
+  const idx = {
+    proc:            fi('NUMERO DO PROCESSO'),
+    parte_contraria: fi('PARTE CONTRARIA'),
+    parte_principal: fi('PARTE PRINCIPAL'),
+    data_dist:       fi('DATA DA DISTRIBUICAO'),
+    data_enc:        fi('DATA DO ENCERRAMENTO'),
+    motivo:          fi('MOTIVO DO ENCERRAMENTO'),
+    valores:         fi('VALORES PAGOS'),
+    pedidos:         fi('PEDIDOS'),
+  };
+
+  const c = (r, i) => (i < 0 ? '' : String(r[i] ?? '').trim());
+  const cNum = (r, i) => {
+    if (i < 0) return null;
+    const v = r[i];
+    if (typeof v === 'number') return v;
+    if (!v) return null;
+    const s = String(v).replace(/[R$\s.]/g, '').replace(',', '.');
+    const n = parseFloat(s); return isNaN(n) ? null : n;
+  };
+  const parseDate = v => {
+    if (!v) return null;
+    if (v instanceof Date) return v;
+    if (typeof v === 'number') { const d = new Date(Math.round((v - 25569) * 86400 * 1000)); return isNaN(d) ? null : d; }
+    return null;
+  };
+
+  const out = [];
+  for (let i = headerIdx + 1; i < rawRows.length; i++) {
+    const r = rawRows[i]; if (!Array.isArray(r)) continue;
+    const proc = c(r, idx.proc);
+    if (!proc || !/\d{5,}/.test(proc)) continue;
+    out.push({
+      num_processo: proc,
+      reclamante: c(r, idx.parte_contraria),
+      parte_principal: c(r, idx.parte_principal),
+      data_distrib: parseDate(r[idx.data_dist]),
+      data_encerramento: parseDate(r[idx.data_enc]),
+      motivo: c(r, idx.motivo) || 'Não informado',
+      valores_pagos: cNum(r, idx.valores),
+      pedidos: c(r, idx.pedidos),
+    });
+  }
+  return out;
+}
+
+/**
+ * Classifica cumprimento provisório vs. definitivo a partir do texto livre do processo
+ * (andamento/sentença/acórdão/observações). Como a maioria das planilhas não tem um campo
+ * estruturado para isso, procura termos jurídicos explícitos; quando não encontra nada
+ * conclusivo, devolve "A confirmar" em vez de arriscar um chute.
+ */
+function _xlDetectExecucaoTipo(text) {
+  const n = _xlN(text);
+  if (n.includes('EXECUCAO PROVISORIA') || n.includes('CUMPRIMENTO PROVISORIO')) return 'Provisória';
+  if (n.includes('EXECUCAO DEFINITIVA') || n.includes('CUMPRIMENTO DEFINITIVO')) return 'Definitiva';
+  if (n.includes('AGUARDA TRANSITO EM JULGADO') || n.includes('AGUARDANDO TRANSITO EM JULGADO') || n.includes('AGUARDA O TRANSITO EM JULGADO')) return 'Provisória';
+  if (n.includes('OPEROU-SE O TRANSITO EM JULGADO') || n.includes('TRANSITO EM JULGADO DA ACAO') || n.includes('COM O TRANSITO EM JULGADO') || n.includes('TRANSITADA EM JULGADO') || n.includes('TRANSITADO EM JULGADO')) return 'Definitiva';
+  return 'A confirmar';
+}
+
+/**
+ * Detecta se o processo envolve pedido de DSR e, se sim, tenta classificar o resultado
+ * (Ganhamos / Perdemos / Pendente) a partir do texto da sentença e do acórdão — nessa
+ * ordem de prioridade, já que o acórdão é a decisão mais recente. Quando o texto é
+ * ambíguo ou não há decisão ainda, devolve "Pendente" em vez de arriscar um resultado.
+ */
+function _xlDetectDSR(rec) {
+  const DSR_RE = /\bDSR\b/i;
+  const FAV_RE = /(IMPROCEDEN|REJEITAD[OA]|AFASTAD[OA]|EXCLU[IÍ][DÍ][OA]|INDEFERID[OA]|NAO PROVID[OA]|NEGADO)/;
+  const DESF_RE = /(CONDENA|MANTID[OA]|DEFERID[OA]|PROCEDENTE|ACOLHID[OA]|RECONHEC)/;
+
+  const sources = [rec.texto_acordao, rec.texto_sentenca, rec.texto_andamento].filter(Boolean);
+  for (const src of sources) {
+    if (!DSR_RE.test(src)) continue;
+    const n = _xlN(src);
+    const fav = FAV_RE.test(n), desf = DESF_RE.test(n);
+    if (fav && !desf) return 'Ganhamos';
+    if (desf && !fav) return 'Perdemos';
+    return 'Pendente'; // ambíguo — melhor marcar para revisão do que arriscar
+  }
+  if (rec.texto_pedidos && DSR_RE.test(rec.texto_pedidos)) return 'Pendente';
+  return null; // sem menção a DSR neste processo
+}
+
+/**
  * Flexible parser for an active-processes sheet with variable column layouts.
  * Handles: APDATA (2-row header), BUSER (Judiciais), CUIDAR.ME, FRETE (ATIVOS).
  */
@@ -10988,7 +11260,14 @@ function _xlParseClientActive(rawRows) {
     dataStart = headerIdx + 2;
   }
 
-  const fi = (...pats) => { for (const p of pats) { const k = _xlN(p); const i = header.findIndex(h => h.includes(k)); if (i >= 0) return i; } return -1; };
+  // Prioriza correspondência EXATA do cabeçalho antes de cair para substring — evita que uma
+  // coluna tipo "TESTEMUNHA DA RECLAMADA" roube o índice de um padrão genérico como 'RECLAMADA'
+  // quando a coluna certa (ex.: "PARTE PRINCIPAL") só seria encontrada por um padrão posterior.
+  const fi = (...pats) => {
+    for (const p of pats) { const k = _xlN(p); const i = header.findIndex(h => h === k); if (i >= 0) return i; }
+    for (const p of pats) { const k = _xlN(p); const i = header.findIndex(h => h.includes(k)); if (i >= 0) return i; }
+    return -1;
+  };
   // Like fi, but searches only from column `from+1` onwards (for duplicate column names)
   const fiFrom = (from, ...pats) => { for (const p of pats) { const k = _xlN(p); const i = header.findIndex((h,ci) => ci > from && h.includes(k)); if (i >= 0) return i; } return -1; };
   const idx = {
@@ -11018,6 +11297,7 @@ function _xlParseClientActive(rawRows) {
     sentenca:        fi('SENTENCA','RESULTADO','DESFECHO','LIMINAR'),
     data_sentenca:   fi('DATA DA SENTENCA','DATA DO ACORDAO','DATA DO JULGAMENTO','DATA DA DECISAO','DATA DA SENTENÇA','DATA DO ACÓRDÃO'),
     objeto:          fi('OBJETO','ASSUNTO','MATERIA','PEDIDOS'),
+    valor_causa:     fi('VALOR DA CAUSA'),
   };
   // turma3g = TURMA column immediately after JULGADOR DO 3º GRAU (second TURMA column)
   idx.turma3g = idx.julgador3g >= 0 ? fiFrom(idx.julgador3g, 'TURMA','CAMARA') : -1;
@@ -11032,6 +11312,14 @@ function _xlParseClientActive(rawRows) {
     return String(v).trim();
   };
   const cRaw = (r, i) => i >= 0 ? r[i] : null; // raw value (for dates)
+  const cNum = (r, i) => {
+    if (i < 0) return null;
+    const v = r[i];
+    if (typeof v === 'number') return v;
+    if (v == null || v === '') return null;
+    const s = String(v).replace(/[R$\s.]/g, '').replace(',', '.');
+    const n = parseFloat(s); return isNaN(n) ? null : n;
+  };
   const normRisco = v => { const n = _xlN(v); if (n.includes('PROVAVEL')) return 'Provável'; if (n.includes('POSSIVEL')) return 'Possível'; if (n.includes('REMOTO')) return 'Remoto'; return v || ''; };
   const parseDate = v => { if (!v) return null; if (v instanceof Date) return v; if (typeof v === 'number') { const d = new Date(Math.round((v - 25569)*86400*1000)); return isNaN(d) ? null : d; } const s = String(v).trim(); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return new Date(+m[1],+m[2]-1,+m[3]); m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if (m) { const y = m[3].length===2?2000+Number(m[3]):+m[3]; return new Date(y,+m[2]-1,+m[1]); } return null; };
   const detectResp = r => {
@@ -11077,7 +11365,7 @@ function _xlParseClientActive(rawRows) {
     return 'Outro';
   };
 
-  return rawRows.slice(dataStart).map(r => {
+  const parsed = rawRows.slice(dataStart).map(r => {
     if (!Array.isArray(r)) return null;
     let proc = c(r, idx.proc);
     // proc may be numeric in some formats
@@ -11107,8 +11395,10 @@ function _xlParseClientActive(rawRows) {
       responsabilidade: detectResp(r), sentenca: c(r, idx.sentenca),
       data_sentenca: parseDate(cRaw(r, idx.data_sentenca)),
       objeto:       c(r, idx.objeto),
+      valor_causa:  cNum(r, idx.valor_causa),
     };
   }).filter(Boolean);
+  return parsed;
 }
 
 /**
@@ -11246,29 +11536,156 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
 
   // ── 7. Casos distribuídos por ano ────────────────────────────────────
   const anoC = {};
-  const mes2026C = {};
   const MONTHS_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   records.forEach(r => {
     const d = r.data_distrib;
     if (!d || !(d instanceof Date) || isNaN(d.getTime())) return;
     const y = d.getFullYear();
     anoC[y] = (anoC[y]||0)+1;
-    if (y === 2026) {
-      const mk = String(d.getMonth()+1).padStart(2,'0');
-      mes2026C[mk] = (mes2026C[mk]||0)+1;
-    }
   });
   const anoKeys = Object.keys(anoC).sort();
   if (anoKeys.length > 1) push('visao-geral','chart_por_ano','Casos por Ano','','',
     _xlChartMultiBar(anoKeys, anoKeys.map(k=>anoC[k]),'Processos',false),
     'Casos Distribuídos por Ano');
 
-  const mes26Keys = Object.keys(mes2026C).sort();
-  if (mes26Keys.length) push('visao-geral','chart_2026_mes','Casos em 2026 por Mês','','',
-    _xlChartMultiBar(mes26Keys.map(k => MONTHS_PT[parseInt(k,10)-1]), mes26Keys.map(k=>mes2026C[k]),'Processos'),
-    'Casos Distribuídos em 2026 (por Mês)');
-
   // Ranking de Pedidos — apenas ex-foodlover (removido da visão geral)
+
+  // ── 7b. Evolução acumulada do ano de referência — recebidos vs. encerrados ──
+  // A reunião com o cliente é trimestral, então importa mais o acumulado do ano
+  // inteiro (incluindo o que já foi encerrado no período) do que só o último mês.
+  {
+    const isCurrentYear = refAno === new Date().getFullYear();
+    const lastMonth = isCurrentYear ? (new Date().getMonth() + 1) : 12;
+    const recebidosPorMes = {};
+    records.forEach(r => {
+      if (r.data_distrib instanceof Date && r.data_distrib.getFullYear() === refAno) {
+        const m = r.data_distrib.getMonth() + 1;
+        recebidosPorMes[m] = (recebidosPorMes[m] || 0) + 1;
+      }
+    });
+    const encerradosPorMes = {};
+    (encRecords || []).forEach(r => {
+      if (r.data_encerramento instanceof Date && r.data_encerramento.getFullYear() === refAno) {
+        const m = r.data_encerramento.getMonth() + 1;
+        encerradosPorMes[m] = (encerradosPorMes[m] || 0) + 1;
+      }
+    });
+    if (Object.keys(recebidosPorMes).length || Object.keys(encerradosPorMes).length) {
+      let accR = 0, accE = 0;
+      const labels = [], accRecArr = [], accEncArr = [];
+      for (let m = 1; m <= lastMonth; m++) {
+        accR += recebidosPorMes[m] || 0;
+        accE += encerradosPorMes[m] || 0;
+        labels.push(MONTHS_PT[m - 1]);
+        accRecArr.push(accR);
+        accEncArr.push(accE);
+      }
+      push('visao-geral','chart_evolucao_acumulada', `Evolução Acumulada ${refAno}`, '', '', {
+        type: 'line',
+        _wide: true,
+        data: { labels, datasets: [
+          { label: 'Recebidos (acum.)',  data: accRecArr, borderColor: '#0D2B5E', backgroundColor: 'rgba(13,43,94,0.08)',   fill: true, tension: 0.25 },
+          { label: 'Encerrados (acum.)', data: accEncArr, borderColor: '#0F9E76', backgroundColor: 'rgba(15,158,118,0.08)', fill: true, tension: 0.25 },
+        ]},
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'top', labels: { font: { family: 'IBM Plex Mono', size: 10 } } } },
+          scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+        },
+      }, `Evolução Acumulada ${refAno} — Recebidos vs. Encerrados`);
+    }
+  }
+
+  // ── 7c. Casos recebidos no ano de referência (tabela) ─────────────────
+  {
+    const recebidos = records
+      .filter(r => r.data_distrib instanceof Date && r.data_distrib.getFullYear() === refAno)
+      .sort((a,b) => a.data_distrib - b.data_distrib);
+    if (recebidos.length) {
+      const tblRows = recebidos.map(r => [
+        r.num_processo,
+        r.reclamante || '—',
+        r.data_distrib.toLocaleDateString('pt-BR'),
+        r.valor_causa != null ? 'R$ ' + fmtBr(r.valor_causa) : '—',
+      ]);
+      push('visao-geral','tabela_recebidos_ano', `Casos Recebidos em ${refAno}`, '', '', {
+        type: 'table',
+        columns: ['Nº do Processo','Reclamante','Data de Distribuição','Valor da Causa'],
+        rows: tblRows,
+      }, `Casos Recebidos em ${refAno}`);
+    }
+  }
+
+  // ── 7d. Exposição em execução — provisória/definitiva (tabela) ────────
+  {
+    const execRecs = records.filter(r => /EXECU|CUMPRIMENTO/.test(_xlN(r.fase || r.status)));
+    if (execRecs.length) {
+      const ordered = [...execRecs].sort((a,b) => (b.valor_risco||0) - (a.valor_risco||0));
+      const tblRows = ordered.map(r => [
+        r.num_processo,
+        r.reclamante || '—',
+        r.execucao_tipo || 'A confirmar',
+        r.valor_risco != null ? 'R$ ' + fmtBr(r.valor_risco) : '—',
+      ]);
+      const totalRisco = execRecs.reduce((s,r) => s + (r.valor_risco || 0), 0);
+      push('visao-geral','tabela_execucao', 'Exposição em Execução', '', '', {
+        type: 'table',
+        columns: ['Nº do Processo','Reclamante','Tipo de Execução','Valor do Risco'],
+        rows: tblRows,
+        footnote: `Estimativa de desembolso em processos já em fase de execução até o fim do ano: ${totalRisco ? 'R$ ' + fmtBr(totalRisco) : '—'}. A classificação "Provisória/Definitiva" é inferida automaticamente a partir do andamento do processo — recomenda-se revisão antes do envio ao cliente.`,
+      }, 'Casos em Execução — Estimativa de Desembolso até o Fim do Ano');
+
+      const tipoC = {};
+      execRecs.forEach(r => { const t = r.execucao_tipo || 'A confirmar'; tipoC[t] = (tipoC[t]||0)+1; });
+      push('visao-geral','chart_execucao_tipo', 'Cumprimento Provisório vs. Definitivo', '', '',
+        _xlChartDoughnut(Object.keys(tipoC), Object.values(tipoC)),
+        'Cumprimento Provisório vs. Definitivo');
+    }
+
+    // Projeção de encerramentos até o fim do ano — estimativa pelo ritmo médio de fechamentos
+    if (refAno === new Date().getFullYear() && encRecords && encRecords.length) {
+      const closuresThisYear = encRecords.filter(r => r.data_encerramento instanceof Date && r.data_encerramento.getFullYear() === refAno);
+      const monthsElapsed = new Date().getMonth() + 1;
+      if (closuresThisYear.length && monthsElapsed > 0) {
+        const avgPerMonth = closuresThisYear.length / monthsElapsed;
+        const remaining = Math.max(0, 12 - monthsElapsed);
+        const projecao = Math.round(closuresThisYear.length + avgPerMonth * remaining);
+        push('visao-geral','kpi_projecao_encerramentos', `Projeção de Encerramentos até Dez/${refAno}`,
+          fmtBr(projecao), `processos (estimativa · ${closuresThisYear.length} já encerrados no ano)`);
+      }
+    }
+  }
+
+  // ── 7e. Encerrados no ano de referência, por motivo (gráfico) ──────────
+  if (encRecords && encRecords.length) {
+    const encThisYear = encRecords.filter(r => r.data_encerramento instanceof Date && r.data_encerramento.getFullYear() === refAno);
+    const motivoC = {};
+    encThisYear.forEach(r => { const m = (r.motivo || 'Não informado').trim(); motivoC[m] = (motivoC[m]||0)+1; });
+    const motivoTop = topN(motivoC, 12);
+    if (motivoTop.length) push('visao-geral','chart_encerrados_motivo', `Encerrados em ${refAno} por Motivo`, '', '',
+      _xlChartMultiBar(motivoTop.map(([l])=>l), motivoTop.map(([,v])=>v),'Processos'),
+      `Encerrados em ${refAno} por Motivo de Encerramento`);
+  }
+
+  // ── 7f. Casos com pedido de DSR — ganhamos / perdemos / pendentes (tabela) ──
+  {
+    const dsrRecs = records
+      .map(r => ({ r, dsrResultado: _xlDetectDSR(r) }))
+      .filter(x => x.dsrResultado);
+    if (dsrRecs.length) {
+      const situLabel = { Ganhamos: 'Ganhamos', Perdemos: 'Perdemos', Pendente: 'Pendente de julgamento' };
+      const tblRows = dsrRecs.map(({ r, dsrResultado }) => [r.num_processo, r.reclamante || '—', situLabel[dsrResultado] || dsrResultado]);
+      const ganhos = dsrRecs.filter(x => x.dsrResultado === 'Ganhamos').length;
+      const perdas = dsrRecs.filter(x => x.dsrResultado === 'Perdemos').length;
+      const pendentes = dsrRecs.length - ganhos - perdas;
+      push('visao-geral','tabela_dsr', 'Casos com Pedido de DSR', '', '', {
+        type: 'table',
+        columns: ['Nº do Processo','Reclamante','Situação'],
+        rows: tblRows,
+        footnote: `Ganhamos: ${ganhos} · Perdemos: ${perdas} · Pendentes de julgamento: ${pendentes}. Classificação automática a partir do texto da sentença/acórdão — recomenda-se revisão antes do envio ao cliente.`,
+      }, 'Casos com Pedido de DSR — Ganhamos, Perdemos e Pendentes');
+    }
+  }
 
   // ── 8. Top advogados adversários ─────────────────────────────────────
   const advC = {};
@@ -11559,11 +11976,12 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
     }
 
     // Ranking de empresas no polo passivo — subsidiária
+    // (usa só polo_passivo: reclamada é sempre o próprio cliente, nunca a empresa terceira)
     const tcEmpC = {};
     recsTerc.forEach(r => {
-      const polo = _xlN(r.polo_passivo || r.reclamada || '');
+      const polo = _xlN(r.polo_passivo || '');
       if (!polo || polo.startsWith('NAO SE APLICA') || polo.includes('EX EMPREGAD')) return;
-      const name = (r.polo_passivo || r.reclamada || '').trim();
+      const name = (r.polo_passivo || '').trim();
       if (name.length > 3) tcEmpC[name] = (tcEmpC[name]||0)+1;
     });
     const tcEmpTop = topN(tcEmpC, 12);
