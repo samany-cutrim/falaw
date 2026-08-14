@@ -1355,6 +1355,27 @@
               </div>
               <small style="color:var(--c-muted)">Empresas ou pessoas ligadas a este cliente (mesmo grupo). Audiências dessas razões sociais/nomes também aparecem no dashboard, no "Enviar Pauta" e no e-mail automático deste cliente.</small>
             </div>
+            <div class="form-field">
+              <label>Abas do Dashboard</label>
+              <div id="cli-hidden-tabs" style="display:flex;flex-direction:column;gap:6px">
+                <label style="display:flex;align-items:center;gap:8px;font-weight:400;font-size:13px;cursor:pointer">
+                  <input type="checkbox" class="cli-tab-chk" value="visao-geral" /> Ocultar "Visão Geral"
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;font-weight:400;font-size:13px;cursor:pointer">
+                  <input type="checkbox" class="cli-tab-chk" value="ex_empregados" /> Ocultar "Ex-empregados"
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;font-weight:400;font-size:13px;cursor:pointer">
+                  <input type="checkbox" class="cli-tab-chk" value="terceirizacao" /> Ocultar "Subsidiária"
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;font-weight:400;font-size:13px;cursor:pointer">
+                  <input type="checkbox" class="cli-tab-chk" value="destaques" /> Ocultar "Destaques do Mês"
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;font-weight:400;font-size:13px;cursor:pointer">
+                  <input type="checkbox" class="cli-tab-chk" value="comparativo" /> Ocultar "Comparativo"
+                </label>
+              </div>
+              <small style="color:var(--c-muted)">Abas marcadas ficam ocultas para este cliente no dashboard do portal.</small>
+            </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-ghost" onclick="closeClientModal()">Cancelar</button>
@@ -3360,6 +3381,7 @@ async function loadPortalFromSupabase() {
       notifyEmail: r.notify_email || '',
       comparativoEnabled: r.comparativo_enabled || false,
       aliases: r.aliases || [],
+      hiddenTabs: r.hidden_tabs || [],
       code: r.code,
       createdAt: r.created_at,
       reports: apiReports.map(rep => {
@@ -3372,7 +3394,7 @@ async function loadPortalFromSupabase() {
 }
 
 function _stripClientForSb(c) {
-  return { id: c.id, name: c.name, company: c.company, email: c.email, notify_email: c.notifyEmail || null, comparativo_enabled: c.comparativoEnabled || false, aliases: c.aliases || [], code: c.code, created_at: c.createdAt || new Date().toISOString() };
+  return { id: c.id, name: c.name, company: c.company, email: c.email, notify_email: c.notifyEmail || null, comparativo_enabled: c.comparativoEnabled || false, aliases: c.aliases || [], hidden_tabs: c.hiddenTabs || [], code: c.code, created_at: c.createdAt || new Date().toISOString() };
 }
 
 async function sbSaveClients(list) {
@@ -7873,6 +7895,8 @@ async function openClientModal(clientId) {
     document.getElementById('cli-code').value          = c.code;
     window._msState['cli-aliases'] = new Set(c.aliases || []);
     _msPopulate('cli-aliases', window._msState['cli-aliases-options'] || []);
+    const hiddenTabs = new Set(c.hiddenTabs || []);
+    document.querySelectorAll('#cli-hidden-tabs .cli-tab-chk').forEach(chk => { chk.checked = hiddenTabs.has(chk.value); });
   } else {
     document.getElementById('clientModalTitle').textContent = 'Novo Cliente';
     document.getElementById('cli-id').value             = '';
@@ -7881,6 +7905,7 @@ async function openClientModal(clientId) {
     document.getElementById('cli-notify-email').value   = '';
     window._msState['cli-aliases'] = new Set();
     _msPopulate('cli-aliases', window._msState['cli-aliases-options'] || []);
+    document.querySelectorAll('#cli-hidden-tabs .cli-tab-chk').forEach(chk => { chk.checked = false; });
     genCode();
   }
   const manualInput = document.getElementById('cli-alias-manual');
@@ -7929,6 +7954,7 @@ async function saveClient() {
   const code        = document.getElementById('cli-code').value.trim();
   const id          = document.getElementById('cli-id').value;
   const aliases     = _msGetValues('cli-aliases');
+  const hiddenTabs  = Array.from(document.querySelectorAll('#cli-hidden-tabs .cli-tab-chk:checked')).map(chk => chk.value);
 
   if (!company || !email || !code) { alert('Preencha empresa, e-mail e código de acesso.'); return; }
 
@@ -7937,10 +7963,10 @@ async function saveClient() {
 
   if (id) {
     const idx = clients.findIndex(c => c.id === id);
-    if (idx >= 0) clients[idx] = { ...clients[idx], name: company, company, email, notifyEmail, comparativoEnabled, aliases, dashType, code };
+    if (idx >= 0) clients[idx] = { ...clients[idx], name: company, company, email, notifyEmail, comparativoEnabled, aliases, hiddenTabs, dashType, code };
     editedClient = clients[idx];
   } else {
-    editedClient = { id: cliUID(), name: company, company, email, notifyEmail, comparativoEnabled, aliases, dashType, code, createdAt: new Date().toISOString(), reports: [] };
+    editedClient = { id: cliUID(), name: company, company, email, notifyEmail, comparativoEnabled, aliases, hiddenTabs, dashType, code, createdAt: new Date().toISOString(), reports: [] };
     clients.push(editedClient);
   }
 
