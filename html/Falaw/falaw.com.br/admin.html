@@ -10997,7 +10997,6 @@ function _xlParseClientReportDual(wbPrimary, wbSecondary) {
         if (existing) {
           if (d.valor_risco != null) existing.valor_risco = d.valor_risco;
           if (d.valor_causa != null && existing.valor_causa == null) existing.valor_causa = d.valor_causa;
-          if (d.execucao_tipo) existing.execucao_tipo = d.execucao_tipo;
           if (!existing.data_distrib && d.data_distrib) existing.data_distrib = d.data_distrib;
           if (!existing.reclamante && d.reclamante) existing.reclamante = d.reclamante;
           if (!existing.fase && d.fase) existing.fase = d.fase;
@@ -11110,9 +11109,6 @@ function _xlParseDetailedActive(rawRows) {
       texto_andamento, texto_obs, texto_sentenca, texto_acordao,
       texto_pedidos: c(r, idx.pedidos),
     };
-    rec.execucao_tipo = /EXECU|CUMPRIMENTO/.test(_xlN(fase))
-      ? _xlDetectExecucaoTipo([texto_andamento, texto_sentenca, texto_acordao, texto_obs].join(' '))
-      : null;
     out.push(rec);
   }
   return out;
@@ -11187,13 +11183,18 @@ function _xlParseEncerradosDetalhado(rawRows) {
 }
 
 /**
- * Classifica cumprimento provisório vs. definitivo a partir do texto livre do processo
- * (andamento/sentença/acórdão/observações). Como a maioria das planilhas não tem um campo
- * estruturado para isso, procura termos jurídicos explícitos; quando não encontra nada
- * conclusivo, devolve "A confirmar" em vez de arriscar um chute.
+ * Classifica cumprimento provisório vs. definitivo. Regra principal (a mais confiável,
+ * usada pelo próprio escritório): quando o campo de pedidos aparece reduzido a apenas
+ * "Cumprimento de sentença" (sem os itens da causa detalhados), o processo está em
+ * execução provisória. Se o pedido não seguir esse padrão, cai para uma busca por termos
+ * jurídicos explícitos no texto livre (andamento/sentença/acórdão/observações); quando não
+ * encontra nada conclusivo, devolve "A confirmar" em vez de arriscar um chute.
  */
-function _xlDetectExecucaoTipo(text) {
-  const n = _xlN(text);
+function _xlDetectExecucaoTipo(pedidosText, fallbackText) {
+  const pn = _xlN(pedidosText);
+  if (pn.startsWith('CUMPRIMENTO DE SENTENCA')) return 'Provisória';
+
+  const n = _xlN(fallbackText);
   if (n.includes('EXECUCAO PROVISORIA') || n.includes('CUMPRIMENTO PROVISORIO')) return 'Provisória';
   if (n.includes('EXECUCAO DEFINITIVA') || n.includes('CUMPRIMENTO DEFINITIVO')) return 'Definitiva';
   if (n.includes('AGUARDA TRANSITO EM JULGADO') || n.includes('AGUARDANDO TRANSITO EM JULGADO') || n.includes('AGUARDA O TRANSITO EM JULGADO')) return 'Provisória';
@@ -11582,7 +11583,6 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       }
       push('visao-geral','chart_evolucao_acumulada', `Evolução Acumulada ${refAno}`, '', '', {
         type: 'line',
-        _wide: true,
         data: { labels, datasets: [
           { label: 'Recebidos (acum.)',  data: accRecArr, borderColor: '#0D2B5E', backgroundColor: 'rgba(13,43,94,0.08)',   fill: true, tension: 0.25 },
           { label: 'Encerrados (acum.)', data: accEncArr, borderColor: '#0F9E76', backgroundColor: 'rgba(15,158,118,0.08)', fill: true, tension: 0.25 },
@@ -11619,6 +11619,12 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
   // ── 7d. Exposição em execução — provisória/definitiva (tabela) ────────
   {
     const execRecs = records.filter(r => /EXECU|CUMPRIMENTO/.test(_xlN(r.fase || r.status)));
+    execRecs.forEach(r => {
+      r.execucao_tipo = _xlDetectExecucaoTipo(
+        r.objeto,
+        [r.texto_andamento, r.texto_sentenca, r.texto_acordao, r.texto_obs].filter(Boolean).join(' ')
+      );
+    });
     if (execRecs.length) {
       const ordered = [...execRecs].sort((a,b) => (b.valor_risco||0) - (a.valor_risco||0));
       const tblRows = ordered.map(r => [
@@ -11649,9 +11655,11 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       if (closuresThisYear.length && monthsElapsed > 0) {
         const avgPerMonth = closuresThisYear.length / monthsElapsed;
         const remaining = Math.max(0, 12 - monthsElapsed);
-        const projecao = Math.round(closuresThisYear.length + avgPerMonth * remaining);
-        push('visao-geral','kpi_projecao_encerramentos', `Projeção de Encerramentos até Dez/${refAno}`,
-          fmtBr(projecao), `processos (estimativa · ${closuresThisYear.length} já encerrados no ano)`);
+        const projecaoRestante = Math.round(avgPerMonth * remaining);
+        const projecaoTotal = closuresThisYear.length + projecaoRestante;
+        push('visao-geral','chart_projecao_encerramentos', `Projeção de Encerramentos até Dez/${refAno}`, '', '',
+          _xlChartDoughnut(['Já encerrados', 'Projeção restante no ano'], [closuresThisYear.length, projecaoRestante]),
+          `Projeção de Encerramentos até Dez/${refAno} — total estimado: ${fmtBr(projecaoTotal)}`);
       }
     }
   }
@@ -11682,6 +11690,8 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
         type: 'table',
         columns: ['Nº do Processo','Reclamante','Situação'],
         rows: tblRows,
+        badgeColumn: 2,
+        badgeColors: { 'Ganhamos': '#0F9E76', 'Perdemos': '#7B1A2E', 'Pendente de julgamento': '#B7791F' },
         footnote: `Ganhamos: ${ganhos} · Perdemos: ${perdas} · Pendentes de julgamento: ${pendentes}. Classificação automática a partir do texto da sentença/acórdão — recomenda-se revisão antes do envio ao cliente.`,
       }, 'Casos com Pedido de DSR — Ganhamos, Perdemos e Pendentes');
     }
