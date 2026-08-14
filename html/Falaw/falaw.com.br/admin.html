@@ -11203,26 +11203,53 @@ function _xlDetectExecucaoTipo(pedidosText, fallbackText) {
 }
 
 /**
+ * Julga o resultado de um pedido a partir de qual palavra-chave (favorável ou desfavorável
+ * à reclamada) está mais PERTO de cada menção ao termo, em vez de olhar o parágrafo inteiro —
+ * um texto de sentença costuma falar de vários pedidos ao mesmo tempo, então "condenação"
+ * duas frases depois não deve contar tanto quanto "afastar" logo ao lado do termo.
+ */
+function _xlClosestSignal(text, termRe, favRe, desfRe) {
+  const termPositions = [...text.matchAll(termRe)].map(m => m.index);
+  if (!termPositions.length) return null;
+  const minDist = re => {
+    let min = Infinity;
+    for (const m of text.matchAll(re)) {
+      for (const t of termPositions) { const d = Math.abs(m.index - t); if (d < min) min = d; }
+    }
+    return min;
+  };
+  const favDist = minDist(favRe), desfDist = minDist(desfRe);
+  const MAX = 250; // além disso, considera que a palavra não é sobre este termo
+  const favOk = favDist <= MAX, desfOk = desfDist <= MAX;
+  const MARGIN = 15; // distâncias muito parecidas = ambíguo, não força um lado
+  if (favOk && (!desfOk || favDist < desfDist - MARGIN)) return 'fav';
+  if (desfOk && (!favOk || desfDist < favDist - MARGIN)) return 'desf';
+  return 'ambiguo';
+}
+
+/**
  * Detecta se o processo envolve pedido de DSR e, se sim, tenta classificar o resultado
- * (Ganhamos / Perdemos / Pendente) a partir do texto da sentença e do acórdão — nessa
- * ordem de prioridade, já que o acórdão é a decisão mais recente. Quando o texto é
- * ambíguo ou não há decisão ainda, devolve "Pendente" em vez de arriscar um resultado.
+ * (Ganhamos / Perdemos / Pendente) a partir do texto da decisão do TST, do acórdão e da
+ * sentença — nessa ordem de prioridade, já que o TST é a decisão mais recente/final. Quando
+ * o texto é ambíguo ou não há decisão ainda, devolve "Pendente" em vez de arriscar.
  */
 function _xlDetectDSR(rec) {
-  const DSR_RE = /\bDSR\b/i;
-  const FAV_RE = /(IMPROCEDEN|REJEITAD[OA]|AFASTAD[OA]|EXCLU[IÍ][DÍ][OA]|INDEFERID[OA]|NAO PROVID[OA]|NEGADO)/;
-  const DESF_RE = /(CONDENA|MANTID[OA]|DEFERID[OA]|PROCEDENTE|ACOLHID[OA]|RECONHEC)/;
+  const DSR_RE = /\bDSR\b/gi;
+  // Favorável à reclamada = pedido de DSR negado/retirado da condenação
+  const FAV_RE = /(IMPROCEDEN|REJEITAD[OA]|AFASTAD[OA]|AFASTAR|AFASTOU|EXCLU[IÍ][DÍ][OA]|EXCLUS[AÃ]O|EXCLUIR|INDEFERID[OA]|NAO PROVID[OA]|NEGADO)/gi;
+  // Desfavorável à reclamada = pedido de DSR concedido/mantido na condenação
+  const DESF_RE = /(CONDENA|MANTID[OA]|DEFERID[OA]|PROCEDENTE|ACOLHID[OA]|RECONHEC)/gi;
 
-  const sources = [rec.texto_acordao, rec.texto_sentenca, rec.texto_andamento].filter(Boolean);
+  const sources = [rec.texto_tst, rec.texto_acordao, rec.texto_sentenca, rec.texto_andamento].filter(Boolean);
   for (const src of sources) {
-    if (!DSR_RE.test(src)) continue;
-    const n = _xlN(src);
-    const fav = FAV_RE.test(n), desf = DESF_RE.test(n);
-    if (fav && !desf) return 'Ganhamos';
-    if (desf && !fav) return 'Perdemos';
+    if (!/\bDSR\b/i.test(src)) continue;
+    const signal = _xlClosestSignal(_xlN(src), DSR_RE, FAV_RE, DESF_RE);
+    if (signal === 'fav') return 'Ganhamos';
+    if (signal === 'desf') return 'Perdemos';
     return 'Pendente'; // ambíguo — melhor marcar para revisão do que arriscar
   }
-  if (rec.texto_pedidos && DSR_RE.test(rec.texto_pedidos)) return 'Pendente';
+  const pedidos = rec.texto_pedidos || rec.objeto;
+  if (pedidos && /\bDSR\b/i.test(pedidos)) return 'Pendente';
   return null; // sem menção a DSR neste processo
 }
 
@@ -11299,6 +11326,9 @@ function _xlParseClientActive(rawRows) {
     data_sentenca:   fi('DATA DA SENTENCA','DATA DO ACORDAO','DATA DO JULGAMENTO','DATA DA DECISAO','DATA DA SENTENÇA','DATA DO ACÓRDÃO'),
     objeto:          fi('OBJETO','ASSUNTO','MATERIA','PEDIDOS'),
     valor_causa:     fi('VALOR DA CAUSA'),
+    resumo_sentenca: fi('RESUMO DA SENTENCA'),
+    resumo_acordao:  fi('RESUMO DO ACORDAO'),
+    resumo_tst:      fi('RESUMO DA DECISAO'),
   };
   // turma3g = TURMA column immediately after JULGADOR DO 3º GRAU (second TURMA column)
   idx.turma3g = idx.julgador3g >= 0 ? fiFrom(idx.julgador3g, 'TURMA','CAMARA') : -1;
@@ -11397,6 +11427,9 @@ function _xlParseClientActive(rawRows) {
       data_sentenca: parseDate(cRaw(r, idx.data_sentenca)),
       objeto:       c(r, idx.objeto),
       valor_causa:  cNum(r, idx.valor_causa),
+      texto_sentenca: c(r, idx.resumo_sentenca),
+      texto_acordao:  c(r, idx.resumo_acordao),
+      texto_tst:      c(r, idx.resumo_tst),
     };
   }).filter(Boolean);
   return parsed;
@@ -11583,6 +11616,8 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
       }
       push('visao-geral','chart_evolucao_acumulada', `Evolução Acumulada ${refAno}`, '', '', {
         type: 'line',
+        _cumulativeLabel: true,
+        subtitle: 'Valores acumulados desde janeiro — não é a quantidade do mês isolado',
         data: { labels, datasets: [
           { label: 'Recebidos (acum.)',  data: accRecArr, borderColor: '#0D2B5E', backgroundColor: 'rgba(13,43,94,0.08)',   fill: true, tension: 0.25 },
           { label: 'Encerrados (acum.)', data: accEncArr, borderColor: '#0F9E76', backgroundColor: 'rgba(15,158,118,0.08)', fill: true, tension: 0.25 },
@@ -11590,7 +11625,10 @@ function _xlBuildClientDashKpis(periodId, parsedData) {
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position: 'top', labels: { font: { family: 'IBM Plex Mono', size: 10 } } } },
-          scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true, ticks: { stepSize: 1 }, title: { display: true, text: 'Total acumulado no ano', font: { family: 'IBM Plex Mono', size: 9 } } },
+          },
         },
       }, `Evolução Acumulada ${refAno} — Recebidos vs. Encerrados`);
     }
