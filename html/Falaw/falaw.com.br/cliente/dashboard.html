@@ -1565,6 +1565,19 @@ let _dashPeriods   = [];
 let _dashActiveTab = 'visao-geral';
 let _dashPeriodId  = null;
 
+// Aplica as abas ocultas definidas pelo admin para este cliente (coluna hidden_tabs).
+// Se a aba ativa por padrão estiver oculta, cai para a primeira aba visível.
+function applyHiddenDashTabs(hiddenTabs) {
+  const hidden = new Set(hiddenTabs || []);
+  document.querySelectorAll('#dashTabBar .tab-btn').forEach(btn => {
+    btn.style.display = hidden.has(btn.dataset.tab) ? 'none' : '';
+  });
+  if (hidden.has(_dashActiveTab)) {
+    const firstVisible = DASH_TABS.find(t => !hidden.has(t));
+    if (firstVisible) _dashActiveTab = firstVisible;
+  }
+}
+
 // Chart instances per tab, keyed by tab key
 const _chartInstances = {};
 
@@ -4629,6 +4642,7 @@ async function init() {
           code: data.code,
           createdAt: data.created_at,
           comparativoEnabled: data.comparativo_enabled || false,
+          hiddenTabs: data.hidden_tabs || [],
           aliases: data.aliases || [],
           reports: apiReports.map(rep => {
             const lr = lc ? (lc.reports || []).find(l => l.id === rep.id) : null;
@@ -4681,9 +4695,8 @@ async function init() {
   document.getElementById('nav-pauta').style.display = '';
   loadPautaCliente(client.company || session.company || '', client.aliases || []);
 
-  /* Aba Comparativo: sempre visível */
-  const compBtn = document.querySelector('#dashTabBar .tab-btn[data-tab="comparativo"]');
-  if (compBtn) compBtn.style.display = '';
+  /* Abas ocultas configuradas pelo admin para este cliente */
+  applyHiddenDashTabs(client.hiddenTabs);
 
   /* Page title */
   document.getElementById('pageTitle').textContent     = 'Olá, ' + displayName.split(' ')[0];
