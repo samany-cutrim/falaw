@@ -3298,18 +3298,30 @@ function abrirModalCorrAdmin(audId) {
   setTimeout(() => overlay.querySelector('select,input')?.focus(), 50);
 }
 
+// Normaliza um nome para comparação: remove acentos, colapsa espaços, minúsculas.
+// Evita que espaço duplo/maiúscula/acento façam um correspondente já cadastrado
+// aparecer como "(não cadastrado)" no select abaixo.
+function _corrNormName(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
 // Monta as opções do <select> a partir do cadastro de correspondentes (tabela `correspondentes`).
 // Se o nome já gravado na audiência não bater com nenhum cadastro (dado legado), mantém como opção extra.
 function _corrOptionsHtml(tipo, atual) {
   const list = (window._corrCadastroList || []).filter(c => c.tipo === tipo);
+  const atualNorm = _corrNormName(atual);
+  // 1ª tentativa: igualdade exata após normalizar. 2ª tentativa: um nome contido no outro
+  // (cobre sufixos tipo "(OAB 123)" gravados junto do nome na audiência).
+  let matched = atualNorm ? list.find(c => _corrNormName(c.nome) === atualNorm) : null;
+  if (!matched && atualNorm) {
+    matched = list.find(c => { const n = _corrNormName(c.nome); return n && (atualNorm.includes(n) || n.includes(atualNorm)); });
+  }
   let html = '<option value="">— Selecione —</option>';
-  let achou = false;
   list.forEach(c => {
-    const sel = c.nome === atual;
-    if (sel) achou = true;
+    const sel = !!matched && c.id === matched.id;
     html += `<option value="${escHtml(c.nome)}" data-id="${escHtml(c.id)}" data-email="${escHtml(c.email||'')}" data-celular="${escHtml(c.celular||'')}" ${sel?'selected':''}>${escHtml(c.nome)}</option>`;
   });
-  if (atual && !achou) {
+  if (atual && !matched) {
     html += `<option value="${escHtml(atual)}" selected>${escHtml(atual)} (não cadastrado)</option>`;
   }
   return html;
