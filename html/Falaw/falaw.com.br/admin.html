@@ -10529,7 +10529,13 @@ function cliDashTabInit(clients) {
     `<option value="${escHtml(c.id)}">${escHtml(c.company)}</option>`).join('');
   sel.innerHTML = '<option value="">— Selecione um cliente —</option>' + opts;
   sel.value = _cliDashClientId || '';
-  if (_cliDashClientId) cliDashSelectClient(_cliDashClientId);
+  // preserveSubTab: este init roda tanto na abertura manual da aba quanto em
+  // recargas automáticas (live-reload a cada mudança em `clients`/`ClientReport`,
+  // ou o poll de ~25s). Nesses recarregamentos automáticos o cliente já
+  // selecionado não muda — só os dados são atualizados — então não deve
+  // arrancar o admin da sub-aba em que está (ex.: no meio de um upload de
+  // Excel) de volta para "Períodos".
+  if (_cliDashClientId) cliDashSelectClient(_cliDashClientId, { preserveSubTab: true });
 }
 
 // Botão "Enviar Relatório / Excel" no tab-cli-dash
@@ -10543,7 +10549,8 @@ function cliDashInit() {
   // sem-op: inicialização agora feita via cliDashTabInit ao abrir o tab
 }
 
-async function cliDashSelectClient(clientId) {
+async function cliDashSelectClient(clientId, opts) {
+  const preserveSubTab = !!(opts && opts.preserveSubTab) && clientId === _cliDashClientId;
   _cliDashClientId = clientId;
   const panel = document.getElementById('cli-dash-panel');
   const btn   = document.getElementById('cli-dash-new-period-btn');
@@ -10562,7 +10569,11 @@ async function cliDashSelectClient(clientId) {
   _cliDashPeriods = error ? [] : (data || []);
   cliDashRenderPeriods();
   cliDashPopulateSelects();
-  cliDashSubTab('periods');
+  // Só força a sub-aba "Períodos" numa seleção real de cliente (dropdown) ou
+  // após ações na própria aba de períodos — não numa recarga automática em
+  // segundo plano, que não deve interromper o admin no meio de outra sub-aba
+  // (ex.: "Upload Excel").
+  if (!preserveSubTab) cliDashSubTab('periods');
 }
 
 // Marca os checkboxes de "ocultar aba" conforme o cliente selecionado
