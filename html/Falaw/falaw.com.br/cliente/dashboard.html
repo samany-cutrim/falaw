@@ -1145,11 +1145,20 @@ async function downloadReportPPT(report) {
 /* ─── DASHBOARD EXPORT (Excel / PDF / PPT) ──────────────────────────────── */
 async function downloadDashboardExcel() {
   // Tenta encontrar o relatório Excel associado ao período selecionado
-  const periodId = _dashPeriodId;
-  const reports  = window._allReports || [];
-  // Procura pelo dashPeriodId correspondente, ou pega o mais recente
-  const report = reports.find(r => r.dashPeriodId === periodId || (r.stats && r.stats.dashPeriodId === periodId)) || reports[0];
-  if (!report) { alert('Nenhum arquivo Excel disponível para este período.'); return; }
+  const periodId    = _dashPeriodId;
+  const periodLabel = (_dashLastPeriodLabel || '').trim().toLowerCase();
+  const reports = window._allReports || [];
+  const norm = s => (s || '').toString().trim().toLowerCase();
+
+  // 1. Bate pelo dashPeriodId (relatórios publicados via importador de Excel)
+  let report = reports.find(r => r.dashPeriodId === periodId || (r.stats && r.stats.dashPeriodId === periodId));
+  // 2. Bate pelo rótulo do período (relatórios adicionados manualmente, ex.: "Agosto/2026")
+  if (!report && periodLabel) report = reports.find(r => norm(r.period) === periodLabel);
+
+  if (!report) {
+    alert('Nenhum arquivo Excel disponível para o período selecionado' + (_dashLastPeriodLabel ? ' (' + _dashLastPeriodLabel + ')' : '') + '.');
+    return;
+  }
   await downloadReport(report);
 }
 
