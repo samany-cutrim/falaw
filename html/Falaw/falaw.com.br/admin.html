@@ -10859,9 +10859,9 @@ async function cliDashSaveExcel() {
           };
           clients[cidxRep].reports = clients[cidxRep].reports || [];
           clients[cidxRep].reports.push(repEntry);
-          await saveClients(clients);
-          // Salvar metadados na Cockroach API para que o download funcione no dispositivo do cliente
-          await apiSaveReportMeta({
+          localStorage.setItem(CLI_KEY, JSON.stringify(clients));
+          // Salvar metadados no Supabase (ClientReport) para que o download funcione no dispositivo do cliente
+          const repMetaOk = await apiSaveReportMeta({
             id: repEntry.id,
             clientId: _cliDashClientId,
             title: repEntry.title,
@@ -10872,10 +10872,14 @@ async function cliDashSaveExcel() {
             fileSize: repEntry.fileSize,
             uploadedAt: repEntry.uploadedAt,
             stats: { dashPeriodId: periodId }
-          }).catch(e => console.warn('report-meta-api:', e));
+          }).catch(e => { console.warn('report-meta-api:', e); return false; });
+          if (!repMetaOk) showToast('⚠️ Excel processado, mas falhou salvar o relatório para download do cliente. Veja o console.');
         }
       }
-    } catch(re) { console.warn('report-register:', re); }
+    } catch(re) {
+      console.warn('report-register:', re);
+      showToast('⚠️ Falhou registrar o relatório para download do cliente: ' + (re && re.message || re));
+    }
 
     // Notificar cliente por e-mail via n8n — perguntar antes de enviar
     try {
