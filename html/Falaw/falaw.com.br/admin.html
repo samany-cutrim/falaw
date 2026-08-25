@@ -1950,6 +1950,7 @@
                   <option value="PERÍCIA">Perícia</option>
                   <option value="ENCERRAMENTO DE INSTRUÇÃO">Enc. Instrução</option>
                   <option value="SUSTENTAÇÃO ORAL">Sust. Oral</option>
+                  <option value="DILIGÊNCIA">Diligência</option>
                 </select>
               </div>
               <div class="form-field">
@@ -14874,9 +14875,9 @@ function _escHtml(str) {
 const AUD_STORE_KEY    = 'falaw_audiencias_v1';
 const PJE_SERVER       = 'http://localhost:7777';
 
-const AUD_TIPO_LABEL   = { INICIAL:'Inicial', 'INSTRUÇÃO':'Instrução', 'CONCILIAÇÃO':'Conciliação', UNA:'Una', 'PERÍCIA':'Perícia', 'ENCERRAMENTO DE INSTRUÇÃO':'Enc. Instrução' };
-const AUD_TIPO_COLOR   = { INICIAL:'#0D2B5E', 'INSTRUÇÃO':'#6D28D9', 'CONCILIAÇÃO':'#1B7A4E', UNA:'#92400e', 'PERÍCIA':'#C62828', 'ENCERRAMENTO DE INSTRUÇÃO':'#be123c' };
-const AUD_TIPO_BG      = { INICIAL:'#EEF2FF', 'INSTRUÇÃO':'#F5F3FF', 'CONCILIAÇÃO':'#E8F5EE', UNA:'#fffbeb', 'PERÍCIA':'#FFEBEE', 'ENCERRAMENTO DE INSTRUÇÃO':'#fff1f2' };
+const AUD_TIPO_LABEL   = { INICIAL:'Inicial', 'INSTRUÇÃO':'Instrução', 'CONCILIAÇÃO':'Conciliação', UNA:'Una', 'PERÍCIA':'Perícia', 'ENCERRAMENTO DE INSTRUÇÃO':'Enc. Instrução', 'DILIGÊNCIA':'Diligência' };
+const AUD_TIPO_COLOR   = { INICIAL:'#0D2B5E', 'INSTRUÇÃO':'#6D28D9', 'CONCILIAÇÃO':'#1B7A4E', UNA:'#92400e', 'PERÍCIA':'#C62828', 'ENCERRAMENTO DE INSTRUÇÃO':'#be123c', 'DILIGÊNCIA':'#DB2777' };
+const AUD_TIPO_BG      = { INICIAL:'#EEF2FF', 'INSTRUÇÃO':'#F5F3FF', 'CONCILIAÇÃO':'#E8F5EE', UNA:'#fffbeb', 'PERÍCIA':'#FFEBEE', 'ENCERRAMENTO DE INSTRUÇÃO':'#fff1f2', 'DILIGÊNCIA':'#E0F2FE' };
 const AUD_MOD_LABEL    = { VIRTUAL:'Virtual', PRESENCIAL:'Presencial', 'HÍBRIDA':'Híbrida' };
 const AUD_MOD_ICON     = { VIRTUAL:'', PRESENCIAL:'', 'HÍBRIDA':'' };
 const AUD_STATUS_LABEL = { agendada:'Agendada', realizada:'Realizada', adiada:'Adiada', cancelada:'Cancelada', cancelado_pje:'Cancelada no PJe?' };
@@ -15307,6 +15308,7 @@ function _audCard(a) {
   const isCancelada  = a.status === 'cancelada';
   const isSustOral   = a.tipo_audiencia === 'SUSTENTAÇÃO ORAL';
   const isPericia    = a.tipo_audiencia === 'PERÍCIA';
+  const isDiligencia = a.tipo_audiencia === 'DILIGÊNCIA';
   // Cliente: prioriza tag (CLIENTE) no campo reclamada
   let _clienteNome = a.cliente || '';
   if (a.reclamada && a.reclamada.includes('(CLIENTE)')) {
@@ -15314,7 +15316,7 @@ function _audCard(a) {
     if (_found) _clienteNome = _found.replace(/\s*\(CLIENTE\)/gi,'').replace(/\s*S\.?A\.?$/i,'').trim();
   }
   const respColor = AUD_RESP_COLOR[a.tipo_responsabilidade] || '#374151';
-  return `<div class="item-card" style="display:block;border-left:4px solid ${isCancelPje ? '#D97706' : tipoColor};padding:18px 20px;${isCancelPje ? 'background:#FFFBEB;opacity:.85;' : isCancelada ? 'background:#FFF5F5;' : isSustOral ? 'background:#fff7ed;border-color:#fed7aa;' : isPericia ? 'background:#FFF5F5;border-color:#fecaca;' : isHoje ? 'background:#fffef0;' : ''}" data-aud-id="${_escHtml(a.id)}">
+  return `<div class="item-card" style="display:block;border-left:4px solid ${isCancelPje ? '#D97706' : tipoColor};padding:18px 20px;${isCancelPje ? 'background:#FFFBEB;opacity:.85;' : isCancelada ? 'background:#FFF5F5;' : isSustOral ? 'background:#fff7ed;border-color:#fed7aa;' : isPericia ? 'background:#FFF5F5;border-color:#fecaca;' : isDiligencia ? 'background:#E0F2FE;border-color:#7DD3FC;' : isHoje ? 'background:#fffef0;' : ''}" data-aud-id="${_escHtml(a.id)}">
     ${isCancelPje ? `<div style="background:#FEF3C7;border:1px solid #FCD34D;border-left:3px solid #D97706;border-radius:2px;padding:8px 12px;margin-bottom:12px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#92400E"><strong>Audiência não encontrada no PJe</strong> — Pode ter sido cancelada. Confirme abaixo ou ignore se for engano do scraper.</div>` : ''}
     ${(!a.horario || !a.vara) && !isCancelada && !isCancelPje && (a.data_audiencia || '') >= new Date().toISOString().slice(0,10) ? `<div style="background:#FFF1F2;border:1px solid #FECDD3;border-left:3px solid #E11D48;border-radius:2px;padding:8px 12px;margin-bottom:12px;font-family:var(--f-mono);font-size:10px;letter-spacing:.04em;color:#9F1239;display:flex;align-items:center;gap:8px"><strong>⚠ Dados incompletos</strong>${!a.horario ? ' · horário não encontrado' : ''}${!a.vara ? ' · vara não encontrada' : ''} — preencha para não perder a audiência</div>` : ''}
     <!-- linha topo -->
