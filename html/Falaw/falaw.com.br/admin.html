@@ -10,6 +10,7 @@
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="./sb-config.js"></script>
@@ -1486,14 +1487,21 @@
         <h2>Financeiro — Correspondentes</h2>
       </div>
 
+      <!-- Atalhos de período: ao abrir a aba, sempre volta pro Mês Atual (calculado
+           na hora — vira o mês, o padrão já muda sozinho) — ver _finSetPeriodo(). -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <button type="button" id="fin-btn-mes-anterior" class="btn btn-ghost btn-sm" onclick="_finSetPeriodo('anterior')">Mês Anterior</button>
+        <button type="button" id="fin-btn-mes-atual" class="btn btn-ghost btn-sm" onclick="_finSetPeriodo('atual')">Mês Atual</button>
+      </div>
+
       <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:20px">
         <div class="form-field" style="margin-bottom:0">
           <label>De</label>
-          <input id="fin-de" type="date" onchange="loadFinanceiro()" />
+          <input id="fin-de" type="date" onchange="_finPeriodoCustom()" />
         </div>
         <div class="form-field" style="margin-bottom:0">
           <label>Até</label>
-          <input id="fin-ate" type="date" onchange="loadFinanceiro()" />
+          <input id="fin-ate" type="date" onchange="_finPeriodoCustom()" />
         </div>
         <div class="form-field" style="margin-bottom:0;min-width:220px">
           <label>Cliente</label>
@@ -1502,6 +1510,9 @@
           </select>
         </div>
         <button type="button" class="btn btn-ghost" onclick="_finLimparFiltros()">Limpar filtros</button>
+        <span style="flex:1"></span>
+        <button type="button" class="btn btn-ghost" onclick="_finExportExcel()">⬇ Excel</button>
+        <button type="button" class="btn btn-ghost" onclick="_finExportPDF()">⬇ PDF</button>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px">
@@ -4885,7 +4896,7 @@ function switchTab(name) {
   if (name === 'equipe')        { loadTeamFromGitHub().then(renderEquipe); }
   if (name === 'clientes')         { loadPortalFromSupabase().then(renderClients); }
   if (name === 'correspondentes')  { loadCorrespondentes(); }
-  if (name === 'financeiro')       { loadFinanceiro(); }
+  if (name === 'financeiro')       { _finSetPeriodo('atual'); }
   if (name === 'newsletter')    { clearBadge('newsletter'); loadNewsletterFromSupabase().then(renderNewsletter); }
   if (name === 'contato')       { clearBadge('contato'); loadContatoFromSupabase().then(renderContato); }
   if (name === 'curriculos')    { clearBadge('curriculos'); loadCurriculosFromSupabase().then(renderCurriculos); }
@@ -16209,11 +16220,52 @@ function _finFmtDate(dateStr) {
   return `${dateStr.slice(8,10)}/${dateStr.slice(5,7)}/${dateStr.slice(0,4)}`;
 }
 
-function _finLimparFiltros() {
-  document.getElementById('fin-de').value = '';
-  document.getElementById('fin-ate').value = '';
-  document.getElementById('fin-cliente-filtro').value = '';
+// Guarda o conjunto atualmente filtrado (pra exportar exatamente o que está
+// na tela) e qual atalho de período está ativo (pra destacar o botão certo).
+let _finLastRows = [];
+let _finPeriodoAtivo = null;
+
+function _finPad2(n) { return String(n).padStart(2, '0'); }
+
+// Define De/Até como o mês inteiro (atual ou anterior), calculado na hora —
+// por isso, ao virar o mês, reabrir a aba já mostra o novo mês atual sozinho.
+function _finSetPeriodo(qual) {
+  const hoje = new Date();
+  let ano = hoje.getFullYear(), mes = hoje.getMonth(); // mes: 0-based
+  if (qual === 'anterior') { mes -= 1; if (mes < 0) { mes = 11; ano -= 1; } }
+  const primeiroDia = `${ano}-${_finPad2(mes + 1)}-01`;
+  const ultimoDiaNum = new Date(ano, mes + 1, 0).getDate();
+  const ultimoDia = `${ano}-${_finPad2(mes + 1)}-${_finPad2(ultimoDiaNum)}`;
+  document.getElementById('fin-de').value  = primeiroDia;
+  document.getElementById('fin-ate').value = ultimoDia;
+  _finPeriodoAtivo = qual;
+  _finAtualizarBotoesPeriodo();
   loadFinanceiro();
+}
+
+// Editou De/Até manualmente: deixa de ser "Mês Atual"/"Mês Anterior" e passa
+// a ser um período livre (nenhum atalho fica destacado).
+function _finPeriodoCustom() {
+  _finPeriodoAtivo = null;
+  _finAtualizarBotoesPeriodo();
+  loadFinanceiro();
+}
+
+function _finAtualizarBotoesPeriodo() {
+  const btnAnterior = document.getElementById('fin-btn-mes-anterior');
+  const btnAtual    = document.getElementById('fin-btn-mes-atual');
+  [[btnAnterior, 'anterior'], [btnAtual, 'atual']].forEach(([btn, qual]) => {
+    if (!btn) return;
+    const ativo = _finPeriodoAtivo === qual;
+    btn.style.background  = ativo ? '#0D2B5E' : '';
+    btn.style.color       = ativo ? '#fff'    : '';
+    btn.style.borderColor = ativo ? '#0D2B5E' : '';
+  });
+}
+
+function _finLimparFiltros() {
+  document.getElementById('fin-cliente-filtro').value = '';
+  _finSetPeriodo('atual');
 }
 
 async function loadFinanceiro() {
@@ -16251,6 +16303,7 @@ async function loadFinanceiro() {
     return true;
   });
 
+  _finLastRows = filtered;
   _finRender(filtered);
 }
 
@@ -16270,7 +16323,10 @@ function _finRankHtml(map, emptyMsg) {
     </div>`).join('')}</div>`;
 }
 
-function _finRender(rows) {
+// Agrega o total pago, o gasto por cliente e por correspondente — usado tanto
+// pra renderizar a tela quanto pras exportações (Excel/PDF), sempre em cima
+// do mesmo conjunto já filtrado (_finLastRows).
+function _finAggregate(rows) {
   let totalAdv = 0, totalPrep = 0;
   const porCliente = new Map();
   const porCorr = new Map();
@@ -16293,6 +16349,12 @@ function _finRender(rows) {
       porCorr.set(k, (porCorr.get(k) || 0) + prep);
     }
   });
+
+  return { totalAdv, totalPrep, porCliente, porCorr };
+}
+
+function _finRender(rows) {
+  const { totalAdv, totalPrep, porCliente, porCorr } = _finAggregate(rows);
 
   document.getElementById('fin-stat-total').textContent = _finFmtMoney(totalAdv + totalPrep);
   document.getElementById('fin-stat-adv').textContent   = _finFmtMoney(totalAdv);
@@ -16341,6 +16403,131 @@ function _finRender(rows) {
       <td style="padding:10px 14px;text-align:right;font-family:var(--f-mono);font-weight:800">${_finFmtMoney(totalAdv + totalPrep)}</td>
     </tr></tfoot>
     </table></div>`;
+}
+
+// Descrição textual do período atualmente filtrado (usada no PDF e nos nomes dos arquivos).
+function _finPeriodoLabel() {
+  const de  = document.getElementById('fin-de').value;
+  const ate = document.getElementById('fin-ate').value;
+  if (!de && !ate) return 'Todos os períodos';
+  return `${de ? _finFmtDate(de) : '—'} a ${ate ? _finFmtDate(ate) : '—'}`;
+}
+function _finPeriodoSlug() {
+  const de  = document.getElementById('fin-de').value || 'inicio';
+  const ate = document.getElementById('fin-ate').value || 'fim';
+  return `${de}_a_${ate}`;
+}
+
+function _finExportExcel() {
+  if (typeof XLSX === 'undefined') { showToast('SheetJS não carregado.'); return; }
+  if (!_finLastRows.length) { showToast('Nenhum dado para exportar neste período/filtro.'); return; }
+
+  const ordered = _finLastRows.slice().sort((a,b) => (b.data_audiencia||'').localeCompare(a.data_audiencia||''));
+  const detalhe = ordered.map(r => ({
+    'Data':                  _finFmtDate(r.data_audiencia),
+    'Processo':              r.processo || '',
+    'Cliente':                r.cliente || '',
+    'Advogado':              r.advogado || '',
+    'Valor Advogado (R$)':   r.valor_advogado  != null ? Number(r.valor_advogado)  : '',
+    'Preposto':              r.dados_preposto || '',
+    'Valor Preposto (R$)':   r.valor_preposto  != null ? Number(r.valor_preposto)  : '',
+    'Total (R$)':            (r.valor_advogado != null ? Number(r.valor_advogado) : 0) + (r.valor_preposto != null ? Number(r.valor_preposto) : 0),
+  }));
+
+  const { porCliente, porCorr } = _finAggregate(_finLastRows);
+  const clienteRows = [...porCliente.entries()].sort((a,b) => b[1] - a[1]).map(([nome, val]) => ({ 'Cliente': nome, 'Total (R$)': val }));
+  const corrRows    = [...porCorr.entries()].sort((a,b) => b[1] - a[1]).map(([nome, val]) => ({ 'Correspondente': nome, 'Total (R$)': val }));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalhe),    'Audiências');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clienteRows), 'Por Cliente');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(corrRows),    'Por Correspondente');
+  XLSX.writeFile(wb, `financeiro-correspondentes_${_finPeriodoSlug()}.xlsx`);
+}
+
+function _finExportPDF() {
+  if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
+    showToast('Biblioteca de PDF ainda carregando. Tente novamente em instantes.');
+    return;
+  }
+  if (!_finLastRows.length) { showToast('Nenhum dado para exportar neste período/filtro.'); return; }
+
+  const { jsPDF } = window.jspdf || window;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const { totalAdv, totalPrep } = _finAggregate(_finLastRows);
+  let y = 34;
+
+  const drawHeader = () => {
+    doc.setFillColor(13, 43, 94);
+    doc.rect(0, 0, W, 26, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.text('Falaw Advogados', 14, 11);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text('Financeiro — Correspondentes', 14, 18);
+  };
+  drawHeader();
+
+  doc.setTextColor(26, 10, 13);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('Período: ' + _finPeriodoLabel(), 14, y); y += 6;
+  const clienteSel = document.getElementById('fin-cliente-filtro').value;
+  doc.setFont('helvetica', 'normal');
+  doc.text('Cliente: ' + (clienteSel || 'Todos'), 14, y); y += 8;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text(`Total pago: ${_finFmtMoney(totalAdv + totalPrep)}   ·   Advogados: ${_finFmtMoney(totalAdv)}   ·   Prepostos: ${_finFmtMoney(totalPrep)}   ·   Audiências: ${_finLastRows.length}`, 14, y);
+  y += 10;
+
+  const cols = [
+    { label: 'Data',      w: 20 },
+    { label: 'Processo',  w: 34 },
+    { label: 'Cliente',   w: 28 },
+    { label: 'Advogado',  w: 30 },
+    { label: 'Vlr Adv.',  w: 20 },
+    { label: 'Preposto',  w: 30 },
+    { label: 'Vlr Prep.', w: 20 },
+  ];
+  const drawTableHeader = () => {
+    doc.setFillColor(240, 240, 240);
+    doc.rect(14, y - 4, W - 28, 6, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(60, 60, 60);
+    let x = 14;
+    cols.forEach(c => { doc.text(c.label, x + 1, y); x += c.w; });
+    y += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(26, 10, 13);
+  };
+  drawTableHeader();
+
+  const ordered = _finLastRows.slice().sort((a,b) => (b.data_audiencia||'').localeCompare(a.data_audiencia||''));
+  ordered.forEach(r => {
+    if (y > H - 16) { doc.addPage(); y = 18; drawTableHeader(); }
+    const adv  = r.valor_advogado != null ? _finFmtMoney(r.valor_advogado) : '—';
+    const prep = r.valor_preposto != null ? _finFmtMoney(r.valor_preposto) : '—';
+    const cells = [_finFmtDate(r.data_audiencia), r.processo || '—', r.cliente || '—', r.advogado || '—', adv, r.dados_preposto || '—', prep];
+    let x = 14;
+    cells.forEach((val, i) => {
+      const w = cols[i].w;
+      const linha = doc.splitTextToSize(String(val), w - 2)[0] || '';
+      doc.text(linha, x + 1, y);
+      x += w;
+    });
+    y += 5.5;
+  });
+
+  doc.setFontSize(7);
+  doc.setTextColor(160, 160, 160);
+  doc.text('Gerado por Falaw Advogados — falaw.com.br', 14, H - 8);
+  doc.save(`financeiro-correspondentes_${_finPeriodoSlug()}.pdf`);
 }
 
 /* ─── IMPORT EXCEL ─────────────────────────────────────────── */
