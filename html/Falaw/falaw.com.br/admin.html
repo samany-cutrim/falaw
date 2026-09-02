@@ -16445,13 +16445,36 @@ function _finExportExcel() {
   XLSX.writeFile(wb, `financeiro-correspondentes_${_finPeriodoSlug()}.xlsx`);
 }
 
-function _finExportPDF() {
+// Logo em base64 pro cabeçalho do PDF — buscado uma vez (mesma origem do
+// site, sem problema de CORS) e cacheado; se falhar, o cabeçalho cai pra
+// título em texto (ver drawHeader em _finExportPDF).
+const _FIN_LOGO_URL = '../../../assets/images/Falaw/falaw.com.br/wp-content/uploads/2024/06/logo-falaw.png';
+const _FIN_LOGO_ASPECT = 1330 / 709; // largura/altura do PNG original
+let _finLogoDataUrl;
+async function _finGetLogoDataUrl() {
+  if (_finLogoDataUrl !== undefined) return _finLogoDataUrl;
+  try {
+    const res = await fetch(_FIN_LOGO_URL);
+    if (!res.ok) throw new Error('logo não encontrada');
+    const blob = await res.blob();
+    _finLogoDataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch(e) { _finLogoDataUrl = null; }
+  return _finLogoDataUrl;
+}
+
+async function _finExportPDF() {
   if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
     showToast('Biblioteca de PDF ainda carregando. Tente novamente em instantes.');
     return;
   }
   if (!_finLastRows.length) { showToast('Nenhum dado para exportar neste período/filtro.'); return; }
 
+  const logoDataUrl = await _finGetLogoDataUrl();
   const { jsPDF } = window.jspdf || window;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const W = doc.internal.pageSize.getWidth();
@@ -16463,12 +16486,20 @@ function _finExportPDF() {
     doc.setFillColor(13, 43, 94);
     doc.rect(0, 0, W, 26, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(15);
-    doc.text('Falaw Advogados', 14, 11);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text('Financeiro — Correspondentes', 14, 18);
+    if (logoDataUrl) {
+      const logoH = 18, logoW = logoH * _FIN_LOGO_ASPECT;
+      doc.addImage(logoDataUrl, 'PNG', 14, 4, logoW, logoH);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('Financeiro — Correspondentes', 14 + logoW + 6, 16);
+    } else {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(15);
+      doc.text('Falaw Advogados', 14, 11);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text('Financeiro — Correspondentes', 14, 18);
+    }
   };
   drawHeader();
 
