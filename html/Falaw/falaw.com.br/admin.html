@@ -957,6 +957,7 @@
           <div class="admin-dropdown-item" id="ditem-equipe"         onclick="switchTab('equipe')"><span>Equipe</span></div>
           <div class="admin-dropdown-item" id="ditem-clientes"       onclick="switchTab('clientes')"><span>Clientes</span></div>
           <div class="admin-dropdown-item" id="ditem-correspondentes" onclick="switchTab('correspondentes')"><span>Correspondentes</span></div>
+          <div class="admin-dropdown-item" id="ditem-financeiro" onclick="switchTab('financeiro')"><span>Financeiro</span></div>
         </div>
       </div>
       <!-- Grupo Dashboards -->
@@ -1477,6 +1478,52 @@
         </div>
       </div>
 
+    </section>
+
+    <!-- ── FINANCEIRO — CORRESPONDENTES ── -->
+    <section id="tab-financeiro" class="admin-section">
+      <div class="section-header">
+        <h2>Financeiro — Correspondentes</h2>
+      </div>
+
+      <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+        <div class="form-field" style="margin-bottom:0">
+          <label>De</label>
+          <input id="fin-de" type="date" onchange="loadFinanceiro()" />
+        </div>
+        <div class="form-field" style="margin-bottom:0">
+          <label>Até</label>
+          <input id="fin-ate" type="date" onchange="loadFinanceiro()" />
+        </div>
+        <div class="form-field" style="margin-bottom:0;min-width:220px">
+          <label>Cliente</label>
+          <select id="fin-cliente-filtro" onchange="loadFinanceiro()" style="width:100%;border:1px solid var(--c-divider);border-radius:2px;padding:10px 14px;font-family:var(--f-body);font-size:14px;color:var(--c-dark);background:#fafaf8;outline:none">
+            <option value="">Todos os clientes</option>
+          </select>
+        </div>
+        <button type="button" class="btn btn-ghost" onclick="_finLimparFiltros()">Limpar filtros</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px">
+        <div class="stats-card"><div class="stats-label">Total Pago</div><div class="stats-val" id="fin-stat-total">R$ 0,00</div></div>
+        <div class="stats-card"><div class="stats-label">Advogados</div><div class="stats-val" id="fin-stat-adv">R$ 0,00</div></div>
+        <div class="stats-card"><div class="stats-label">Prepostos</div><div class="stats-val" id="fin-stat-prep">R$ 0,00</div></div>
+        <div class="stats-card"><div class="stats-label">Audiências c/ Valor</div><div class="stats-val" id="fin-stat-count">0</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px">
+        <div>
+          <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);margin-bottom:8px">Gasto por Cliente</div>
+          <div id="fin-por-cliente"></div>
+        </div>
+        <div>
+          <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);margin-bottom:8px">Gasto por Correspondente</div>
+          <div id="fin-por-correspondente"></div>
+        </div>
+      </div>
+
+      <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);margin-bottom:8px">Audiências com valor lançado</div>
+      <div id="fin-lista"></div>
     </section>
 
     <!-- ── DASHBOARD CLIENTES ── -->
@@ -2042,6 +2089,19 @@
                     <option value="preposto">Só Preposto</option>
                     <option value="ambos">Advogado e Preposto</option>
                   </select>
+                </div>
+                <!-- Valores pagos ao correspondente: só o superadmin vê/edita este bloco
+                     (às vezes a própria Falaw faz a contratação direta). A controladoria/
+                     audiências (papel restrito) não tem acesso — ver _isRestritoRole(). -->
+                <div id="aud-valor-fields" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+                  <div class="form-field" style="margin-bottom:0">
+                    <label>Valor Advogado (R$)</label>
+                    <input id="aud-valor-advogado" type="number" min="0" step="0.01" placeholder="0,00" />
+                  </div>
+                  <div class="form-field" style="margin-bottom:0">
+                    <label>Valor Preposto (R$)</label>
+                    <input id="aud-valor-preposto" type="number" min="0" step="0.01" placeholder="0,00" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -3859,9 +3919,16 @@ function applyRoleRestrictions() {
   if (groupConteudo)   groupConteudo.style.display   = 'none';
   if (groupDashboards) groupDashboards.style.display = 'none';
 
-  // No grupo Gestão, ocultar item Equipe
+  // No grupo Gestão, ocultar itens Equipe e Financeiro (valores de correspondentes
+  // são de uso exclusivo do superadmin — ver _audCard/_isRestritoRole)
   const itemEquipe = document.getElementById('ditem-equipe');
   if (itemEquipe) itemEquipe.style.display = 'none';
+  const itemFinanceiro = document.getElementById('ditem-financeiro');
+  if (itemFinanceiro) itemFinanceiro.style.display = 'none';
+
+  // Campos de valor do correspondente no modal de audiência: só superadmin
+  const campoValores = document.getElementById('aud-valor-fields');
+  if (campoValores) campoValores.style.display = 'none';
 
   // Ocultar botão Configurações
   const btnConfig = document.getElementById('tab-btn-config');
@@ -3875,6 +3942,13 @@ function applyRoleRestrictions() {
   const groupGestao = document.getElementById('group-gestao');
   if (groupGestao) groupGestao.classList.add('open');
   switchTab('audiencias');
+}
+
+// Papel restrito (controladoria/audiências): não vê nem edita os valores pagos
+// aos correspondentes — isso é exclusivo do superadmin (aba Financeiro e
+// campos de valor no modal de audiência).
+function _isRestritoRole() {
+  return (sessionStorage.getItem('fa_admin_role') || 'superadmin') === 'restrito';
 }
 
 function toggleDarkMode() {
@@ -3904,6 +3978,12 @@ function doLogout() {
   localStorage.removeItem('fa_admin_persist_supabase');
   // Restaura visibilidade de todos os itens de nav
   document.querySelectorAll('.admin-tab-group, .admin-tab, .admin-dropdown-item').forEach(el => { el.style.display = ''; });
+  // Restaura o bloco de valores do correspondente no modal de audiência (fica
+  // escondido pelo applyRoleRestrictions quando o papel é restrito — sem isso,
+  // um superadmin que logasse na mesma aba logo após um usuário restrito
+  // continuaria sem ver os campos de valor)
+  const campoValores = document.getElementById('aud-valor-fields');
+  if (campoValores) campoValores.style.display = '';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('admin-shell').style.display = 'none';
   document.getElementById('login-pwd').value = '';
@@ -4050,7 +4130,7 @@ function getSbCreds() {
 }
 
 const CONTEUDO_TABS   = ['blog','newsletter','contato','curriculos','comentarios','informativos','calendario','redes-sociais'];
-const GESTAO_TABS     = ['equipe','clientes','correspondentes'];
+const GESTAO_TABS     = ['equipe','clientes','correspondentes','financeiro'];
 const DASH_TABS       = ['ifood','cli-dash'];
 const PESQUISAS_TABS  = ['pesquisas-lista','pesquisas-dash'];
 const STANDALONE_TABS = ['config','audiencias'];
@@ -4568,9 +4648,9 @@ function _atualizarBadgeSugestoes() {
 ══════════════════════════════════════ */
 window._liveCurrentTab = 'blog';
 const LIVE_TABLE_TABS = {
-  pauta_audiencias: ['audiencias'],
+  pauta_audiencias: ['audiencias', 'financeiro'],
   mencoes:          ['audiencias'],
-  correspondentes:  ['audiencias', 'correspondentes'],
+  correspondentes:  ['audiencias', 'correspondentes', 'financeiro'],
   equipe:           ['audiencias'],
   clients:          ['clientes', 'cli-dash'],
   ClientReport:     ['cli-dash'],
@@ -4583,6 +4663,7 @@ const LIVE_TABLE_TABS = {
 const LIVE_TAB_RELOADERS = {
   audiencias:        () => loadAudiencias(true),
   correspondentes:   () => loadCorrespondentes(),
+  financeiro:        () => loadFinanceiro(),
   clientes:          () => loadPortalFromSupabase().then(renderClients),
   'cli-dash':        () => loadPortalFromSupabase().then(cliDashTabInit),
   newsletter:        () => loadNewsletterFromSupabase().then(renderNewsletter),
@@ -4800,6 +4881,7 @@ function switchTab(name) {
   if (name === 'equipe')        { loadTeamFromGitHub().then(renderEquipe); }
   if (name === 'clientes')         { loadPortalFromSupabase().then(renderClients); }
   if (name === 'correspondentes')  { loadCorrespondentes(); }
+  if (name === 'financeiro')       { loadFinanceiro(); }
   if (name === 'newsletter')    { clearBadge('newsletter'); loadNewsletterFromSupabase().then(renderNewsletter); }
   if (name === 'contato')       { clearBadge('contato'); loadContatoFromSupabase().then(renderContato); }
   if (name === 'curriculos')    { clearBadge('curriculos'); loadCurriculosFromSupabase().then(renderCurriculos); }
@@ -15358,8 +15440,8 @@ function _audCard(a) {
           ${advCad&&advCad.observacoes ? `<div><span style="font-family:var(--f-mono);font-size:8px;text-transform:uppercase;letter-spacing:.07em">Obs. Advogado</span><br/>${_escHtml(advCad.observacoes)}</div>` : ''}
           ${prepCad&&prepCad.observacoes ? `<div style="margin-top:${(advCad&&advCad.observacoes)?'4px':'0'}"><span style="font-family:var(--f-mono);font-size:8px;text-transform:uppercase;letter-spacing:.07em">Obs. Preposto</span><br/>${_escHtml(prepCad.observacoes)}</div>` : ''}
         </div>` : ''}
-        <!-- valores correspondentes -->
-        ${(a.valor_advogado != null || a.valor_preposto != null) ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+        <!-- valores correspondentes (somente superadmin — controladoria/audiências não vê valores pagos) -->
+        ${(!_isRestritoRole() && (a.valor_advogado != null || a.valor_preposto != null)) ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
           ${a.valor_advogado != null ? `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:2px 6px 2px 9px;font-size:10px;color:#1B7A4E;font-weight:700;font-family:var(--f-mono)">💰 Adv: R$ ${Number(a.valor_advogado).toLocaleString('pt-BR',{minimumFractionDigits:2})}<button type="button" onclick="_audLimparValor('${_escHtml(a.id)}','advogado')" title="Excluir valor do advogado" style="background:none;border:none;padding:0;margin:0;cursor:pointer;color:#1B7A4E;font-weight:900;font-size:11px;line-height:1">×</button></span>` : ''}
           ${a.valor_preposto != null ? `<span style="display:inline-flex;align-items:center;gap:5px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:2px 6px 2px 9px;font-size:10px;color:#0D2B5E;font-weight:700;font-family:var(--f-mono)">💰 Pre: R$ ${Number(a.valor_preposto).toLocaleString('pt-BR',{minimumFractionDigits:2})}<button type="button" onclick="_audLimparValor('${_escHtml(a.id)}','preposto')" title="Excluir valor do preposto" style="background:none;border:none;padding:0;margin:0;cursor:pointer;color:#0D2B5E;font-weight:900;font-size:11px;line-height:1">×</button></span>` : ''}
         </div>` : ''}
@@ -15876,7 +15958,7 @@ function audLimparFiltros() {
 
 /* ── modal open/close ── */
 function openAudienciaModal() {
-  const fields = ['aud-id','aud-data','aud-horario','aud-tipo','aud-modalidade','aud-processo','aud-vara','aud-link','aud-idsena','aud-reclamante','aud-reclamada','aud-cliente','aud-tipo-resp','aud-responsavel','aud-advogado','aud-preposto-obs','aud-dados-preposto','aud-comentarios','aud-testemunhas'];
+  const fields = ['aud-id','aud-data','aud-horario','aud-tipo','aud-modalidade','aud-processo','aud-vara','aud-link','aud-idsena','aud-reclamante','aud-reclamada','aud-cliente','aud-tipo-resp','aud-responsavel','aud-advogado','aud-preposto-obs','aud-dados-preposto','aud-comentarios','aud-testemunhas','aud-valor-advogado','aud-valor-preposto'];
   fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('aud-status').value = 'agendada';
   document.getElementById('aud-testemunha-check').checked = false;
@@ -15940,6 +16022,8 @@ async function editAudiencia(id) {
   document.getElementById('aud-corr-check').checked = corrOn;
   audToggleCorr(corrOn);
   document.getElementById('aud-corr-tipo').value = a.corr_tipo_envio || 'advogado';
+  document.getElementById('aud-valor-advogado').value = a.valor_advogado != null ? a.valor_advogado : '';
+  document.getElementById('aud-valor-preposto').value = a.valor_preposto != null ? a.valor_preposto : '';
   document.getElementById('aud-modal-del').style.display = '';
   document.getElementById('audienciaModalTitle').textContent = 'Editar Audiência';
   document.getElementById('audienciaModal').style.display = 'flex';
@@ -15986,6 +16070,13 @@ async function saveAudiencia() {
     updated_at:            new Date().toISOString(),
   };
 
+  // Valores pagos ao correspondente: campo só visível/editável pelo superadmin
+  // (papel restrito não vê nem mexe — ver aud-valor-fields/_isRestritoRole).
+  const _valorAdvInput  = parseFloat(document.getElementById('aud-valor-advogado').value);
+  const _valorPrepInput = parseFloat(document.getElementById('aud-valor-preposto').value);
+  row.valor_advogado = isNaN(_valorAdvInput)  ? null : _valorAdvInput;
+  row.valor_preposto = isNaN(_valorPrepInput) ? null : _valorPrepInput;
+
   // Se deixou de enviar para correspondente, ou trocou quem vai atender, os valores
   // atribuídos anteriormente perdem o sentido — limpa para não ficar informação órfã.
   const _orig = window._audEditingOriginal;
@@ -15993,10 +16084,14 @@ async function saveAudiencia() {
     if (!row.corr_tipo_envio) {
       row.valor_advogado = null;
       row.valor_preposto = null;
-    } else {
-      if ((_orig.advogado || '') !== row.advogado && _orig.valor_advogado != null) row.valor_advogado = null;
-      if ((_orig.dados_preposto || '') !== row.dados_preposto && _orig.valor_preposto != null) row.valor_preposto = null;
+    } else if (_isRestritoRole()) {
+      // Papel restrito não enxerga o campo de valor (fica com o que já estava
+      // salvo, preservado no input escondido) — só limpa se trocou quem atende,
+      // pra não deixar valor de outra pessoa órfão sem ninguém poder ver/corrigir.
+      row.valor_advogado = (_orig.advogado || '') !== row.advogado ? null : (_orig.valor_advogado ?? null);
+      row.valor_preposto = (_orig.dados_preposto || '') !== row.dados_preposto ? null : (_orig.valor_preposto ?? null);
     }
+    // superadmin: usa exatamente o que foi digitado nos campos de valor acima
   }
   const { sbUrl, sbKey } = getSbCreds();
   if (sbUrl && sbKey) {
@@ -16100,6 +16195,155 @@ async function _audLimparValor(id, tipo) {
   } catch(e) { showToast('Erro: ' + e.message); }
 }
 
+/* ══════════════════════════════════════
+   FINANCEIRO — GASTOS COM CORRESPONDENTES
+   Consolida os valor_advogado/valor_preposto lançados na Pauta de Audiências:
+   quanto foi pago por cliente e por correspondente (advogado/preposto).
+   Aba exclusiva do superadmin — controladoria/audiências não vê valores
+   (ver applyRoleRestrictions/_isRestritoRole).
+══════════════════════════════════════ */
+function _finFmtMoney(n) {
+  return 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+function _finFmtDate(dateStr) {
+  if (!dateStr) return '—';
+  return `${dateStr.slice(8,10)}/${dateStr.slice(5,7)}/${dateStr.slice(0,4)}`;
+}
+
+function _finLimparFiltros() {
+  document.getElementById('fin-de').value = '';
+  document.getElementById('fin-ate').value = '';
+  document.getElementById('fin-cliente-filtro').value = '';
+  loadFinanceiro();
+}
+
+async function loadFinanceiro() {
+  const { sbUrl, sbKey } = getSbCreds();
+  let rows = [];
+  if (sbUrl && sbKey) {
+    try {
+      const sb = supabase.createClient(sbUrl, sbKey);
+      const { data, error } = await sb.from('pauta_audiencias')
+        .select('id,data_audiencia,processo,cliente,advogado,dados_preposto,valor_advogado,valor_preposto')
+        .or('valor_advogado.not.is.null,valor_preposto.not.is.null')
+        .order('data_audiencia', { ascending: false });
+      if (error) throw error;
+      rows = data || [];
+    } catch(e) { showToast('Erro ao carregar financeiro: ' + e.message); }
+  } else {
+    const local = JSON.parse(localStorage.getItem(AUD_STORE_KEY) || '[]');
+    rows = local.filter(a => a.valor_advogado != null || a.valor_preposto != null);
+  }
+
+  // Popula o filtro de clientes a partir do universo completo (antes de aplicar o filtro de cliente)
+  const selEl = document.getElementById('fin-cliente-filtro');
+  const prevVal = selEl.value;
+  const clientes = [...new Set(rows.map(r => (r.cliente || '').trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+  selEl.innerHTML = '<option value="">Todos os clientes</option>' + clientes.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+  selEl.value = prevVal;
+
+  const de  = document.getElementById('fin-de').value;
+  const ate = document.getElementById('fin-ate').value;
+  const clienteSel = selEl.value;
+  const filtered = rows.filter(r => {
+    if (de  && (r.data_audiencia || '') < de)  return false;
+    if (ate && (r.data_audiencia || '') > ate) return false;
+    if (clienteSel && (r.cliente || '').trim() !== clienteSel) return false;
+    return true;
+  });
+
+  _finRender(filtered);
+}
+
+function _finRankHtml(map, emptyMsg) {
+  const entries = [...map.entries()].sort((a,b) => b[1] - a[1]);
+  if (!entries.length) return `<div class="empty-state" style="padding:20px"><p>${emptyMsg}</p></div>`;
+  const max = entries[0][1] || 1;
+  return `<div style="display:flex;flex-direction:column;gap:8px">${entries.map(([nome, val]) => `
+    <div style="background:var(--c-surface);border:1px solid var(--c-divider);border-radius:4px;padding:10px 14px">
+      <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-bottom:6px">
+        <span style="font-weight:600">${escHtml(nome)}</span>
+        <span style="font-family:var(--f-mono);font-weight:700;color:#1B7A4E">${_finFmtMoney(val)}</span>
+      </div>
+      <div style="background:#f3f4f6;border-radius:3px;height:6px;overflow:hidden">
+        <div style="background:#0D2B5E;height:100%;width:${Math.max(4, (val / max) * 100)}%"></div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function _finRender(rows) {
+  let totalAdv = 0, totalPrep = 0;
+  const porCliente = new Map();
+  const porCorr = new Map();
+
+  rows.forEach(r => {
+    const adv  = r.valor_advogado != null ? Number(r.valor_advogado) : 0;
+    const prep = r.valor_preposto != null ? Number(r.valor_preposto) : 0;
+    totalAdv  += adv;
+    totalPrep += prep;
+
+    const clienteNome = (r.cliente || '').trim() || 'Sem cliente definido';
+    porCliente.set(clienteNome, (porCliente.get(clienteNome) || 0) + adv + prep);
+
+    if (r.valor_advogado != null && r.advogado) {
+      const k = r.advogado.trim();
+      porCorr.set(k, (porCorr.get(k) || 0) + adv);
+    }
+    if (r.valor_preposto != null && r.dados_preposto) {
+      const k = r.dados_preposto.trim();
+      porCorr.set(k, (porCorr.get(k) || 0) + prep);
+    }
+  });
+
+  document.getElementById('fin-stat-total').textContent = _finFmtMoney(totalAdv + totalPrep);
+  document.getElementById('fin-stat-adv').textContent   = _finFmtMoney(totalAdv);
+  document.getElementById('fin-stat-prep').textContent  = _finFmtMoney(totalPrep);
+  document.getElementById('fin-stat-count').textContent = rows.length;
+
+  document.getElementById('fin-por-cliente').innerHTML       = _finRankHtml(porCliente, 'Nenhum valor lançado no período/filtro selecionado.');
+  document.getElementById('fin-por-correspondente').innerHTML = _finRankHtml(porCorr, 'Nenhum valor lançado no período/filtro selecionado.');
+
+  const listaEl = document.getElementById('fin-lista');
+  if (!rows.length) {
+    listaEl.innerHTML = '<div class="empty-state"><p>Nenhuma audiência com valor lançado.</p></div>';
+    return;
+  }
+  const ordered = rows.slice().sort((a,b) => (b.data_audiencia||'').localeCompare(a.data_audiencia||''));
+  listaEl.innerHTML = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:#f9fafb;border-bottom:2px solid var(--c-divider)">
+      <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Data</th>
+      <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Processo</th>
+      <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Cliente</th>
+      <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Advogado</th>
+      <th style="text-align:right;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Valor Adv.</th>
+      <th style="text-align:left;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Preposto</th>
+      <th style="text-align:right;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Valor Prep.</th>
+      <th style="text-align:right;padding:10px 14px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted)">Total</th>
+    </tr></thead>
+    <tbody>${ordered.map(r => {
+      const adv  = r.valor_advogado != null ? Number(r.valor_advogado) : 0;
+      const prep = r.valor_preposto != null ? Number(r.valor_preposto) : 0;
+      return `<tr style="border-bottom:1px solid var(--c-divider)" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+      <td style="padding:12px 14px;font-family:var(--f-mono);font-size:12px">${_finFmtDate(r.data_audiencia)}</td>
+      <td style="padding:12px 14px;font-family:var(--f-mono);font-size:12px;font-weight:600">${escHtml(r.processo||'—')}</td>
+      <td style="padding:12px 14px">${escHtml(r.cliente||'—')}</td>
+      <td style="padding:12px 14px">${escHtml(r.advogado||'—')}</td>
+      <td style="padding:12px 14px;text-align:right;font-family:var(--f-mono);font-size:12px;color:#1B7A4E">${r.valor_advogado != null ? _finFmtMoney(adv) : '—'}</td>
+      <td style="padding:12px 14px">${escHtml(r.dados_preposto||'—')}</td>
+      <td style="padding:12px 14px;text-align:right;font-family:var(--f-mono);font-size:12px;color:#0D2B5E">${r.valor_preposto != null ? _finFmtMoney(prep) : '—'}</td>
+      <td style="padding:12px 14px;text-align:right;font-family:var(--f-mono);font-size:12px;font-weight:700">${_finFmtMoney(adv + prep)}</td>
+    </tr>`;
+    }).join('')}</tbody>
+    <tfoot><tr style="border-top:2px solid var(--c-divider);background:#f9fafb">
+      <td colspan="4" style="padding:10px 14px;font-weight:700;text-align:right">Total</td>
+      <td style="padding:10px 14px;text-align:right;font-family:var(--f-mono);font-weight:700;color:#1B7A4E">${_finFmtMoney(totalAdv)}</td>
+      <td></td>
+      <td style="padding:10px 14px;text-align:right;font-family:var(--f-mono);font-weight:700;color:#0D2B5E">${_finFmtMoney(totalPrep)}</td>
+      <td style="padding:10px 14px;text-align:right;font-family:var(--f-mono);font-weight:800">${_finFmtMoney(totalAdv + totalPrep)}</td>
+    </tr></tfoot>
+    </table></div>`;
+}
 
 /* ─── IMPORT EXCEL ─────────────────────────────────────────── */
 /* ─── PJe SYNC via Servidor Local ──────────────────────────── */
