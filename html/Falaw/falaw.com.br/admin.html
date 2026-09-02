@@ -2119,6 +2119,23 @@
                 </select>
               </div>
             </div>
+            <!-- Valor do correspondente: bloco apartado do "Enviar para Correspondente?" —
+                 uso interno para quando a própria Falaw contrata direto (sem passar pela
+                 Administradora de Correspondentes). Só o superadmin vê/edita — ver
+                 _isRestritoRole()/applyRoleRestrictions. -->
+            <div id="aud-valor-fields" style="margin:8px 0 0;padding:12px 16px;background:#f7f5f2;border:1px solid var(--c-divider);border-radius:4px">
+              <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-muted);margin-bottom:10px">Valor do Correspondente</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="form-field" style="margin-bottom:0">
+                  <label>Valor Advogado (R$)</label>
+                  <input id="aud-valor-advogado" type="number" min="0" step="0.01" placeholder="0,00" />
+                </div>
+                <div class="form-field" style="margin-bottom:0">
+                  <label>Valor Preposto (R$)</label>
+                  <input id="aud-valor-preposto" type="number" min="0" step="0.01" placeholder="0,00" />
+                </div>
+              </div>
+            </div>
           </div>
           <div class="modal-footer">
             <button id="aud-modal-del" class="btn btn-ghost" style="color:#C62828;display:none" onclick="deleteAudiencia(document.getElementById('aud-id').value)">Excluir</button>
@@ -3913,6 +3930,10 @@ function applyRoleRestrictions() {
   const itemFinanceiro = document.getElementById('ditem-financeiro');
   if (itemFinanceiro) itemFinanceiro.style.display = 'none';
 
+  // Bloco "Valor do Correspondente" no modal de audiência: só superadmin
+  const campoValores = document.getElementById('aud-valor-fields');
+  if (campoValores) campoValores.style.display = 'none';
+
   // Ocultar botão Configurações
   const btnConfig = document.getElementById('tab-btn-config');
   if (btnConfig) btnConfig.style.display = 'none';
@@ -3961,6 +3982,12 @@ function doLogout() {
   localStorage.removeItem('fa_admin_persist_supabase');
   // Restaura visibilidade de todos os itens de nav
   document.querySelectorAll('.admin-tab-group, .admin-tab, .admin-dropdown-item').forEach(el => { el.style.display = ''; });
+  // Restaura o bloco de valor do correspondente no modal de audiência (fica
+  // escondido pelo applyRoleRestrictions quando o papel é restrito — sem isso,
+  // um superadmin que logasse na mesma aba logo após um usuário restrito
+  // continuaria sem ver o campo de valor)
+  const campoValores = document.getElementById('aud-valor-fields');
+  if (campoValores) campoValores.style.display = '';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('admin-shell').style.display = 'none';
   document.getElementById('login-pwd').value = '';
@@ -15935,7 +15962,7 @@ function audLimparFiltros() {
 
 /* ── modal open/close ── */
 function openAudienciaModal() {
-  const fields = ['aud-id','aud-data','aud-horario','aud-tipo','aud-modalidade','aud-processo','aud-vara','aud-link','aud-idsena','aud-reclamante','aud-reclamada','aud-cliente','aud-tipo-resp','aud-responsavel','aud-advogado','aud-preposto-obs','aud-dados-preposto','aud-comentarios','aud-testemunhas'];
+  const fields = ['aud-id','aud-data','aud-horario','aud-tipo','aud-modalidade','aud-processo','aud-vara','aud-link','aud-idsena','aud-reclamante','aud-reclamada','aud-cliente','aud-tipo-resp','aud-responsavel','aud-advogado','aud-preposto-obs','aud-dados-preposto','aud-comentarios','aud-testemunhas','aud-valor-advogado','aud-valor-preposto'];
   fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('aud-status').value = 'agendada';
   document.getElementById('aud-testemunha-check').checked = false;
@@ -15999,6 +16026,8 @@ async function editAudiencia(id) {
   document.getElementById('aud-corr-check').checked = corrOn;
   audToggleCorr(corrOn);
   document.getElementById('aud-corr-tipo').value = a.corr_tipo_envio || 'advogado';
+  document.getElementById('aud-valor-advogado').value = a.valor_advogado != null ? a.valor_advogado : '';
+  document.getElementById('aud-valor-preposto').value = a.valor_preposto != null ? a.valor_preposto : '';
   document.getElementById('aud-modal-del').style.display = '';
   document.getElementById('audienciaModalTitle').textContent = 'Editar Audiência';
   document.getElementById('audienciaModal').style.display = 'flex';
@@ -16045,20 +16074,23 @@ async function saveAudiencia() {
     updated_at:            new Date().toISOString(),
   };
 
-  // Se deixou de enviar para correspondente, ou trocou quem vai atender, os valores
-  // atribuídos anteriormente perdem o sentido — limpa para não ficar informação órfã.
-  // Os valores em si são lançados pela Administradora de Correspondentes no
-  // portal dela (cliente/dashboard.html, sessão corrTipo === 'admin'), não aqui.
+  // Valor do correspondente: bloco apartado do "Enviar para Correspondente?" — uso
+  // interno para quando a própria Falaw contrata direto. Só o superadmin vê/edita
+  // este campo no modal (papel restrito não enxerga — ver aud-valor-fields/_isRestritoRole).
+  const _valorAdvInput  = parseFloat(document.getElementById('aud-valor-advogado').value);
+  const _valorPrepInput = parseFloat(document.getElementById('aud-valor-preposto').value);
+  row.valor_advogado = isNaN(_valorAdvInput)  ? null : _valorAdvInput;
+  row.valor_preposto = isNaN(_valorPrepInput) ? null : _valorPrepInput;
+
   const _orig = window._audEditingOriginal;
-  if (_orig && _orig.id === id) {
-    if (!row.corr_tipo_envio) {
-      row.valor_advogado = null;
-      row.valor_preposto = null;
-    } else {
-      if ((_orig.advogado || '') !== row.advogado && _orig.valor_advogado != null) row.valor_advogado = null;
-      if ((_orig.dados_preposto || '') !== row.dados_preposto && _orig.valor_preposto != null) row.valor_preposto = null;
-    }
+  if (_orig && _orig.id === id && _isRestritoRole()) {
+    // Papel restrito não vê o campo de valor (fica com o que já estava salvo,
+    // preservado no input escondido) — só limpa se trocou quem atende, pra não
+    // deixar valor de outra pessoa órfão sem ninguém poder ver/corrigir.
+    row.valor_advogado = (_orig.advogado || '') !== row.advogado ? null : (_orig.valor_advogado ?? null);
+    row.valor_preposto = (_orig.dados_preposto || '') !== row.dados_preposto ? null : (_orig.valor_preposto ?? null);
   }
+  // superadmin: usa exatamente o que foi digitado nos campos de valor acima
   const { sbUrl, sbKey } = getSbCreds();
   if (sbUrl && sbKey) {
     try {
