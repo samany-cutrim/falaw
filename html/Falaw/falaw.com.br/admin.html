@@ -14468,7 +14468,8 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     // Suspensos calculados antes do guard para não pular abas que só têm suspensos
     const tSusp1389 = susp1389.filter(s=>_xlCanonCR(String(s.causa_raiz||''))===cr);
     const tSusp1291 = susp1291.filter(s=>_xlCanonCR(String(s.causa_raiz||''))===cr);
-    const tSusp300  = susp300.filter(s=>_xlCanonCR(String(s.causa_raiz||''))===cr);
+    // Tema 300 é exclusivo da aba Ex-Foodlover — não filtra por causa raiz da linha
+    const tSusp300  = cr === 'EX-FOODLOVER' ? susp300 : [];
     const tSusp = tSusp1389.length + tSusp1291.length + tSusp300.length;
     if (!recs.length && !decs.length && !tSusp) continue;
     const ta = recs.filter(r=>r.status==='ativo').length;
