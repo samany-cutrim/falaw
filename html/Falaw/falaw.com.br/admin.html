@@ -13944,7 +13944,7 @@ function _xlParseAcordos(headerRow, rawRows) {
   }).filter(Boolean);
 }
 
-function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391, decisoesTabela, julgadoresData, encerradosData, valoresElevadosData, prevPeriodData, acordosData) {
+function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, suspensos1391, suspensos300, decisoesTabela, julgadoresData, encerradosData, valoresElevadosData, prevPeriodData, acordosData) {
   // decisoesTabela: decisões do arquivo separado — aparecem apenas nas tabelas, não nos contadores
   // julgadoresData: linhas da aba Julgadores — usadas para table_fund_vg
   decisoesTabela    = decisoesTabela    || [];
@@ -13959,6 +13959,7 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
   };
   const susp1389 = suspensos1389 || [];
   const susp1291 = suspensos1391 || [];
+  const susp300  = suspensos300  || [];
 
   // ── VISÃO GERAL ──────────────────────────────────────────────────────────────
   const total  = records.length;
@@ -14467,7 +14468,8 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     // Suspensos calculados antes do guard para não pular abas que só têm suspensos
     const tSusp1389 = susp1389.filter(s=>_xlCanonCR(String(s.causa_raiz||''))===cr);
     const tSusp1291 = susp1291.filter(s=>_xlCanonCR(String(s.causa_raiz||''))===cr);
-    const tSusp = tSusp1389.length + tSusp1291.length;
+    const tSusp300  = susp300.filter(s=>_xlCanonCR(String(s.causa_raiz||''))===cr);
+    const tSusp = tSusp1389.length + tSusp1291.length + tSusp300.length;
     if (!recs.length && !decs.length && !tSusp) continue;
     const ta = recs.filter(r=>r.status==='ativo').length;
     const te = recs.filter(r=>r.status==='encerrado').length;
@@ -14480,10 +14482,11 @@ function _xlBuildKpiRows(periodId, records, decisoes, novos, suspensos1389, susp
     if(tSusp>0) push(tabKey,'suspensos','Processos Suspensos',_xlFmtBr(tSusp),'suspensos');
 
     // Tabela de suspensos por tema
-    if (tSusp1389.length || tSusp1291.length) {
+    if (tSusp1389.length || tSusp1291.length || tSusp300.length) {
       const _suspRows = [
         ...tSusp1389.map(s => ({ reclamante: s.reclamante, processo: s.processo, trt: s.trt, tribunal: s.tribunal, turma: s.turma, relator: s.relator, tema: '1389', obs: s.obs })),
         ...tSusp1291.map(s => ({ reclamante: s.reclamante, processo: s.processo, trt: s.trt, tribunal: s.tribunal, turma: s.turma, relator: s.relator, tema: '1291', obs: s.obs })),
+        ...tSusp300.map(s => ({ reclamante: s.reclamante, processo: s.processo, trt: s.trt, tribunal: s.tribunal, turma: s.turma, relator: s.relator, tema: '300', obs: s.obs })),
       ];
       push(tabKey, 'table_suspensos_cr', `Suspensos por Tema (${tSusp})`, '', '',
         { type: 'table_suspensos', rows: _suspRows },
@@ -14708,6 +14711,10 @@ async function ifoodSaveExcel() {
     const susp1291 = susp1291Sh ? _xlParseSuspensos(XLSX.utils.sheet_to_json(susp1291Sh,{header:1,defval:''})) : [];
     console.log('[ifoodSave] susp1291Sh encontrado:', !!susp1291Sh, '| linhas:', susp1291.length);
 
+    const susp300Sh = findSh('Suspensos Tema 300','300','susp 300','suspensos 300','tema 300');
+    const susp300 = susp300Sh ? _xlParseSuspensos(XLSX.utils.sheet_to_json(susp300Sh,{header:1,defval:''})) : [];
+    console.log('[ifoodSave] susp300Sh encontrado:', !!susp300Sh, '| linhas:', susp300.length);
+
     const encSh = findSh('ENCERRADOS','Encerrados','encerrados');
     const encerradosData = encSh ? _xlParseEncerrados(XLSX.utils.sheet_to_json(encSh,{header:1,defval:''}).slice(1)) : [];
 
@@ -14803,7 +14810,7 @@ async function ifoodSaveExcel() {
       setIfNotNull('m4_economia',   gf('m4_economia'));
     }
 
-    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291, decisoesTabela, julgadoresData, encerradosData, valoresElevadosData, prevPeriodData, acordosData);
+    const kpiRows = _xlBuildKpiRows(periodId, records, decisoes, novos, susp1389, susp1291, susp300, decisoesTabela, julgadoresData, encerradosData, valoresElevadosData, prevPeriodData, acordosData);
 
     // Upload do arquivo Excel bruto para Cockroach (quando API configurada)
     let ifoodExcelFileUrl = null;

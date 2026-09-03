@@ -1381,9 +1381,10 @@ async function renderCharts(tabKey, kpis) {
         const rows = cfg.rows || [];
         const tema1389 = rows.filter(r => r.tema === '1389');
         const tema1291 = rows.filter(r => r.tema === '1291');
+        const tema300  = rows.filter(r => r.tema === '300');
         const renderTema = (tRows, tema) => {
           if (!tRows.length) return '';
-          const temaLabel = tema === '1389' ? 'Tema 1389' : 'Tema 1291';
+          const temaLabel = 'Tema ' + tema;
           return `
             <div style="margin-bottom:20px">
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0D2B5E;margin-bottom:8px;padding:6px 10px;background:#e8eef8;border-radius:4px">
@@ -1414,7 +1415,8 @@ async function renderCharts(tabKey, kpis) {
         wrap.innerHTML =
           `<div style="font-size:12px;color:#555;margin-bottom:12px">${rows.length} processo${rows.length!==1?'s':''} suspenso${rows.length!==1?'s':''}</div>` +
           renderTema(tema1389, '1389') +
-          renderTema(tema1291, '1291');
+          renderTema(tema1291, '1291') +
+          renderTema(tema300, '300');
         return;
       }
 
